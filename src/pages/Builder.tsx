@@ -1,38 +1,86 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Eye, Plus, QrCode, Tags, Copy, X } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Builder = () => {
   return (
-    <div className="min-h-screen p-6 bg-gray-50">
-      <div className="max-w-4xl mx-auto space-y-8">
-        <div className="text-center space-y-4">
-          <h1 className="text-3xl md:text-4xl font-bold">Create Your Store</h1>
-          <p className="text-gray-600">Build your online store with our easy-to-use website builder</p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-red-600 text-white p-4 flex justify-between items-center">
+        <X className="w-6 h-6" />
+        <h1 className="text-xl font-bold">يوسف</h1>
+        <div className="flex gap-4">
+          <Link className="p-2 rounded-full bg-red-500" to="#">
+            <Copy className="w-5 h-5" />
+          </Link>
+          <button className="p-2 rounded-full bg-red-500">
+            <img src="/lovable-uploads/6fd4999f-4557-46fe-922a-3af4fd437caf.png" alt="Profile" className="w-5 h-5 rounded-full" />
+          </button>
         </div>
-        
-        <div className="bg-white rounded-lg shadow-md p-6 space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="storeName">Store Name</Label>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-xl mx-auto p-4 space-y-4">
+        {/* Restaurant Link Card */}
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex justify-between items-center">
+            <div className="text-gray-600 text-right">
+              <h2 className="text-xl font-bold text-red-600">رابط المطعم</h2>
+              <p className="text-sm">مشاركة الرابط مع الزبائن</p>
+            </div>
+            <Button variant="outline" className="border-red-600 text-red-600 hover:bg-red-50">
+              نسخ
+            </Button>
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="bg-white rounded-xl p-4 shadow-sm space-y-4">
+          <div className="relative">
             <Input 
-              id="storeName" 
-              placeholder="Enter your store name"
-              className="w-full"
+              placeholder="ابحث عن وجبة..."
+              className="w-full pl-10 text-right"
             />
+            <svg className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Store Description</Label>
-            <Input 
-              id="description" 
-              placeholder="Describe your store"
-              className="w-full"
-            />
+          {/* Action Buttons */}
+          <div className="grid grid-cols-2 gap-4">
+            <Button variant="outline" className="border-gray-200 hover:bg-gray-50 space-x-2">
+              <Eye className="w-4 h-4" />
+              <span>معاينة</span>
+            </Button>
+            <Button className="bg-red-600 hover:bg-red-700 space-x-2">
+              <Plus className="w-4 h-4" />
+              <span>إضافة وجبة</span>
+            </Button>
+            <Button variant="outline" className="border-gray-200 hover:bg-gray-50 space-x-2">
+              <QrCode className="w-4 h-4" />
+              <span>منيو QR</span>
+            </Button>
+            <Button className="bg-red-600 hover:bg-red-700 space-x-2">
+              <Tags className="w-4 h-4" />
+              <span>الأصناف</span>
+            </Button>
           </div>
+        </div>
 
-          <Button className="w-full">
-            Create Store
+        {/* Empty State */}
+        <div className="bg-white rounded-xl p-8 shadow-sm text-center space-y-4">
+          <div className="flex justify-center">
+            <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-bold text-gray-700">لا توجد وجبات مسجلة</h3>
+          <p className="text-gray-500">يمكنك البدء بإضافة وجبات جديدة</p>
+          <Button className="bg-red-600 hover:bg-red-700">
+            <Plus className="w-4 h-4 mr-2" />
+            إضافة وجبة جديدة
           </Button>
         </div>
       </div>
