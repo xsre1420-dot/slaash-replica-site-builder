@@ -1,6 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export const Hero = () => {
   return (
@@ -13,8 +14,10 @@ export const Hero = () => {
         Build and launch professional websites in minutes with our AI-powered platform.
         No coding required.
       </p>
-      <Button size="lg" className="animate-fade-in">
-        Get Started <ArrowRight className="ml-2 h-4 w-4" />
+      <Button size="lg" className="animate-fade-in" asChild>
+        <Link to="/builder">
+          Get Started <ArrowRight className="ml-2 h-4 w-4" />
+        </Link>
       </Button>
     </div>
   );
