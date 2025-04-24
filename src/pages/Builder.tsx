@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, Plus, QrCode, Tags, Copy, X } from "lucide-react";
@@ -54,10 +53,12 @@ const Builder = () => {
               <Eye className="w-4 h-4" />
               <span>معاينة</span>
             </Button>
-            <Button className="bg-red-600 hover:bg-red-700 space-x-2">
-              <Plus className="w-4 h-4" />
-              <span>إضافة وجبة</span>
-            </Button>
+            <Link to="/add-product">
+              <Button className="w-full bg-red-600 hover:bg-red-700 space-x-2">
+                <Plus className="w-4 h-4" />
+                <span>إضافة وجبة</span>
+              </Button>
+            </Link>
             <Button variant="outline" className="border-gray-200 hover:bg-gray-50 space-x-2">
               <QrCode className="w-4 h-4" />
               <span>منيو QR</span>
