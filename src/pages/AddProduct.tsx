@@ -1,13 +1,31 @@
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X } from "lucide-react";
+import { X, ImagePlus } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useState, useRef } from "react";
 
 const AddProduct = () => {
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleChooseFile = () => {
+    fileInputRef.current?.click();
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -25,11 +43,48 @@ const AddProduct = () => {
           {/* Image Upload */}
           <div className="space-y-2 text-right">
             <Label className="block">صورة الوجبة</Label>
-            <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center">
-              <Button variant="outline" className="w-full">
-                اختيار ملف
-              </Button>
-              <p className="mt-2 text-sm text-gray-500">لم يتم تحديد أي ملف</p>
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*"
+              onChange={handleImageChange}
+            />
+            <div 
+              className={`border-2 border-dashed border-gray-200 rounded-lg p-4 text-center ${
+                imagePreview ? 'pt-0' : ''
+              }`}
+            >
+              {imagePreview ? (
+                <div className="space-y-4">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="max-h-48 mx-auto rounded-lg"
+                  />
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleChooseFile}
+                    type="button"
+                  >
+                    تغيير الصورة
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleChooseFile}
+                    type="button"
+                  >
+                    <ImagePlus className="w-4 h-4 ml-2" />
+                    اختيار ملف
+                  </Button>
+                  <p className="mt-2 text-sm text-gray-500">لم يتم تحديد أي ملف</p>
+                </>
+              )}
             </div>
           </div>
 
