@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, Plus, QrCode, Tags, Copy, X } from "lucide-react";
 import { Link } from "react-router-dom";
+import { ProductsList } from "@/components/ProductsList";
 
 const Builder = () => {
   return (
@@ -70,20 +71,8 @@ const Builder = () => {
           </div>
         </div>
 
-        {/* Empty State */}
-        <div className="bg-white rounded-xl p-8 shadow-sm text-center space-y-4">
-          <div className="flex justify-center">
-            <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          </div>
-          <h3 className="text-xl font-bold text-gray-700">لا توجد وجبات مسجلة</h3>
-          <p className="text-gray-500">يمكنك البدء بإضافة وجبات جديدة</p>
-          <Button className="bg-red-600 hover:bg-red-700">
-            <Plus className="w-4 h-4 mr-2" />
-            إضافة وجبة جديدة
-          </Button>
-        </div>
+        {/* Products List */}
+        <ProductsList />
       </div>
     </div>
   );
