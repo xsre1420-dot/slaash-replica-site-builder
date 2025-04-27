@@ -50,12 +50,10 @@ const Builder = () => {
 
           {/* Action Buttons */}
           <div className="grid grid-cols-2 gap-4">
-            <Link to="/preview-store" className="w-full">
-              <Button variant="outline" className="w-full border-gray-200 hover:bg-gray-50 space-x-2">
-                <Eye className="w-4 h-4" />
-                <span>معاينة</span>
-              </Button>
-            </Link>
+            <Button variant="outline" className="border-gray-200 hover:bg-gray-50 space-x-2">
+              <Eye className="w-4 h-4" />
+              <span>معاينة</span>
+            </Button>
             <Link to="/add-product">
               <Button className="w-full bg-red-600 hover:bg-red-700 space-x-2">
                 <Plus className="w-4 h-4" />
