@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { Calendar } from "lucide-react";
+import { Calendar, Eye, List } from "lucide-react";
 import { ProductsList } from "@/components/ProductsList";
 
 export default function Builder() {
