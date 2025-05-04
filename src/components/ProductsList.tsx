@@ -1,11 +1,28 @@
 
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Edit, Plus, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { products as initialProducts } from "@/data/dummyData";
+import { Product } from "@/types";
+import { useToast } from "@/components/ui/use-toast";
 
 export const ProductsList = () => {
-  // This will be replaced with real data once we integrate with a backend
-  const products: any[] = [];
+  const [products, setProducts] = useState<Product[]>([]);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    // In a real app, we would fetch products from an API
+    setProducts(initialProducts);
+  }, []);
+
+  const handleDelete = (id: string) => {
+    setProducts(products.filter(p => p.id !== id));
+    toast({
+      title: "تم الحذف بنجاح",
+      description: "تم حذف المنتج بنجاح"
+    });
+  };
 
   if (products.length === 0) {
     return (
@@ -30,8 +47,39 @@ export const ProductsList = () => {
   return (
     <div className="space-y-4">
       {products.map((product) => (
-        <div key={product.id} className="bg-white rounded-lg shadow p-4">
-          {/* Product details will be added here once we have data */}
+        <div key={product.id} className="bg-white rounded-lg shadow-sm p-4">
+          <div className="flex justify-between items-start">
+            <div className="flex space-x-2">
+              <Button 
+                variant="ghost" 
+                className="p-1 h-8 w-8" 
+                onClick={() => handleDelete(product.id)}
+              >
+                <Trash2 className="w-4 h-4 text-red-500" />
+              </Button>
+              <Link to={`/edit-product/${product.id}`}>
+                <Button 
+                  variant="ghost" 
+                  className="p-1 h-8 w-8" 
+                >
+                  <Edit className="w-4 h-4 text-blue-500" />
+                </Button>
+              </Link>
+            </div>
+            
+            <div className="flex items-center">
+              <div className="text-right mr-4">
+                <h3 className="text-lg font-bold">{product.name}</h3>
+                <p className="text-sm text-gray-500 line-clamp-1">{product.description}</p>
+                <p className="text-red-600 font-bold mt-1">{product.price.toLocaleString()} د.ع</p>
+              </div>
+              <img
+                src={product.image}
+                alt={product.name}
+                className="w-16 h-16 rounded-md object-cover"
+              />
+            </div>
+          </div>
         </div>
       ))}
     </div>
