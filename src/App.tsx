@@ -11,6 +11,8 @@ import NotFound from "./pages/NotFound";
 import PreviewStore from "./pages/PreviewStore";
 import Categories from "./pages/Categories";
 import Checkout from "./pages/Checkout";
+import Orders from "./pages/Orders";
+import OrderDetails from "./pages/OrderDetails";
 import { CartProvider } from "./context/CartContext";
 
 const queryClient = new QueryClient();
@@ -29,6 +31,8 @@ const App = () => (
             <Route path="/preview" element={<PreviewStore />} />
             <Route path="/categories" element={<Categories />} />
             <Route path="/checkout" element={<Checkout />} />
+            <Route path="/orders" element={<Orders />} />
+            <Route path="/orders/:orderId" element={<OrderDetails />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

@@ -1,6 +1,6 @@
 
 import { X, ArrowRight, Plus, Minus, Trash2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
@@ -8,10 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
+import { Order } from "@/types";
 
 const Checkout = () => {
   const { cartItems, removeFromCart, updateQuantity, clearCart, cartTotal } = useCart();
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const [customerInfo, setCustomerInfo] = useState({
     name: "",
@@ -37,16 +39,35 @@ const Checkout = () => {
       return;
     }
     
-    // Here we would normally submit the order to a backend
-    // For now, just show a success message and clear the cart
+    // Create a new order object
+    const newOrder: Order = {
+      id: `ord-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
+      items: [...cartItems],
+      customerInfo: {
+        name: customerInfo.name,
+        phone: customerInfo.phone,
+        address: customerInfo.address,
+        notes: customerInfo.notes || undefined,
+      },
+      total: cartTotal,
+      date: new Date().toISOString(),
+      status: 'pending',
+    };
+    
+    // In a real app, we would save the order to a backend
+    // For now, we can store it in localStorage for demo purposes
+    const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+    const updatedOrders = [newOrder, ...existingOrders];
+    localStorage.setItem('orders', JSON.stringify(updatedOrders));
+    
     toast({
       title: "تم إرسال الطلب بنجاح",
       description: "سنتواصل معك قريباً لتأكيد الطلب",
     });
     
     clearCart();
-    // Navigate back to store
-    window.location.href = "/preview";
+    // Navigate to thank you page or back to store
+    navigate("/preview");
   };
 
   return (
