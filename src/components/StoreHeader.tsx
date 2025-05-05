@@ -83,14 +83,6 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
                             onChange={handleImageUpload}
                           />
                         </label>
-                        
-                        <Input 
-                          type="text" 
-                          value={logo} 
-                          onChange={(e) => setLogo(e.target.value)}
-                          className="text-right" 
-                          placeholder="أو أدخل رابط الشعار"
-                        />
                       </div>
                     </div>
                   </div>
