@@ -31,7 +31,7 @@ const PreviewStore = () => {
           <Link to="/builder">
             <X className="w-6 h-6" />
           </Link>
-          <h1 className="text-2xl font-bold">دجاج العريش</h1>
+          <h1 className="text-2xl font-bold">نمو</h1>
           <div className="w-6" /> {/* Spacer for alignment */}
         </div>
         
