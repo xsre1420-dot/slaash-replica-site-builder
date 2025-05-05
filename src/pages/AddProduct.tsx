@@ -1,14 +1,24 @@
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X, ImagePlus } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState, useRef } from "react";
+import { categories, addProduct } from "@/data/dummyData";
+import { useToast } from "@/components/ui/use-toast";
+import { Product } from "@/types";
 
 const AddProduct = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
+  const [price, setPrice] = useState("");
+  const { toast } = useToast();
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,6 +36,60 @@ const AddProduct = () => {
     fileInputRef.current?.click();
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate form
+    if (!name.trim()) {
+      toast({
+        title: "خطأ",
+        description: "يرجى إدخال اسم الوجبة",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!category) {
+      toast({
+        title: "خطأ",
+        description: "يرجى اختيار فئة الوجبة",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!price || isNaN(Number(price)) || Number(price) <= 0) {
+      toast({
+        title: "خطأ",
+        description: "يرجى إدخال سعر صحيح",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Create new product
+    const newProduct: Product = {
+      id: Date.now().toString(), // Generate a unique ID
+      name,
+      description,
+      category,
+      price: Number(price),
+      image: imagePreview || "/lovable-uploads/59c215d6-809e-4764-90cd-41fd1213f286.png", // Default image if none selected
+    };
+
+    // Add product to the list
+    addProduct(newProduct);
+
+    // Show success toast
+    toast({
+      title: "تم بنجاح",
+      description: "تمت إضافة وجبة جديدة",
+    });
+
+    // Navigate back to builder
+    navigate('/builder');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -39,7 +103,7 @@ const AddProduct = () => {
 
       {/* Form */}
       <div className="max-w-xl mx-auto p-4">
-        <form className="bg-white rounded-xl p-6 shadow-sm space-y-6">
+        <form className="bg-white rounded-xl p-6 shadow-sm space-y-6" onSubmit={handleSubmit}>
           {/* Image Upload */}
           <div className="space-y-2 text-right">
             <Label className="block">صورة الوجبة</Label>
@@ -91,20 +155,27 @@ const AddProduct = () => {
           {/* Name */}
           <div className="space-y-2 text-right">
             <Label htmlFor="name" className="block">اسم الوجبة</Label>
-            <Input id="name" className="text-right" />
+            <Input 
+              id="name" 
+              className="text-right" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
           </div>
 
           {/* Category */}
           <div className="space-y-2 text-right">
             <Label htmlFor="category" className="block">الفئة</Label>
-            <Select>
+            <Select value={category} onValueChange={setCategory}>
               <SelectTrigger className="w-full text-right">
-                <SelectValue placeholder="الوجبات الرئيسية" />
+                <SelectValue placeholder="اختر فئة" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="main">الوجبات الرئيسية</SelectItem>
-                <SelectItem value="appetizers">المقبلات</SelectItem>
-                <SelectItem value="drinks">المشروبات</SelectItem>
+                {categories.filter(c => c.id !== "all").map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -112,17 +183,28 @@ const AddProduct = () => {
           {/* Description */}
           <div className="space-y-2 text-right">
             <Label htmlFor="description" className="block">الوصف</Label>
-            <Textarea id="description" className="text-right" />
+            <Textarea 
+              id="description" 
+              className="text-right" 
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
           </div>
 
           {/* Price */}
           <div className="space-y-2 text-right">
             <Label htmlFor="price" className="block">السعر (دينار عراقي)</Label>
-            <Input id="price" type="number" className="text-right" />
+            <Input 
+              id="price" 
+              type="number" 
+              className="text-right" 
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+            />
           </div>
 
           {/* Submit Button */}
-          <Button className="w-full bg-red-600 hover:bg-red-700">
+          <Button type="submit" className="w-full bg-red-600 hover:bg-red-700">
             إضافة الوجبة +
           </Button>
         </form>

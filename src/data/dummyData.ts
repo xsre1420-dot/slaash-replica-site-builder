@@ -9,7 +9,8 @@ export const categories: Category[] = [
   { id: "drinks", name: "المشروبات", order: 4 },
 ];
 
-export const products: Product[] = [
+// We're using let instead of const to allow updating the products array
+export let products: Product[] = [
   {
     id: "1",
     name: "نصف دجاجة مشوية",
@@ -51,6 +52,11 @@ export const products: Product[] = [
     image: "/lovable-uploads/59c215d6-809e-4764-90cd-41fd1213f286.png"
   }
 ];
+
+// Function to add a new product
+export const addProduct = (product: Product): void => {
+  products = [...products, product];
+};
 
 // Get products by category
 export const getProductsByCategory = (categoryId: string): Product[] => {

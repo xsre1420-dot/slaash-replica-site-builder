@@ -1,5 +1,5 @@
 
-import { X, Plus, Minus, ShoppingCart } from "lucide-react";
+import { X, ShoppingCart } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { categories, getProductsByCategory } from "@/data/dummyData";
@@ -13,9 +13,15 @@ const PreviewStore = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const { addToCart, cartCount } = useCart();
 
+  // This effect will run every time the component renders, ensuring we have the latest products
   useEffect(() => {
     setProducts(getProductsByCategory(selectedCategory));
   }, [selectedCategory]);
+
+  // Handle adding a product to the cart
+  const handleAddToCart = (product: Product) => {
+    addToCart(product);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -79,9 +85,8 @@ const PreviewStore = () => {
                   
                   <Button 
                     className="mt-4 bg-red-600 hover:bg-red-700"
-                    onClick={() => addToCart(product)}
+                    onClick={() => handleAddToCart(product)}
                   >
-                    <Plus className="w-4 h-4 ml-1" />
                     أضف إلى السلة
                   </Button>
                 </div>
