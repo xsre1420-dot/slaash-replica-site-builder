@@ -1,10 +1,11 @@
 
 import { useState } from "react";
-import { Settings, User, Link as LinkIcon } from "lucide-react";
+import { Settings, User, Link as LinkIcon, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface StoreHeaderProps {
   storeLogo: string;
@@ -16,9 +17,22 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(storeName);
   const [logo, setLogo] = useState(storeLogo);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const { toast } = useToast();
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setLogoFile(file);
+      // Create a temporary URL for preview
+      const objectUrl = URL.createObjectURL(file);
+      setLogo(objectUrl);
+    }
+  };
+
   const handleSaveChanges = () => {
+    // In a real app, you would upload the image to a server here
+    // and get back the URL. For now, we'll just use the temporary URL
     onUpdateStore(logo, name);
     setIsEditing(false);
     toast({
@@ -46,14 +60,41 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
                 <div className="space-y-3">
                   <div className="space-y-2">
                     <label className="text-sm font-medium block text-right">شعار المتجر</label>
-                    <Input 
-                      type="text" 
-                      value={logo} 
-                      onChange={(e) => setLogo(e.target.value)}
-                      className="text-right" 
-                      placeholder="رابط الشعار"
-                    />
+                    <div className="flex flex-col items-center gap-2">
+                      <Avatar className="w-20 h-20 border-2 border-gray-200">
+                        {logo ? (
+                          <AvatarImage src={logo} alt="شعار المتجر" />
+                        ) : (
+                          <AvatarFallback>🍽️</AvatarFallback>
+                        )}
+                      </Avatar>
+                      
+                      <div className="flex w-full flex-col gap-2">
+                        <label htmlFor="logo-upload" className="cursor-pointer">
+                          <div className="flex items-center justify-center w-full p-2 bg-gray-100 hover:bg-gray-200 rounded-md text-center text-gray-700 text-sm">
+                            <Upload className="h-4 w-4 ml-2" />
+                            تحميل شعار جديد
+                          </div>
+                          <input 
+                            id="logo-upload" 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            onChange={handleImageUpload}
+                          />
+                        </label>
+                        
+                        <Input 
+                          type="text" 
+                          value={logo} 
+                          onChange={(e) => setLogo(e.target.value)}
+                          className="text-right" 
+                          placeholder="أو أدخل رابط الشعار"
+                        />
+                      </div>
+                    </div>
                   </div>
+                  
                   <div className="space-y-2">
                     <label className="text-sm font-medium block text-right">اسم المتجر</label>
                     <Input 
@@ -64,6 +105,7 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
                       placeholder="اسم المتجر"
                     />
                   </div>
+                  
                   <div className="flex gap-2 justify-end">
                     <Button variant="outline" onClick={() => setIsEditing(false)}>
                       إلغاء
@@ -76,13 +118,13 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
               ) : (
                 <div className="space-y-3">
                   <div className="flex justify-center">
-                    <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center">
+                    <Avatar className="w-20 h-20">
                       {logo ? (
-                        <img src={logo} alt="شعار المتجر" className="w-16 h-16 object-contain" />
+                        <AvatarImage src={logo} alt="شعار المتجر" />
                       ) : (
-                        <div className="text-3xl text-gray-400">🍽️</div>
+                        <AvatarFallback className="text-3xl text-gray-400">🍽️</AvatarFallback>
                       )}
-                    </div>
+                    </Avatar>
                   </div>
                   <div className="text-center">
                     <p className="font-bold text-lg">{name}</p>
@@ -127,7 +169,12 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
       
       <div className="flex items-center gap-2">
         <div className="text-xl font-bold">{storeName}</div>
-        {logo && <img src={logo} alt="شعار المتجر" className="w-8 h-8 object-contain" />}
+        {logo && (
+          <Avatar className="w-8 h-8">
+            <AvatarImage src={logo} alt="شعار المتجر" />
+            <AvatarFallback>🍽️</AvatarFallback>
+          </Avatar>
+        )}
       </div>
     </div>
   );
