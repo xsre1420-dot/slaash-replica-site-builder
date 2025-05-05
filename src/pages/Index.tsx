@@ -1,8 +1,11 @@
 
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useStore } from "@/context/StoreContext";
 
 const Index = () => {
+  const { storeName } = useStore();
+  
   return (
     <div className="min-h-screen bg-gradient-to-b from-red-900 to-red-800 flex flex-col items-center justify-between p-8 text-white">
       <div className="flex-1 flex flex-col items-center justify-center w-full">
@@ -13,7 +16,7 @@ const Index = () => {
             <div className="absolute transform -rotate-12 -translate-y-2 bg-white w-24 h-12"></div>
           </div>
           <div className="text-center">
-            <h1 className="text-6xl font-bold mb-1">نمو</h1>
+            <h1 className="text-6xl font-bold mb-1">{storeName}</h1>
             <h2 className="text-2xl uppercase tracking-wider">NUMO</h2>
           </div>
         </div>

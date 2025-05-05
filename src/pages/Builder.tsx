@@ -1,15 +1,26 @@
 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { Calendar, Eye, List, Plus, Tag } from "lucide-react";
 import { ProductsList } from "@/components/ProductsList";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import StoreHeader from "@/components/StoreHeader";
+import { useStore } from "@/context/StoreContext";
 
 export default function Builder() {
+  const { storeName, storeLogo, updateStore } = useStore();
+
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
+      {/* Store Header */}
+      <StoreHeader 
+        storeName={storeName} 
+        storeLogo={storeLogo} 
+        onUpdateStore={updateStore} 
+      />
+      
+      <div className="p-8 max-w-6xl mx-auto">
         <div className="bg-white rounded-xl p-6 shadow-sm mb-8">
           <div className="text-center mb-6">
             <h2 className="text-xl font-bold text-red-600 mb-2">رابط المطعم</h2>

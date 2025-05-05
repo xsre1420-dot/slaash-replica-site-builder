@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { categories, getProductsByCategory } from "@/data/dummyData";
 import { Product } from "@/types";
 import { useCart } from "@/context/CartContext";
+import { useStore } from "@/context/StoreContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -12,6 +13,7 @@ const PreviewStore = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [products, setProducts] = useState<Product[]>([]);
   const { addToCart, cartCount } = useCart();
+  const { storeName, storeLogo } = useStore();
 
   // This effect will run every time the component renders, ensuring we have the latest products
   useEffect(() => {
@@ -31,7 +33,12 @@ const PreviewStore = () => {
           <Link to="/builder">
             <X className="w-6 h-6" />
           </Link>
-          <h1 className="text-2xl font-bold">نمو</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold">{storeName}</h1>
+            {storeLogo && (
+              <img src={storeLogo} alt={storeName} className="w-8 h-8 object-contain" />
+            )}
+          </div>
           <div className="w-6" /> {/* Spacer for alignment */}
         </div>
         
