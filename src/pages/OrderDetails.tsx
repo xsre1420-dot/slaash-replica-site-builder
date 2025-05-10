@@ -12,6 +12,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
+import { Check, X, Loader2 } from "lucide-react";
 
 // Same demo orders for testing
 const demoOrders: Order[] = [
@@ -142,6 +144,32 @@ const OrderDetails = () => {
     );
   }
 
+  const getStatusBadge = (status: 'pending' | 'completed' | 'cancelled') => {
+    switch (status) {
+      case 'completed':
+        return (
+          <Badge className="bg-green-100 text-green-800 hover:bg-green-100 flex items-center gap-1">
+            <Check className="h-3 w-3" />
+            مكتمل
+          </Badge>
+        );
+      case 'cancelled':
+        return (
+          <Badge className="bg-red-100 text-red-800 hover:bg-red-100 flex items-center gap-1">
+            <X className="h-3 w-3" />
+            ملغي
+          </Badge>
+        );
+      default:
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 flex items-center gap-1">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            قيد الانتظار
+          </Badge>
+        );
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 rtl">
       {/* Header */}
@@ -165,7 +193,10 @@ const OrderDetails = () => {
                 <span>{format(new Date(order.date), "yyyy-MM-dd HH:mm")}</span>
               </div>
               <div>
-                <CardTitle className="text-right">تفاصيل الطلب</CardTitle>
+                <CardTitle className="text-right flex items-center justify-end gap-2">
+                  تفاصيل الطلب
+                  {getStatusBadge(order.status)}
+                </CardTitle>
                 <CardDescription className="text-right">
                   {order.id}
                 </CardDescription>

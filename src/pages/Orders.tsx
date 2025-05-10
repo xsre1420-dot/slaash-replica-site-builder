@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import OrdersHeader from "@/components/orders/OrdersHeader";
 import OrdersFilters from "@/components/orders/OrdersFilters";
 import OrdersEmptyState from "@/components/orders/OrdersEmptyState";
-import OrdersTable from "@/components/orders/OrdersTable";
+import OrdersSimpleTable from "@/components/orders/OrdersSimpleTable";
 import { useOrders } from "@/components/orders/useOrders";
 
 const Orders = () => {
@@ -44,7 +44,7 @@ const Orders = () => {
             {filteredOrders.length === 0 ? (
               <OrdersEmptyState />
             ) : (
-              <OrdersTable 
+              <OrdersSimpleTable 
                 orders={filteredOrders} 
                 onArchiveOrder={archiveOrder}
                 onUpdateStatus={updateOrderStatus}
