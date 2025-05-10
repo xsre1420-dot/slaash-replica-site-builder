@@ -29,7 +29,7 @@ const Orders = () => {
           <CardHeader>
             <CardTitle className="text-right">الطلبات</CardTitle>
             <CardDescription className="text-right">
-              عرض وإدارة طلبات العملاء
+              عرض وإدارة طلبات العملاء مع كافة معلومات التوصيل
             </CardDescription>
           </CardHeader>
           <CardContent>

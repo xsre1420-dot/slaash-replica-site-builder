@@ -19,7 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 
 interface OrdersTableProps {
   orders: Order[];
@@ -28,6 +28,8 @@ interface OrdersTableProps {
 }
 
 const OrdersTable = ({ orders, onArchiveOrder, onUpdateStatus }: OrdersTableProps) => {
+  const { toast } = useToast();
+  
   const handleStatusChange = (orderId: string, newStatus: "pending" | "completed" | "cancelled") => {
     onUpdateStatus(orderId, newStatus);
     
@@ -43,6 +45,10 @@ const OrdersTable = ({ orders, onArchiveOrder, onUpdateStatus }: OrdersTableProp
     });
   };
 
+  const formatItemsList = (items: Order['items']) => {
+    return items.map(item => `${item.product.name} (${item.quantity})`).join(', ');
+  };
+
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -52,6 +58,8 @@ const OrdersTable = ({ orders, onArchiveOrder, onUpdateStatus }: OrdersTableProp
             <TableHead className="text-right">اسم العميل</TableHead>
             <TableHead className="text-right">رقم الهاتف</TableHead>
             <TableHead className="text-right">العنوان</TableHead>
+            <TableHead className="text-right">المنتجات</TableHead>
+            <TableHead className="text-right">ملاحظات</TableHead>
             <TableHead className="text-right">التاريخ</TableHead>
             <TableHead className="text-right">المبلغ</TableHead>
             <TableHead className="text-right">الحالة</TableHead>
@@ -64,7 +72,9 @@ const OrdersTable = ({ orders, onArchiveOrder, onUpdateStatus }: OrdersTableProp
               <TableCell className="font-medium">{order.id}</TableCell>
               <TableCell>{order.customerInfo.name}</TableCell>
               <TableCell>{order.customerInfo.phone}</TableCell>
-              <TableCell>{order.customerInfo.address}</TableCell>
+              <TableCell className="max-w-[150px] truncate">{order.customerInfo.address}</TableCell>
+              <TableCell className="max-w-[150px] truncate">{formatItemsList(order.items)}</TableCell>
+              <TableCell className="max-w-[150px] truncate">{order.customerInfo.notes || "-"}</TableCell>
               <TableCell>{format(new Date(order.date), "yyyy-MM-dd HH:mm")}</TableCell>
               <TableCell>{order.total.toLocaleString()} د.ع</TableCell>
               <TableCell>
