@@ -1,7 +1,7 @@
 
 import { Order } from "@/types";
 import { Link } from "react-router-dom";
-import { Eye, Archive } from "lucide-react";
+import { Eye, Archive, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
 interface OrdersTableProps {
   orders: Order[];
@@ -30,6 +31,7 @@ const OrdersTable = ({ orders, onArchiveOrder }: OrdersTableProps) => {
             <TableHead className="text-right">العنوان</TableHead>
             <TableHead className="text-right">التاريخ</TableHead>
             <TableHead className="text-right">المبلغ</TableHead>
+            <TableHead className="text-right">الحالة</TableHead>
             <TableHead className="text-right">الإجراءات</TableHead>
           </TableRow>
         </TableHeader>
@@ -42,6 +44,24 @@ const OrdersTable = ({ orders, onArchiveOrder }: OrdersTableProps) => {
               <TableCell>{order.customerInfo.address}</TableCell>
               <TableCell>{format(new Date(order.date), "yyyy-MM-dd HH:mm")}</TableCell>
               <TableCell>{order.total.toLocaleString()} د.ع</TableCell>
+              <TableCell>
+                {order.status === "completed" ? (
+                  <Badge className="bg-green-100 text-green-800 hover:bg-green-100 flex items-center gap-1">
+                    <Check className="h-3 w-3" />
+                    مكتمل
+                  </Badge>
+                ) : order.status === "cancelled" ? (
+                  <Badge className="bg-red-100 text-red-800 hover:bg-red-100 flex items-center gap-1">
+                    <X className="h-3 w-3" />
+                    ملغي
+                  </Badge>
+                ) : (
+                  <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 flex items-center gap-1">
+                    <X className="h-3 w-3" />
+                    قيد الانتظار
+                  </Badge>
+                )}
+              </TableCell>
               <TableCell>
                 <div className="flex gap-2">
                   <Button

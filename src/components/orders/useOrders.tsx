@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Order } from "@/types";
+import { format } from "date-fns";
 
 // Demo orders data
 const demoOrders: Order[] = [
@@ -86,7 +87,7 @@ const demoOrders: Order[] = [
     },
     total: 12000,
     date: "2025-05-01T11:15:00",
-    status: "completed",
+    status: "pending",
   },
 ];
 
@@ -97,9 +98,24 @@ export const useOrders = () => {
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
-    // In a real app, we would fetch orders from an API
-    setOrders(demoOrders);
-    setFilteredOrders(demoOrders);
+    // Try to get orders from localStorage first
+    const storedOrders = localStorage.getItem('orders');
+    if (storedOrders) {
+      try {
+        const parsedOrders = JSON.parse(storedOrders);
+        // Combine stored orders with demo orders
+        setOrders([...parsedOrders, ...demoOrders]);
+        setFilteredOrders([...parsedOrders, ...demoOrders]);
+      } catch (error) {
+        console.error('Error parsing stored orders:', error);
+        setOrders(demoOrders);
+        setFilteredOrders(demoOrders);
+      }
+    } else {
+      // Fall back to demo orders
+      setOrders(demoOrders);
+      setFilteredOrders(demoOrders);
+    }
   }, []);
 
   useEffect(() => {
@@ -135,6 +151,20 @@ export const useOrders = () => {
       order.id === orderId ? { ...order, status: "cancelled" as "pending" | "completed" | "cancelled" } : order
     );
     setOrders(updatedOrders);
+    
+    // Update localStorage if order is from there
+    const storedOrders = localStorage.getItem('orders');
+    if (storedOrders) {
+      try {
+        const parsedOrders = JSON.parse(storedOrders);
+        const updatedStoredOrders = parsedOrders.map((order: Order) =>
+          order.id === orderId ? { ...order, status: "cancelled" as "pending" | "completed" | "cancelled" } : order
+        );
+        localStorage.setItem('orders', JSON.stringify(updatedStoredOrders));
+      } catch (error) {
+        console.error('Error updating stored orders:', error);
+      }
+    }
   };
 
   const clearDateFilter = () => {
@@ -152,6 +182,3 @@ export const useOrders = () => {
     clearDateFilter,
   };
 };
-
-// Add missing import for format
-import { format } from "date-fns";
