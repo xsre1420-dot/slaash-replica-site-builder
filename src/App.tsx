@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Builder from "./pages/Builder";
 import AddProduct from "./pages/AddProduct";
+import EditProduct from "./pages/EditProduct";
 import NotFound from "./pages/NotFound";
 import PreviewStore from "./pages/PreviewStore";
 import Categories from "./pages/Categories";
@@ -32,6 +33,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/builder" element={<Builder />} />
               <Route path="/add-product" element={<AddProduct />} />
+              <Route path="/edit-product/:productId" element={<EditProduct />} />
               <Route path="/preview" element={<PreviewStore />} />
               <Route path="/categories" element={<Categories />} />
               <Route path="/checkout" element={<Checkout />} />

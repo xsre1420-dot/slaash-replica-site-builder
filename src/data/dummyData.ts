@@ -9,7 +9,7 @@ export const categories: Category[] = [
   { id: "drinks", name: "المشروبات", order: 4 },
 ];
 
-// We're using let instead of const to allow updating the products array
+// We're using a reference to the products array that can be modified
 export let products: Product[] = [
   {
     id: "1",
