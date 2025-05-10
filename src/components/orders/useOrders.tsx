@@ -153,13 +153,30 @@ export const useOrders = () => {
     setOrders(updatedOrders);
     
     // Update localStorage if order is from there
+    updateLocalStorage(updatedOrders);
+  };
+
+  const updateOrderStatus = (orderId: string, newStatus: "pending" | "completed" | "cancelled") => {
+    const updatedOrders = orders.map((order) =>
+      order.id === orderId ? { ...order, status: newStatus } : order
+    );
+    setOrders(updatedOrders);
+    
+    // Update localStorage
+    updateLocalStorage(updatedOrders);
+  };
+
+  const updateLocalStorage = (updatedOrders: Order[]) => {
     const storedOrders = localStorage.getItem('orders');
     if (storedOrders) {
       try {
         const parsedOrders = JSON.parse(storedOrders);
-        const updatedStoredOrders = parsedOrders.map((order: Order) =>
-          order.id === orderId ? { ...order, status: "cancelled" as "pending" | "completed" | "cancelled" } : order
-        );
+        // Find which orders are from localStorage
+        const localOrderIds = new Set(parsedOrders.map((order: Order) => order.id));
+        
+        // Update only those orders that were originally in localStorage
+        const updatedStoredOrders = updatedOrders.filter(order => localOrderIds.has(order.id));
+        
         localStorage.setItem('orders', JSON.stringify(updatedStoredOrders));
       } catch (error) {
         console.error('Error updating stored orders:', error);
@@ -179,6 +196,7 @@ export const useOrders = () => {
     dateFilter,
     setDateFilter,
     archiveOrder,
+    updateOrderStatus,
     clearDateFilter,
   };
 };

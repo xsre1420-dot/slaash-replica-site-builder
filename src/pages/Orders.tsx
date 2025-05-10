@@ -14,6 +14,7 @@ const Orders = () => {
     dateFilter,
     setDateFilter,
     archiveOrder,
+    updateOrderStatus,
     clearDateFilter,
   } = useOrders();
 
@@ -43,7 +44,11 @@ const Orders = () => {
             {filteredOrders.length === 0 ? (
               <OrdersEmptyState />
             ) : (
-              <OrdersTable orders={filteredOrders} onArchiveOrder={archiveOrder} />
+              <OrdersTable 
+                orders={filteredOrders} 
+                onArchiveOrder={archiveOrder}
+                onUpdateStatus={updateOrderStatus}
+              />
             )}
           </CardContent>
         </Card>
