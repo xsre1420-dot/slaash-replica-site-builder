@@ -42,5 +42,9 @@
   .card-gradient {
     @apply bg-gradient-to-br from-white to-secondary/10;
   }
+  
+  /* Add this class for RTL table headers */
+  .rtl th {
+    text-align: right;
+  }
 }
-

@@ -50,21 +50,21 @@ const OrdersSimpleTable = ({ orders, onArchiveOrder, onUpdateStatus }: OrdersSim
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead className="text-right">التاريخ</TableHead>
-            <TableHead className="text-right">المبلغ</TableHead>
-            <TableHead className="text-right">الحالة</TableHead>
-            <TableHead className="text-right">الإجراءات</TableHead>
+          <TableRow className="bg-gray-100">
+            <TableHead className="text-right font-bold text-gray-800 py-4 border-b-2 border-gray-200">التاريخ</TableHead>
+            <TableHead className="text-right font-bold text-gray-800 py-4 border-b-2 border-gray-200">المبلغ</TableHead>
+            <TableHead className="text-right font-bold text-gray-800 py-4 border-b-2 border-gray-200">الحالة</TableHead>
+            <TableHead className="text-right font-bold text-gray-800 py-4 border-b-2 border-gray-200">الإجراءات</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {orders.map((order) => (
-            <TableRow key={order.id} className={order.status === "cancelled" ? "opacity-50" : ""}>
-              <TableCell>
+            <TableRow key={order.id} className={order.status === "cancelled" ? "opacity-50 hover:bg-gray-50" : "hover:bg-gray-50"}>
+              <TableCell className="py-3 text-right">
                 {format(new Date(order.date), "yyyy-MM-dd HH:mm")}
               </TableCell>
-              <TableCell>{order.total.toLocaleString()} د.ع</TableCell>
-              <TableCell>
+              <TableCell className="py-3 text-right font-medium">{order.total.toLocaleString()} د.ع</TableCell>
+              <TableCell className="py-3 text-right">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="h-8 p-0">
@@ -102,8 +102,8 @@ const OrdersSimpleTable = ({ orders, onArchiveOrder, onUpdateStatus }: OrdersSim
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>
-              <TableCell>
-                <div className="flex gap-2">
+              <TableCell className="py-3 text-right">
+                <div className="flex gap-2 justify-end">
                   <Button
                     variant="outline"
                     size="sm"
