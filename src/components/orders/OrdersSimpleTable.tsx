@@ -1,7 +1,7 @@
 
 import { Order } from "@/types";
 import { Link } from "react-router-dom";
-import { Eye, Archive } from "lucide-react";
+import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -28,7 +28,7 @@ interface OrdersSimpleTableProps {
   onUpdateStatus: (orderId: string, status: "pending" | "completed" | "cancelled") => void;
 }
 
-const OrdersSimpleTable = ({ orders, onArchiveOrder, onUpdateStatus }: OrdersSimpleTableProps) => {
+const OrdersSimpleTable = ({ orders, onUpdateStatus }: OrdersSimpleTableProps) => {
   const { toast } = useToast();
   
   const handleStatusChange = (orderId: string, newStatus: "pending" | "completed" | "cancelled") => {
@@ -103,7 +103,7 @@ const OrdersSimpleTable = ({ orders, onArchiveOrder, onUpdateStatus }: OrdersSim
                 </DropdownMenu>
               </TableCell>
               <TableCell className="py-3 text-right">
-                <div className="flex gap-2 justify-end">
+                <div className="flex justify-end">
                   <Button
                     variant="outline"
                     size="sm"
@@ -113,15 +113,6 @@ const OrdersSimpleTable = ({ orders, onArchiveOrder, onUpdateStatus }: OrdersSim
                     <Link to={`/orders/${order.id}`}>
                       <Eye className="h-4 w-4" />
                     </Link>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 px-2"
-                    onClick={() => onArchiveOrder(order.id)}
-                    disabled={order.status === "cancelled"}
-                  >
-                    <Archive className="h-4 w-4" />
                   </Button>
                 </div>
               </TableCell>

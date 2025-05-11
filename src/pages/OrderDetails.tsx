@@ -190,7 +190,7 @@ const OrderDetails = () => {
             <div className="flex justify-between items-center">
               <div className="flex items-center">
                 <Calendar className="w-5 h-5 ml-2" />
-                <span>{format(new Date(order.date), "yyyy-MM-dd HH:mm")}</span>
+                <span>{format(new Date(order.date), "yyyy-MM-dd hh:mm a")}</span>
               </div>
               <div>
                 <CardTitle className="text-right flex items-center justify-end gap-2">
@@ -257,7 +257,7 @@ const OrderDetails = () => {
                         <img
                           src={item.product.image}
                           alt={item.product.name}
-                          className="w-12 h-12 rounded-md object-cover"
+                          className="w-16 h-16 rounded-lg object-cover border border-gray-200 shadow-sm"
                         />
                       </div>
                     </div>
