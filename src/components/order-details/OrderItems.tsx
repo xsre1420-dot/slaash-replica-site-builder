@@ -23,8 +23,8 @@ const OrderItems = ({ items }: OrderItemsProps) => {
                 </span>
               </div>
             </div>
-            <div className="flex items-center">
-              <div className="text-right ml-3">
+            <div className="flex items-center gap-4">
+              <div className="text-right">
                 <span className="block font-semibold">{item.product.name}</span>
                 <span className="text-gray-600 text-sm line-clamp-1">
                   {item.product.description}

@@ -61,7 +61,7 @@ const OrdersSimpleTable = ({ orders, onUpdateStatus }: OrdersSimpleTableProps) =
           {orders.map((order) => (
             <TableRow key={order.id} className={order.status === "cancelled" ? "opacity-50 hover:bg-gray-50" : "hover:bg-gray-50"}>
               <TableCell className="py-3 text-right">
-                {format(new Date(order.date), "yyyy-MM-dd HH:mm")}
+                {format(new Date(order.date), "yyyy-MM-dd hh:mm a")}
               </TableCell>
               <TableCell className="py-3 text-right font-medium">{order.total.toLocaleString()} د.ع</TableCell>
               <TableCell className="py-3 text-right">
