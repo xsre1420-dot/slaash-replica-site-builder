@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, ReactNode } from "react";
 import { CartItem, Product } from "@/types";
 import { useToast } from "@/hooks/use-toast";
@@ -27,28 +26,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       );
 
       if (existingItem) {
-        toast({
-          title: "تم تحديث السلة",
-          description: `تمت زيادة كمية ${product.name} في السلة`,
-          variant: "default",
-          className: "bg-green-50 border-green-200 text-green-800",
-        });
-        
-        // If it exists, increment the quantity
+        // If it exists, increment the quantity without notification
         return prevItems.map((item) =>
           item.product.id === product.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       } else {
-        toast({
-          title: "تمت الإضافة بنجاح",
-          description: `تم إضافة ${product.name} إلى السلة`,
-          variant: "default",
-          className: "bg-green-50 border-green-200 text-green-800",
-        });
-        
-        // If it's new, add it with quantity 1
+        // If it's new, add it with quantity 1 without notification
         return [...prevItems, { product, quantity: 1 }];
       }
     });

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Order } from "@/types";
 
 const Checkout = () => {
@@ -60,9 +60,10 @@ const Checkout = () => {
     const updatedOrders = [newOrder, ...existingOrders];
     localStorage.setItem('orders', JSON.stringify(updatedOrders));
     
+    // Show simple success notification
     toast({
-      title: "تم إرسال الطلب بنجاح",
-      description: "سنتواصل معك قريباً لتأكيد الطلب",
+      title: "تم الطلب بنجاح",
+      className: "bg-green-500 text-white border-green-600 mx-auto max-w-fit",
     });
     
     clearCart();

@@ -1,172 +1,193 @@
 
+import { useParams, Link } from "react-router-dom";
+import { ArrowRight, Plus, Minus, ShoppingCart } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import { X, ShoppingCart, ChevronRight, ChevronLeft } from "lucide-react";
-import { getProductById, categories } from "@/data/dummyData";
 import { Product } from "@/types";
-import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { useCart } from "@/context/CartContext";
+import { Card, CardContent } from "@/components/ui/card";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+
+// Placeholder data for testing
+const demoProducts: Product[] = [
+  {
+    id: "1",
+    name: "برجر لحم",
+    description: "برجر لحم طازج مع صلصة خاصة وخضروات",
+    price: 8000,
+    category: "برجر",
+    image: "/placeholder.svg",
+    images: ["/placeholder.svg", "/placeholder.svg"],
+    featured: true,
+  },
+  {
+    id: "2",
+    name: "فاهيتا دجاج",
+    description: "فاهيتا دجاج مشوي مع صوص خاص وخضروات",
+    price: 7000,
+    category: "ساندويش",
+    image: "/placeholder.svg",
+    featured: false,
+  },
+];
 
 const ProductDetails = () => {
   const { productId } = useParams<{ productId: string }>();
   const [product, setProduct] = useState<Product | null>(null);
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [quantity, setQuantity] = useState(1);
   const { addToCart } = useCart();
-  const navigate = useNavigate();
-  const { toast } = useToast();
 
   useEffect(() => {
-    if (productId) {
-      const foundProduct = getProductById(productId);
-      if (foundProduct) {
-        setProduct(foundProduct);
-      } else {
-        navigate('/preview');
+    // Fetch product from localStorage or use demo data
+    const storedProducts = localStorage.getItem("products");
+    let foundProduct: Product | undefined;
+
+    if (storedProducts) {
+      try {
+        const parsedProducts = JSON.parse(storedProducts);
+        foundProduct = parsedProducts.find((p: Product) => p.id === productId);
+      } catch (error) {
+        console.error("Error parsing products:", error);
       }
     }
-  }, [productId, navigate]);
 
-  const handleAddToCart = () => {
-    if (product) {
-      addToCart(product);
+    // If not found in localStorage, check demo products
+    if (!foundProduct) {
+      foundProduct = demoProducts.find((p) => p.id === productId);
     }
-  };
 
-  const nextImage = () => {
-    if (!product) return;
-    
-    const allImages = [
-      product.image,
-      ...(product.additionalImages || [])
-    ];
-    
-    setActiveImageIndex((prevIndex) => 
-      prevIndex === allImages.length - 1 ? 0 : prevIndex + 1
-    );
-  };
-
-  const prevImage = () => {
-    if (!product) return;
-    
-    const allImages = [
-      product.image,
-      ...(product.additionalImages || [])
-    ];
-    
-    setActiveImageIndex((prevIndex) => 
-      prevIndex === 0 ? allImages.length - 1 : prevIndex - 1
-    );
-  };
+    if (foundProduct) {
+      setProduct(foundProduct);
+    }
+  }, [productId]);
 
   if (!product) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center p-8">
-          <h2 className="text-xl font-bold text-gray-700 mb-2">جاري التحميل...</h2>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <p>جاري التحميل...</p>
       </div>
     );
   }
 
-  const allImages = [
-    product.image,
-    ...(product.additionalImages || [])
-  ];
+  const handleAddToCart = () => {
+    for (let i = 0; i < quantity; i++) {
+      addToCart(product);
+    }
+    setQuantity(1);
+  };
 
-  const categoryName = categories.find(c => c.id === product.category)?.name || product.category;
+  const handleIncrement = () => {
+    setQuantity((prev) => prev + 1);
+  };
+
+  const handleDecrement = () => {
+    if (quantity > 1) {
+      setQuantity((prev) => prev - 1);
+    }
+  };
+
+  const images = product.images || [product.image];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
-      <div className="bg-red-600 text-white p-4 flex justify-between items-center">
-        <Link to="/preview">
-          <X className="w-6 h-6" />
-        </Link>
-        <h1 className="text-xl font-bold">تفاصيل المنتج</h1>
-        <div className="w-6" />
+      <div className="bg-red-600 text-white p-4">
+        <div className="flex justify-between items-center">
+          <Link to="/preview">
+            <ArrowRight className="w-6 h-6" />
+          </Link>
+          <h1 className="text-xl font-bold">تفاصيل المنتج</h1>
+          <div className="w-6"></div>
+        </div>
       </div>
 
-      <div className="p-4">
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          {/* Product Images Carousel - Made smaller */}
-          <div className="relative bg-white">
-            <div className="aspect-square w-full max-h-80 relative">
-              <img
-                src={allImages[activeImageIndex]}
-                alt={product.name}
-                className="w-full h-full object-contain"
-              />
-              
-              {allImages.length > 1 && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/70 rounded-full h-8 w-8"
-                    onClick={prevImage}
-                  >
-                    <ChevronLeft className="h-6 w-6" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/70 rounded-full h-8 w-8"
-                    onClick={nextImage}
-                  >
-                    <ChevronRight className="h-6 w-6" />
-                  </Button>
-                </>
-              )}
-              
-              {/* Image Indicators */}
-              {allImages.length > 1 && (
-                <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
-                  {allImages.map((_, index) => (
-                    <button
-                      key={index}
-                      className={`w-2 h-2 rounded-full ${
-                        index === activeImageIndex ? "bg-red-600" : "bg-white/70"
-                      }`}
-                      onClick={() => setActiveImageIndex(index)}
-                    />
-                  ))}
+      {/* Main Content */}
+      <div className="max-w-xl mx-auto p-4">
+        <Card className="overflow-hidden">
+          <CardContent className="p-0">
+            {/* Product Images Carousel */}
+            <div className="relative w-full">
+              {images.length > 1 ? (
+                <Carousel className="w-full">
+                  <CarouselContent>
+                    {images.map((img, index) => (
+                      <CarouselItem key={index} className="relative">
+                        <div className="aspect-square w-full">
+                          <img
+                            src={img}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  <CarouselPrevious className="absolute left-2 top-1/2 -translate-y-1/2" />
+                  <CarouselNext className="absolute right-2 top-1/2 -translate-y-1/2" />
+                </Carousel>
+              ) : (
+                <div className="aspect-square w-full">
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Product Details - Improved layout */}
-          <div className="p-4 space-y-4">
-            <div className="flex justify-between items-start">
-              <div className="flex items-center">
-                <Badge className="bg-teal-100 text-teal-800 hover:bg-teal-100">
-                  {categoryName}
-                </Badge>
+            {/* Product Details */}
+            <div className="p-6 space-y-4">
+              <div className="flex justify-between items-start">
+                <span className="text-xl font-bold text-red-600">
+                  {product.price.toLocaleString()} د.ع
+                </span>
+                <h2 className="text-xl font-bold text-right">{product.name}</h2>
               </div>
-              <h1 className="text-2xl font-bold text-right">{product.name}</h1>
-            </div>
-            
-            <p className="text-red-600 text-xl font-bold text-right">{product.price.toLocaleString()} د.ع</p>
-            
-            {product.description && (
+
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-gray-700 text-right leading-relaxed">{product.description}</p>
+              </div>
+
               <div className="text-right">
-                <h2 className="text-lg font-bold mb-2">الوصف</h2>
-                <p className="text-gray-600">{product.description}</p>
+                <span className="inline-block bg-gray-100 text-gray-600 text-sm px-3 py-1 rounded-full">
+                  {product.category}
+                </span>
               </div>
-            )}
 
-            {/* Add to Cart Button */}
-            <Button 
-              className="w-full bg-red-600 hover:bg-red-700 py-6 text-lg"
-              onClick={handleAddToCart}
-            >
-              <ShoppingCart className="ml-2 h-5 w-5" />
-              أضف إلى السلة
-            </Button>
-          </div>
-        </div>
+              <div className="flex justify-between items-center border-t pt-4">
+                <Button 
+                  onClick={handleAddToCart} 
+                  className="bg-red-600 hover:bg-red-700 w-2/3 flex items-center justify-center gap-2"
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  إضافة للسلة
+                </Button>
+
+                <div className="flex items-center">
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="rounded-full" 
+                    onClick={handleIncrement}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                  <span className="mx-3 text-lg font-medium">{quantity}</span>
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="rounded-full" 
+                    onClick={handleDecrement} 
+                    disabled={quantity <= 1}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
