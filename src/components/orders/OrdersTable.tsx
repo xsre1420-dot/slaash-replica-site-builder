@@ -75,7 +75,12 @@ const OrdersTable = ({ orders, onArchiveOrder, onUpdateStatus }: OrdersTableProp
               <TableCell className="max-w-[150px] truncate">{order.customerInfo.address}</TableCell>
               <TableCell className="max-w-[150px] truncate">{formatItemsList(order.items)}</TableCell>
               <TableCell className="max-w-[150px] truncate">{order.customerInfo.notes || "-"}</TableCell>
-              <TableCell>{format(new Date(order.date), "yyyy-MM-dd HH:mm")}</TableCell>
+              <TableCell>
+                <div className="flex flex-col">
+                  <span className="font-medium">{format(new Date(order.date), "yyyy-MM-dd")}</span>
+                  <span className="text-sm text-gray-500">{format(new Date(order.date), "hh:mm a")}</span>
+                </div>
+              </TableCell>
               <TableCell>{order.total.toLocaleString()} د.ع</TableCell>
               <TableCell>
                 <DropdownMenu>

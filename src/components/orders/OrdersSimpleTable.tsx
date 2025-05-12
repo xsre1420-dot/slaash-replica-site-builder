@@ -51,6 +51,7 @@ const OrdersSimpleTable = ({ orders, onUpdateStatus }: OrdersSimpleTableProps) =
       <Table>
         <TableHeader>
           <TableRow className="bg-gray-100">
+            <TableHead className="text-right font-bold text-gray-800 py-4 border-b-2 border-gray-200">رقم الطلب</TableHead>
             <TableHead className="text-right font-bold text-gray-800 py-4 border-b-2 border-gray-200">التاريخ</TableHead>
             <TableHead className="text-right font-bold text-gray-800 py-4 border-b-2 border-gray-200">المبلغ</TableHead>
             <TableHead className="text-right font-bold text-gray-800 py-4 border-b-2 border-gray-200">الحالة</TableHead>
@@ -60,8 +61,12 @@ const OrdersSimpleTable = ({ orders, onUpdateStatus }: OrdersSimpleTableProps) =
         <TableBody>
           {orders.map((order) => (
             <TableRow key={order.id} className={order.status === "cancelled" ? "opacity-50 hover:bg-gray-50" : "hover:bg-gray-50"}>
+              <TableCell className="py-3 text-right font-medium">{order.id}</TableCell>
               <TableCell className="py-3 text-right">
-                {format(new Date(order.date), "yyyy-MM-dd hh:mm a")}
+                <div className="flex flex-col">
+                  <span className="font-medium">{format(new Date(order.date), "yyyy-MM-dd")}</span>
+                  <span className="text-sm text-gray-500">{format(new Date(order.date), "hh:mm a")}</span>
+                </div>
               </TableCell>
               <TableCell className="py-3 text-right font-medium">{order.total.toLocaleString()} د.ع</TableCell>
               <TableCell className="py-3 text-right">
