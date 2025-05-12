@@ -1,6 +1,6 @@
 
-import { X, ShoppingCart } from "lucide-react";
-import { Link } from "react-router-dom";
+import { X, ShoppingCart, ArrowRight } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { categories, getProductsByCategory } from "@/data/dummyData";
 import { Product } from "@/types";
@@ -14,6 +14,7 @@ const PreviewStore = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const { addToCart, cartCount } = useCart();
   const { storeName, storeLogo } = useStore();
+  const navigate = useNavigate();
 
   // This effect will run every time the component renders, ensuring we have the latest products
   useEffect(() => {
@@ -23,6 +24,11 @@ const PreviewStore = () => {
   // Handle adding a product to the cart
   const handleAddToCart = (product: Product) => {
     addToCart(product);
+  };
+
+  // Navigate to product details
+  const handleViewProduct = (productId: string) => {
+    navigate(`/product-details/${productId}`);
   };
 
   return (
@@ -80,22 +86,41 @@ const PreviewStore = () => {
           </div>
         ) : (
           products.map((product) => (
-            <div key={product.id} className="bg-white rounded-xl p-4 shadow-sm">
+            <div 
+              key={product.id} 
+              className="bg-white rounded-xl p-4 shadow-sm"
+              onClick={() => handleViewProduct(product.id)}
+            >
               <div className="flex justify-between items-start">
                 <div className="flex flex-col items-end text-right flex-1">
                   <h3 className="text-xl font-bold mb-1">{product.name}</h3>
-                  <p className="text-gray-600 text-sm mb-2">{product.description}</p>
+                  <p className="text-gray-600 text-sm mb-2 line-clamp-2">{product.description}</p>
                   <span className="text-red-600 font-bold">{product.price.toLocaleString()} د.ع</span>
                   <Badge className="mt-2 bg-teal-100 text-teal-800 hover:bg-teal-100">
                     {categories.find(c => c.id === product.category)?.name || product.category}
                   </Badge>
                   
-                  <Button 
-                    className="mt-4 bg-red-600 hover:bg-red-700"
-                    onClick={() => handleAddToCart(product)}
-                  >
-                    أضف إلى السلة
-                  </Button>
+                  <div className="flex gap-2 mt-4">
+                    <Button 
+                      className="bg-red-600 hover:bg-red-700"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddToCart(product);
+                      }}
+                    >
+                      أضف إلى السلة
+                    </Button>
+                    
+                    <Button 
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewProduct(product.id);
+                      }}
+                    >
+                      التفاصيل <ArrowRight className="mr-2 w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
                 <img
                   src={product.image}

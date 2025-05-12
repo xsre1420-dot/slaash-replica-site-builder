@@ -11,6 +11,7 @@ import AddProduct from "./pages/AddProduct";
 import EditProduct from "./pages/EditProduct";
 import NotFound from "./pages/NotFound";
 import PreviewStore from "./pages/PreviewStore";
+import ProductDetails from "./pages/ProductDetails";
 import Categories from "./pages/Categories";
 import Checkout from "./pages/Checkout";
 import Orders from "./pages/Orders";
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/add-product" element={<AddProduct />} />
               <Route path="/edit-product/:productId" element={<EditProduct />} />
               <Route path="/preview" element={<PreviewStore />} />
+              <Route path="/product-details/:productId" element={<ProductDetails />} />
               <Route path="/categories" element={<Categories />} />
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/orders" element={<Orders />} />
