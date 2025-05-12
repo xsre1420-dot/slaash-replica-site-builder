@@ -1,7 +1,7 @@
 
 import { createContext, useContext, useState, ReactNode } from "react";
 import { CartItem, Product } from "@/types";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface CartContextType {
   cartItems: CartItem[];
@@ -30,6 +30,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         toast({
           title: "تمت زيادة الكمية",
           description: `تمت إضافة ${product.name} إلى السلة`,
+          variant: "default",
         });
         
         // If it exists, increment the quantity
@@ -42,6 +43,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         toast({
           title: "تمت الإضافة إلى السلة",
           description: `تمت إضافة ${product.name} إلى السلة`,
+          variant: "default",
         });
         
         // If it's new, add it with quantity 1
@@ -51,9 +53,19 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const removeFromCart = (productId: string) => {
+    const product = cartItems.find(item => item.product.id === productId);
+    
     setCartItems((prevItems) => 
       prevItems.filter((item) => item.product.id !== productId)
     );
+
+    if (product) {
+      toast({
+        title: "تمت إزالة المنتج",
+        description: `تمت إزالة ${product.product.name} من السلة`,
+        variant: "default",
+      });
+    }
   };
 
   const updateQuantity = (productId: string, quantity: number) => {
@@ -62,15 +74,30 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    const product = cartItems.find(item => item.product.id === productId);
+
     setCartItems((prevItems) =>
       prevItems.map((item) =>
         item.product.id === productId ? { ...item, quantity } : item
       )
     );
+
+    if (product) {
+      toast({
+        title: "تم تحديث الكمية",
+        description: `تم تحديث كمية ${product.product.name} إلى ${quantity}`,
+        variant: "default",
+      });
+    }
   };
 
   const clearCart = () => {
     setCartItems([]);
+    toast({
+      title: "تم تفريغ السلة",
+      description: "تم إزالة جميع المنتجات من السلة",
+      variant: "default",
+    });
   };
 
   // Calculate the total price of all items in the cart

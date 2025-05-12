@@ -5,7 +5,8 @@ export interface Product {
   description: string;
   category: string;
   price: number;
-  image: string;
+  image: string; // صورة رئيسية
+  additionalImages?: string[]; // صور إضافية
 }
 
 export interface CartItem {

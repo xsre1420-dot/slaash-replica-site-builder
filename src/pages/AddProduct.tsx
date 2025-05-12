@@ -4,36 +4,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, ImagePlus } from "lucide-react";
+import { X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { categories, addProduct } from "@/data/dummyData";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Product } from "@/types";
+import ProductImagesManager from "@/components/ProductImagesManager";
 
 const AddProduct = () => {
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [mainImage, setMainImage] = useState<string | null>(null);
+  const [additionalImages, setAdditionalImages] = useState<string[]>([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [price, setPrice] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleChooseFile = () => {
-    fileInputRef.current?.click();
+  const handleImagesChange = (newMainImage: string | null, newAdditionalImages: string[]) => {
+    setMainImage(newMainImage);
+    setAdditionalImages(newAdditionalImages);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -67,6 +58,15 @@ const AddProduct = () => {
       return;
     }
 
+    if (!mainImage) {
+      toast({
+        title: "خطأ",
+        description: "يرجى إضافة صورة رئيسية للمنتج",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Create new product
     const newProduct: Product = {
       id: Date.now().toString(), // Generate a unique ID
@@ -74,7 +74,8 @@ const AddProduct = () => {
       description,
       category,
       price: Number(price),
-      image: imagePreview || "/lovable-uploads/59c215d6-809e-4764-90cd-41fd1213f286.png", // Default image if none selected
+      image: mainImage,
+      additionalImages: additionalImages,
     };
 
     // Add product to the list
@@ -105,52 +106,11 @@ const AddProduct = () => {
       <div className="max-w-xl mx-auto p-4">
         <form className="bg-white rounded-xl p-6 shadow-sm space-y-6" onSubmit={handleSubmit}>
           {/* Image Upload */}
-          <div className="space-y-2 text-right">
-            <Label className="block">صورة الوجبة</Label>
-            <input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              accept="image/*"
-              onChange={handleImageChange}
-            />
-            <div 
-              className={`border-2 border-dashed border-gray-200 rounded-lg p-4 text-center ${
-                imagePreview ? 'pt-0' : ''
-              }`}
-            >
-              {imagePreview ? (
-                <div className="space-y-4">
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="max-h-48 mx-auto rounded-lg"
-                  />
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={handleChooseFile}
-                    type="button"
-                  >
-                    تغيير الصورة
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={handleChooseFile}
-                    type="button"
-                  >
-                    <ImagePlus className="w-4 h-4 ml-2" />
-                    اختيار ملف
-                  </Button>
-                  <p className="mt-2 text-sm text-gray-500">لم يتم تحديد أي ملف</p>
-                </>
-              )}
-            </div>
-          </div>
+          <ProductImagesManager 
+            mainImage={mainImage}
+            additionalImages={additionalImages}
+            onImagesChange={handleImagesChange}
+          />
 
           {/* Name */}
           <div className="space-y-2 text-right">

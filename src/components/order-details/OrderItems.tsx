@@ -30,11 +30,13 @@ const OrderItems = ({ items }: OrderItemsProps) => {
                   {item.product.description}
                 </span>
               </div>
-              <img
-                src={item.product.image}
-                alt={item.product.name}
-                className="w-16 h-16 rounded-lg object-cover border border-gray-200 shadow-sm"
-              />
+              <div className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-white flex items-center justify-center">
+                <img
+                  src={item.product.image}
+                  alt={item.product.name}
+                  className="w-full h-full object-contain"
+                />
+              </div>
             </div>
           </div>
         ))}
