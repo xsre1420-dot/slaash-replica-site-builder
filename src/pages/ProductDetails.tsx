@@ -31,10 +31,6 @@ const ProductDetails = () => {
   const handleAddToCart = () => {
     if (product) {
       addToCart(product);
-      toast({
-        title: "تمت الإضافة بنجاح",
-        description: `تم إضافة ${product.name} إلى سلة المشتريات`,
-      });
     }
   };
 
@@ -92,80 +88,85 @@ const ProductDetails = () => {
         <div className="w-6" />
       </div>
 
-      {/* Product Images Carousel */}
-      <div className="relative bg-white">
-        <div className="aspect-square w-full relative">
-          <img
-            src={allImages[activeImageIndex]}
-            alt={product.name}
-            className="w-full h-full object-cover"
-          />
-          
-          {allImages.length > 1 && (
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/70 rounded-full h-8 w-8"
-                onClick={prevImage}
-              >
-                <ChevronLeft className="h-6 w-6" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/70 rounded-full h-8 w-8"
-                onClick={nextImage}
-              >
-                <ChevronRight className="h-6 w-6" />
-              </Button>
-            </>
-          )}
-          
-          {/* Image Indicators */}
-          {allImages.length > 1 && (
-            <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
-              {allImages.map((_, index) => (
-                <button
-                  key={index}
-                  className={`w-2 h-2 rounded-full ${
-                    index === activeImageIndex ? "bg-red-600" : "bg-white/70"
-                  }`}
-                  onClick={() => setActiveImageIndex(index)}
-                />
-              ))}
+      <div className="p-4">
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          {/* Product Images Carousel - Made smaller */}
+          <div className="relative bg-white">
+            <div className="aspect-square w-full max-h-80 relative">
+              <img
+                src={allImages[activeImageIndex]}
+                alt={product.name}
+                className="w-full h-full object-contain"
+              />
+              
+              {allImages.length > 1 && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/70 rounded-full h-8 w-8"
+                    onClick={prevImage}
+                  >
+                    <ChevronLeft className="h-6 w-6" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/70 rounded-full h-8 w-8"
+                    onClick={nextImage}
+                  >
+                    <ChevronRight className="h-6 w-6" />
+                  </Button>
+                </>
+              )}
+              
+              {/* Image Indicators */}
+              {allImages.length > 1 && (
+                <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
+                  {allImages.map((_, index) => (
+                    <button
+                      key={index}
+                      className={`w-2 h-2 rounded-full ${
+                        index === activeImageIndex ? "bg-red-600" : "bg-white/70"
+                      }`}
+                      onClick={() => setActiveImageIndex(index)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Product Details */}
-      <div className="p-4 space-y-6">
-        <div className="text-right">
-          <h1 className="text-2xl font-bold mb-1">{product.name}</h1>
-          <div className="flex justify-end mb-2">
-            <Badge className="bg-teal-100 text-teal-800 hover:bg-teal-100">
-              {categoryName}
-            </Badge>
           </div>
-          <p className="text-red-600 text-xl font-bold">{product.price.toLocaleString()} د.ع</p>
-        </div>
 
-        {product.description && (
-          <div className="text-right">
-            <h2 className="text-lg font-bold mb-2">الوصف</h2>
-            <p className="text-gray-600">{product.description}</p>
+          {/* Product Details - Improved layout */}
+          <div className="p-4 space-y-4">
+            <div className="flex justify-between items-start">
+              <div className="flex items-center">
+                <Badge className="bg-teal-100 text-teal-800 hover:bg-teal-100">
+                  {categoryName}
+                </Badge>
+              </div>
+              <h1 className="text-2xl font-bold text-right">{product.name}</h1>
+            </div>
+            
+            <p className="text-red-600 text-xl font-bold text-right">{product.price.toLocaleString()} د.ع</p>
+            
+            {product.description && (
+              <div className="text-right">
+                <h2 className="text-lg font-bold mb-2">الوصف</h2>
+                <p className="text-gray-600">{product.description}</p>
+              </div>
+            )}
+
+            {/* Add to Cart Button */}
+            <Button 
+              className="w-full bg-red-600 hover:bg-red-700 py-6 text-lg"
+              onClick={handleAddToCart}
+            >
+              <ShoppingCart className="ml-2 h-5 w-5" />
+              أضف إلى السلة
+            </Button>
           </div>
-        )}
-
-        {/* Add to Cart Button */}
-        <Button 
-          className="w-full bg-red-600 hover:bg-red-700 py-6 text-lg"
-          onClick={handleAddToCart}
-        >
-          <ShoppingCart className="ml-2 h-5 w-5" />
-          أضف إلى السلة
-        </Button>
+        </div>
       </div>
     </div>
   );

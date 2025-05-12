@@ -28,9 +28,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
       if (existingItem) {
         toast({
-          title: "تمت زيادة الكمية",
-          description: `تمت إضافة ${product.name} إلى السلة`,
+          title: "تم تحديث السلة",
+          description: `تمت زيادة كمية ${product.name} في السلة`,
           variant: "default",
+          className: "bg-green-50 border-green-200 text-green-800",
         });
         
         // If it exists, increment the quantity
@@ -41,9 +42,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         );
       } else {
         toast({
-          title: "تمت الإضافة إلى السلة",
-          description: `تمت إضافة ${product.name} إلى السلة`,
+          title: "تمت الإضافة بنجاح",
+          description: `تم إضافة ${product.name} إلى السلة`,
           variant: "default",
+          className: "bg-green-50 border-green-200 text-green-800",
         });
         
         // If it's new, add it with quantity 1
@@ -61,9 +63,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
     if (product) {
       toast({
-        title: "تمت إزالة المنتج",
-        description: `تمت إزالة ${product.product.name} من السلة`,
+        title: "تمت الإزالة",
+        description: `تم إزالة ${product.product.name} من السلة`,
         variant: "default",
+        className: "bg-red-50 border-red-200 text-red-800",
       });
     }
   };
@@ -87,6 +90,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         title: "تم تحديث الكمية",
         description: `تم تحديث كمية ${product.product.name} إلى ${quantity}`,
         variant: "default",
+        className: "bg-blue-50 border-blue-200 text-blue-800",
       });
     }
   };
@@ -97,6 +101,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       title: "تم تفريغ السلة",
       description: "تم إزالة جميع المنتجات من السلة",
       variant: "default",
+      className: "bg-amber-50 border-amber-200 text-amber-800",
     });
   };
 

@@ -1,5 +1,5 @@
 
-import { X, ShoppingCart, ArrowRight } from "lucide-react";
+import { X, ShoppingCart } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { categories, getProductsByCategory } from "@/data/dummyData";
@@ -118,7 +118,7 @@ const PreviewStore = () => {
                         handleViewProduct(product.id);
                       }}
                     >
-                      التفاصيل <ArrowRight className="mr-2 w-4 h-4" />
+                      التفاصيل
                     </Button>
                   </div>
                 </div>
