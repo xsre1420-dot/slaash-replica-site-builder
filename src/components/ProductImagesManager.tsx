@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { ImagePlus, X, CheckCircle, ArrowUp, ArrowDown } from "lucide-react";
@@ -18,7 +18,7 @@ const ProductImagesManager = ({
   onImagesChange,
 }: ProductImagesManagerProps) => {
   const [selectedMainIndex, setSelectedMainIndex] = useState<number | null>(null);
-  const fileInputRef = useState<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const allImages = [
@@ -138,7 +138,7 @@ const ProductImagesManager = ({
         <Label className="block">صور المنتج</Label>
         <input
           type="file"
-          ref={(el) => fileInputRef.current = el}
+          ref={fileInputRef}
           className="hidden"
           accept="image/*"
           onChange={handleImageUpload}
