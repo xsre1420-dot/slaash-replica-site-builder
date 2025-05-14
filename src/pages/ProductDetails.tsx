@@ -8,6 +8,7 @@ import { useCart } from "@/context/CartContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { useToast } from "@/components/ui/use-toast";
 
 // Placeholder data for testing
 const demoProducts: Product[] = [
@@ -35,6 +36,7 @@ const ProductDetails = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
   const { addToCart } = useCart();
+  const { toast } = useToast();
 
   useEffect(() => {
     // Fetch product from localStorage or use demo data
