@@ -167,12 +167,7 @@ function toast({ ...props }: Toast) {
   }
 }
 
-// Add document click handler to dismiss all toasts
-if (typeof window !== 'undefined') {
-  document.addEventListener('click', () => {
-    dispatch({ type: "DISMISS_TOAST" })
-  })
-}
+// Document click handler has been removed to prevent auto-dismissal
 
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState)

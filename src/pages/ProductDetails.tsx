@@ -8,7 +8,6 @@ import { useCart } from "@/context/CartContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { useToast } from "@/hooks/use-toast";
 
 // Placeholder data for testing
 const demoProducts: Product[] = [
@@ -36,7 +35,6 @@ const ProductDetails = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
   const { addToCart, cartCount } = useCart();
-  const { toast } = useToast();
 
   useEffect(() => {
     // Fetch product from localStorage or use demo data
@@ -75,14 +73,7 @@ const ProductDetails = () => {
       addToCart(product);
     }
     setQuantity(1);
-    
-    // Show success toast when product is added
-    toast({
-      title: "تم الإضافة بنجاح",
-      description: `تمت إضافة ${product.name} إلى السلة`,
-      variant: "default",
-      className: "bg-green-50 border-green-200 text-green-800",
-    });
+    // Toast notification has been removed
   };
 
   const handleIncrement = () => {
