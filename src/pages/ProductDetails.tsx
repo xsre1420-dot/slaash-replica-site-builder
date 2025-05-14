@@ -8,7 +8,7 @@ import { useCart } from "@/context/CartContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 // Placeholder data for testing
 const demoProducts: Product[] = [
@@ -35,7 +35,7 @@ const ProductDetails = () => {
   const { productId } = useParams<{ productId: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
-  const { addToCart } = useCart();
+  const { addToCart, cartCount } = useCart();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -75,6 +75,14 @@ const ProductDetails = () => {
       addToCart(product);
     }
     setQuantity(1);
+    
+    // Show success toast when product is added
+    toast({
+      title: "تم الإضافة بنجاح",
+      description: `تمت إضافة ${product.name} إلى السلة`,
+      variant: "default",
+      className: "bg-green-50 border-green-200 text-green-800",
+    });
   };
 
   const handleIncrement = () => {
@@ -103,18 +111,18 @@ const ProductDetails = () => {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-xl mx-auto p-4">
-        <Card className="overflow-hidden shadow-lg border-0">
+      {/* Main Content - Full Width */}
+      <div className="w-full mx-auto">
+        <Card className="overflow-hidden border-0 rounded-none">
           <CardContent className="p-0">
-            {/* Product Images Carousel */}
+            {/* Product Images Carousel - Full Width */}
             <div className="w-full">
               {allImages.length > 1 ? (
                 <Carousel className="w-full">
                   <CarouselContent>
                     {allImages.map((img, index) => (
                       <CarouselItem key={index} className="relative">
-                        <AspectRatio ratio={1/1} className="bg-gray-100">
+                        <AspectRatio ratio={16/9} className="bg-gray-100">
                           <img
                             src={img}
                             alt={product.name}
@@ -128,7 +136,7 @@ const ProductDetails = () => {
                   <CarouselNext className="absolute right-2 top-1/2 -translate-y-1/2" />
                 </Carousel>
               ) : (
-                <AspectRatio ratio={1/1} className="bg-gray-100">
+                <AspectRatio ratio={16/9} className="bg-gray-100">
                   <img
                     src={product.image}
                     alt={product.name}
@@ -190,6 +198,20 @@ const ProductDetails = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Fixed Cart Button */}
+      <div className="fixed bottom-8 left-8">
+        <Link to="/checkout">
+          <button className="bg-red-600 text-white p-4 rounded-full shadow-lg relative">
+            <ShoppingCart className="w-6 h-6" />
+            {cartCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-white text-red-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
+                {cartCount}
+              </span>
+            )}
+          </button>
+        </Link>
       </div>
     </div>
   );
