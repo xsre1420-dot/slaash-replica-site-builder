@@ -17,8 +17,7 @@ const demoProducts: Product[] = [
     price: 8000,
     category: "برجر",
     image: "/placeholder.svg",
-    images: ["/placeholder.svg", "/placeholder.svg"],
-    featured: true,
+    additionalImages: ["/placeholder.svg", "/placeholder.svg"]
   },
   {
     id: "2",
@@ -26,8 +25,7 @@ const demoProducts: Product[] = [
     description: "فاهيتا دجاج مشوي مع صوص خاص وخضروات",
     price: 7000,
     category: "ساندويش",
-    image: "/placeholder.svg",
-    featured: false,
+    image: "/placeholder.svg"
   },
 ];
 
@@ -86,7 +84,8 @@ const ProductDetails = () => {
     }
   };
 
-  const images = product.images || [product.image];
+  // Get all available images (main image + any additional images)
+  const allImages = product.additionalImages ? [product.image, ...product.additionalImages] : [product.image];
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -107,10 +106,10 @@ const ProductDetails = () => {
           <CardContent className="p-0">
             {/* Product Images Carousel */}
             <div className="relative w-full">
-              {images.length > 1 ? (
+              {allImages.length > 1 ? (
                 <Carousel className="w-full">
                   <CarouselContent>
-                    {images.map((img, index) => (
+                    {allImages.map((img, index) => (
                       <CarouselItem key={index} className="relative">
                         <div className="aspect-square w-full">
                           <img
