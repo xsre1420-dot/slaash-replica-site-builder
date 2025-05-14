@@ -6,6 +6,7 @@ import { Product } from "@/types";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
 import { Card, CardContent } from "@/components/ui/card";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
 // Placeholder data for testing
@@ -88,9 +89,9 @@ const ProductDetails = () => {
   const allImages = product.additionalImages ? [product.image, ...product.additionalImages] : [product.image];
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-red-600 text-white p-4">
+      <div className="bg-red-600 text-white p-4 sticky top-0 z-10 shadow-md">
         <div className="flex justify-between items-center">
           <Link to="/preview">
             <ArrowRight className="w-6 h-6" />
@@ -102,22 +103,22 @@ const ProductDetails = () => {
 
       {/* Main Content */}
       <div className="max-w-xl mx-auto p-4">
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden shadow-lg border-0">
           <CardContent className="p-0">
             {/* Product Images Carousel */}
-            <div className="relative w-full">
+            <div className="w-full">
               {allImages.length > 1 ? (
                 <Carousel className="w-full">
                   <CarouselContent>
                     {allImages.map((img, index) => (
                       <CarouselItem key={index} className="relative">
-                        <div className="aspect-square w-full">
+                        <AspectRatio ratio={1/1} className="bg-gray-100">
                           <img
                             src={img}
                             alt={product.name}
                             className="w-full h-full object-cover"
                           />
-                        </div>
+                        </AspectRatio>
                       </CarouselItem>
                     ))}
                   </CarouselContent>
@@ -125,27 +126,27 @@ const ProductDetails = () => {
                   <CarouselNext className="absolute right-2 top-1/2 -translate-y-1/2" />
                 </Carousel>
               ) : (
-                <div className="aspect-square w-full">
+                <AspectRatio ratio={1/1} className="bg-gray-100">
                   <img
                     src={product.image}
                     alt={product.name}
                     className="w-full h-full object-cover"
                   />
-                </div>
+                </AspectRatio>
               )}
             </div>
 
             {/* Product Details */}
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-5">
               <div className="flex justify-between items-start">
-                <span className="text-xl font-bold text-red-600">
+                <span className="text-2xl font-bold text-red-600">
                   {product.price.toLocaleString()} د.ع
                 </span>
-                <h2 className="text-xl font-bold text-right">{product.name}</h2>
+                <h2 className="text-2xl font-bold text-right">{product.name}</h2>
               </div>
 
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <p className="text-gray-700 text-right leading-relaxed">{product.description}</p>
+              <div className="bg-gray-50 p-4 rounded-lg shadow-inner">
+                <p className="text-gray-700 text-right leading-relaxed text-lg">{product.description}</p>
               </div>
 
               <div className="text-right">
@@ -154,33 +155,33 @@ const ProductDetails = () => {
                 </span>
               </div>
 
-              <div className="flex justify-between items-center border-t pt-4">
+              <div className="flex justify-between items-center border-t pt-5">
                 <Button 
                   onClick={handleAddToCart} 
-                  className="bg-red-600 hover:bg-red-700 w-2/3 flex items-center justify-center gap-2"
+                  className="bg-red-600 hover:bg-red-700 w-2/3 flex items-center justify-center gap-2 h-12 text-base"
                 >
                   <ShoppingCart className="h-5 w-5" />
                   إضافة للسلة
                 </Button>
 
-                <div className="flex items-center">
+                <div className="flex items-center border rounded-full overflow-hidden">
                   <Button 
-                    variant="outline" 
+                    variant="ghost" 
                     size="icon" 
-                    className="rounded-full" 
+                    className="rounded-full h-10 w-10" 
                     onClick={handleIncrement}
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-5 w-5" />
                   </Button>
-                  <span className="mx-3 text-lg font-medium">{quantity}</span>
+                  <span className="mx-4 text-lg font-medium">{quantity}</span>
                   <Button 
-                    variant="outline" 
+                    variant="ghost" 
                     size="icon" 
-                    className="rounded-full" 
+                    className="rounded-full h-10 w-10" 
                     onClick={handleDecrement} 
                     disabled={quantity <= 1}
                   >
-                    <Minus className="h-4 w-4" />
+                    <Minus className="h-5 w-5" />
                   </Button>
                 </div>
               </div>
