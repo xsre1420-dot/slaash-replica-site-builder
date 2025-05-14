@@ -1,34 +1,18 @@
 
-import { useParams, Link } from "react-router-dom";
-import { ArrowRight, Plus, Minus, ShoppingCart } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+import { useState } from "react";
 import { Product } from "@/types";
-import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
 import { Card, CardContent } from "@/components/ui/card";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
-// Placeholder data for testing
-const demoProducts: Product[] = [
-  {
-    id: "1",
-    name: "برجر لحم",
-    description: "برجر لحم طازج مع صلصة خاصة وخضروات",
-    price: 8000,
-    category: "برجر",
-    image: "/placeholder.svg",
-    additionalImages: ["/placeholder.svg", "/placeholder.svg"]
-  },
-  {
-    id: "2",
-    name: "فاهيتا دجاج",
-    description: "فاهيتا دجاج مشوي مع صوص خاص وخضروات",
-    price: 7000,
-    category: "ساندويش",
-    image: "/placeholder.svg"
-  },
-];
+// Import the new smaller components
+import ProductHeader from "@/components/product-details/ProductHeader";
+import ProductImages from "@/components/product-details/ProductImages";
+import ProductInfo from "@/components/product-details/ProductInfo";
+import ProductQuantity from "@/components/product-details/ProductQuantity";
+import AddToCartButton from "@/components/product-details/AddToCartButton";
+import CartButton from "@/components/product-details/CartButton";
+import ProductData from "@/components/product-details/ProductData";
 
 const ProductDetails = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -36,44 +20,13 @@ const ProductDetails = () => {
   const [quantity, setQuantity] = useState(1);
   const { addToCart, cartCount } = useCart();
 
-  useEffect(() => {
-    // Fetch product from localStorage or use demo data
-    const storedProducts = localStorage.getItem("products");
-    let foundProduct: Product | undefined;
-
-    if (storedProducts) {
-      try {
-        const parsedProducts = JSON.parse(storedProducts);
-        foundProduct = parsedProducts.find((p: Product) => p.id === productId);
-      } catch (error) {
-        console.error("Error parsing products:", error);
-      }
-    }
-
-    // If not found in localStorage, check demo products
-    if (!foundProduct) {
-      foundProduct = demoProducts.find((p) => p.id === productId);
-    }
-
-    if (foundProduct) {
-      setProduct(foundProduct);
-    }
-  }, [productId]);
-
-  if (!product) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>جاري التحميل...</p>
-      </div>
-    );
-  }
-
   const handleAddToCart = () => {
-    for (let i = 0; i < quantity; i++) {
-      addToCart(product);
+    if (product) {
+      for (let i = 0; i < quantity; i++) {
+        addToCart(product);
+      }
+      setQuantity(1);
     }
-    setQuantity(1);
-    // Toast notification has been removed
   };
 
   const handleIncrement = () => {
@@ -86,124 +39,54 @@ const ProductDetails = () => {
     }
   };
 
+  if (!product) {
+    return (
+      <>
+        <ProductData productId={productId} onProductLoaded={setProduct} />
+        <div className="min-h-screen flex items-center justify-center">
+          <p>جاري التحميل...</p>
+        </div>
+      </>
+    );
+  }
+
   // Get all available images (main image + any additional images)
   const allImages = product.additionalImages ? [product.image, ...product.additionalImages] : [product.image];
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-red-600 text-white p-4 sticky top-0 z-10 shadow-md">
-        <div className="flex justify-between items-center">
-          <Link to="/preview">
-            <ArrowRight className="w-6 h-6" />
-          </Link>
-          <h1 className="text-xl font-bold">تفاصيل المنتج</h1>
-          <div className="w-6"></div>
-        </div>
-      </div>
+      <ProductData productId={productId} onProductLoaded={setProduct} />
+      <ProductHeader />
 
       {/* Main Content - Full Width */}
       <div className="w-full mx-auto">
         <Card className="overflow-hidden border-0 rounded-none">
           <CardContent className="p-0">
-            {/* Product Images Carousel - Full Width */}
-            <div className="w-full">
-              {allImages.length > 1 ? (
-                <Carousel className="w-full">
-                  <CarouselContent>
-                    {allImages.map((img, index) => (
-                      <CarouselItem key={index} className="relative">
-                        <AspectRatio ratio={16/9} className="bg-gray-100">
-                          <img
-                            src={img}
-                            alt={product.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </AspectRatio>
-                      </CarouselItem>
-                    ))}
-                  </CarouselContent>
-                  <CarouselPrevious className="absolute left-2 top-1/2 -translate-y-1/2" />
-                  <CarouselNext className="absolute right-2 top-1/2 -translate-y-1/2" />
-                </Carousel>
-              ) : (
-                <AspectRatio ratio={16/9} className="bg-gray-100">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-full object-cover"
-                  />
-                </AspectRatio>
-              )}
-            </div>
+            <ProductImages images={allImages} productName={product.name} />
 
             {/* Product Details */}
             <div className="p-6 space-y-5">
-              <div className="flex justify-between items-start">
-                <span className="text-2xl font-bold text-red-600">
-                  {product.price.toLocaleString()} د.ع
-                </span>
-                <h2 className="text-2xl font-bold text-right">{product.name}</h2>
-              </div>
-
-              <div className="bg-gray-50 p-4 rounded-lg shadow-inner">
-                <p className="text-gray-700 text-right leading-relaxed text-lg">{product.description}</p>
-              </div>
-
-              <div className="text-right">
-                <span className="inline-block bg-gray-100 text-gray-600 text-sm px-3 py-1 rounded-full">
-                  {product.category}
-                </span>
-              </div>
+              <ProductInfo 
+                name={product.name}
+                price={product.price}
+                description={product.description}
+                category={product.category}
+              />
 
               <div className="flex justify-between items-center border-t pt-5">
-                <Button 
-                  onClick={handleAddToCart} 
-                  className="bg-red-600 hover:bg-red-700 w-2/3 flex items-center justify-center gap-2 h-12 text-base"
-                >
-                  <ShoppingCart className="h-5 w-5" />
-                  إضافة للسلة
-                </Button>
-
-                <div className="flex items-center border rounded-full overflow-hidden">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="rounded-full h-10 w-10" 
-                    onClick={handleIncrement}
-                  >
-                    <Plus className="h-5 w-5" />
-                  </Button>
-                  <span className="mx-4 text-lg font-medium">{quantity}</span>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="rounded-full h-10 w-10" 
-                    onClick={handleDecrement} 
-                    disabled={quantity <= 1}
-                  >
-                    <Minus className="h-5 w-5" />
-                  </Button>
-                </div>
+                <AddToCartButton onClick={handleAddToCart} />
+                <ProductQuantity 
+                  quantity={quantity}
+                  onIncrement={handleIncrement}
+                  onDecrement={handleDecrement}
+                />
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Fixed Cart Button */}
-      <div className="fixed bottom-8 left-8">
-        <Link to="/checkout">
-          <button className="bg-red-600 text-white p-4 rounded-full shadow-lg relative">
-            <ShoppingCart className="w-6 h-6" />
-            {cartCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-white text-red-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
-                {cartCount}
-              </span>
-            )}
-          </button>
-        </Link>
-      </div>
+      <CartButton cartCount={cartCount} />
     </div>
   );
 };
