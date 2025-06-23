@@ -19,12 +19,6 @@ const ProductInfo = ({ name, price, description, category }: ProductInfoProps) =
       <div className="bg-gray-50 p-4 rounded-lg shadow-inner">
         <p className="text-gray-700 text-right leading-relaxed text-lg">{description}</p>
       </div>
-
-      <div className="text-right">
-        <span className="inline-block bg-gray-100 text-gray-600 text-sm px-3 py-1 rounded-full">
-          {category}
-        </span>
-      </div>
     </div>
   );
 };
