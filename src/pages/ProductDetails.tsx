@@ -3,7 +3,6 @@ import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { Product } from "@/types";
 import { useCart } from "@/context/CartContext";
-import { Card, CardContent } from "@/components/ui/card";
 
 // Import the new smaller components
 import ProductHeader from "@/components/product-details/ProductHeader";
@@ -54,36 +53,40 @@ const ProductDetails = () => {
   const allImages = product.additionalImages ? [product.image, ...product.additionalImages] : [product.image];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <ProductData productId={productId} onProductLoaded={setProduct} />
       <ProductHeader />
 
-      {/* Main Content - Full Width */}
-      <div className="w-full mx-auto">
-        <Card className="overflow-hidden border-0 rounded-none">
-          <CardContent className="p-0">
-            <ProductImages images={allImages} productName={product.name} />
+      {/* Main Content - Full Width and Height */}
+      <div className="flex-1 flex flex-col">
+        {/* Large Product Images - Takes more space */}
+        <div className="bg-white">
+          <ProductImages images={allImages} productName={product.name} isLarge={true} />
+        </div>
 
-            {/* Product Details */}
-            <div className="p-6 space-y-5">
-              <ProductInfo 
-                name={product.name}
-                price={product.price}
-                description={product.description}
-                category={product.category}
-              />
+        {/* Product Details - Scrollable */}
+        <div className="flex-1 bg-white p-6 space-y-5">
+          <ProductInfo 
+            name={product.name}
+            price={product.price}
+            description={product.description}
+            category={product.category}
+          />
 
-              <div className="flex justify-between items-center border-t pt-5">
-                <AddToCartButton onClick={handleAddToCart} />
-                <ProductQuantity 
-                  quantity={quantity}
-                  onIncrement={handleIncrement}
-                  onDecrement={handleDecrement}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          {/* Quantity Selector */}
+          <div className="flex justify-center">
+            <ProductQuantity 
+              quantity={quantity}
+              onIncrement={handleIncrement}
+              onDecrement={handleDecrement}
+            />
+          </div>
+        </div>
+
+        {/* Fixed Bottom Add to Cart Button */}
+        <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 shadow-lg">
+          <AddToCartButton onClick={handleAddToCart} />
+        </div>
       </div>
 
       <CartButton cartCount={cartCount} />
