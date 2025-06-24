@@ -53,7 +53,7 @@ const ProductDetails = () => {
   const allImages = product.additionalImages ? [product.image, ...product.additionalImages] : [product.image];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col pb-20">
       <ProductData productId={productId} onProductLoaded={setProduct} />
       <ProductHeader />
 
@@ -81,11 +81,11 @@ const ProductDetails = () => {
               onDecrement={handleDecrement}
             />
           </div>
-        </div>
 
-        {/* Fixed Bottom Add to Cart Button */}
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 shadow-lg">
-          <AddToCartButton onClick={handleAddToCart} />
+          {/* Add to Cart Button - Above Cart */}
+          <div className="pt-4">
+            <AddToCartButton onClick={handleAddToCart} />
+          </div>
         </div>
       </div>
 
