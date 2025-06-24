@@ -1,4 +1,3 @@
-
 import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { Product } from "@/types";
@@ -21,9 +20,8 @@ const ProductDetails = () => {
 
   const handleAddToCart = () => {
     if (product) {
-      for (let i = 0; i < quantity; i++) {
-        addToCart(product);
-      }
+      // Add only one item at a time regardless of quantity selected
+      addToCart(product);
       setQuantity(1);
     }
   };
