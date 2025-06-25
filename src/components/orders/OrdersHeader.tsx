@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 
 const OrdersHeader = () => {
   return (
-    <div className="bg-red-600 text-white p-4">
+    <div className="bg-primary text-white p-4">
       <div className="flex justify-between items-center">
         <Link to="/builder">
           <ArrowLeft className="w-6 h-6" />

@@ -94,7 +94,7 @@ const AddProduct = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-red-600 text-white p-4 flex justify-between items-center">
+      <div className="bg-primary text-white p-4 flex justify-between items-center">
         <Link to="/builder">
           <X className="w-6 h-6" />
         </Link>
@@ -164,7 +164,7 @@ const AddProduct = () => {
           </div>
 
           {/* Submit Button */}
-          <Button type="submit" className="w-full bg-red-600 hover:bg-red-700">
+          <Button type="submit" className="w-full bg-primary hover:bg-primary/90">
             إضافة الوجبة +
           </Button>
         </form>

@@ -23,7 +23,7 @@ export default function Builder() {
       <div className="p-8 max-w-6xl mx-auto">
         <div className="bg-white rounded-xl p-6 shadow-sm mb-8">
           <div className="text-center mb-6">
-            <h2 className="text-xl font-bold text-red-600 mb-2">رابط المطعم</h2>
+            <h2 className="text-xl font-bold text-primary mb-2">رابط المطعم</h2>
             <p className="text-gray-500">مشاركة الرابط مع الزبائن</p>
           </div>
           
@@ -46,7 +46,7 @@ export default function Builder() {
               </Button>
             </Link>
             <Link to="/add-product">
-              <Button className="w-full bg-red-600 hover:bg-red-700 flex items-center justify-center gap-2 py-6">
+              <Button className="w-full bg-primary hover:bg-primary/90 flex items-center justify-center gap-2 py-6">
                 <Plus className="w-5 h-5 ml-2" />
                 إضافة وجبة
               </Button>
@@ -70,7 +70,7 @@ export default function Builder() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>المنتجات</CardTitle>
-              <Link to="/add-product" className="text-red-600 hover:underline text-sm flex items-center">
+              <Link to="/add-product" className="text-primary hover:underline text-sm flex items-center">
                 <Plus className="w-4 h-4 ml-1" />
                 إضافة منتج جديد
               </Link>

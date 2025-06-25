@@ -37,7 +37,7 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <header className="bg-red-600 text-white py-4 px-6 text-center">
+      <header className="bg-primary text-white py-4 px-6 text-center">
         <h1 className="text-xl font-bold flex items-center justify-center">
           نظام إدارة المطعم <span className="mx-2">🍽️</span>
         </h1>
@@ -46,9 +46,9 @@ const Login = () => {
       <div className="flex-1 flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-md bg-white rounded-lg shadow-md overflow-hidden">
           {/* Login Header */}
-          <div className="bg-red-600 text-white p-6 text-right">
+          <div className="bg-primary text-white p-6 text-right">
             <h2 className="text-2xl font-bold mb-1">تسجيل الدخول</h2>
-            <p className="text-sm text-red-100">أدخل بيانات الدخول لإدارة مطعمك</p>
+            <p className="text-sm text-primary-foreground opacity-90">أدخل بيانات الدخول لإدارة مطعمك</p>
           </div>
 
           <form onSubmit={handleLogin} className="p-6">
@@ -114,7 +114,7 @@ const Login = () => {
             {/* Login Button */}
             <Button 
               type="submit" 
-              className="w-full bg-red-600 hover:bg-red-700 text-white py-3 text-lg"
+              className="w-full bg-primary hover:bg-primary/90 text-white py-3 text-lg"
             >
               <span className="ml-2">تسجيل الدخول</span>
               <ArrowRight className="h-5 w-5 transform rotate-180" />
@@ -122,7 +122,7 @@ const Login = () => {
 
             {/* Forgot Password */}
             <div className="text-center mt-4">
-              <Link to="/forgot-password" className="text-red-600 hover:underline text-sm">
+              <Link to="/forgot-password" className="text-primary hover:underline text-sm">
                 نسيت كلمة المرور؟
               </Link>
             </div>

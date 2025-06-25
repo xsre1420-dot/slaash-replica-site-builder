@@ -7,7 +7,7 @@ const Index = () => {
   const { storeName } = useStore();
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-red-900 to-red-800 flex flex-col items-center justify-between p-8 text-white">
+    <div className="min-h-screen bg-gradient-to-b from-primary to-secondary flex flex-col items-center justify-between p-8 text-white">
       <div className="flex-1 flex flex-col items-center justify-center w-full">
         {/* Logo */}
         <div className="mb-10 flex flex-col items-center">
@@ -23,7 +23,7 @@ const Index = () => {
         
         {/* Login Button */}
         <Link to="/login" className="w-full max-w-md">
-          <button className="w-full bg-white text-black rounded-full py-5 px-8 flex items-center justify-center text-xl font-bold">
+          <button className="w-full bg-white text-primary rounded-full py-5 px-8 flex items-center justify-center text-xl font-bold">
             <span className="ml-2">سجل الدخول</span>
             <ArrowRight className="h-5 w-5" />
           </button>
