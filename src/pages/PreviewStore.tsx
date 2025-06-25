@@ -1,5 +1,5 @@
 
-import { X, ShoppingCart } from "lucide-react";
+import { X, ShoppingCart, Plus, Trash2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { categories, getProductsByCategory } from "@/data/dummyData";
@@ -12,6 +12,10 @@ import { Button } from "@/components/ui/button";
 const PreviewStore = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [products, setProducts] = useState<Product[]>([]);
+  const [headerImages, setHeaderImages] = useState<string[]>([
+    "/lovable-uploads/3482b4a1-01de-4784-b929-e9e4d755830f.png"
+  ]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const { addToCart, cartCount } = useCart();
   const { storeName, storeLogo } = useStore();
   const navigate = useNavigate();
@@ -30,6 +34,34 @@ const PreviewStore = () => {
   const handleViewProduct = (productId: string) => {
     navigate(`/product-details/${productId}`);
   };
+
+  // Handle image upload
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const imageUrl = URL.createObjectURL(file);
+      setHeaderImages([...headerImages, imageUrl]);
+    }
+  };
+
+  // Remove image
+  const removeImage = (index: number) => {
+    const newImages = headerImages.filter((_, i) => i !== index);
+    setHeaderImages(newImages);
+    if (currentImageIndex >= newImages.length) {
+      setCurrentImageIndex(0);
+    }
+  };
+
+  // Auto-rotate images every 5 seconds
+  useEffect(() => {
+    if (headerImages.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentImageIndex((prev) => (prev + 1) % headerImages.length);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [headerImages.length]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -61,6 +93,61 @@ const PreviewStore = () => {
         </div>
       </div>
 
+      {/* Header Images Section */}
+      <div className="relative">
+        {headerImages.length > 0 && (
+          <div className="relative h-48 overflow-hidden">
+            <img
+              src={headerImages[currentImageIndex]}
+              alt="Header"
+              className="w-full h-full object-cover"
+            />
+            
+            {/* Image Navigation Dots */}
+            {headerImages.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+                {headerImages.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentImageIndex(index)}
+                    className={`w-2 h-2 rounded-full ${
+                      currentImageIndex === index ? "bg-white" : "bg-white/50"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Image Management Buttons */}
+            <div className="absolute top-4 right-4 flex gap-2">
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                <Button size="sm" className="bg-primary/80 hover:bg-primary">
+                  <Plus className="w-4 h-4 ml-1" />
+                  إضافة صورة
+                </Button>
+              </label>
+              
+              {headerImages.length > 1 && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => removeImage(currentImageIndex)}
+                  className="bg-red-500/80 hover:bg-red-500"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Category Tabs */}
       <div className="flex justify-end gap-2 p-4 overflow-x-auto">
         {categories.map((category) => (
@@ -78,59 +165,65 @@ const PreviewStore = () => {
         ))}
       </div>
 
-      {/* Products List */}
-      <div className="p-4 space-y-4 mb-24">
+      {/* Products Grid - 2 per row */}
+      <div className="p-4 mb-24">
         {products.length === 0 ? (
           <div className="text-center py-8 text-dark-green">
             لا توجد منتجات في هذا التصنيف
           </div>
         ) : (
-          products.map((product) => (
-            <div 
-              key={product.id} 
-              className="bg-white rounded-xl p-4 shadow-sm"
-              onClick={() => handleViewProduct(product.id)}
-            >
-              <div className="flex justify-between items-start">
-                <div className="flex flex-col items-end text-right flex-1">
-                  <h3 className="text-xl font-bold mb-1 text-dark-green">{product.name}</h3>
-                  <p className="text-dark-green text-sm mb-2 line-clamp-2">{product.description}</p>
-                  <span className="text-primary font-bold">{product.price.toLocaleString()} د.ع</span>
-                  <Badge className="mt-2 bg-teal-100 text-primary hover:bg-teal-100">
-                    {categories.find(c => c.id === product.category)?.name || product.category}
-                  </Badge>
+          <div className="grid grid-cols-2 gap-4">
+            {products.map((product) => (
+              <div 
+                key={product.id} 
+                className="bg-white rounded-xl p-3 shadow-sm"
+                onClick={() => handleViewProduct(product.id)}
+              >
+                <div className="flex flex-col">
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-full h-24 rounded-lg object-cover mb-2"
+                  />
                   
-                  <div className="flex gap-2 mt-4">
-                    <Button 
-                      className="bg-primary hover:bg-primary/90"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddToCart(product);
-                      }}
-                    >
-                      أضف إلى السلة
-                    </Button>
+                  <div className="text-right flex-1">
+                    <h3 className="text-sm font-bold mb-1 text-dark-green line-clamp-1">{product.name}</h3>
+                    <p className="text-dark-green text-xs mb-2 line-clamp-2">{product.description}</p>
+                    <span className="text-primary font-bold text-sm">{product.price.toLocaleString()} د.ع</span>
                     
-                    <Button 
-                      variant="outline"
-                      className="text-dark-green border-primary hover:bg-primary/10"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleViewProduct(product.id);
-                      }}
-                    >
-                      التفاصيل
-                    </Button>
+                    <Badge className="mt-2 bg-teal-100 text-primary hover:bg-teal-100 text-xs">
+                      {categories.find(c => c.id === product.category)?.name || product.category}
+                    </Badge>
+                    
+                    <div className="flex flex-col gap-1 mt-3">
+                      <Button 
+                        size="sm"
+                        className="bg-primary hover:bg-primary/90 text-xs h-7"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddToCart(product);
+                        }}
+                      >
+                        أضف للسلة
+                      </Button>
+                      
+                      <Button 
+                        size="sm"
+                        variant="outline"
+                        className="text-dark-green border-primary hover:bg-primary/10 text-xs h-7"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewProduct(product.id);
+                        }}
+                      >
+                        التفاصيل
+                      </Button>
+                    </div>
                   </div>
                 </div>
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-24 h-24 rounded-lg object-cover ml-4"
-                />
               </div>
-            </div>
-          ))
+            ))}
+          </div>
         )}
       </div>
 
