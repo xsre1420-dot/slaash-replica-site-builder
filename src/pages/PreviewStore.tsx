@@ -93,10 +93,27 @@ const PreviewStore = () => {
         </div>
       </div>
 
-      {/* Header Images Section */}
+      {/* Category Tabs - Moved to top */}
+      <div className="flex justify-end gap-2 p-4 overflow-x-auto bg-white shadow-sm">
+        {categories.map((category) => (
+          <button 
+            key={category.id}
+            className={`px-4 py-2 rounded-full text-dark-green whitespace-nowrap ${
+              selectedCategory === category.id 
+                ? "bg-primary text-white" 
+                : "bg-gray-100 text-dark-green hover:bg-gray-200"
+            }`}
+            onClick={() => setSelectedCategory(category.id)}
+          >
+            {category.name}
+          </button>
+        ))}
+      </div>
+
+      {/* Header Images Section - Moved below category tabs */}
       <div className="relative">
         {headerImages.length > 0 && (
-          <div className="relative h-48 overflow-hidden">
+          <div className="relative h-56 overflow-hidden">
             <img
               src={headerImages[currentImageIndex]}
               alt="Header"
@@ -110,7 +127,7 @@ const PreviewStore = () => {
                   <button
                     key={index}
                     onClick={() => setCurrentImageIndex(index)}
-                    className={`w-2 h-2 rounded-full ${
+                    className={`w-3 h-3 rounded-full transition-all ${
                       currentImageIndex === index ? "bg-white" : "bg-white/50"
                     }`}
                   />
@@ -138,7 +155,7 @@ const PreviewStore = () => {
                   size="sm"
                   variant="destructive"
                   onClick={() => removeImage(currentImageIndex)}
-                  className="bg-red-500/80 hover:bg-red-500"
+                  className="bg-primary/80 hover:bg-primary"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -148,24 +165,7 @@ const PreviewStore = () => {
         )}
       </div>
 
-      {/* Category Tabs */}
-      <div className="flex justify-end gap-2 p-4 overflow-x-auto">
-        {categories.map((category) => (
-          <button 
-            key={category.id}
-            className={`px-4 py-2 rounded-full text-dark-green ${
-              selectedCategory === category.id 
-                ? "bg-primary text-white" 
-                : "bg-white text-dark-green"
-            }`}
-            onClick={() => setSelectedCategory(category.id)}
-          >
-            {category.name}
-          </button>
-        ))}
-      </div>
-
-      {/* Products Grid - 2 per row */}
+      {/* Products Grid - Larger and more vertical layout */}
       <div className="p-4 mb-24">
         {products.length === 0 ? (
           <div className="text-center py-8 text-dark-green">
@@ -176,48 +176,51 @@ const PreviewStore = () => {
             {products.map((product) => (
               <div 
                 key={product.id} 
-                className="bg-white rounded-xl p-3 shadow-sm"
+                className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
                 onClick={() => handleViewProduct(product.id)}
               >
-                <div className="flex flex-col">
+                <div className="flex flex-col h-full">
                   <img
                     src={product.image}
                     alt={product.name}
-                    className="w-full h-24 rounded-lg object-cover mb-2"
+                    className="w-full h-32 rounded-lg object-cover mb-3"
                   />
                   
-                  <div className="text-right flex-1">
-                    <h3 className="text-sm font-bold mb-1 text-dark-green line-clamp-1">{product.name}</h3>
-                    <p className="text-dark-green text-xs mb-2 line-clamp-2">{product.description}</p>
-                    <span className="text-primary font-bold text-sm">{product.price.toLocaleString()} د.ع</span>
+                  <div className="text-right flex-1 flex flex-col">
+                    <h3 className="text-base font-bold mb-2 text-dark-green line-clamp-2">{product.name}</h3>
+                    <p className="text-dark-green text-sm mb-3 line-clamp-3 flex-1">{product.description}</p>
                     
-                    <Badge className="mt-2 bg-teal-100 text-primary hover:bg-teal-100 text-xs">
-                      {categories.find(c => c.id === product.category)?.name || product.category}
-                    </Badge>
-                    
-                    <div className="flex flex-col gap-1 mt-3">
-                      <Button 
-                        size="sm"
-                        className="bg-primary hover:bg-primary/90 text-xs h-7"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAddToCart(product);
-                        }}
-                      >
-                        أضف للسلة
-                      </Button>
+                    <div className="mt-auto">
+                      <span className="text-primary font-bold text-lg block mb-2">{product.price.toLocaleString()} د.ع</span>
                       
-                      <Button 
-                        size="sm"
-                        variant="outline"
-                        className="text-dark-green border-primary hover:bg-primary/10 text-xs h-7"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleViewProduct(product.id);
-                        }}
-                      >
-                        التفاصيل
-                      </Button>
+                      <Badge className="mb-3 bg-teal-100 text-primary hover:bg-teal-100 text-xs">
+                        {categories.find(c => c.id === product.category)?.name || product.category}
+                      </Badge>
+                      
+                      <div className="flex flex-col gap-2">
+                        <Button 
+                          size="sm"
+                          className="bg-primary hover:bg-primary/90 text-sm h-8 w-full"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddToCart(product);
+                          }}
+                        >
+                          أضف للسلة
+                        </Button>
+                        
+                        <Button 
+                          size="sm"
+                          variant="outline"
+                          className="text-dark-green border-primary hover:bg-primary/10 text-sm h-8 w-full"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewProduct(product.id);
+                          }}
+                        >
+                          التفاصيل
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
