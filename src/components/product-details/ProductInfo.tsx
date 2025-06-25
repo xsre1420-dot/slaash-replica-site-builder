@@ -10,7 +10,7 @@ const ProductInfo = ({ name, price, description, category }: ProductInfoProps) =
   return (
     <div className="space-y-5">
       <div className="flex justify-between items-start">
-        <span className="text-2xl font-bold text-red-600">
+        <span className="text-2xl font-bold text-primary">
           {price.toLocaleString()} د.ع
         </span>
         <h2 className="text-2xl font-bold text-right">{name}</h2>
