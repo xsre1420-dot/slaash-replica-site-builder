@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -121,7 +120,7 @@ const EditProduct = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-red-600 text-white p-4 flex justify-between items-center">
+      <div className="bg-primary text-white p-4 flex justify-between items-center">
         <Link to="/builder">
           <X className="w-6 h-6" />
         </Link>
@@ -141,10 +140,10 @@ const EditProduct = () => {
 
           {/* Name */}
           <div className="space-y-2 text-right">
-            <Label htmlFor="name" className="block">اسم الوجبة</Label>
+            <Label htmlFor="name" className="block text-dark-green">اسم الوجبة</Label>
             <Input 
               id="name" 
-              className="text-right" 
+              className="text-right text-dark-green" 
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -152,9 +151,9 @@ const EditProduct = () => {
 
           {/* Category */}
           <div className="space-y-2 text-right">
-            <Label htmlFor="category" className="block">الفئة</Label>
+            <Label htmlFor="category" className="block text-dark-green">الفئة</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="w-full text-right">
+              <SelectTrigger className="w-full text-right text-dark-green">
                 <SelectValue placeholder="اختر فئة" />
               </SelectTrigger>
               <SelectContent>
@@ -169,10 +168,10 @@ const EditProduct = () => {
 
           {/* Description */}
           <div className="space-y-2 text-right">
-            <Label htmlFor="description" className="block">الوصف</Label>
+            <Label htmlFor="description" className="block text-dark-green">الوصف</Label>
             <Textarea 
               id="description" 
-              className="text-right" 
+              className="text-right text-dark-green" 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
@@ -180,18 +179,18 @@ const EditProduct = () => {
 
           {/* Price */}
           <div className="space-y-2 text-right">
-            <Label htmlFor="price" className="block">السعر (دينار عراقي)</Label>
+            <Label htmlFor="price" className="block text-dark-green">السعر (دينار عراقي)</Label>
             <Input 
               id="price" 
               type="number" 
-              className="text-right" 
+              className="text-right text-dark-green" 
               value={price}
               onChange={(e) => setPrice(e.target.value)}
             />
           </div>
 
           {/* Submit Button */}
-          <Button type="submit" className="w-full bg-red-600 hover:bg-red-700">
+          <Button type="submit" className="w-full bg-primary hover:bg-primary/90">
             حفظ التغييرات
           </Button>
         </form>

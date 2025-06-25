@@ -34,7 +34,7 @@ const PreviewStore = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-red-600 text-white p-4 rounded-b-3xl">
+      <div className="bg-primary text-white p-4 rounded-b-3xl">
         <div className="flex justify-between items-center mb-4">
           <Link to="/builder">
             <X className="w-6 h-6" />
@@ -45,7 +45,7 @@ const PreviewStore = () => {
               <img src={storeLogo} alt={storeName} className="w-8 h-8 object-contain" />
             )}
           </div>
-          <div className="w-6" /> {/* Spacer for alignment */}
+          <div className="w-6" />
         </div>
         
         {/* Search Bar */}
@@ -53,7 +53,7 @@ const PreviewStore = () => {
           <input
             type="search"
             placeholder="ابحث عن وجبة..."
-            className="w-full p-2 pl-10 pr-4 rounded-full text-right text-gray-900"
+            className="w-full p-2 pl-10 pr-4 rounded-full text-right text-dark-green"
           />
           <svg className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -66,10 +66,10 @@ const PreviewStore = () => {
         {categories.map((category) => (
           <button 
             key={category.id}
-            className={`px-4 py-2 rounded-full ${
+            className={`px-4 py-2 rounded-full text-dark-green ${
               selectedCategory === category.id 
-                ? "bg-red-600 text-white" 
-                : "bg-white text-gray-600"
+                ? "bg-primary text-white" 
+                : "bg-white text-dark-green"
             }`}
             onClick={() => setSelectedCategory(category.id)}
           >
@@ -81,7 +81,7 @@ const PreviewStore = () => {
       {/* Products List */}
       <div className="p-4 space-y-4 mb-24">
         {products.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-dark-green">
             لا توجد منتجات في هذا التصنيف
           </div>
         ) : (
@@ -93,16 +93,16 @@ const PreviewStore = () => {
             >
               <div className="flex justify-between items-start">
                 <div className="flex flex-col items-end text-right flex-1">
-                  <h3 className="text-xl font-bold mb-1">{product.name}</h3>
-                  <p className="text-gray-600 text-sm mb-2 line-clamp-2">{product.description}</p>
-                  <span className="text-red-600 font-bold">{product.price.toLocaleString()} د.ع</span>
-                  <Badge className="mt-2 bg-teal-100 text-teal-800 hover:bg-teal-100">
+                  <h3 className="text-xl font-bold mb-1 text-dark-green">{product.name}</h3>
+                  <p className="text-dark-green text-sm mb-2 line-clamp-2">{product.description}</p>
+                  <span className="text-primary font-bold">{product.price.toLocaleString()} د.ع</span>
+                  <Badge className="mt-2 bg-teal-100 text-primary hover:bg-teal-100">
                     {categories.find(c => c.id === product.category)?.name || product.category}
                   </Badge>
                   
                   <div className="flex gap-2 mt-4">
                     <Button 
-                      className="bg-red-600 hover:bg-red-700"
+                      className="bg-primary hover:bg-primary/90"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleAddToCart(product);
@@ -113,6 +113,7 @@ const PreviewStore = () => {
                     
                     <Button 
                       variant="outline"
+                      className="text-dark-green border-primary hover:bg-primary/10"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleViewProduct(product.id);
@@ -136,12 +137,12 @@ const PreviewStore = () => {
       {/* Shopping Cart Bar with Rounded Edges */}
       <div className="fixed bottom-0 left-0 right-0 z-50">
         <Link to="/checkout">
-          <div className="bg-red-600 h-16 flex items-center justify-center relative rounded-t-3xl">
-            {/* Red circular icon in the center */}
-            <div className="absolute -top-6 bg-red-600 rounded-full p-4 border-4 border-white shadow-lg">
+          <div className="bg-primary h-16 flex items-center justify-center relative rounded-t-3xl">
+            {/* Primary circular icon in the center */}
+            <div className="absolute -top-6 bg-primary rounded-full p-4 border-4 border-white shadow-lg">
               <ShoppingCart className="w-6 h-6 text-white" />
               {cartCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-white text-red-600 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+                <span className="absolute -top-2 -right-2 bg-white text-primary rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
                   {cartCount}
                 </span>
               )}

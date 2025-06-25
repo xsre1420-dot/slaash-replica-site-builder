@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
@@ -134,7 +133,7 @@ const OrderDetails = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-700">الطلب غير موجود</h2>
+          <h2 className="text-xl font-semibold text-dark-green">الطلب غير موجود</h2>
           <Link to="/orders">
             <Button className="mt-4">العودة للطلبات</Button>
           </Link>
@@ -152,7 +151,7 @@ const OrderDetails = () => {
             <ArrowLeft className="w-6 h-6" />
           </Link>
           <h1 className="text-xl font-bold">تفاصيل الطلب #{order.id}</h1>
-          <div className="w-6"></div> {/* Empty div for alignment */}
+          <div className="w-6"></div>
         </div>
       </div>
 

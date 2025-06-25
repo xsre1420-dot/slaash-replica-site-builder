@@ -8,20 +8,20 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 150 84% 15%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 150 84% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 150 84% 15%;
     --primary: 174 77% 56%;
     --primary-foreground: 210 40% 98%;
     --secondary: 174 77% 76%;
-    --secondary-foreground: 158 64% 15%;
+    --secondary-foreground: 150 84% 15%;
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted-foreground: 150 60% 30%;
     --accent: 174 77% 76%;
-    --accent-foreground: 158 64% 15%;
-    --destructive: 0 84.2% 60.2%;
+    --accent-foreground: 150 84% 15%;
+    --destructive: 174 77% 56%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
@@ -31,6 +31,7 @@
 
   body {
     font-family: 'Inter', sans-serif;
+    color: hsl(150 84% 15%);
   }
 }
 
@@ -46,5 +47,14 @@
   /* Add this class for RTL table headers */
   .rtl th {
     text-align: right;
+  }
+  
+  /* Dark green text utilities */
+  .text-dark-green {
+    color: hsl(150 84% 15%);
+  }
+  
+  .text-turquoise {
+    color: hsl(174 77% 56%);
   }
 }

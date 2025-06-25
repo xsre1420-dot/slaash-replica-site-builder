@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -114,10 +113,10 @@ const AddProduct = () => {
 
           {/* Name */}
           <div className="space-y-2 text-right">
-            <Label htmlFor="name" className="block">اسم الوجبة</Label>
+            <Label htmlFor="name" className="block text-dark-green">اسم الوجبة</Label>
             <Input 
               id="name" 
-              className="text-right" 
+              className="text-right text-dark-green" 
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -125,9 +124,9 @@ const AddProduct = () => {
 
           {/* Category */}
           <div className="space-y-2 text-right">
-            <Label htmlFor="category" className="block">الفئة</Label>
+            <Label htmlFor="category" className="block text-dark-green">الفئة</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="w-full text-right">
+              <SelectTrigger className="w-full text-right text-dark-green">
                 <SelectValue placeholder="اختر فئة" />
               </SelectTrigger>
               <SelectContent>
@@ -142,10 +141,10 @@ const AddProduct = () => {
 
           {/* Description */}
           <div className="space-y-2 text-right">
-            <Label htmlFor="description" className="block">الوصف</Label>
+            <Label htmlFor="description" className="block text-dark-green">الوصف</Label>
             <Textarea 
               id="description" 
-              className="text-right" 
+              className="text-right text-dark-green" 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
@@ -153,11 +152,11 @@ const AddProduct = () => {
 
           {/* Price */}
           <div className="space-y-2 text-right">
-            <Label htmlFor="price" className="block">السعر (دينار عراقي)</Label>
+            <Label htmlFor="price" className="block text-dark-green">السعر (دينار عراقي)</Label>
             <Input 
               id="price" 
               type="number" 
-              className="text-right" 
+              className="text-right text-dark-green" 
               value={price}
               onChange={(e) => setPrice(e.target.value)}
             />
