@@ -35,35 +35,35 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <header className="bg-white text-black py-4 px-6 text-center border-b-2 border-primary">
-        <h1 className="text-xl font-bold flex items-center justify-center text-black">
+      <header className="bg-primary text-white py-4 px-6 text-center">
+        <h1 className="text-xl font-bold flex items-center justify-center">
           نظام إدارة المطعم <span className="mx-2">🍽️</span>
         </h1>
       </header>
 
       <div className="flex-1 flex flex-col items-center justify-center p-6">
-        <div className="w-full max-w-md bg-white rounded-lg shadow-lg overflow-hidden border-2 border-primary">
+        <div className="w-full max-w-md bg-white rounded-lg shadow-md overflow-hidden">
           {/* Login Header */}
           <div className="bg-primary text-white p-6 text-right">
-            <h2 className="text-2xl font-bold mb-1 text-white">تسجيل الدخول</h2>
-            <p className="text-sm text-white opacity-90">أدخل بيانات الدخول لإدارة مطعمك</p>
+            <h2 className="text-2xl font-bold mb-1">تسجيل الدخول</h2>
+            <p className="text-sm text-primary-foreground opacity-90">أدخل بيانات الدخول لإدارة مطعمك</p>
           </div>
 
           <form onSubmit={handleLogin} className="p-6">
             {/* Error Alert */}
             {error && (
-              <Alert className="mb-6 bg-red-50 border-red-200 text-right">
+              <Alert className="mb-6 bg-yellow-100 border-yellow-400 text-right">
                 <div className="flex items-center">
-                  <AlertDescription className="flex-1 text-red-800">⚠️ {error}</AlertDescription>
+                  <AlertDescription className="flex-1 text-dark-green">⚠️ {error}</AlertDescription>
                 </div>
               </Alert>
             )}
 
             {/* Username Input */}
             <div className="mb-6">
-              <label htmlFor="username" className="block text-right text-black mb-2">
+              <label htmlFor="username" className="block text-right text-dark-green mb-2">
                 اسم المستخدم
               </label>
               <div className="relative">
@@ -73,16 +73,16 @@ const Login = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="أدخل اسم المستخدم"
-                  className="pl-10 text-right text-black bg-white border-gray-300 placeholder:text-gray-500"
+                  className="pl-10 text-right text-dark-green"
                   dir="rtl"
                 />
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-5 w-5" />
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
               </div>
             </div>
 
             {/* Password Input */}
             <div className="mb-6">
-              <label htmlFor="password" className="block text-right text-black mb-2">
+              <label htmlFor="password" className="block text-right text-dark-green mb-2">
                 كلمة المرور
               </label>
               <div className="relative">
@@ -92,16 +92,16 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="أدخل كلمة المرور"
-                  className="pl-10 text-right text-black bg-white border-gray-300 placeholder:text-gray-500"
+                  className="pl-10 text-right text-dark-green"
                   dir="rtl"
                 />
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-5 w-5" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
               </div>
             </div>
 
             {/* Remember Me Checkbox */}
             <div className="flex items-center justify-end mb-6">
-              <label htmlFor="remember-me" className="ml-2 text-sm text-black">
+              <label htmlFor="remember-me" className="ml-2 text-sm text-dark-green">
                 تذكر تسجيل الدخول
               </label>
               <Checkbox 
@@ -114,7 +114,7 @@ const Login = () => {
             {/* Login Button */}
             <Button 
               type="submit" 
-              className="w-full bg-primary text-white hover:bg-primary/90 py-3 text-lg"
+              className="w-full bg-primary hover:bg-primary/90 text-white py-3 text-lg"
             >
               <span className="ml-2">تسجيل الدخول</span>
               <ArrowRight className="h-5 w-5 transform rotate-180" />
@@ -122,7 +122,7 @@ const Login = () => {
 
             {/* Forgot Password */}
             <div className="text-center mt-4">
-              <Link to="/forgot-password" className="text-primary hover:text-primary/80 text-sm">
+              <Link to="/forgot-password" className="text-primary hover:underline text-sm">
                 نسيت كلمة المرور؟
               </Link>
             </div>
@@ -131,7 +131,7 @@ const Login = () => {
       </div>
 
       {/* Footer */}
-      <footer className="text-center py-4 text-black text-sm">
+      <footer className="text-center py-4 text-dark-green text-sm">
         <p>جميع الحقوق محفوظة © 2025 نظام إدارة المطعم</p>
       </footer>
     </div>

@@ -12,57 +12,53 @@ export default function Builder() {
   const { storeName, storeLogo, updateStore } = useStore();
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header with turquoise border */}
-      <div className="bg-white text-black p-4 border-b-2 border-primary">
-        <div className="max-w-6xl mx-auto">
-          <StoreHeader 
-            storeName={storeName} 
-            storeLogo={storeLogo} 
-            onUpdateStore={updateStore} 
-          />
-        </div>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Store Header */}
+      <StoreHeader 
+        storeName={storeName} 
+        storeLogo={storeLogo} 
+        onUpdateStore={updateStore} 
+      />
       
-      <div className="p-4 max-w-6xl mx-auto">
-        <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-primary mb-8">
+      <div className="p-8 max-w-6xl mx-auto">
+        <div className="bg-white rounded-xl p-6 shadow-sm mb-8">
           <div className="text-center mb-6">
-            <h2 className="text-xl font-bold text-black mb-2">رابط المطعم</h2>
-            <p className="text-gray-600">مشاركة الرابط مع الزبائن</p>
+            <h2 className="text-xl font-bold text-primary mb-2">رابط المطعم</h2>
+            <p className="text-dark-green">مشاركة الرابط مع الزبائن</p>
           </div>
           
           <div className="flex items-center gap-2 mb-8">
             <Input 
               value="https://yourstore.com/menu" 
               readOnly 
-              className="text-left bg-gray-50 border-gray-300 text-black"
+              className="text-left bg-gray-50"
             />
-            <Button variant="secondary" className="whitespace-nowrap bg-primary text-white hover:bg-primary/90 border-primary">
+            <Button variant="destructive" className="whitespace-nowrap bg-primary hover:bg-primary/90 text-white border-primary">
               نسخ
             </Button>
           </div>
           
           <div className="grid grid-cols-2 gap-4">
             <Link to="/preview">
-              <Button variant="outline" className="w-full flex items-center justify-center gap-2 py-6 text-black border-primary hover:bg-primary/10 transition-colors">
+              <Button variant="outline" className="w-full flex items-center justify-center gap-2 py-6 text-dark-green border-primary hover:bg-primary/10">
                 <Eye className="w-5 h-5 ml-2" />
                 معاينة
               </Button>
             </Link>
             <Link to="/add-product">
-              <Button className="w-full bg-primary text-white hover:bg-primary/90 flex items-center justify-center gap-2 py-6 transition-colors">
+              <Button className="w-full bg-primary hover:bg-primary/90 flex items-center justify-center gap-2 py-6">
                 <Plus className="w-5 h-5 ml-2" />
                 إضافة وجبة
               </Button>
             </Link>
             <Link to="/orders">
-              <Button variant="outline" className="w-full flex items-center justify-center gap-2 py-6 text-black border-primary hover:bg-primary/10 transition-colors">
+              <Button variant="outline" className="w-full flex items-center justify-center gap-2 py-6 text-dark-green border-primary hover:bg-primary/10">
                 <List className="w-5 h-5 ml-2" />
                 الطلبات
               </Button>
             </Link>
             <Link to="/categories">
-              <Button variant="outline" className="w-full flex items-center justify-center gap-2 py-6 text-black border-primary hover:bg-primary/10 transition-colors">
+              <Button variant="outline" className="w-full flex items-center justify-center gap-2 py-6 text-dark-green border-primary hover:bg-primary/10">
                 <Tag className="w-5 h-5 ml-2" />
                 الأصناف
               </Button>
@@ -70,18 +66,18 @@ export default function Builder() {
           </div>
         </div>
 
-        <Card className="shadow-lg border-2 border-primary bg-white">
-          <CardHeader className="border-b-2 border-primary">
+        <Card>
+          <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-black">المنتجات</CardTitle>
-              <Link to="/add-product" className="text-black hover:text-gray-600 text-sm flex items-center transition-colors">
+              <CardTitle className="text-dark-green">المنتجات</CardTitle>
+              <Link to="/add-product" className="text-primary hover:underline text-sm flex items-center">
                 <Plus className="w-4 h-4 ml-1" />
                 إضافة منتج جديد
               </Link>
             </div>
-            <CardDescription className="text-gray-600">إدارة منتجات المنيو</CardDescription>
+            <CardDescription className="text-dark-green">إدارة منتجات المنيو</CardDescription>
           </CardHeader>
-          <CardContent className="p-6">
+          <CardContent>
             <ProductsList />
           </CardContent>
         </Card>

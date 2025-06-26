@@ -8,41 +8,40 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 0 0% 0%;
+    --foreground: 150 84% 15%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 0%;
+    --card-foreground: 150 84% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 0%;
-    --primary: 189 100% 48%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 0%;
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 0 0% 96%;
-    --accent-foreground: 0 0% 0%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 189 100% 48%;
-    --input: 0 0% 90%;
-    --ring: 189 100% 48%;
+    --popover-foreground: 150 84% 15%;
+    --primary: 174 77% 56%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 174 77% 76%;
+    --secondary-foreground: 150 84% 15%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 150 60% 30%;
+    --accent: 174 77% 76%;
+    --accent-foreground: 150 84% 15%;
+    --destructive: 174 77% 56%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 174 77% 56%;
     --radius: 0.75rem;
   }
 
   body {
     font-family: 'Inter', sans-serif;
-    color: black;
-    background-color: white;
+    color: hsl(150 84% 15%);
   }
 }
 
 @layer utilities {
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-black to-black;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary;
   }
   
   .card-gradient {
-    @apply bg-gradient-to-br from-white to-gray-50;
+    @apply bg-gradient-to-br from-white to-secondary/10;
   }
   
   /* Add this class for RTL table headers */
@@ -50,12 +49,12 @@
     text-align: right;
   }
   
-  /* Color utilities */
+  /* Dark green text utilities */
   .text-dark-green {
-    color: black;
+    color: hsl(150 84% 15%);
   }
   
   .text-turquoise {
-    color: black;
+    color: hsl(174 77% 56%);
   }
 }
