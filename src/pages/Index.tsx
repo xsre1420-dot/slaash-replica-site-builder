@@ -7,7 +7,7 @@ const Index = () => {
   const { storeName } = useStore();
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary to-secondary flex flex-col items-center justify-between p-8 text-white">
+    <div className="min-h-screen bg-gradient-to-b from-primary to-primary/80 flex flex-col items-center justify-between p-8 text-white">
       <div className="flex-1 flex flex-col items-center justify-center w-full">
         {/* Logo */}
         <div className="mb-10 flex flex-col items-center">
