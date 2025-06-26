@@ -6,7 +6,6 @@ import { categories, getProductsByCategory } from "@/data/dummyData";
 import { Product } from "@/types";
 import { useCart } from "@/context/CartContext";
 import { useStore } from "@/context/StoreContext";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 const PreviewStore = () => {
@@ -165,7 +164,7 @@ const PreviewStore = () => {
         )}
       </div>
 
-      {/* Products Grid - Larger and more vertical layout */}
+      {/* Products Grid - Updated design */}
       <div className="p-4 mb-24">
         {products.length === 0 ? (
           <div className="text-center py-8 text-dark-green">
@@ -176,31 +175,28 @@ const PreviewStore = () => {
             {products.map((product) => (
               <div 
                 key={product.id} 
-                className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
                 onClick={() => handleViewProduct(product.id)}
               >
                 <div className="flex flex-col h-full">
+                  {/* Full width image without borders */}
                   <img
                     src={product.image}
                     alt={product.name}
-                    className="w-full h-32 rounded-lg object-cover mb-3"
+                    className="w-full h-40 object-cover"
                   />
                   
-                  <div className="text-right flex-1 flex flex-col">
-                    <h3 className="text-base font-bold mb-2 text-dark-green line-clamp-2">{product.name}</h3>
-                    <p className="text-dark-green text-sm mb-3 line-clamp-3 flex-1">{product.description}</p>
+                  {/* Product info - simplified */}
+                  <div className="p-4 text-right flex-1 flex flex-col">
+                    <h3 className="text-lg font-bold mb-3 text-dark-green line-clamp-2">{product.name}</h3>
                     
                     <div className="mt-auto">
-                      <span className="text-primary font-bold text-lg block mb-2">{product.price.toLocaleString()} د.ع</span>
-                      
-                      <Badge className="mb-3 bg-teal-100 text-primary hover:bg-teal-100 text-xs">
-                        {categories.find(c => c.id === product.category)?.name || product.category}
-                      </Badge>
+                      <span className="text-primary font-bold text-xl block mb-4">{product.price.toLocaleString()} د.ع</span>
                       
                       <div className="flex flex-col gap-2">
                         <Button 
                           size="sm"
-                          className="bg-primary hover:bg-primary/90 text-sm h-8 w-full"
+                          className="bg-primary hover:bg-primary/90 text-sm h-9 w-full"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleAddToCart(product);
@@ -212,7 +208,7 @@ const PreviewStore = () => {
                         <Button 
                           size="sm"
                           variant="outline"
-                          className="text-dark-green border-primary hover:bg-primary/10 text-sm h-8 w-full"
+                          className="text-dark-green border-primary hover:bg-primary/10 text-sm h-9 w-full"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleViewProduct(product.id);
