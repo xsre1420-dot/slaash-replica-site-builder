@@ -1,10 +1,11 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import OrdersHeader from "@/components/orders/OrdersHeader";
 import OrdersFilters from "@/components/orders/OrdersFilters";
 import OrdersEmptyState from "@/components/orders/OrdersEmptyState";
 import OrdersSimpleTable from "@/components/orders/OrdersSimpleTable";
 import { useOrders } from "@/components/orders/useOrders";
+import { Link } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 
 const Orders = () => {
   const {
@@ -20,12 +21,22 @@ const Orders = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 rtl">
-      {/* Header */}
-      <OrdersHeader />
+      {/* Header with consistent styling */}
+      <div className="bg-primary text-white p-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-between items-center">
+            <Link to="/builder">
+              <ArrowLeft className="w-6 h-6" />
+            </Link>
+            <h1 className="text-xl font-bold">إدارة الطلبات</h1>
+            <div className="w-6"></div>
+          </div>
+        </div>
+      </div>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-4">
-        <Card className="mb-6 shadow-sm">
+        <Card className="mb-6 shadow-sm border">
           <CardHeader className="border-b pb-4">
             <CardTitle className="text-right text-xl text-dark-green">الطلبات</CardTitle>
             <CardDescription className="text-right text-dark-green">

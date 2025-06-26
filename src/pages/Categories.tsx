@@ -1,4 +1,3 @@
-
 import { X, Plus, Edit, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
@@ -7,6 +6,7 @@ import { Category } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Dialog, 
   DialogContent, 
@@ -29,7 +29,6 @@ const Categories = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Load categories (in a real app, this would come from an API)
     setCategories([...initialCategories]);
   }, []);
 
@@ -92,7 +91,6 @@ const Categories = () => {
   const handleDeleteCategory = () => {
     if (!deletingCategoryId) return;
     
-    // Don't allow deleting the "all" category
     if (deletingCategoryId === "all") {
       toast({
         title: "غير مسموح",
@@ -113,7 +111,7 @@ const Categories = () => {
   };
 
   const handleMoveUp = (index: number) => {
-    if (index <= 0) return; // Can't move up the first item
+    if (index <= 0) return;
     
     const newCategories = [...categories];
     [newCategories[index], newCategories[index - 1]] = [
@@ -121,7 +119,6 @@ const Categories = () => {
       newCategories[index],
     ];
     
-    // Update order property
     newCategories.forEach((cat, idx) => {
       cat.order = idx;
     });
@@ -130,7 +127,7 @@ const Categories = () => {
   };
 
   const handleMoveDown = (index: number) => {
-    if (index >= categories.length - 1) return; // Can't move down the last item
+    if (index >= categories.length - 1) return;
     
     const newCategories = [...categories];
     [newCategories[index], newCategories[index + 1]] = [
@@ -138,7 +135,6 @@ const Categories = () => {
       newCategories[index],
     ];
     
-    // Update order property
     newCategories.forEach((cat, idx) => {
       cat.order = idx;
     });
@@ -148,89 +144,100 @@ const Categories = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-red-600 text-white p-4">
-        <div className="flex justify-between items-center">
-          <Link to="/builder">
-            <X className="w-6 h-6" />
-          </Link>
-          <h1 className="text-xl font-bold">إدارة الأصناف</h1>
-          <div className="w-6"></div> {/* Empty div for alignment */}
+      {/* Header with consistent styling */}
+      <div className="bg-primary text-white p-4">
+        <div className="max-w-xl mx-auto">
+          <div className="flex justify-between items-center">
+            <Link to="/builder">
+              <X className="w-6 h-6" />
+            </Link>
+            <h1 className="text-xl font-bold">إدارة الأصناف</h1>
+            <div className="w-6"></div>
+          </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="max-w-xl mx-auto p-4">
-        <div className="bg-white rounded-xl shadow-sm p-4 mt-4">
-          <div className="flex justify-between items-center mb-4">
-            <Button 
-              className="bg-red-600 hover:bg-red-700"
-              onClick={() => setIsAddDialogOpen(true)}
-            >
-              <Plus className="w-4 h-4 ml-1" />
-              إضافة تصنيف جديد
-            </Button>
-            <h2 className="text-xl font-bold">الأصناف</h2>
-          </div>
-
-          <div className="space-y-2">
-            {categories.map((category, index) => (
-              <div 
-                key={category.id}
-                className="flex justify-between items-center p-3 border rounded-lg"
+        <Card className="shadow-sm border mt-4">
+          <CardHeader className="border-b">
+            <div className="flex justify-between items-center">
+              <Button 
+                className="bg-primary hover:bg-primary/90 transition-colors"
+                onClick={() => setIsAddDialogOpen(true)}
               >
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setDeletingCategoryId(category.id);
-                      setIsDeleteDialogOpen(true);
-                    }}
-                    disabled={category.id === "all"}
-                  >
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setEditingCategory(category);
-                      setIsEditDialogOpen(true);
-                    }}
-                    disabled={category.id === "all"}
-                  >
-                    <Edit className="w-4 h-4 text-blue-500" />
-                  </Button>
-                  
-                  <div className="flex space-x-1">
+                <Plus className="w-4 h-4 ml-1" />
+                إضافة تصنيف جديد
+              </Button>
+              <CardTitle className="text-dark-green">الأصناف</CardTitle>
+            </div>
+            <CardDescription className="text-right text-dark-green">
+              إدارة أصناف المنتجات في المنيو
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="space-y-2">
+              {categories.map((category, index) => (
+                <div 
+                  key={category.id}
+                  className="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center space-x-2">
                     <Button
                       variant="ghost"
-                      size="sm"
-                      onClick={() => handleMoveDown(index)}
-                      disabled={index >= categories.length - 1}
+                      size="icon"
+                      onClick={() => {
+                        setDeletingCategoryId(category.id);
+                        setIsDeleteDialogOpen(true);
+                      }}
+                      disabled={category.id === "all"}
+                      className="hover:bg-red-50 hover:text-red-500"
                     >
-                      <span>⬇️</span>
+                      <Trash2 className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="ghost"
-                      size="sm"
-                      onClick={() => handleMoveUp(index)}
-                      disabled={index <= 0}
+                      size="icon"
+                      onClick={() => {
+                        setEditingCategory(category);
+                        setIsEditDialogOpen(true);
+                      }}
+                      disabled={category.id === "all"}
+                      className="hover:bg-blue-50 hover:text-blue-500"
                     >
-                      <span>⬆️</span>
+                      <Edit className="w-4 h-4" />
                     </Button>
+                    
+                    <div className="flex space-x-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleMoveDown(index)}
+                        disabled={index >= categories.length - 1}
+                        className="hover:bg-gray-100"
+                      >
+                        <span>⬇️</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleMoveUp(index)}
+                        disabled={index <= 0}
+                        className="hover:bg-gray-100"
+                      >
+                        <span>⬆️</span>
+                      </Button>
+                    </div>
                   </div>
+                  
+                  <span className="font-medium text-dark-green">{category.name}</span>
                 </div>
-                
-                <span className="font-medium">{category.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Add Category Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="sm:max-w-[425px] text-right">
           <DialogHeader>
@@ -255,14 +262,13 @@ const Categories = () => {
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               إلغاء
             </Button>
-            <Button className="bg-red-600 hover:bg-red-700" onClick={handleAddCategory}>
+            <Button className="bg-primary hover:bg-primary/90" onClick={handleAddCategory}>
               إضافة
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Category Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[425px] text-right">
           <DialogHeader>
@@ -293,14 +299,13 @@ const Categories = () => {
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               إلغاء
             </Button>
-            <Button className="bg-red-600 hover:bg-red-700" onClick={handleEditCategory}>
+            <Button className="bg-primary hover:bg-primary/90" onClick={handleEditCategory}>
               حفظ
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Category Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[425px] text-right">
           <DialogHeader>
