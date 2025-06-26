@@ -9,49 +9,8 @@ export const categories: Category[] = [
   { id: "drinks", name: "المشروبات", order: 4 },
 ];
 
-// We're using a reference to the products array that can be modified
-export let products: Product[] = [
-  {
-    id: "1",
-    name: "نصف دجاجة مشوية",
-    description: "دجاجة كاملة مشوية + مقبلات + خبز",
-    category: "main-dish",
-    price: 6000,
-    image: "/lovable-uploads/59c215d6-809e-4764-90cd-41fd1213f286.png"
-  },
-  {
-    id: "2",
-    name: "كباب لحم",
-    description: "5 أسياخ كباب لحم + أرز + سلطة",
-    category: "main-dish",
-    price: 8000,
-    image: "/lovable-uploads/59c215d6-809e-4764-90cd-41fd1213f286.png"
-  },
-  {
-    id: "3",
-    name: "سلطة خضراء",
-    description: "طماطم، خيار، خس، زيتون، جبنة فيتا",
-    category: "appetizers",
-    price: 3000,
-    image: "/lovable-uploads/59c215d6-809e-4764-90cd-41fd1213f286.png"
-  },
-  {
-    id: "4",
-    name: "عصير برتقال طازج",
-    description: "عصير برتقال طبيعي 100%",
-    category: "drinks",
-    price: 2000,
-    image: "/lovable-uploads/59c215d6-809e-4764-90cd-41fd1213f286.png"
-  },
-  {
-    id: "5",
-    name: "برغر لحم",
-    description: "برغر لحم مع جبنة وصلصة خاصة + بطاطس",
-    category: "fast-food",
-    price: 5000,
-    image: "/lovable-uploads/59c215d6-809e-4764-90cd-41fd1213f286.png"
-  }
-];
+// Start with an empty products array - all products will be added manually
+export let products: Product[] = [];
 
 // Function to add a new product
 export const addProduct = (product: Product): void => {

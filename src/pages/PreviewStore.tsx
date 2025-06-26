@@ -1,4 +1,3 @@
-
 import { X, ShoppingCart, Plus, Trash2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
@@ -11,9 +10,7 @@ import { Button } from "@/components/ui/button";
 const PreviewStore = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [products, setProducts] = useState<Product[]>([]);
-  const [headerImages, setHeaderImages] = useState<string[]>([
-    "/lovable-uploads/3482b4a1-01de-4784-b929-e9e4d755830f.png"
-  ]);
+  const [headerImages, setHeaderImages] = useState<string[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const { addToCart, cartCount } = useCart();
   const { storeName, storeLogo } = useStore();
@@ -109,9 +106,9 @@ const PreviewStore = () => {
         ))}
       </div>
 
-      {/* Header Images Section - Moved below category tabs */}
-      <div className="relative">
-        {headerImages.length > 0 && (
+      {/* Header Images Section - Only show if images exist */}
+      {headerImages.length > 0 && (
+        <div className="relative">
           <div className="relative h-56 overflow-hidden">
             <img
               src={headerImages[currentImageIndex]}
@@ -161,14 +158,42 @@ const PreviewStore = () => {
               )}
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Add Header Image Button - Show when no images */}
+      {headerImages.length === 0 && (
+        <div className="p-4 bg-white border-b">
+          <label className="cursor-pointer">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+            <Button className="w-full bg-primary hover:bg-primary/90">
+              <Plus className="w-4 h-4 ml-2" />
+              إضافة صورة للرأس
+            </Button>
+          </label>
+        </div>
+      )}
 
       {/* Products Grid - Updated design */}
       <div className="p-4 mb-24">
         {products.length === 0 ? (
-          <div className="text-center py-8 text-dark-green">
-            لا توجد منتجات في هذا التصنيف
+          <div className="text-center py-12 text-dark-green">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="text-6xl">🍽️</div>
+              <h3 className="text-xl font-bold">لا توجد منتجات بعد</h3>
+              <p className="text-gray-500">ابدأ بإضافة وجباتك من قسم البناء</p>
+              <Link to="/add-product">
+                <Button className="bg-primary hover:bg-primary/90">
+                  <Plus className="w-4 h-4 ml-2" />
+                  إضافة أول وجبة
+                </Button>
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4">

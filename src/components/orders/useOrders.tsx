@@ -3,94 +3,6 @@ import { useState, useEffect } from "react";
 import { Order } from "@/types";
 import { format } from "date-fns";
 
-// Demo orders data
-const demoOrders: Order[] = [
-  {
-    id: "ord-001",
-    items: [
-      {
-        product: {
-          id: "p1",
-          name: "برجر لحم",
-          description: "برجر لحم مشوي مع صوص خاص",
-          category: "وجبات سريعة",
-          price: 8000,
-          image: "/placeholder.svg",
-        },
-        quantity: 2,
-      },
-      {
-        product: {
-          id: "p2",
-          name: "بطاطس",
-          description: "بطاطس مقلية مقرمشة",
-          category: "إضافات",
-          price: 3000,
-          image: "/placeholder.svg",
-        },
-        quantity: 1,
-      },
-    ],
-    customerInfo: {
-      name: "أحمد محمد",
-      phone: "07701234567",
-      address: "بغداد - الكرادة",
-      notes: "الرجاء التوصيل سريعاً",
-    },
-    total: 19000,
-    date: "2025-05-03T14:30:00",
-    status: "completed",
-  },
-  {
-    id: "ord-002",
-    items: [
-      {
-        product: {
-          id: "p3",
-          name: "شاورما دجاج",
-          description: "شاورما دجاج مع صوص ثوم",
-          category: "وجبات سريعة",
-          price: 6000,
-          image: "/placeholder.svg",
-        },
-        quantity: 3,
-      },
-    ],
-    customerInfo: {
-      name: "سارة علي",
-      phone: "07709876543",
-      address: "بغداد - المنصور",
-    },
-    total: 18000,
-    date: "2025-05-02T19:45:00",
-    status: "completed",
-  },
-  {
-    id: "ord-003",
-    items: [
-      {
-        product: {
-          id: "p4",
-          name: "معجنات مشكلة",
-          description: "تشكيلة من المعجنات الطازجة",
-          category: "معجنات",
-          price: 12000,
-          image: "/placeholder.svg",
-        },
-        quantity: 1,
-      },
-    ],
-    customerInfo: {
-      name: "محمد حسين",
-      phone: "07712345678",
-      address: "بغداد - زيونة",
-    },
-    total: 12000,
-    date: "2025-05-01T11:15:00",
-    status: "pending",
-  },
-];
-
 export const useOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
@@ -98,23 +10,22 @@ export const useOrders = () => {
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
-    // Try to get orders from localStorage first
+    // Load orders from localStorage only - no demo data
     const storedOrders = localStorage.getItem('orders');
     if (storedOrders) {
       try {
         const parsedOrders = JSON.parse(storedOrders);
-        // Combine stored orders with demo orders
-        setOrders([...parsedOrders, ...demoOrders]);
-        setFilteredOrders([...parsedOrders, ...demoOrders]);
+        setOrders(parsedOrders);
+        setFilteredOrders(parsedOrders);
       } catch (error) {
         console.error('Error parsing stored orders:', error);
-        setOrders(demoOrders);
-        setFilteredOrders(demoOrders);
+        setOrders([]);
+        setFilteredOrders([]);
       }
     } else {
-      // Fall back to demo orders
-      setOrders(demoOrders);
-      setFilteredOrders(demoOrders);
+      // Start with empty orders array
+      setOrders([]);
+      setFilteredOrders([]);
     }
   }, []);
 
@@ -151,8 +62,6 @@ export const useOrders = () => {
       order.id === orderId ? { ...order, status: "cancelled" as "pending" | "completed" | "cancelled" } : order
     );
     setOrders(updatedOrders);
-    
-    // Update localStorage if order is from there
     updateLocalStorage(updatedOrders);
   };
 
@@ -161,27 +70,11 @@ export const useOrders = () => {
       order.id === orderId ? { ...order, status: newStatus } : order
     );
     setOrders(updatedOrders);
-    
-    // Update localStorage
     updateLocalStorage(updatedOrders);
   };
 
   const updateLocalStorage = (updatedOrders: Order[]) => {
-    const storedOrders = localStorage.getItem('orders');
-    if (storedOrders) {
-      try {
-        const parsedOrders = JSON.parse(storedOrders);
-        // Find which orders are from localStorage
-        const localOrderIds = new Set(parsedOrders.map((order: Order) => order.id));
-        
-        // Update only those orders that were originally in localStorage
-        const updatedStoredOrders = updatedOrders.filter(order => localOrderIds.has(order.id));
-        
-        localStorage.setItem('orders', JSON.stringify(updatedStoredOrders));
-      } catch (error) {
-        console.error('Error updating stored orders:', error);
-      }
-    }
+    localStorage.setItem('orders', JSON.stringify(updatedOrders));
   };
 
   const clearDateFilter = () => {
