@@ -56,11 +56,8 @@
 
 @layer utilities {
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary;
-  }
-  
-  .card-gradient {
-    @apply bg-gradient-to-br from-primary-custom to-accent/30;
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(to right, hsl(var(--primary)), hsl(var(--secondary)));
   }
   
   /* RTL table headers */
