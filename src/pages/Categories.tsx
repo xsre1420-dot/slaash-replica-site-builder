@@ -147,9 +147,9 @@ const Categories = () => {
   };
 
   return (
-    <div className="min-h-screen bg-primary-custom font-arabic">
+    <div className="min-h-screen bg-white font-arabic">
       {/* Header */}
-      <div className="bg-primary text-primary-custom p-4">
+      <div className="bg-slate-800 text-white p-4">
         <div className="flex justify-between items-center">
           <Link to="/builder">
             <X className="w-6 h-6" />
@@ -161,23 +161,23 @@ const Categories = () => {
 
       {/* Main Content */}
       <div className="max-w-xl mx-auto p-4">
-        <div className="bg-primary-custom rounded-xl shadow-sm p-4 mt-4">
+        <div className="bg-white rounded-xl shadow-sm p-4 mt-4 border">
           <div className="flex justify-between items-center mb-4">
             <Button 
-              className="bg-primary hover:bg-secondary text-primary-custom"
+              className="bg-slate-800 hover:bg-slate-700 text-white"
               onClick={() => setIsAddDialogOpen(true)}
             >
               <Plus className="w-4 h-4 ml-1" />
               إضافة تصنيف جديد
             </Button>
-            <h2 className="text-xl font-bold text-primary-custom">الأصناف</h2>
+            <h2 className="text-xl font-bold text-slate-800">الأصناف</h2>
           </div>
 
           <div className="space-y-2">
             {categories.map((category, index) => (
               <div 
                 key={category.id}
-                className="flex justify-between items-center p-3 rounded-lg bg-accent"
+                className="flex justify-between items-center p-3 rounded-lg bg-gray-50 border"
               >
                 <div className="flex items-center space-x-2">
                   <Button
@@ -189,7 +189,7 @@ const Categories = () => {
                     }}
                     disabled={category.id === "all"}
                   >
-                    <Trash2 className="w-4 h-4 text-primary" />
+                    <Trash2 className="w-4 h-4 text-red-600" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -200,7 +200,7 @@ const Categories = () => {
                     }}
                     disabled={category.id === "all"}
                   >
-                    <Edit className="w-4 h-4 text-secondary" />
+                    <Edit className="w-4 h-4 text-slate-600" />
                   </Button>
                   
                   <div className="flex space-x-1">
@@ -223,7 +223,7 @@ const Categories = () => {
                   </div>
                 </div>
                 
-                <span className="font-medium text-primary-custom">{category.name}</span>
+                <span className="font-medium text-slate-800">{category.name}</span>
               </div>
             ))}
           </div>
@@ -232,30 +232,30 @@ const Categories = () => {
 
       {/* Add Category Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] text-right bg-primary-custom">
+        <DialogContent className="sm:max-w-[425px] text-right bg-white">
           <DialogHeader>
-            <DialogTitle className="text-right text-primary-custom">إضافة تصنيف جديد</DialogTitle>
-            <DialogDescription className="text-right text-secondary-custom">
+            <DialogTitle className="text-right text-slate-800">إضافة تصنيف جديد</DialogTitle>
+            <DialogDescription className="text-right text-slate-600">
               أدخل اسم التصنيف الجديد الذي سيظهر في القائمة
             </DialogDescription>
           </DialogHeader>
           
           <div className="py-4">
-            <Label htmlFor="categoryName" className="block mb-1 text-primary-custom">اسم التصنيف</Label>
+            <Label htmlFor="categoryName" className="block mb-1 text-slate-800">اسم التصنيف</Label>
             <Input
               id="categoryName"
               value={newCategory.name}
               onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-              className="text-right bg-accent border-secondary text-primary-custom"
+              className="text-right bg-white border-gray-300 text-slate-800"
               autoFocus
             />
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="border-secondary text-primary-custom hover:bg-accent">
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="border-gray-300 text-slate-800 hover:bg-gray-50">
               إلغاء
             </Button>
-            <Button className="bg-primary hover:bg-secondary text-primary-custom" onClick={handleAddCategory}>
+            <Button className="bg-slate-800 hover:bg-slate-700 text-white" onClick={handleAddCategory}>
               إضافة
             </Button>
           </DialogFooter>
@@ -264,16 +264,16 @@ const Categories = () => {
 
       {/* Edit Category Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] text-right bg-primary-custom">
+        <DialogContent className="sm:max-w-[425px] text-right bg-white">
           <DialogHeader>
-            <DialogTitle className="text-right text-primary-custom">تعديل التصنيف</DialogTitle>
-            <DialogDescription className="text-right text-secondary-custom">
+            <DialogTitle className="text-right text-slate-800">تعديل التصنيف</DialogTitle>
+            <DialogDescription className="text-right text-slate-600">
               قم بتغيير اسم التصنيف
             </DialogDescription>
           </DialogHeader>
           
           <div className="py-4">
-            <Label htmlFor="editCategoryName" className="block mb-1 text-primary-custom">اسم التصنيف</Label>
+            <Label htmlFor="editCategoryName" className="block mb-1 text-slate-800">اسم التصنيف</Label>
             <Input
               id="editCategoryName"
               value={editingCategory?.name || ""}
@@ -284,16 +284,16 @@ const Categories = () => {
                     : null
                 )
               }
-              className="text-right bg-accent border-secondary text-primary-custom"
+              className="text-right bg-white border-gray-300 text-slate-800"
               autoFocus
             />
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="border-secondary text-primary-custom hover:bg-accent">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="border-gray-300 text-slate-800 hover:bg-gray-50">
               إلغاء
             </Button>
-            <Button className="bg-primary hover:bg-secondary text-primary-custom" onClick={handleEditCategory}>
+            <Button className="bg-slate-800 hover:bg-slate-700 text-white" onClick={handleEditCategory}>
               حفظ
             </Button>
           </DialogFooter>
@@ -302,20 +302,20 @@ const Categories = () => {
 
       {/* Delete Category Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] text-right bg-primary-custom">
+        <DialogContent className="sm:max-w-[425px] text-right bg-white">
           <DialogHeader>
-            <DialogTitle className="text-right text-primary-custom">حذف التصنيف</DialogTitle>
-            <DialogDescription className="text-right text-secondary-custom">
+            <DialogTitle className="text-right text-slate-800">حذف التصنيف</DialogTitle>
+            <DialogDescription className="text-right text-slate-600">
               هل أنت متأكد من رغبتك في حذف هذا التصنيف؟ هذا الإجراء لا يمكن التراجع عنه.
             </DialogDescription>
           </DialogHeader>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogDown(false)} className="border-secondary text-primary-custom hover:bg-accent">
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="border-gray-300 text-slate-800 hover:bg-gray-50">
               إلغاء
             </Button>
             <Button 
-              className="bg-primary hover:bg-secondary text-primary-custom"
+              className="bg-red-600 hover:bg-red-700 text-white"
               onClick={handleDeleteCategory}
             >
               حذف

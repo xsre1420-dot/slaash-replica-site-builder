@@ -12,53 +12,55 @@ export default function Builder() {
   const { storeName, storeLogo, updateStore } = useStore();
 
   return (
-    <div className="min-h-screen bg-primary-custom font-arabic">
+    <div className="min-h-screen bg-white font-arabic">
       {/* Store Header */}
-      <StoreHeader 
-        storeName={storeName} 
-        storeLogo={storeLogo} 
-        onUpdateStore={updateStore} 
-      />
+      <div className="bg-slate-800">
+        <StoreHeader 
+          storeName={storeName} 
+          storeLogo={storeLogo} 
+          onUpdateStore={updateStore} 
+        />
+      </div>
       
       <div className="p-8 max-w-6xl mx-auto">
-        <div className="bg-accent rounded-xl p-6 shadow-sm mb-8">
+        <div className="bg-white rounded-xl p-6 shadow-sm mb-8 border">
           <div className="text-center mb-6">
-            <h2 className="text-xl font-bold text-primary mb-2">رابط المطعم</h2>
-            <p className="text-secondary-custom">مشاركة الرابط مع الزبائن</p>
+            <h2 className="text-xl font-bold text-slate-800 mb-2">رابط المطعم</h2>
+            <p className="text-slate-600">مشاركة الرابط مع الزبائن</p>
           </div>
           
           <div className="flex items-center gap-2 mb-8">
             <Input 
               value="https://yourstore.com/menu" 
               readOnly 
-              className="text-left bg-primary-custom text-primary-custom font-english"
+              className="text-left bg-white text-slate-800 font-english border-gray-300"
             />
-            <Button variant="default" className="whitespace-nowrap bg-primary hover:bg-secondary text-primary-custom">
+            <Button variant="default" className="whitespace-nowrap bg-slate-800 hover:bg-slate-700 text-white">
               نسخ
             </Button>
           </div>
           
           <div className="grid grid-cols-2 gap-4">
             <Link to="/preview">
-              <Button variant="outline" className="w-full flex items-center justify-center gap-2 py-6 text-primary-custom bg-primary-custom hover:bg-accent">
+              <Button variant="outline" className="w-full flex items-center justify-center gap-2 py-6 text-slate-800 bg-white hover:bg-gray-50 border-gray-300">
                 <Eye className="w-5 h-5 ml-2" />
                 معاينة
               </Button>
             </Link>
             <Link to="/add-product">
-              <Button className="w-full bg-primary hover:bg-secondary flex items-center justify-center gap-2 py-6 text-primary-custom">
+              <Button className="w-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center gap-2 py-6 text-white">
                 <Plus className="w-5 h-5 ml-2" />
                 إضافة وجبة
               </Button>
             </Link>
             <Link to="/orders">
-              <Button variant="outline" className="w-full flex items-center justify-center gap-2 py-6 text-primary-custom bg-primary-custom hover:bg-accent">
+              <Button variant="outline" className="w-full flex items-center justify-center gap-2 py-6 text-slate-800 bg-white hover:bg-gray-50 border-gray-300">
                 <List className="w-5 h-5 ml-2" />
                 الطلبات
               </Button>
             </Link>
             <Link to="/categories">
-              <Button variant="outline" className="w-full flex items-center justify-center gap-2 py-6 text-primary-custom bg-primary-custom hover:bg-accent">
+              <Button variant="outline" className="w-full flex items-center justify-center gap-2 py-6 text-slate-800 bg-white hover:bg-gray-50 border-gray-300">
                 <Tag className="w-5 h-5 ml-2" />
                 الأصناف
               </Button>
@@ -66,16 +68,16 @@ export default function Builder() {
           </div>
         </div>
 
-        <Card className="bg-primary-custom shadow-sm">
+        <Card className="bg-white shadow-sm border">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-primary-custom">المنتجات</CardTitle>
-              <Link to="/add-product" className="text-secondary hover:text-primary hover:underline text-sm flex items-center">
+              <CardTitle className="text-slate-800">المنتجات</CardTitle>
+              <Link to="/add-product" className="text-slate-600 hover:text-slate-800 hover:underline text-sm flex items-center">
                 <Plus className="w-4 h-4 ml-1" />
                 إضافة منتج جديد
               </Link>
             </div>
-            <CardDescription className="text-secondary-custom">إدارة منتجات المنيو</CardDescription>
+            <CardDescription className="text-slate-600">إدارة منتجات المنيو</CardDescription>
           </CardHeader>
           <CardContent>
             <ProductsList />
