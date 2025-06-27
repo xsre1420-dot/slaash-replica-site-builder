@@ -311,7 +311,7 @@ const Categories = () => {
           </DialogHeader>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogDown(false)} className="border-secondary text-primary-custom hover:bg-accent">
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="border-secondary text-primary-custom hover:bg-accent">
               إلغاء
             </Button>
             <Button 
