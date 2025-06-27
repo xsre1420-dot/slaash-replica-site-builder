@@ -35,7 +35,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-primary-custom flex flex-col font-arabic">
       {/* Header */}
       <header className="bg-primary text-white py-4 px-6 text-center">
         <h1 className="text-xl font-bold flex items-center justify-center">
@@ -44,7 +44,7 @@ const Login = () => {
       </header>
 
       <div className="flex-1 flex flex-col items-center justify-center p-6">
-        <div className="w-full max-w-md bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="w-full max-w-md bg-white rounded-lg shadow-md overflow-hidden border border-primary">
           {/* Login Header */}
           <div className="bg-primary text-white p-6 text-right">
             <h2 className="text-2xl font-bold mb-1">تسجيل الدخول</h2>
@@ -56,14 +56,14 @@ const Login = () => {
             {error && (
               <Alert className="mb-6 bg-yellow-100 border-yellow-400 text-right">
                 <div className="flex items-center">
-                  <AlertDescription className="flex-1 text-dark-green">⚠️ {error}</AlertDescription>
+                  <AlertDescription className="flex-1 text-primary-custom">⚠️ {error}</AlertDescription>
                 </div>
               </Alert>
             )}
 
             {/* Username Input */}
             <div className="mb-6">
-              <label htmlFor="username" className="block text-right text-dark-green mb-2">
+              <label htmlFor="username" className="block text-right text-primary-custom mb-2 font-medium">
                 اسم المستخدم
               </label>
               <div className="relative">
@@ -73,16 +73,16 @@ const Login = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="أدخل اسم المستخدم"
-                  className="pl-10 text-right text-dark-green"
+                  className="pl-10 text-right text-primary-custom border-secondary"
                   dir="rtl"
                 />
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary h-5 w-5" />
               </div>
             </div>
 
             {/* Password Input */}
             <div className="mb-6">
-              <label htmlFor="password" className="block text-right text-dark-green mb-2">
+              <label htmlFor="password" className="block text-right text-primary-custom mb-2 font-medium">
                 كلمة المرور
               </label>
               <div className="relative">
@@ -92,16 +92,16 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="أدخل كلمة المرور"
-                  className="pl-10 text-right text-dark-green"
+                  className="pl-10 text-right text-primary-custom border-secondary"
                   dir="rtl"
                 />
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary h-5 w-5" />
               </div>
             </div>
 
             {/* Remember Me Checkbox */}
             <div className="flex items-center justify-end mb-6">
-              <label htmlFor="remember-me" className="ml-2 text-sm text-dark-green">
+              <label htmlFor="remember-me" className="ml-2 text-sm text-secondary-custom">
                 تذكر تسجيل الدخول
               </label>
               <Checkbox 
@@ -114,7 +114,7 @@ const Login = () => {
             {/* Login Button */}
             <Button 
               type="submit" 
-              className="w-full bg-primary hover:bg-primary/90 text-white py-3 text-lg"
+              className="w-full bg-primary hover:bg-secondary text-white py-3 text-lg font-medium"
             >
               <span className="ml-2">تسجيل الدخول</span>
               <ArrowRight className="h-5 w-5 transform rotate-180" />
@@ -122,7 +122,7 @@ const Login = () => {
 
             {/* Forgot Password */}
             <div className="text-center mt-4">
-              <Link to="/forgot-password" className="text-primary hover:underline text-sm">
+              <Link to="/forgot-password" className="text-secondary hover:text-primary hover:underline text-sm">
                 نسيت كلمة المرور؟
               </Link>
             </div>
@@ -131,7 +131,7 @@ const Login = () => {
       </div>
 
       {/* Footer */}
-      <footer className="text-center py-4 text-dark-green text-sm">
+      <footer className="bg-primary-custom text-center py-4 text-secondary-custom text-sm border-t border-secondary">
         <p>جميع الحقوق محفوظة © 2025 نظام إدارة المطعم</p>
       </footer>
     </div>

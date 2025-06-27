@@ -19,16 +19,16 @@ const Orders = () => {
   } = useOrders();
 
   return (
-    <div className="min-h-screen bg-gray-50 rtl">
+    <div className="min-h-screen bg-primary-custom rtl font-arabic">
       {/* Header */}
       <OrdersHeader />
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-4">
-        <Card className="mb-6 shadow-sm">
-          <CardHeader className="border-b pb-4">
-            <CardTitle className="text-right text-xl text-dark-green">الطلبات</CardTitle>
-            <CardDescription className="text-right text-dark-green">
+        <Card className="mb-6 shadow-sm border border-secondary">
+          <CardHeader className="border-b border-secondary pb-4">
+            <CardTitle className="text-right text-xl text-primary-custom">الطلبات</CardTitle>
+            <CardDescription className="text-right text-secondary-custom">
               عرض وإدارة طلبات العملاء مع كافة معلومات التوصيل
             </CardDescription>
           </CardHeader>

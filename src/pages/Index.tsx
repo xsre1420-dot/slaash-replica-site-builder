@@ -15,15 +15,15 @@ const Index = () => {
             <div className="absolute transform rotate-12 bg-white w-24 h-12"></div>
             <div className="absolute transform -rotate-12 -translate-y-2 bg-white w-24 h-12"></div>
           </div>
-          <div className="text-center">
+          <div className="text-center font-arabic">
             <h1 className="text-6xl font-bold mb-1">{storeName}</h1>
-            <h2 className="text-2xl uppercase tracking-wider">NUMO</h2>
+            <h2 className="text-2xl uppercase tracking-wider font-english">NUMO</h2>
           </div>
         </div>
         
         {/* Login Button */}
         <Link to="/login" className="w-full max-w-md">
-          <button className="w-full bg-white text-primary rounded-full py-5 px-8 flex items-center justify-center text-xl font-bold">
+          <button className="w-full bg-white text-primary rounded-full py-5 px-8 flex items-center justify-center text-xl font-bold font-arabic hover:bg-accent transition-colors">
             <span className="ml-2">سجل الدخول</span>
             <ArrowRight className="h-5 w-5" />
           </button>
@@ -31,7 +31,7 @@ const Index = () => {
       </div>
       
       {/* Footer */}
-      <div className="mt-10 text-center text-sm opacity-80">
+      <div className="mt-10 text-center text-sm opacity-80 font-arabic">
         <p>نظام إدارة المطاعم والمقاهي © 2025</p>
       </div>
     </div>

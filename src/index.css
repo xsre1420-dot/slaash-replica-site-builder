@@ -1,5 +1,5 @@
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -8,30 +8,49 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 150 84% 15%;
+    --foreground: 201 36% 18%;
     --card: 0 0% 100%;
-    --card-foreground: 150 84% 15%;
+    --card-foreground: 201 36% 18%;
     --popover: 0 0% 100%;
-    --popover-foreground: 150 84% 15%;
-    --primary: 174 77% 56%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 174 77% 76%;
-    --secondary-foreground: 150 84% 15%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 150 60% 30%;
-    --accent: 174 77% 76%;
-    --accent-foreground: 150 84% 15%;
-    --destructive: 174 77% 56%;
+    --popover-foreground: 201 36% 18%;
+    --primary: 180 100% 21%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 169 65% 35%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 161 29% 85%;
+    --muted-foreground: 185 30% 53%;
+    --accent: 161 35% 91%;
+    --accent-foreground: 201 36% 18%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 174 77% 56%;
+    --border: 161 35% 91%;
+    --input: 161 35% 91%;
+    --ring: 180 100% 21%;
     --radius: 0.75rem;
+    
+    /* Custom color variables */
+    --bg-primary: 161 35% 91%;
+    --bg-secondary: 163 44% 80%;
+    --text-primary: 201 36% 18%;
+    --text-secondary: 185 30% 53%;
+    --accent-primary: 180 100% 21%;
+    --accent-secondary: 169 65% 35%;
   }
 
   body {
+    font-family: 'Tajawal', 'Inter', sans-serif;
+    color: hsl(var(--text-primary));
+    background-color: hsl(var(--bg-primary));
+  }
+  
+  /* Apply Inter font for English text */
+  .font-english {
     font-family: 'Inter', sans-serif;
-    color: hsl(150 84% 15%);
+  }
+  
+  /* Apply Tajawal for Arabic text */
+  .font-arabic {
+    font-family: 'Tajawal', sans-serif;
   }
 }
 
@@ -41,20 +60,32 @@
   }
   
   .card-gradient {
-    @apply bg-gradient-to-br from-white to-secondary/10;
+    @apply bg-gradient-to-br from-white to-accent/30;
   }
   
-  /* Add this class for RTL table headers */
+  /* RTL table headers */
   .rtl th {
     text-align: right;
   }
   
-  /* Dark green text utilities */
-  .text-dark-green {
-    color: hsl(150 84% 15%);
+  /* Custom color utilities */
+  .text-primary-custom {
+    color: hsl(var(--text-primary));
   }
   
-  .text-turquoise {
-    color: hsl(174 77% 56%);
+  .text-secondary-custom {
+    color: hsl(var(--text-secondary));
+  }
+  
+  .bg-primary-custom {
+    background-color: hsl(var(--bg-primary));
+  }
+  
+  .bg-secondary-custom {
+    background-color: hsl(var(--bg-secondary));
+  }
+  
+  .border-primary-custom {
+    border-color: hsl(var(--accent-primary));
   }
 }
