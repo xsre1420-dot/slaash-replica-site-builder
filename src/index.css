@@ -7,33 +7,33 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 186 75% 88%;
     --foreground: 201 36% 18%;
-    --card: 0 0% 100%;
+    --card: 186 75% 88%;
     --card-foreground: 201 36% 18%;
-    --popover: 0 0% 100%;
+    --popover: 186 75% 88%;
     --popover-foreground: 201 36% 18%;
-    --primary: 180 100% 21%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 210 100% 20%;
+    --primary-foreground: 186 75% 88%;
     --secondary: 169 65% 35%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary-foreground: 186 75% 88%;
     --muted: 161 29% 85%;
     --muted-foreground: 185 30% 53%;
     --accent: 161 35% 91%;
     --accent-foreground: 201 36% 18%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 210 100% 20%;
+    --destructive-foreground: 186 75% 88%;
     --border: 161 35% 91%;
     --input: 161 35% 91%;
-    --ring: 180 100% 21%;
+    --ring: 210 100% 20%;
     --radius: 0.75rem;
     
-    /* Custom color variables */
-    --bg-primary: 161 35% 91%;
+    /* Custom color variables - Updated */
+    --bg-primary: 186 75% 88%;
     --bg-secondary: 163 44% 80%;
     --text-primary: 201 36% 18%;
     --text-secondary: 185 30% 53%;
-    --accent-primary: 180 100% 21%;
+    --accent-primary: 210 100% 20%;
     --accent-secondary: 169 65% 35%;
   }
 
@@ -60,7 +60,7 @@
   }
   
   .card-gradient {
-    @apply bg-gradient-to-br from-white to-accent/30;
+    @apply bg-gradient-to-br from-primary-custom to-accent/30;
   }
   
   /* RTL table headers */
