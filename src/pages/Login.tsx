@@ -37,18 +37,18 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-primary-custom flex flex-col font-arabic">
       {/* Header */}
-      <header className="bg-primary text-primary-custom py-4 px-6 text-center">
+      <header className="bg-primary text-white py-4 px-6 text-center">
         <h1 className="text-xl font-bold flex items-center justify-center">
           نظام إدارة المطعم <span className="mx-2">🍽️</span>
         </h1>
       </header>
 
       <div className="flex-1 flex flex-col items-center justify-center p-6">
-        <div className="w-full max-w-md bg-primary-custom rounded-lg shadow-md overflow-hidden border border-primary">
+        <div className="w-full max-w-md bg-white rounded-lg shadow-md overflow-hidden border border-primary">
           {/* Login Header */}
-          <div className="bg-primary text-primary-custom p-6 text-right">
+          <div className="bg-primary text-white p-6 text-right">
             <h2 className="text-2xl font-bold mb-1">تسجيل الدخول</h2>
-            <p className="text-sm opacity-90">أدخل بيانات الدخول لإدارة مطعمك</p>
+            <p className="text-sm text-primary-foreground opacity-90">أدخل بيانات الدخول لإدارة مطعمك</p>
           </div>
 
           <form onSubmit={handleLogin} className="p-6">
@@ -114,7 +114,7 @@ const Login = () => {
             {/* Login Button */}
             <Button 
               type="submit" 
-              className="w-full bg-primary hover:bg-secondary text-primary-custom py-3 text-lg font-medium"
+              className="w-full bg-primary hover:bg-secondary text-white py-3 text-lg font-medium"
             >
               <span className="ml-2">تسجيل الدخول</span>
               <ArrowRight className="h-5 w-5 transform rotate-180" />

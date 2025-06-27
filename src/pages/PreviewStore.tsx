@@ -60,9 +60,9 @@ const PreviewStore = () => {
   }, [headerImages.length]);
 
   return (
-    <div className="min-h-screen bg-primary-custom">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-primary text-primary-custom p-4 rounded-b-3xl">
+      <div className="bg-primary text-white p-4 rounded-b-3xl">
         <div className="flex justify-between items-center mb-4">
           <Link to="/builder">
             <X className="w-6 h-6" />
@@ -90,13 +90,13 @@ const PreviewStore = () => {
       </div>
 
       {/* Category Tabs - Moved to top */}
-      <div className="flex justify-end gap-2 p-4 overflow-x-auto bg-primary-custom shadow-sm">
+      <div className="flex justify-end gap-2 p-4 overflow-x-auto bg-white shadow-sm">
         {categories.map((category) => (
           <button 
             key={category.id}
             className={`px-4 py-2 rounded-full text-dark-green whitespace-nowrap ${
               selectedCategory === category.id 
-                ? "bg-primary text-primary-custom" 
+                ? "bg-primary text-white" 
                 : "bg-gray-100 text-dark-green hover:bg-gray-200"
             }`}
             onClick={() => setSelectedCategory(category.id)}
@@ -163,7 +163,7 @@ const PreviewStore = () => {
 
       {/* Add Header Image Button - Show when no images */}
       {headerImages.length === 0 && (
-        <div className="p-4 bg-primary-custom border-b">
+        <div className="p-4 bg-white border-b">
           <label className="cursor-pointer">
             <input
               type="file"
@@ -171,7 +171,7 @@ const PreviewStore = () => {
               onChange={handleImageUpload}
               className="hidden"
             />
-            <Button className="w-full bg-primary hover:bg-primary/90 text-primary-custom">
+            <Button className="w-full bg-primary hover:bg-primary/90">
               <Plus className="w-4 h-4 ml-2" />
               إضافة صورة للرأس
             </Button>
@@ -188,7 +188,7 @@ const PreviewStore = () => {
               <h3 className="text-xl font-bold">لا توجد منتجات بعد</h3>
               <p className="text-gray-500">ابدأ بإضافة وجباتك من قسم البناء</p>
               <Link to="/add-product">
-                <Button className="bg-primary hover:bg-primary/90 text-primary-custom">
+                <Button className="bg-primary hover:bg-primary/90">
                   <Plus className="w-4 h-4 ml-2" />
                   إضافة أول وجبة
                 </Button>
@@ -200,7 +200,7 @@ const PreviewStore = () => {
             {products.map((product) => (
               <div 
                 key={product.id} 
-                className="bg-primary-custom rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
                 onClick={() => handleViewProduct(product.id)}
               >
                 <div className="flex flex-col h-full">
@@ -221,7 +221,7 @@ const PreviewStore = () => {
                       <div className="flex flex-col gap-2">
                         <Button 
                           size="sm"
-                          className="bg-primary hover:bg-primary/90 text-sm h-9 w-full text-primary-custom"
+                          className="bg-primary hover:bg-primary/90 text-sm h-9 w-full"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleAddToCart(product);
@@ -256,10 +256,10 @@ const PreviewStore = () => {
         <Link to="/checkout">
           <div className="bg-primary h-16 flex items-center justify-center relative rounded-t-3xl">
             {/* Primary circular icon in the center */}
-            <div className="absolute -top-6 bg-primary rounded-full p-4 border-4 border-primary-custom shadow-lg">
-              <ShoppingCart className="w-6 h-6 text-primary-custom" />
+            <div className="absolute -top-6 bg-primary rounded-full p-4 border-4 border-white shadow-lg">
+              <ShoppingCart className="w-6 h-6 text-white" />
               {cartCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-primary-custom text-primary rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+                <span className="absolute -top-2 -right-2 bg-white text-primary rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
                   {cartCount}
                 </span>
               )}
