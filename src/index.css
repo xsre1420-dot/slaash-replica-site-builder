@@ -1,5 +1,4 @@
 
-
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 @tailwind base;
@@ -14,7 +13,7 @@
     --card-foreground: 201 36% 18%;
     --popover: 186 75% 88%;
     --popover-foreground: 201 36% 18%;
-    --primary: 201 36% 18%;
+    --primary: 210 100% 20%;
     --primary-foreground: 186 75% 88%;
     --secondary: 169 65% 35%;
     --secondary-foreground: 186 75% 88%;
@@ -22,11 +21,11 @@
     --muted-foreground: 185 30% 53%;
     --accent: 161 35% 91%;
     --accent-foreground: 201 36% 18%;
-    --destructive: 201 36% 18%;
+    --destructive: 210 100% 20%;
     --destructive-foreground: 186 75% 88%;
     --border: 161 35% 91%;
     --input: 161 35% 91%;
-    --ring: 201 36% 18%;
+    --ring: 210 100% 20%;
     --radius: 0.75rem;
     
     /* Custom color variables - Updated */
@@ -34,7 +33,7 @@
     --bg-secondary: 163 44% 80%;
     --text-primary: 201 36% 18%;
     --text-secondary: 185 30% 53%;
-    --accent-primary: 201 36% 18%;
+    --accent-primary: 210 100% 20%;
     --accent-secondary: 169 65% 35%;
   }
 
@@ -61,7 +60,7 @@
   }
   
   .card-gradient {
-    background: linear-gradient(135deg, hsl(var(--accent-primary)) 0%, hsl(var(--accent)) 100%);
+    @apply bg-gradient-to-br from-primary-custom to-accent/30;
   }
   
   /* RTL table headers */
@@ -90,4 +89,3 @@
     border-color: hsl(var(--accent-primary));
   }
 }
-
