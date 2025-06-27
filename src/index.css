@@ -60,7 +60,7 @@
   }
   
   .card-gradient {
-    @apply bg-gradient-to-br from-primary-custom to-accent/30;
+    @apply bg-gradient-to-br from-primary to-accent/30;
   }
   
   /* RTL table headers */
