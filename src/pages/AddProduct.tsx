@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +11,8 @@ import { categories, addProduct } from "@/data/dummyData";
 import { useToast } from "@/hooks/use-toast";
 import { Product } from "@/types";
 import ProductImagesManager from "@/components/ProductImagesManager";
+import SizesManager from "@/components/SizesManager";
+import ColorsManager from "@/components/ColorsManager";
 
 const AddProduct = () => {
   const [mainImage, setMainImage] = useState<string | null>(null);
@@ -18,6 +21,8 @@ const AddProduct = () => {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [price, setPrice] = useState("");
+  const [sizes, setSizes] = useState<string[]>([]);
+  const [colors, setColors] = useState<string[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -75,6 +80,8 @@ const AddProduct = () => {
       price: Number(price),
       image: mainImage,
       additionalImages: additionalImages,
+      sizes: sizes.length > 0 ? sizes : undefined,
+      colors: colors.length > 0 ? colors : undefined,
     };
 
     // Add product to the list
@@ -161,6 +168,12 @@ const AddProduct = () => {
               onChange={(e) => setPrice(e.target.value)}
             />
           </div>
+
+          {/* Sizes Manager */}
+          <SizesManager sizes={sizes} onSizesChange={setSizes} />
+
+          {/* Colors Manager */}
+          <ColorsManager colors={colors} onColorsChange={setColors} />
 
           {/* Submit Button */}
           <Button type="submit" className="w-full bg-primary hover:bg-primary/90">

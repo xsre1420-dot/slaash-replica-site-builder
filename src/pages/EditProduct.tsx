@@ -10,6 +10,8 @@ import { categories, getProductById, products } from "@/data/dummyData";
 import { useToast } from "@/hooks/use-toast";
 import { Product } from "@/types";
 import ProductImagesManager from "@/components/ProductImagesManager";
+import SizesManager from "@/components/SizesManager";
+import ColorsManager from "@/components/ColorsManager";
 
 const EditProduct = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -19,6 +21,8 @@ const EditProduct = () => {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [price, setPrice] = useState("");
+  const [sizes, setSizes] = useState<string[]>([]);
+  const [colors, setColors] = useState<string[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -32,6 +36,8 @@ const EditProduct = () => {
         setPrice(product.price.toString());
         setMainImage(product.image);
         setAdditionalImages(product.additionalImages || []);
+        setSizes(product.sizes || []);
+        setColors(product.colors || []);
       } else {
         toast({
           title: "خطأ",
@@ -98,6 +104,8 @@ const EditProduct = () => {
         price: Number(price),
         image: mainImage,
         additionalImages,
+        sizes: sizes.length > 0 ? sizes : undefined,
+        colors: colors.length > 0 ? colors : undefined,
       };
 
       // Find and update the product in the array
@@ -188,6 +196,12 @@ const EditProduct = () => {
               onChange={(e) => setPrice(e.target.value)}
             />
           </div>
+
+          {/* Sizes Manager */}
+          <SizesManager sizes={sizes} onSizesChange={setSizes} />
+
+          {/* Colors Manager */}
+          <ColorsManager colors={colors} onColorsChange={setColors} />
 
           {/* Submit Button */}
           <Button type="submit" className="w-full bg-primary hover:bg-primary/90">

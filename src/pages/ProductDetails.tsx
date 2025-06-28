@@ -1,3 +1,4 @@
+
 import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { Product } from "@/types";
@@ -69,6 +70,8 @@ const ProductDetails = () => {
             price={product.price}
             description={product.description}
             category={product.category}
+            sizes={product.sizes}
+            colors={product.colors}
           />
 
           {/* Quantity Selector */}

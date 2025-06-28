@@ -1,4 +1,3 @@
-
 export interface Product {
   id: string;
   name: string;
@@ -7,6 +6,8 @@ export interface Product {
   price: number;
   image: string; // صورة رئيسية
   additionalImages?: string[]; // صور إضافية
+  sizes?: string[]; // قياسات اختيارية
+  colors?: string[]; // ألوان اختيارية
 }
 
 export interface CartItem {
