@@ -35,7 +35,7 @@ export const ProductsList = () => {
         <p className="text-gray-500">يمكنك البدء بإضافة وجبات جديدة</p>
         <Link to="/add-product">
           <Button 
-            style={{ backgroundColor: '#16a085' }}
+            style={{ backgroundColor: '#004D5A' }}
             className="hover:bg-opacity-90 text-white"
           >
             <Plus className="w-4 h-4 ml-2" />
