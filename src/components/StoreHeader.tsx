@@ -42,14 +42,14 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
   };
 
   return (
-    <div className="bg-gradient-to-r from-red-700 to-red-600 py-3 px-4 flex justify-between items-center text-white">
+    <div className="bg-primary text-white py-3 px-4 flex justify-between items-center">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" className="rounded-full p-2 h-auto w-auto bg-red-600/40 hover:bg-red-800">
+        <Button variant="ghost" className="rounded-full p-2 h-auto w-auto bg-primary/40 hover:bg-primary/60">
           <Settings className="h-5 w-5" />
         </Button>
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" className="rounded-full p-2 h-auto w-auto bg-red-600/40 hover:bg-red-800">
+            <Button variant="ghost" className="rounded-full p-2 h-auto w-auto bg-primary/40 hover:bg-primary/60">
               <User className="h-5 w-5" />
             </Button>
           </PopoverTrigger>
@@ -65,7 +65,7 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
                         {logo ? (
                           <AvatarImage src={logo} alt="شعار المتجر" className="object-contain" />
                         ) : (
-                          <AvatarFallback className="bg-red-50 text-red-700 text-2xl">🍽️</AvatarFallback>
+                          <AvatarFallback className="bg-primary/10 text-primary text-2xl">🍽️</AvatarFallback>
                         )}
                       </Avatar>
                       
@@ -114,12 +114,12 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
                       {logo ? (
                         <AvatarImage src={logo} alt="شعار المتجر" className="object-contain" />
                       ) : (
-                        <AvatarFallback className="text-3xl text-red-700 bg-red-50">🍽️</AvatarFallback>
+                        <AvatarFallback className="text-3xl text-primary bg-primary/10">🍽️</AvatarFallback>
                       )}
                     </Avatar>
                   </div>
                   <div className="text-center">
-                    <p className="font-bold text-xl text-red-600 font-serif">{name}</p>
+                    <p className="font-bold text-xl text-primary font-serif">{name}</p>
                   </div>
                   <Button className="w-full" onClick={() => setIsEditing(true)}>
                     تعديل معلومات المتجر
@@ -131,7 +131,7 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
         </Popover>
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" className="rounded-full p-2 h-auto w-auto bg-red-600/40 hover:bg-red-800">
+            <Button variant="ghost" className="rounded-full p-2 h-auto w-auto bg-primary/40 hover:bg-primary/60">
               <LinkIcon className="h-5 w-5" />
             </Button>
           </PopoverTrigger>
@@ -164,7 +164,7 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
         {logo && (
           <Avatar className="w-10 h-10 rounded-full overflow-visible bg-transparent">
             <AvatarImage src={logo} alt="شعار المتجر" className="object-contain" />
-            <AvatarFallback className="bg-red-50 text-red-700">🍽️</AvatarFallback>
+            <AvatarFallback className="bg-primary/10 text-primary">🍽️</AvatarFallback>
           </Avatar>
         )}
       </div>
