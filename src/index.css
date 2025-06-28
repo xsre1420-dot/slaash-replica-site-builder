@@ -13,7 +13,7 @@
     --card-foreground: 201 36% 18%;
     --popover: 0 0% 100%;
     --popover-foreground: 201 36% 18%;
-    --primary: 180 100% 25%;
+    --primary: 180 100% 21%;
     --primary-foreground: 0 0% 100%;
     --secondary: 169 65% 35%;
     --secondary-foreground: 0 0% 100%;
@@ -25,15 +25,15 @@
     --destructive-foreground: 210 40% 98%;
     --border: 161 35% 91%;
     --input: 161 35% 91%;
-    --ring: 180 100% 25%;
+    --ring: 180 100% 21%;
     --radius: 0.75rem;
     
-    /* Custom color variables - Updated to teal/turquoise */
+    /* Custom color variables - Updated background to white */
     --bg-primary: 0 0% 100%;
     --bg-secondary: 163 44% 80%;
     --text-primary: 201 36% 18%;
     --text-secondary: 185 30% 53%;
-    --accent-primary: 180 100% 25%;
+    --accent-primary: 180 100% 21%;
     --accent-secondary: 169 65% 35%;
   }
 
