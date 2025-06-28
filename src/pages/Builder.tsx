@@ -46,7 +46,10 @@ export default function Builder() {
               </Button>
             </Link>
             <Link to="/add-product">
-              <Button className="w-full bg-primary hover:bg-secondary flex items-center justify-center gap-2 py-6">
+              <Button 
+                style={{ backgroundColor: '#16a085' }}
+                className="w-full hover:bg-opacity-90 text-white flex items-center justify-center gap-2 py-6"
+              >
                 <Plus className="w-5 h-5 ml-2" />
                 إضافة وجبة
               </Button>

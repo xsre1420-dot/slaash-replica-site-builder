@@ -34,7 +34,10 @@ export const ProductsList = () => {
         <h3 className="text-xl font-bold text-gray-700">لا توجد وجبات مسجلة</h3>
         <p className="text-gray-500">يمكنك البدء بإضافة وجبات جديدة</p>
         <Link to="/add-product">
-          <Button className="bg-red-600 hover:bg-red-700">
+          <Button 
+            style={{ backgroundColor: '#16a085' }}
+            className="hover:bg-opacity-90 text-white"
+          >
             <Plus className="w-4 h-4 ml-2" />
             إضافة وجبة جديدة
           </Button>

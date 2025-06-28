@@ -147,9 +147,9 @@ const Categories = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="bg-red-600 text-white p-4">
+      <div style={{ backgroundColor: '#16a085' }} className="text-white p-4">
         <div className="flex justify-between items-center">
           <Link to="/builder">
             <X className="w-6 h-6" />
@@ -164,7 +164,8 @@ const Categories = () => {
         <div className="bg-white rounded-xl shadow-sm p-4 mt-4">
           <div className="flex justify-between items-center mb-4">
             <Button 
-              className="bg-red-600 hover:bg-red-700"
+              style={{ backgroundColor: '#16a085' }}
+              className="hover:bg-opacity-90 text-white"
               onClick={() => setIsAddDialogOpen(true)}
             >
               <Plus className="w-4 h-4 ml-1" />
@@ -255,7 +256,11 @@ const Categories = () => {
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               إلغاء
             </Button>
-            <Button className="bg-red-600 hover:bg-red-700" onClick={handleAddCategory}>
+            <Button 
+              style={{ backgroundColor: '#16a085' }} 
+              className="hover:bg-opacity-90 text-white" 
+              onClick={handleAddCategory}
+            >
               إضافة
             </Button>
           </DialogFooter>
@@ -293,7 +298,11 @@ const Categories = () => {
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               إلغاء
             </Button>
-            <Button className="bg-red-600 hover:bg-red-700" onClick={handleEditCategory}>
+            <Button 
+              style={{ backgroundColor: '#16a085' }} 
+              className="hover:bg-opacity-90 text-white" 
+              onClick={handleEditCategory}
+            >
               حفظ
             </Button>
           </DialogFooter>
