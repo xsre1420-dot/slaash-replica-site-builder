@@ -17,6 +17,8 @@ const ProductDetails = () => {
   const { productId } = useParams<{ productId: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [selectedSize, setSelectedSize] = useState<string>("");
+  const [selectedColor, setSelectedColor] = useState<string>("");
   const { addToCart, cartCount } = useCart();
 
   const handleAddToCart = () => {
@@ -24,6 +26,7 @@ const ProductDetails = () => {
       // Add only one item at a time regardless of quantity selected
       addToCart(product);
       setQuantity(1);
+      console.log('Selected options:', { size: selectedSize, color: selectedColor });
     }
   };
 
@@ -72,6 +75,8 @@ const ProductDetails = () => {
             category={product.category}
             sizes={product.sizes}
             colors={product.colors}
+            onSizeSelect={setSelectedSize}
+            onColorSelect={setSelectedColor}
           />
 
           {/* Quantity Selector */}
