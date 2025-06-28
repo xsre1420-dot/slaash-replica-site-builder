@@ -6,25 +6,38 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowRight, Upload, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight, Upload, X, ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { useStore } from "@/context/StoreContext";
 
 const Settings = () => {
   const { toast } = useToast();
-  const { storeName, storeLogo, updateStore } = useStore();
+  const { storeName, storeLogo, storeSettings, updateStore, updateStoreSettings } = useStore();
   
   const [settings, setSettings] = useState({
     storeName: storeName,
     storeLogo: storeLogo,
-    menuBackgroundColor: "#ffffff",
-    menuTextColor: "#333333",
-    menuAccentColor: "#008080",
-    bannerImages: [] as string[]
+    menuBackgroundColor: storeSettings.menuBackgroundColor,
+    menuTextColor: storeSettings.menuTextColor,
+    menuAccentColor: storeSettings.menuAccentColor,
+    bannerImages: storeSettings.bannerImages,
+    primaryBannerIndex: storeSettings.primaryBannerIndex
   });
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  useEffect(() => {
+    setSettings({
+      storeName,
+      storeLogo,
+      menuBackgroundColor: storeSettings.menuBackgroundColor,
+      menuTextColor: storeSettings.menuTextColor,
+      menuAccentColor: storeSettings.menuAccentColor,
+      bannerImages: storeSettings.bannerImages,
+      primaryBannerIndex: storeSettings.primaryBannerIndex
+    });
+  }, [storeName, storeLogo, storeSettings]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'banner') => {
     const file = event.target.files?.[0];
@@ -48,14 +61,38 @@ const Settings = () => {
   };
 
   const removeBannerImage = (index: number) => {
-    setSettings(prev => ({
-      ...prev,
-      bannerImages: prev.bannerImages.filter((_, i) => i !== index)
-    }));
+    setSettings(prev => {
+      const newImages = prev.bannerImages.filter((_, i) => i !== index);
+      let newPrimaryIndex = prev.primaryBannerIndex;
+      
+      // Adjust primary index if needed
+      if (index === prev.primaryBannerIndex) {
+        newPrimaryIndex = 0; // Reset to first image
+      } else if (index < prev.primaryBannerIndex) {
+        newPrimaryIndex = prev.primaryBannerIndex - 1;
+      }
+      
+      return {
+        ...prev,
+        bannerImages: newImages,
+        primaryBannerIndex: Math.min(newPrimaryIndex, newImages.length - 1)
+      };
+    });
     
     if (currentImageIndex >= settings.bannerImages.length - 1) {
       setCurrentImageIndex(Math.max(0, settings.bannerImages.length - 2));
     }
+  };
+
+  const setPrimaryImage = (index: number) => {
+    setSettings(prev => ({
+      ...prev,
+      primaryBannerIndex: index
+    }));
+    toast({
+      title: "تم التحديث",
+      description: "تم تعيين الصورة كصورة رئيسية",
+    });
   };
 
   const nextImage = () => {
@@ -72,27 +109,19 @@ const Settings = () => {
 
   const handleSaveSettings = () => {
     updateStore(settings.storeLogo, settings.storeName);
-    
-    // حفظ باقي الإعدادات في localStorage
-    localStorage.setItem('storeSettings', JSON.stringify(settings));
+    updateStoreSettings({
+      menuBackgroundColor: settings.menuBackgroundColor,
+      menuTextColor: settings.menuTextColor,
+      menuAccentColor: settings.menuAccentColor,
+      bannerImages: settings.bannerImages,
+      primaryBannerIndex: settings.primaryBannerIndex
+    });
     
     toast({
       title: "تم الحفظ",
       description: "تم حفظ إعدادات المتجر بنجاح",
     });
   };
-
-  const loadSavedSettings = () => {
-    const savedSettings = localStorage.getItem('storeSettings');
-    if (savedSettings) {
-      const parsed = JSON.parse(savedSettings);
-      setSettings(prev => ({ ...prev, ...parsed }));
-    }
-  };
-
-  useEffect(() => {
-    loadSavedSettings();
-  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 font-arabic">
@@ -176,7 +205,7 @@ const Settings = () => {
               <CardHeader>
                 <CardTitle className="text-right">صور البانر</CardTitle>
                 <CardDescription className="text-right">
-                  أضف صور البانر التي ستظهر في أعلى صفحة المنيو
+                  أضف صور البانر وحدد الصورة الرئيسية التي ستظهر أولاً في المنيو
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -191,6 +220,13 @@ const Settings = () => {
                           className="w-full h-full object-cover"
                         />
                       </div>
+                      
+                      {/* Primary image indicator */}
+                      {currentImageIndex === settings.primaryBannerIndex && (
+                        <div className="absolute top-2 right-2 bg-yellow-500 text-white p-2 rounded-full">
+                          <Star className="w-4 h-4 fill-current" />
+                        </div>
+                      )}
                       
                       {settings.bannerImages.length > 1 && (
                         <>
@@ -214,18 +250,32 @@ const Settings = () => {
                         </>
                       )}
                       
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-2 left-2 bg-red-500 text-white hover:bg-red-600"
-                        onClick={() => removeBannerImage(currentImageIndex)}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
+                      <div className="absolute bottom-2 left-2 flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="bg-red-500 text-white hover:bg-red-600"
+                          onClick={() => removeBannerImage(currentImageIndex)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                        
+                        {currentImageIndex !== settings.primaryBannerIndex && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="bg-yellow-500 text-white hover:bg-yellow-600"
+                            onClick={() => setPrimaryImage(currentImageIndex)}
+                          >
+                            <Star className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     
                     <div className="text-center text-sm text-gray-500">
                       {currentImageIndex + 1} من {settings.bannerImages.length}
+                      {currentImageIndex === settings.primaryBannerIndex && " (الصورة الرئيسية)"}
                     </div>
                   </div>
                 ) : (

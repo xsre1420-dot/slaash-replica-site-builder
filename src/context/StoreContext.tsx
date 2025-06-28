@@ -1,11 +1,12 @@
 
-import { createContext, useState, useContext, ReactNode } from "react";
+import { createContext, useState, useContext, ReactNode, useEffect } from "react";
 
 interface StoreSettings {
   menuBackgroundColor: string;
   menuTextColor: string;
   menuAccentColor: string;
   bannerImages: string[];
+  primaryBannerIndex: number;
 }
 
 interface StoreContextType {
@@ -25,16 +26,49 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     menuBackgroundColor: "#ffffff",
     menuTextColor: "#333333",
     menuAccentColor: "#008080",
-    bannerImages: []
+    bannerImages: [],
+    primaryBannerIndex: 0
   });
+
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('storeSettings');
+    if (savedSettings) {
+      try {
+        const parsed = JSON.parse(savedSettings);
+        setStoreSettings(prev => ({ ...prev, ...parsed }));
+        
+        // Also load store name and logo if they exist in settings
+        if (parsed.storeName) setStoreName(parsed.storeName);
+        if (parsed.storeLogo) setStoreLogo(parsed.storeLogo);
+      } catch (error) {
+        console.error('Failed to parse saved settings:', error);
+      }
+    }
+  }, []);
 
   const updateStore = (logo: string, name: string) => {
     setStoreLogo(logo);
     setStoreName(name);
+    
+    // Save to localStorage
+    const currentSettings = JSON.parse(localStorage.getItem('storeSettings') || '{}');
+    localStorage.setItem('storeSettings', JSON.stringify({
+      ...currentSettings,
+      storeName: name,
+      storeLogo: logo
+    }));
   };
 
   const updateStoreSettings = (settings: StoreSettings) => {
     setStoreSettings(settings);
+    
+    // Save to localStorage
+    localStorage.setItem('storeSettings', JSON.stringify({
+      ...settings,
+      storeName,
+      storeLogo
+    }));
   };
 
   return (
