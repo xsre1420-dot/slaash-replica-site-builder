@@ -28,8 +28,8 @@
     --ring: 180 100% 21%;
     --radius: 0.75rem;
     
-    /* Custom color variables */
-    --bg-primary: 161 35% 91%;
+    /* Custom color variables - Updated background to white */
+    --bg-primary: 0 0% 100%;
     --bg-secondary: 163 44% 80%;
     --text-primary: 201 36% 18%;
     --text-secondary: 185 30% 53%;

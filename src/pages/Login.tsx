@@ -35,7 +35,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-primary-custom flex flex-col font-arabic">
+    <div className="min-h-screen bg-white flex flex-col font-arabic">
       {/* Header */}
       <header className="bg-primary text-white py-4 px-6 text-center">
         <h1 className="text-xl font-bold flex items-center justify-center">
@@ -44,7 +44,7 @@ const Login = () => {
       </header>
 
       <div className="flex-1 flex flex-col items-center justify-center p-6">
-        <div className="w-full max-w-md bg-white rounded-lg shadow-md overflow-hidden border border-primary">
+        <div className="w-full max-w-md bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
           {/* Login Header */}
           <div className="bg-primary text-white p-6 text-right">
             <h2 className="text-2xl font-bold mb-1">تسجيل الدخول</h2>
@@ -73,7 +73,7 @@ const Login = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="أدخل اسم المستخدم"
-                  className="pl-10 text-right text-primary-custom border-secondary"
+                  className="pl-10 text-right text-primary-custom border-gray-200"
                   dir="rtl"
                 />
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary h-5 w-5" />
@@ -92,7 +92,7 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="أدخل كلمة المرور"
-                  className="pl-10 text-right text-primary-custom border-secondary"
+                  className="pl-10 text-right text-primary-custom border-gray-200"
                   dir="rtl"
                 />
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary h-5 w-5" />
@@ -131,7 +131,7 @@ const Login = () => {
       </div>
 
       {/* Footer */}
-      <footer className="bg-primary-custom text-center py-4 text-secondary-custom text-sm border-t border-secondary">
+      <footer className="bg-white text-center py-4 text-secondary-custom text-sm border-t border-gray-200">
         <p>جميع الحقوق محفوظة © 2025 نظام إدارة المطعم</p>
       </footer>
     </div>
