@@ -9,7 +9,133 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      "‏Bidaya": {
+        Row: {
+          id: number
+          name: string | null
+          password: string | null
+        }
+        Insert: {
+          id?: number
+          name?: string | null
+          password?: string | null
+        }
+        Update: {
+          id?: number
+          name?: string | null
+          password?: string | null
+        }
+        Relationships: []
+      }
+      categories: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          id: string
+          name: string
+          owner_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          name: string
+          owner_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          name?: string
+          owner_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "restaurant_owners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          additional_images: string[] | null
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          owner_id: string | null
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          additional_images?: string[] | null
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          owner_id?: string | null
+          price: number
+          updated_at?: string
+        }
+        Update: {
+          additional_images?: string[] | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          owner_id?: string | null
+          price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "restaurant_owners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      restaurant_owners: {
+        Row: {
+          created_at: string
+          id: string
+          password_hash: string
+          restaurant_logo: string | null
+          restaurant_name: string | null
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          password_hash: string
+          restaurant_logo?: string | null
+          restaurant_name?: string | null
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          password_hash?: string
+          restaurant_logo?: string | null
+          restaurant_name?: string | null
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
