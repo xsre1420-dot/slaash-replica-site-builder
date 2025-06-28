@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Settings, User, Link as LinkIcon, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,6 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Link } from "react-router-dom";
 
 interface StoreHeaderProps {
   storeLogo: string;
@@ -44,9 +44,11 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
   return (
     <div className="bg-primary text-white py-3 px-4 flex justify-between items-center">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" className="rounded-full p-2 h-auto w-auto bg-primary/40 hover:bg-primary/60">
-          <Settings className="h-5 w-5" />
-        </Button>
+        <Link to="/settings">
+          <Button variant="ghost" className="rounded-full p-2 h-auto w-auto bg-primary/40 hover:bg-primary/60">
+            <Settings className="h-5 w-5" />
+          </Button>
+        </Link>
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="ghost" className="rounded-full p-2 h-auto w-auto bg-primary/40 hover:bg-primary/60">
@@ -124,6 +126,11 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
                   <Button className="w-full" onClick={() => setIsEditing(true)}>
                     تعديل معلومات المتجر
                   </Button>
+                  <Link to="/settings" className="block">
+                    <Button variant="outline" className="w-full">
+                      إعدادات متقدمة
+                    </Button>
+                  </Link>
                 </div>
               )}
             </div>
