@@ -28,12 +28,6 @@ export const loginUser = async (username: string, password: string) => {
       return { error: 'كلمة المرور غير صحيحة' };
     }
 
-    // تعيين معرف المالك في الجلسة
-    await supabase.rpc('set_config', {
-      setting_name: 'app.current_owner_id',
-      setting_value: user.id
-    });
-
     return { 
       user: {
         id: user.id,
@@ -55,7 +49,7 @@ export const registerUser = async (username: string, password: string, restauran
       .from('restaurant_owners')
       .select('id')
       .eq('username', username)
-      .single();
+      .maybeSingle();
 
     if (existingUser) {
       return { error: 'اسم المستخدم موجود بالفعل' };
