@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Edit, Plus, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -35,7 +36,7 @@ export const ProductsList = () => {
         <p className="text-gray-500">يمكنك البدء بإضافة وجبات جديدة</p>
         <Link to="/add-product">
           <Button 
-            style={{ backgroundColor: '#004D5A' }}
+            style={{ backgroundColor: '#008080' }}
             className="hover:bg-opacity-90 text-white"
           >
             <Plus className="w-4 h-4 ml-2" />

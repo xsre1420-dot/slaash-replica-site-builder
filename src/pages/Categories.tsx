@@ -148,7 +148,7 @@ const Categories = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <div style={{ backgroundColor: '#004D5A' }} className="text-white p-4">
+      <div style={{ backgroundColor: '#008080' }} className="text-white p-4">
         <div className="flex justify-between items-center">
           <Link to="/builder">
             <X className="w-6 h-6" />
@@ -163,7 +163,7 @@ const Categories = () => {
         <div className="bg-white rounded-xl shadow-sm p-4 mt-4">
           <div className="flex justify-between items-center mb-4">
             <Button 
-              style={{ backgroundColor: '#004D5A' }}
+              style={{ backgroundColor: '#008080' }}
               className="hover:bg-opacity-90 text-white"
               onClick={() => setIsAddDialogOpen(true)}
             >
@@ -256,7 +256,7 @@ const Categories = () => {
               إلغاء
             </Button>
             <Button 
-              style={{ backgroundColor: '#004D5A' }} 
+              style={{ backgroundColor: '#008080' }} 
               className="hover:bg-opacity-90 text-white" 
               onClick={handleAddCategory}
             >
@@ -298,7 +298,7 @@ const Categories = () => {
               إلغاء
             </Button>
             <Button 
-              style={{ backgroundColor: '#004D5A' }} 
+              style={{ backgroundColor: '#008080' }} 
               className="hover:bg-opacity-90 text-white" 
               onClick={handleEditCategory}
             >

@@ -47,7 +47,7 @@ export default function Builder() {
             </Link>
             <Link to="/add-product">
               <Button 
-                style={{ backgroundColor: '#004D5A' }}
+                style={{ backgroundColor: '#008080' }}
                 className="w-full hover:bg-opacity-90 text-white flex items-center justify-center gap-2 py-6"
               >
                 <Plus className="w-5 h-5 ml-2" />
