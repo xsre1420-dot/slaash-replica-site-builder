@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Edit, Plus, Trash2 } from "lucide-react";
+import { Edit, Plus, Trash2, Star, Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { products as initialProducts } from "@/data/dummyData";
@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/use-toast";
 
 export const ProductsList = () => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -24,21 +25,24 @@ export const ProductsList = () => {
     });
   };
 
+  const toggleFavorite = (productId: string) => {
+    setFavorites(prev => 
+      prev.includes(productId) 
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
   if (products.length === 0) {
     return (
-      <div className="bg-white rounded-xl p-8 shadow-sm text-center space-y-4">
-        <div className="flex justify-center">
-          <svg className="w-12 h-12 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h18v18H3zM16 8l-4 4m0 0l-4-4m4 4v8m-4-4h8" />
-          </svg>
+      <div className="text-center py-16">
+        <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-r from-orange-100 to-pink-100 rounded-full flex items-center justify-center">
+          <div className="text-4xl">🍽️</div>
         </div>
-        <h3 className="text-xl font-bold text-gray-700">لا توجد وجبات مسجلة</h3>
-        <p className="text-gray-500">يمكنك البدء بإضافة وجبات جديدة</p>
+        <h3 className="text-xl font-bold text-gray-700 mb-2">لا توجد وجبات مسجلة</h3>
+        <p className="text-gray-500 mb-6">يمكنك البدء بإضافة وجبات جديدة</p>
         <Link to="/add-product">
-          <Button 
-            style={{ backgroundColor: '#008080' }}
-            className="hover:bg-opacity-90 text-white"
-          >
+          <Button className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-full px-8">
             <Plus className="w-4 h-4 ml-2" />
             إضافة وجبة جديدة
           </Button>
@@ -48,39 +52,66 @@ export const ProductsList = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {products.map((product) => (
-        <div key={product.id} className="bg-white rounded-lg shadow-sm p-4">
-          <div className="flex justify-between items-start">
-            <div className="flex space-x-2">
-              <Button 
-                variant="ghost" 
-                className="p-1 h-8 w-8" 
-                onClick={() => handleDelete(product.id)}
-              >
-                <Trash2 className="w-4 h-4 text-red-500" />
-              </Button>
+        <div key={product.id} className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+          <div className="relative">
+            <img
+              src={product.image}
+              alt={product.name}
+              className="w-full h-48 object-cover"
+            />
+            <button
+              className={`absolute top-4 left-4 w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                favorites.includes(product.id) 
+                  ? 'bg-red-500 text-white' 
+                  : 'bg-white/80 text-gray-400 hover:text-red-500'
+              }`}
+              onClick={() => toggleFavorite(product.id)}
+            >
+              <Heart className={`w-5 h-5 ${favorites.includes(product.id) ? 'fill-current' : ''}`} />
+            </button>
+            
+            {/* Action buttons */}
+            <div className="absolute top-4 right-4 flex gap-2">
               <Link to={`/edit-product/${product.id}`}>
                 <Button 
-                  variant="ghost" 
-                  className="p-1 h-8 w-8" 
+                  size="sm"
+                  className="w-10 h-10 p-0 bg-white/80 hover:bg-white text-gray-600 hover:text-blue-600 rounded-full"
                 >
-                  <Edit className="w-4 h-4 text-blue-500" />
+                  <Edit className="w-4 h-4" />
                 </Button>
               </Link>
+              <Button 
+                size="sm"
+                className="w-10 h-10 p-0 bg-white/80 hover:bg-white text-gray-600 hover:text-red-600 rounded-full"
+                onClick={() => handleDelete(product.id)}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+          
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1">
+                <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                <span className="text-sm text-gray-600">4.5</span>
+              </div>
+              <h3 className="text-lg font-bold text-gray-800 text-right">{product.name}</h3>
             </div>
             
-            <div className="flex items-center">
-              <div className="text-right mr-4">
-                <h3 className="text-lg font-bold">{product.name}</h3>
-                <p className="text-sm text-gray-500 line-clamp-1">{product.description}</p>
-                <p className="text-red-600 font-bold mt-1">{product.price.toLocaleString()} د.ع</p>
+            <p className="text-sm text-gray-500 mb-4 text-right line-clamp-2">{product.description}</p>
+            
+            <div className="flex items-center justify-between">
+              <span className="text-xl font-bold text-gray-800">{product.price.toLocaleString()} د.ع</span>
+              <div className="flex gap-2">
+                <Link to={`/edit-product/${product.id}`}>
+                  <Button size="sm" variant="outline" className="rounded-full">
+                    تعديل
+                  </Button>
+                </Link>
               </div>
-              <img
-                src={product.image}
-                alt={product.name}
-                className="w-16 h-16 rounded-md object-cover"
-              />
             </div>
           </div>
         </div>

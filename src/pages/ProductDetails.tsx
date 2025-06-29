@@ -44,8 +44,11 @@ const ProductDetails = () => {
     return (
       <>
         <ProductData productId={productId} onProductLoaded={setProduct} />
-        <div className="min-h-screen flex items-center justify-center">
-          <p>جاري التحميل...</p>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-orange-500 to-pink-500 rounded-full animate-pulse"></div>
+            <p className="text-gray-600">جاري التحميل...</p>
+          </div>
         </div>
       </>
     );
@@ -62,12 +65,12 @@ const ProductDetails = () => {
       {/* Main Content - Full Width and Height */}
       <div className="flex-1 flex flex-col">
         {/* Large Product Images - Takes more space */}
-        <div className="bg-white">
+        <div className="bg-gray-50 p-6">
           <ProductImages images={allImages} productName={product.name} isLarge={true} />
         </div>
 
-        {/* Product Details - Scrollable */}
-        <div className="flex-1 bg-white p-6 space-y-5">
+        {/* Product Details - Modern Card Style */}
+        <div className="flex-1 bg-white rounded-t-3xl p-6 space-y-6 -mt-6 relative z-10">
           <ProductInfo 
             name={product.name}
             price={product.price}
@@ -88,7 +91,7 @@ const ProductDetails = () => {
             />
           </div>
 
-          {/* Add to Cart Button - Above Cart */}
+          {/* Add to Cart Button - Modern Style */}
           <div className="pt-4">
             <AddToCartButton onClick={handleAddToCart} />
           </div>

@@ -19,7 +19,7 @@ const ProductImages = ({ images, productName, isLarge = false }: ProductImagesPr
           <CarouselContent>
             {images.map((img, index) => (
               <CarouselItem key={index} className="relative">
-                <AspectRatio ratio={aspectRatio} className="bg-gray-100">
+                <AspectRatio ratio={aspectRatio} className="bg-gray-100 rounded-3xl overflow-hidden">
                   <img
                     src={img}
                     alt={productName}
@@ -29,11 +29,11 @@ const ProductImages = ({ images, productName, isLarge = false }: ProductImagesPr
               </CarouselItem>
             ))}
           </CarouselContent>
-          <CarouselPrevious className="absolute left-2 top-1/2 -translate-y-1/2" />
-          <CarouselNext className="absolute right-2 top-1/2 -translate-y-1/2" />
+          <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white border-0 shadow-lg" />
+          <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white border-0 shadow-lg" />
         </Carousel>
       ) : (
-        <AspectRatio ratio={aspectRatio} className="bg-gray-100">
+        <AspectRatio ratio={aspectRatio} className="bg-gray-100 rounded-3xl overflow-hidden">
           <img
             src={images[0]}
             alt={productName}

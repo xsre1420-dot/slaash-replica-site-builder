@@ -26,15 +26,16 @@
     --border: 161 35% 91%;
     --input: 161 35% 91%;
     --ring: 180 100% 25%;
-    --radius: 0.75rem;
+    --radius: 1rem;
     
-    /* Custom color variables - Updated to teal/turquoise */
-    --bg-primary: 0 0% 100%;
-    --bg-secondary: 163 44% 80%;
-    --text-primary: 201 36% 18%;
-    --text-secondary: 185 30% 53%;
-    --accent-primary: 180 100% 25%;
-    --accent-secondary: 169 65% 35%;
+    /* Modern color scheme inspired by the image */
+    --bg-primary: 250 10% 97%;
+    --bg-secondary: 240 8% 95%;
+    --text-primary: 210 20% 15%;
+    --text-secondary: 215 15% 45%;
+    --accent-primary: 25 95% 53%;
+    --accent-secondary: 340 75% 55%;
+    --card-bg: 0 0% 100%;
   }
 
   body {
@@ -56,11 +57,20 @@
 
 @layer utilities {
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-pink-500;
   }
   
-  .card-gradient {
-    @apply bg-gradient-to-br from-white to-accent/30;
+  .card-modern {
+    @apply bg-white rounded-2xl shadow-sm border-0;
+  }
+  
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+  }
+  
+  /* Modern glassmorphism effect */
+  .glass-card {
+    @apply backdrop-blur-lg bg-white/80 border border-white/20;
   }
   
   /* RTL table headers */
@@ -68,24 +78,56 @@
     text-align: right;
   }
   
-  /* Custom color utilities */
-  .text-primary-custom {
+  /* Custom modern utilities */
+  .text-primary-modern {
     color: hsl(var(--text-primary));
   }
   
-  .text-secondary-custom {
+  .text-secondary-modern {
     color: hsl(var(--text-secondary));
   }
   
-  .bg-primary-custom {
+  .bg-primary-modern {
     background-color: hsl(var(--bg-primary));
   }
   
-  .bg-secondary-custom {
+  .bg-secondary-modern {
     background-color: hsl(var(--bg-secondary));
   }
   
-  .border-primary-custom {
-    border-color: hsl(var(--accent-primary));
+  .bg-card-modern {
+    background-color: hsl(var(--card-bg));
   }
+  
+  .accent-gradient {
+    background: linear-gradient(135deg, hsl(var(--accent-primary)), hsl(var(--accent-secondary)));
+  }
+  
+  /* Modern shadows */
+  .shadow-modern {
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.08);
+  }
+  
+  .shadow-modern-lg {
+    box-shadow: 0 10px 40px -4px rgba(0, 0, 0, 0.12);
+  }
+}
+
+/* Custom animations for modern feel */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(255, 165, 0, 0.3); }
+  50% { box-shadow: 0 0 30px rgba(255, 165, 0, 0.6); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
 }
