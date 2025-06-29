@@ -1,4 +1,3 @@
-
 import { X, ShoppingCart, Plus, Trash2, Search, Heart, Star } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
@@ -140,11 +139,11 @@ const PreviewStore = () => {
         </div>
       </div>
 
-      {/* Updated Categories with Rectangular Design */}
+      {/* Updated Categories with Modern Gradient Design */}
       <div className="px-6 py-4">
         <div className="flex justify-between items-center mb-4">
           <button 
-            className="text-sm font-medium text-orange-500"
+            className="text-sm font-medium bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent"
           >
             عرض الكل
           </button>
@@ -157,21 +156,18 @@ const PreviewStore = () => {
           {categories.map((category) => (
             <button 
               key={category.id}
-              className={`px-6 py-3 rounded-lg transition-all duration-200 whitespace-nowrap ${
+              className={`px-6 py-3 rounded-xl transition-all duration-200 whitespace-nowrap ${
                 selectedCategory === category.id 
                   ? "text-white shadow-lg" 
                   : "bg-white hover:bg-gray-50 border border-gray-200"
               }`}
               style={{
-                backgroundColor: selectedCategory === category.id 
-                  ? 'linear-gradient(135deg, #ff6b35, #f7931e)' 
+                background: selectedCategory === category.id 
+                  ? 'linear-gradient(135deg, #ff6b35, #f7931e, #ec4899)' 
                   : '#ffffff',
                 color: selectedCategory === category.id 
                   ? '#ffffff' 
-                  : storeSettings.menuTextColor,
-                background: selectedCategory === category.id 
-                  ? 'linear-gradient(135deg, #ff6b35, #f7931e)' 
-                  : '#ffffff'
+                  : storeSettings.menuTextColor
               }}
               onClick={() => setSelectedCategory(category.id)}
             >
@@ -181,7 +177,7 @@ const PreviewStore = () => {
         </div>
       </div>
 
-      {/* Enhanced Banner with Reduced Shadow */}
+      {/* Enhanced Banner with Smoother Transitions */}
       {bannerImages.length > 0 && (
         <div className="px-6 mb-6">
           <div 
@@ -189,20 +185,20 @@ const PreviewStore = () => {
             onMouseEnter={handleImageHover}
           >
             <div 
-              className={`w-full h-full transition-all duration-300 ease-in-out transform ${
-                isTransitioning ? 'opacity-80 scale-105' : 'opacity-100 scale-100'
+              className={`w-full h-full transition-all duration-200 ease-in-out transform ${
+                isTransitioning ? 'opacity-90 scale-105' : 'opacity-100 scale-100'
               }`}
             >
               <img
                 src={bannerImages[currentImageIndex]}
                 alt="Store Banner"
-                className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
+                className="w-full h-full object-cover transition-transform duration-200 hover:scale-110"
                 loading="lazy"
               />
             </div>
             
-            {/* Reduced gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/10 to-transparent" />
+            {/* Minimal gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/5 to-transparent" />
             
             {/* Enhanced Image Navigation Dots */}
             {bannerImages.length > 1 && (
@@ -211,7 +207,7 @@ const PreviewStore = () => {
                   <button
                     key={index}
                     onClick={() => handleImageNavigation(index)}
-                    className={`transition-all duration-300 ease-in-out rounded-full ${
+                    className={`transition-all duration-200 ease-in-out rounded-full ${
                       currentImageIndex === index 
                         ? "bg-white w-8 h-3 shadow-lg" 
                         : "bg-white/70 w-3 h-3 hover:bg-white/90 hover:scale-110"
@@ -228,7 +224,7 @@ const PreviewStore = () => {
       <div className="px-6 pb-24">
         {products.length === 0 ? (
           <div className="text-center py-16">
-            <div className="w-20 h-20 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+            <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-r from-orange-100 to-pink-100 rounded-full flex items-center justify-center">
               <div className="text-4xl">🍽️</div>
             </div>
             <h3 className="text-xl font-bold mb-2" style={{ color: storeSettings.menuTextColor }}>
@@ -237,10 +233,9 @@ const PreviewStore = () => {
             <p className="text-gray-500 mb-6">ابدأ بإضافة وجباتك من قسم البناء</p>
             <Link to="/add-product">
               <Button 
-                className="text-white rounded-full px-8"
+                className="text-white rounded-full px-8 border-0"
                 style={{ 
-                  background: 'linear-gradient(135deg, #ff6b35, #f7931e)',
-                  border: 'none'
+                  background: 'linear-gradient(135deg, #ff6b35, #f7931e, #ec4899)'
                 }}
               >
                 <Plus className="w-4 h-4 ml-2" />
@@ -266,7 +261,7 @@ const PreviewStore = () => {
                   <button
                     className={`absolute top-3 left-3 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
                       favorites.includes(product.id) 
-                        ? 'bg-red-500 text-white scale-110' 
+                        ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white scale-110' 
                         : 'bg-white text-gray-400 hover:text-red-500 hover:scale-110'
                     }`}
                     onClick={(e) => {
@@ -297,8 +292,7 @@ const PreviewStore = () => {
                     size="sm"
                     className="w-full h-9 text-white rounded-full border-0 transition-all duration-200 hover:scale-105"
                     style={{ 
-                      background: 'linear-gradient(135deg, #ff6b35, #f7931e)',
-                      border: 'none'
+                      background: 'linear-gradient(135deg, #ff6b35, #f7931e, #ec4899)'
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -314,19 +308,19 @@ const PreviewStore = () => {
         )}
       </div>
 
-      {/* Modern Cart Button with Updated Colors */}
+      {/* Modern Cart Button with Updated Gradient */}
       <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
         <Link to="/checkout">
           <div className="relative">
             <div 
               className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
               style={{ 
-                background: 'linear-gradient(135deg, #ff6b35, #f7931e)'
+                background: 'linear-gradient(135deg, #ff6b35, #f7931e, #ec4899)'
               }}
             >
               <ShoppingCart className="w-6 h-6 text-white" />
               {cartCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold animate-pulse">
+                <span className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold animate-pulse">
                   {cartCount}
                 </span>
               )}

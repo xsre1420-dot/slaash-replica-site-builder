@@ -57,13 +57,13 @@ const ProductInfo = ({
   return (
     <div className="space-y-5">
       <div className="flex justify-between items-start">
-        <span className="text-2xl font-bold text-primary">
+        <span className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
           {price.toLocaleString()} د.ع
         </span>
         <h2 className="text-2xl font-bold text-right">{name}</h2>
       </div>
 
-      <div className="bg-gray-50 p-4 rounded-lg shadow-inner">
+      <div className="bg-gradient-to-r from-orange-50 to-pink-50 p-4 rounded-lg shadow-inner border border-orange-100">
         <p className="text-gray-700 text-right leading-relaxed text-lg">{description}</p>
       </div>
 
@@ -78,9 +78,14 @@ const ProductInfo = ({
                 onClick={() => handleSizeSelect(size)}
                 className={`px-4 py-3 rounded-xl text-sm font-medium border-2 transition-all ${
                   selectedSize === size
-                    ? 'bg-primary text-white border-primary shadow-md'
-                    : 'bg-gray-100 text-gray-700 border-gray-200 hover:border-primary hover:bg-primary/10'
+                    ? 'text-white border-transparent shadow-md'
+                    : 'bg-gray-100 text-gray-700 border-gray-200 hover:border-orange-400 hover:bg-orange-50'
                 }`}
+                style={{
+                  background: selectedSize === size 
+                    ? 'linear-gradient(135deg, #ff6b35, #f7931e, #ec4899)' 
+                    : undefined
+                }}
               >
                 {size}
               </button>
@@ -100,8 +105,8 @@ const ProductInfo = ({
                 onClick={() => handleColorSelect(color)}
                 className={`px-4 py-3 rounded-xl text-sm font-medium border-2 transition-all ${
                   selectedColor === color
-                    ? 'border-primary shadow-md ring-2 ring-primary/30'
-                    : 'border-gray-200 hover:border-primary'
+                    ? 'border-orange-400 shadow-md ring-2 ring-orange-200'
+                    : 'border-gray-200 hover:border-orange-400'
                 }`}
                 style={{ 
                   backgroundColor: getColorBackground(color),

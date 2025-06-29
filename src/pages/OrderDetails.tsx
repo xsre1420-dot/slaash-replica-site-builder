@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
@@ -131,11 +132,14 @@ const OrderDetails = () => {
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-pink-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-dark-green">الطلب غير موجود</h2>
+          <h2 className="text-xl font-semibold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">الطلب غير موجود</h2>
           <Link to="/orders">
-            <Button className="mt-4">العودة للطلبات</Button>
+            <Button className="mt-4 text-white border-0"
+                    style={{ background: 'linear-gradient(135deg, #ff6b35, #f7931e, #ec4899)' }}>
+              العودة للطلبات
+            </Button>
           </Link>
         </div>
       </div>
@@ -143,9 +147,10 @@ const OrderDetails = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 rtl">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-pink-50 rtl">
       {/* Header */}
-      <div className="bg-primary text-white p-4">
+      <div className="text-white p-4"
+           style={{ background: 'linear-gradient(135deg, #ff6b35, #f7931e, #ec4899)' }}>
         <div className="flex justify-between items-center">
           <Link to="/orders">
             <ArrowLeft className="w-6 h-6" />
@@ -157,15 +162,15 @@ const OrderDetails = () => {
 
       {/* Main Content */}
       <div className="max-w-3xl mx-auto p-4">
-        <Card className="mb-6">
-          <CardHeader>
+        <Card className="mb-6 border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <CardHeader className="bg-gradient-to-r from-orange-100 to-pink-100 rounded-t-lg">
             <OrderHeader 
               orderId={order.id} 
               date={order.date} 
               status={order.status} 
             />
           </CardHeader>
-          <CardContent>
+          <CardContent className="bg-white rounded-b-lg">
             <div className="space-y-6">
               {/* Customer Info */}
               <CustomerInfo customerInfo={order.customerInfo} />
