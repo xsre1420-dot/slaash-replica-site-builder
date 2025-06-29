@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ArrowLeft, ShoppingCart, Plus, Minus } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -14,7 +15,7 @@ export default function PreviewStore() {
   const [products] = useState<Product[]>(initialProducts);
   const [categories] = useState<Category[]>(initialCategories);
   const [currentImageIndex, setCurrentImageIndex] = useState<{ [key: string]: number }>({});
-  const { addToCart, cart } = useCart();
+  const { addToCart, cartItems } = useCart();
   const { storeName, storeSettings } = useStore();
   const navigate = useNavigate();
 
@@ -23,7 +24,7 @@ export default function PreviewStore() {
     : products.filter(product => product.category === selectedCategory);
 
   const getCartItemCount = (productId: string) => {
-    const item = cart.find(item => item.id === productId);
+    const item = cartItems.find(item => item.product.id === productId);
     return item ? item.quantity : 0;
   };
 
@@ -47,13 +48,13 @@ export default function PreviewStore() {
     }));
   };
 
-  const totalItemsInCart = cart.reduce((total, item) => total + item.quantity, 0);
+  const totalItemsInCart = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   useEffect(() => {
     const interval = setInterval(() => {
       products.forEach(product => {
-        if (product.additional_images && product.additional_images.length > 1) {
-          const allImages = [product.image_url, ...product.additional_images].filter(Boolean);
+        if (product.additionalImages && product.additionalImages.length > 1) {
+          const allImages = [product.image, ...product.additionalImages].filter(Boolean);
           if (allImages.length > 1) {
             nextImage(product.id, allImages);
           }
@@ -146,12 +147,12 @@ export default function PreviewStore() {
         {/* Products Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProducts.map((product) => {
-            const allImages = product.additional_images && product.additional_images.length > 0 
-              ? [product.image_url, ...product.additional_images].filter(Boolean)
-              : [product.image_url].filter(Boolean);
+            const allImages = product.additionalImages && product.additionalImages.length > 0 
+              ? [product.image, ...product.additionalImages].filter(Boolean)
+              : [product.image].filter(Boolean);
             
             const currentIndex = currentImageIndex[product.id] || 0;
-            const displayImage = allImages[currentIndex] || product.image_url;
+            const displayImage = allImages[currentIndex] || product.image;
             const cartCount = getCartItemCount(product.id);
 
             return (
