@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,9 +64,8 @@ const Settings = () => {
       const newImages = prev.bannerImages.filter((_, i) => i !== index);
       let newPrimaryIndex = prev.primaryBannerIndex;
       
-      // Adjust primary index if needed
       if (index === prev.primaryBannerIndex) {
-        newPrimaryIndex = 0; // Reset to first image
+        newPrimaryIndex = 0;
       } else if (index < prev.primaryBannerIndex) {
         newPrimaryIndex = prev.primaryBannerIndex - 1;
       }
@@ -125,274 +123,275 @@ const Settings = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 font-arabic">
-      {/* Header */}
-      <div className="bg-primary text-white py-4 px-6">
-        <div className="flex items-center justify-between">
-          <Link to="/builder">
-            <Button variant="ghost" className="text-white hover:bg-primary/20">
-              <ArrowRight className="w-5 h-5 ml-2" />
-              العودة
-            </Button>
-          </Link>
-          <h1 className="text-2xl font-bold">إعدادات المتجر</h1>
-          <div></div>
+      {/* Modern Header */}
+      <div className="bg-white shadow-sm">
+        <div className="max-w-6xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <Link to="/builder">
+              <Button variant="ghost" className="p-2 hover:bg-gray-100 rounded-xl">
+                <ArrowRight className="w-6 h-6" />
+              </Button>
+            </Link>
+            <h1 className="text-2xl font-bold text-gray-800">إعدادات المتجر</h1>
+            <div className="w-10"></div>
+          </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-6">
-        <Tabs defaultValue="store" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="store">معلومات المتجر</TabsTrigger>
-            <TabsTrigger value="images">الصور</TabsTrigger>
-            <TabsTrigger value="design">التصميم</TabsTrigger>
-          </TabsList>
+      <div className="max-w-6xl mx-auto p-6">
+        <div className="bg-white rounded-3xl shadow-sm p-8">
+          <Tabs defaultValue="store" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 bg-gray-100 rounded-2xl p-1">
+              <TabsTrigger value="store" className="rounded-xl">معلومات المتجر</TabsTrigger>
+              <TabsTrigger value="images" className="rounded-xl">الصور</TabsTrigger>
+              <TabsTrigger value="design" className="rounded-xl">التصميم</TabsTrigger>
+            </TabsList>
 
-          {/* معلومات المتجر */}
-          <TabsContent value="store" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-right">معلومات المتجر الأساسية</CardTitle>
-                <CardDescription className="text-right">
-                  قم بتحديث اسم المتجر والشعار
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label className="text-right block">اسم المتجر</Label>
-                  <Input
-                    value={settings.storeName}
-                    onChange={(e) => setSettings(prev => ({ ...prev, storeName: e.target.value }))}
-                    className="text-right"
-                    placeholder="أدخل اسم المتجر"
-                  />
-                </div>
+            {/* Store Info Tab */}
+            <TabsContent value="store" className="space-y-6 mt-8">
+              <Card className="border-0 shadow-none bg-gray-50 rounded-2xl">
+                <CardHeader>
+                  <CardTitle className="text-right text-xl">معلومات المتجر الأساسية</CardTitle>
+                  <CardDescription className="text-right text-gray-600">
+                    قم بتحديث اسم المتجر والشعار
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-3">
+                    <Label className="text-right block text-gray-700 font-medium">اسم المتجر</Label>
+                    <Input
+                      value={settings.storeName}
+                      onChange={(e) => setSettings(prev => ({ ...prev, storeName: e.target.value }))}
+                      className="text-right rounded-2xl border-gray-200"
+                      placeholder="أدخل اسم المتجر"
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label className="text-right block">شعار المتجر</Label>
-                  <div className="flex items-center gap-4">
-                    <Avatar className="w-20 h-20">
-                      {settings.storeLogo ? (
-                        <AvatarImage src={settings.storeLogo} alt="شعار المتجر" />
-                      ) : (
-                        <AvatarFallback className="text-2xl">🍽️</AvatarFallback>
-                      )}
-                    </Avatar>
-                    
-                    <div className="flex-1">
-                      <label htmlFor="logo-upload" className="cursor-pointer">
-                        <div className="flex items-center justify-center w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:bg-gray-50">
-                          <Upload className="w-5 h-5 ml-2" />
-                          رفع شعار جديد
-                        </div>
-                        <input
-                          id="logo-upload"
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => handleImageUpload(e, 'logo')}
-                        />
-                      </label>
+                  <div className="space-y-3">
+                    <Label className="text-right block text-gray-700 font-medium">شعار المتجر</Label>
+                    <div className="flex items-center gap-6">
+                      <Avatar className="w-24 h-24">
+                        {settings.storeLogo ? (
+                          <AvatarImage src={settings.storeLogo} alt="شعار المتجر" />
+                        ) : (
+                          <AvatarFallback className="text-3xl">🍽️</AvatarFallback>
+                        )}
+                      </Avatar>
+                      
+                      <div className="flex-1">
+                        <label htmlFor="logo-upload" className="cursor-pointer">
+                          <div className="flex items-center justify-center w-full p-6 border-2 border-dashed border-gray-300 rounded-2xl hover:bg-gray-50 hover:border-orange-300 transition-colors">
+                            <Upload className="w-6 h-6 ml-3 text-gray-500" />
+                            <span className="text-gray-600">رفع شعار جديد</span>
+                          </div>
+                          <input
+                            id="logo-upload"
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => handleImageUpload(e, 'logo')}
+                          />
+                        </label>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          {/* الصور */}
-          <TabsContent value="images" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-right">صور البانر</CardTitle>
-                <CardDescription className="text-right">
-                  أضف صور البانر وحدد الصورة الرئيسية التي ستظهر أولاً في المنيو
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* عرض الصور المضافة */}
-                {settings.bannerImages.length > 0 ? (
-                  <div className="space-y-4">
-                    <div className="relative">
-                      <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
-                        <img
-                          src={settings.bannerImages[currentImageIndex]}
-                          alt={`صورة البانر ${currentImageIndex + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      
-                      {/* Primary image indicator */}
-                      {currentImageIndex === settings.primaryBannerIndex && (
-                        <div className="absolute top-2 right-2 bg-yellow-500 text-white p-2 rounded-full">
-                          <Star className="w-4 h-4 fill-current" />
+            {/* Images Tab */}
+            <TabsContent value="images" className="space-y-6 mt-8">
+              <Card className="border-0 shadow-none bg-gray-50 rounded-2xl">
+                <CardHeader>
+                  <CardTitle className="text-right text-xl">صور البانر</CardTitle>
+                  <CardDescription className="text-right text-gray-600">
+                    أضف صور البانر وحدد الصورة الرئيسية التي ستظهر أولاً في المنيو
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {settings.bannerImages.length > 0 ? (
+                    <div className="space-y-6">
+                      <div className="relative">
+                        <div className="aspect-video bg-gray-100 rounded-2xl overflow-hidden">
+                          <img
+                            src={settings.bannerImages[currentImageIndex]}
+                            alt={`صورة البانر ${currentImageIndex + 1}`}
+                            className="w-full h-full object-cover"
+                          />
                         </div>
-                      )}
-                      
-                      {settings.bannerImages.length > 1 && (
-                        <>
+                        
+                        {currentImageIndex === settings.primaryBannerIndex && (
+                          <div className="absolute top-4 right-4 bg-yellow-500 text-white p-3 rounded-2xl">
+                            <Star className="w-5 h-5 fill-current" />
+                          </div>
+                        )}
+                        
+                        {settings.bannerImages.length > 1 && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 text-white hover:bg-black/70 rounded-2xl w-12 h-12"
+                              onClick={prevImage}
+                            >
+                              <ChevronLeft className="w-6 h-6" />
+                            </Button>
+                            
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 text-white hover:bg-black/70 rounded-2xl w-12 h-12"
+                              onClick={nextImage}
+                            >
+                              <ChevronRight className="w-6 h-6" />
+                            </Button>
+                          </>
+                        )}
+                        
+                        <div className="absolute bottom-4 left-4 flex gap-3">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white hover:bg-black/70"
-                            onClick={prevImage}
+                            className="bg-red-500 text-white hover:bg-red-600 rounded-2xl w-12 h-12"
+                            onClick={() => removeBannerImage(currentImageIndex)}
                           >
-                            <ChevronLeft className="w-4 h-4" />
+                            <X className="w-5 h-5" />
                           </Button>
                           
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white hover:bg-black/70"
-                            onClick={nextImage}
-                          >
-                            <ChevronRight className="w-4 h-4" />
-                          </Button>
-                        </>
-                      )}
+                          {currentImageIndex !== settings.primaryBannerIndex && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="bg-yellow-500 text-white hover:bg-yellow-600 rounded-2xl w-12 h-12"
+                              onClick={() => setPrimaryImage(currentImageIndex)}
+                            >
+                              <Star className="w-5 h-5" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
                       
-                      <div className="absolute bottom-2 left-2 flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="bg-red-500 text-white hover:bg-red-600"
-                          onClick={() => removeBannerImage(currentImageIndex)}
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                        
-                        {currentImageIndex !== settings.primaryBannerIndex && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="bg-yellow-500 text-white hover:bg-yellow-600"
-                            onClick={() => setPrimaryImage(currentImageIndex)}
-                          >
-                            <Star className="w-4 h-4" />
-                          </Button>
-                        )}
+                      <div className="text-center text-gray-600">
+                        {currentImageIndex + 1} من {settings.bannerImages.length}
+                        {currentImageIndex === settings.primaryBannerIndex && " (الصورة الرئيسية)"}
                       </div>
                     </div>
-                    
-                    <div className="text-center text-sm text-gray-500">
-                      {currentImageIndex + 1} من {settings.bannerImages.length}
-                      {currentImageIndex === settings.primaryBannerIndex && " (الصورة الرئيسية)"}
+                  ) : (
+                    <div className="text-center py-12 text-gray-500">
+                      <div className="text-4xl mb-4">📷</div>
+                      <p>لا توجد صور بانر مضافة</p>
+                    </div>
+                  )}
+
+                  <label htmlFor="banner-upload" className="cursor-pointer">
+                    <div className="flex items-center justify-center w-full p-8 border-2 border-dashed border-gray-300 rounded-2xl hover:bg-gray-50 hover:border-orange-300 transition-colors">
+                      <Upload className="w-6 h-6 ml-3 text-gray-500" />
+                      <span className="text-gray-600">إضافة صورة بانر جديدة</span>
+                    </div>
+                    <input
+                      id="banner-upload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => handleImageUpload(e, 'banner')}
+                    />
+                  </label>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Design Tab */}
+            <TabsContent value="design" className="space-y-6 mt-8">
+              <Card className="border-0 shadow-none bg-gray-50 rounded-2xl">
+                <CardHeader>
+                  <CardTitle className="text-right text-xl">ألوان المنيو</CardTitle>
+                  <CardDescription className="text-right text-gray-600">
+                    خصص ألوان صفحة المنيو لتناسب هوية متجرك
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-3">
+                      <Label className="text-right block text-gray-700 font-medium">لون الخلفية</Label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="color"
+                          value={settings.menuBackgroundColor}
+                          onChange={(e) => setSettings(prev => ({ ...prev, menuBackgroundColor: e.target.value }))}
+                          className="w-16 h-12 rounded-2xl border border-gray-200"
+                        />
+                        <Input
+                          value={settings.menuBackgroundColor}
+                          onChange={(e) => setSettings(prev => ({ ...prev, menuBackgroundColor: e.target.value }))}
+                          className="text-left rounded-2xl"
+                          placeholder="#ffffff"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label className="text-right block text-gray-700 font-medium">لون النص</Label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="color"
+                          value={settings.menuTextColor}
+                          onChange={(e) => setSettings(prev => ({ ...prev, menuTextColor: e.target.value }))}
+                          className="w-16 h-12 rounded-2xl border border-gray-200"
+                        />
+                        <Input
+                          value={settings.menuTextColor}
+                          onChange={(e) => setSettings(prev => ({ ...prev, menuTextColor: e.target.value }))}
+                          className="text-left rounded-2xl"
+                          placeholder="#333333"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label className="text-right block text-gray-700 font-medium">اللون المميز</Label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="color"
+                          value={settings.menuAccentColor}
+                          onChange={(e) => setSettings(prev => ({ ...prev, menuAccentColor: e.target.value }))}
+                          className="w-16 h-12 rounded-2xl border border-gray-200"
+                        />
+                        <Input
+                          value={settings.menuAccentColor}
+                          onChange={(e) => setSettings(prev => ({ ...prev, menuAccentColor: e.target.value }))}
+                          className="text-left rounded-2xl"
+                          placeholder="#008080"
+                        />
+                      </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    لا توجد صور بانر مضافة
-                  </div>
-                )}
 
-                {/* زر إضافة صورة جديدة */}
-                <label htmlFor="banner-upload" className="cursor-pointer">
-                  <div className="flex items-center justify-center w-full p-6 border-2 border-dashed border-gray-300 rounded-lg hover:bg-gray-50">
-                    <Upload className="w-6 h-6 ml-2" />
-                    إضافة صورة بانر جديدة
-                  </div>
-                  <input
-                    id="banner-upload"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleImageUpload(e, 'banner')}
-                  />
-                </label>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* التصميم */}
-          <TabsContent value="design" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-right">ألوان المنيو</CardTitle>
-                <CardDescription className="text-right">
-                  خصص ألوان صفحة المنيو لتناسب هوية متجرك
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-right block">لون الخلفية</Label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={settings.menuBackgroundColor}
-                        onChange={(e) => setSettings(prev => ({ ...prev, menuBackgroundColor: e.target.value }))}
-                        className="w-12 h-10 rounded border"
-                      />
-                      <Input
-                        value={settings.menuBackgroundColor}
-                        onChange={(e) => setSettings(prev => ({ ...prev, menuBackgroundColor: e.target.value }))}
-                        className="text-left"
-                        placeholder="#ffffff"
-                      />
+                  {/* Color Preview */}
+                  <div className="mt-8 p-8 rounded-2xl border border-gray-200" style={{ backgroundColor: settings.menuBackgroundColor }}>
+                    <h3 className="text-xl font-bold mb-4" style={{ color: settings.menuTextColor }}>
+                      معاينة التصميم
+                    </h3>
+                    <p className="mb-4" style={{ color: settings.menuTextColor }}>
+                      هذا نص عادي بلون النص المختار
+                    </p>
+                    <div className="inline-block px-6 py-3 rounded-2xl" style={{ backgroundColor: settings.menuAccentColor, color: 'white' }}>
+                      نص باللون المميز
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
 
-                  <div className="space-y-2">
-                    <Label className="text-right block">لون النص</Label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={settings.menuTextColor}
-                        onChange={(e) => setSettings(prev => ({ ...prev, menuTextColor: e.target.value }))}
-                        className="w-12 h-10 rounded border"
-                      />
-                      <Input
-                        value={settings.menuTextColor}
-                        onChange={(e) => setSettings(prev => ({ ...prev, menuTextColor: e.target.value }))}
-                        className="text-left"
-                        placeholder="#333333"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-right block">اللون المميز</Label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={settings.menuAccentColor}
-                        onChange={(e) => setSettings(prev => ({ ...prev, menuAccentColor: e.target.value }))}
-                        className="w-12 h-10 rounded border"
-                      />
-                      <Input
-                        value={settings.menuAccentColor}
-                        onChange={(e) => setSettings(prev => ({ ...prev, menuAccentColor: e.target.value }))}
-                        className="text-left"
-                        placeholder="#008080"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* معاينة الألوان */}
-                <div className="mt-6 p-4 rounded-lg border" style={{ backgroundColor: settings.menuBackgroundColor }}>
-                  <h3 className="text-lg font-bold mb-2" style={{ color: settings.menuTextColor }}>
-                    معاينة التصميم
-                  </h3>
-                  <p className="mb-2" style={{ color: settings.menuTextColor }}>
-                    هذا نص عادي بلون النص المختار
-                  </p>
-                  <div className="inline-block px-4 py-2 rounded" style={{ backgroundColor: settings.menuAccentColor, color: 'white' }}>
-                    نص باللون المميز
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        {/* زر الحفظ */}
-        <div className="flex justify-center mt-8">
-          <Button
-            onClick={handleSaveSettings}
-            className="bg-primary hover:bg-primary/90 text-white px-8 py-3 text-lg"
-          >
-            حفظ جميع الإعدادات
-          </Button>
+          {/* Save Button */}
+          <div className="flex justify-center mt-12">
+            <Button
+              onClick={handleSaveSettings}
+              className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white px-12 py-4 text-lg rounded-2xl"
+            >
+              حفظ جميع الإعدادات
+            </Button>
+          </div>
         </div>
       </div>
     </div>

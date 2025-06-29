@@ -90,13 +90,15 @@ export default function Builder() {
             </div>
           </Link>
           
-          <div className="bg-white p-6 rounded-3xl shadow-sm">
-            <div className="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center mb-4">
-              <BarChart3 className="w-6 h-6 text-orange-600" />
+          <Link to="/statistics" className="group">
+            <div className="bg-white p-6 rounded-3xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
+              <div className="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center mb-4">
+                <BarChart3 className="w-6 h-6 text-orange-600" />
+              </div>
+              <h3 className="font-bold text-gray-800 mb-1">الإحصائيات</h3>
+              <p className="text-sm text-gray-500">تقارير وإحصاءات</p>
             </div>
-            <h3 className="font-bold text-gray-800 mb-1">الإحصائيات</h3>
-            <p className="text-sm text-gray-500">قريباً</p>
-          </div>
+          </Link>
         </div>
 
         {/* Modern Products Section */}

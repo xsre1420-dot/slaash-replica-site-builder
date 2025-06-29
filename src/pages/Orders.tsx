@@ -19,20 +19,21 @@ const Orders = () => {
   } = useOrders();
 
   return (
-    <div className="min-h-screen bg-white rtl font-arabic">
-      {/* Header */}
-      <OrdersHeader />
+    <div className="min-h-screen bg-gray-50 rtl font-arabic">
+      {/* Modern Header */}
+      <div className="bg-white shadow-sm">
+        <OrdersHeader />
+      </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto p-4">
-        <Card className="mb-6 shadow-sm border border-gray-200">
-          <CardHeader className="border-b border-gray-200 pb-4">
-            <CardTitle className="text-right text-xl text-primary-custom">الطلبات</CardTitle>
-            <CardDescription className="text-right text-secondary-custom">
-              عرض وإدارة طلبات العملاء مع كافة معلومات التوصيل
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
+      <div className="max-w-7xl mx-auto p-6">
+        <div className="bg-white rounded-3xl shadow-sm p-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 text-right mb-2">الطلبات</h1>
+            <p className="text-gray-600 text-right">عرض وإدارة طلبات العملاء مع كافة معلومات التوصيل</p>
+          </div>
+
+          <div className="mb-8">
             <OrdersFilters
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
@@ -40,18 +41,20 @@ const Orders = () => {
               setDateFilter={setDateFilter}
               clearDateFilter={clearDateFilter}
             />
+          </div>
 
-            {filteredOrders.length === 0 ? (
-              <OrdersEmptyState />
-            ) : (
+          {filteredOrders.length === 0 ? (
+            <OrdersEmptyState />
+          ) : (
+            <div className="bg-gray-50 rounded-2xl p-6">
               <OrdersSimpleTable 
                 orders={filteredOrders} 
                 onArchiveOrder={archiveOrder}
                 onUpdateStatus={updateOrderStatus}
               />
-            )}
-          </CardContent>
-        </Card>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

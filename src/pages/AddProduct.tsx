@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,7 +33,6 @@ const AddProduct = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate form
     if (!name.trim()) {
       toast({
         title: "خطأ",
@@ -71,9 +69,8 @@ const AddProduct = () => {
       return;
     }
 
-    // Create new product
     const newProduct: Product = {
-      id: Date.now().toString(), // Generate a unique ID
+      id: Date.now().toString(),
       name,
       description,
       category,
@@ -84,101 +81,122 @@ const AddProduct = () => {
       colors: colors.length > 0 ? colors : undefined,
     };
 
-    // Add product to the list
     addProduct(newProduct);
 
-    // Show success toast
     toast({
       title: "تم بنجاح",
       description: "تمت إضافة وجبة جديدة",
     });
 
-    // Navigate back to builder
     navigate('/builder');
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-primary text-white p-4 flex justify-between items-center">
-        <Link to="/builder">
-          <X className="w-6 h-6" />
-        </Link>
-        <h1 className="text-xl font-bold">إضافة وجبة جديدة</h1>
-        <div className="w-6" /> {/* Spacer for alignment */}
+    <div className="min-h-screen bg-gray-50 font-arabic">
+      {/* Modern Header */}
+      <div className="bg-white shadow-sm">
+        <div className="max-w-4xl mx-auto px-6 py-4">
+          <div className="flex justify-between items-center">
+            <Link to="/builder">
+              <Button variant="ghost" className="p-2 hover:bg-gray-100 rounded-xl">
+                <X className="w-6 h-6" />
+              </Button>
+            </Link>
+            <h1 className="text-2xl font-bold text-gray-800">إضافة وجبة جديدة</h1>
+            <div className="w-10"></div>
+          </div>
+        </div>
       </div>
 
       {/* Form */}
-      <div className="max-w-xl mx-auto p-4">
-        <form className="bg-white rounded-xl p-6 shadow-sm space-y-6" onSubmit={handleSubmit}>
+      <div className="max-w-4xl mx-auto p-6">
+        <form className="bg-white rounded-3xl p-8 shadow-sm space-y-8" onSubmit={handleSubmit}>
           {/* Image Upload */}
-          <ProductImagesManager 
-            mainImage={mainImage}
-            additionalImages={additionalImages}
-            onImagesChange={handleImagesChange}
-          />
-
-          {/* Name */}
-          <div className="space-y-2 text-right">
-            <Label htmlFor="name" className="block text-dark-green">اسم الوجبة</Label>
-            <Input 
-              id="name" 
-              className="text-right text-dark-green" 
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+          <div className="bg-gray-50 rounded-2xl p-6">
+            <ProductImagesManager 
+              mainImage={mainImage}
+              additionalImages={additionalImages}
+              onImagesChange={handleImagesChange}
             />
           </div>
 
-          {/* Category */}
-          <div className="space-y-2 text-right">
-            <Label htmlFor="category" className="block text-dark-green">الفئة</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="w-full text-right text-dark-green">
-                <SelectValue placeholder="اختر فئة" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.filter(c => c.id !== "all").map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Basic Info */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Name */}
+            <div className="space-y-3">
+              <Label htmlFor="name" className="block text-gray-700 font-medium text-right">اسم الوجبة</Label>
+              <Input 
+                id="name" 
+                className="text-right rounded-2xl border-gray-200" 
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="أدخل اسم الوجبة"
+              />
+            </div>
+
+            {/* Category */}
+            <div className="space-y-3">
+              <Label htmlFor="category" className="block text-gray-700 font-medium text-right">الفئة</Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger className="w-full text-right rounded-2xl border-gray-200">
+                  <SelectValue placeholder="اختر فئة" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl">
+                  {categories.filter(c => c.id !== "all").map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id} className="text-right">
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Description */}
-          <div className="space-y-2 text-right">
-            <Label htmlFor="description" className="block text-dark-green">الوصف</Label>
+          <div className="space-y-3">
+            <Label htmlFor="description" className="block text-gray-700 font-medium text-right">الوصف</Label>
             <Textarea 
               id="description" 
-              className="text-right text-dark-green" 
+              className="text-right rounded-2xl border-gray-200 min-h-[120px]" 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              placeholder="أدخل وصف الوجبة"
             />
           </div>
 
           {/* Price */}
-          <div className="space-y-2 text-right">
-            <Label htmlFor="price" className="block text-dark-green">السعر (دينار عراقي)</Label>
+          <div className="space-y-3">
+            <Label htmlFor="price" className="block text-gray-700 font-medium text-right">السعر (دينار عراقي)</Label>
             <Input 
               id="price" 
               type="number" 
-              className="text-right text-dark-green" 
+              className="text-right rounded-2xl border-gray-200" 
               value={price}
               onChange={(e) => setPrice(e.target.value)}
+              placeholder="0"
             />
           </div>
 
-          {/* Sizes Manager */}
-          <SizesManager sizes={sizes} onSizesChange={setSizes} />
-
-          {/* Colors Manager */}
-          <ColorsManager colors={colors} onColorsChange={setColors} />
+          {/* Sizes and Colors */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="bg-gray-50 rounded-2xl p-6">
+              <SizesManager sizes={sizes} onSizesChange={setSizes} />
+            </div>
+            
+            <div className="bg-gray-50 rounded-2xl p-6">
+              <ColorsManager colors={colors} onColorsChange={setColors} />
+            </div>
+          </div>
 
           {/* Submit Button */}
-          <Button type="submit" className="w-full bg-primary hover:bg-primary/90">
-            إضافة الوجبة +
-          </Button>
+          <div className="flex justify-center pt-8">
+            <Button 
+              type="submit" 
+              className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white px-12 py-4 text-lg rounded-2xl"
+            >
+              إضافة الوجبة +
+            </Button>
+          </div>
         </form>
       </div>
     </div>

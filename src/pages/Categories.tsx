@@ -28,7 +28,6 @@ const Categories = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Load categories (in a real app, this would come from an API)
     setCategories([...initialCategories]);
   }, []);
 
@@ -91,7 +90,6 @@ const Categories = () => {
   const handleDeleteCategory = () => {
     if (!deletingCategoryId) return;
     
-    // Don't allow deleting the "all" category
     if (deletingCategoryId === "all") {
       toast({
         title: "غير مسموح",
@@ -112,7 +110,7 @@ const Categories = () => {
   };
 
   const handleMoveUp = (index: number) => {
-    if (index <= 0) return; // Can't move up the first item
+    if (index <= 0) return;
     
     const newCategories = [...categories];
     [newCategories[index], newCategories[index - 1]] = [
@@ -120,7 +118,6 @@ const Categories = () => {
       newCategories[index],
     ];
     
-    // Update order property
     newCategories.forEach((cat, idx) => {
       cat.order = idx;
     });
@@ -129,7 +126,7 @@ const Categories = () => {
   };
 
   const handleMoveDown = (index: number) => {
-    if (index >= categories.length - 1) return; // Can't move down the last item
+    if (index >= categories.length - 1) return;
     
     const newCategories = [...categories];
     [newCategories[index], newCategories[index + 1]] = [
@@ -137,7 +134,6 @@ const Categories = () => {
       newCategories[index],
     ];
     
-    // Update order property
     newCategories.forEach((cat, idx) => {
       cat.order = idx;
     });
@@ -146,40 +142,43 @@ const Categories = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
-      <div style={{ backgroundColor: '#008080' }} className="text-white p-4">
-        <div className="flex justify-between items-center">
-          <Link to="/builder">
-            <X className="w-6 h-6" />
-          </Link>
-          <h1 className="text-xl font-bold">إدارة الأصناف</h1>
-          <div className="w-6"></div> {/* Empty div for alignment */}
+    <div className="min-h-screen bg-gray-50 font-arabic">
+      {/* Modern Header */}
+      <div className="bg-white shadow-sm">
+        <div className="max-w-6xl mx-auto px-6 py-4">
+          <div className="flex justify-between items-center">
+            <Link to="/builder">
+              <Button variant="ghost" className="p-2 hover:bg-gray-100 rounded-xl">
+                <X className="w-6 h-6" />
+              </Button>
+            </Link>
+            <h1 className="text-2xl font-bold text-gray-800">إدارة الأصناف</h1>
+            <div className="w-10"></div>
+          </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-xl mx-auto p-4">
-        <div className="bg-white rounded-xl shadow-sm p-4 mt-4">
-          <div className="flex justify-between items-center mb-4">
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="bg-white rounded-3xl shadow-sm p-8">
+          <div className="flex justify-between items-center mb-8">
             <Button 
-              style={{ backgroundColor: '#008080' }}
-              className="hover:bg-opacity-90 text-white"
+              className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-2xl px-8 py-3"
               onClick={() => setIsAddDialogOpen(true)}
             >
-              <Plus className="w-4 h-4 ml-1" />
+              <Plus className="w-5 h-5 ml-2" />
               إضافة تصنيف جديد
             </Button>
-            <h2 className="text-xl font-bold">الأصناف</h2>
+            <h2 className="text-2xl font-bold text-gray-800">الأصناف</h2>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-4">
             {categories.map((category, index) => (
               <div 
                 key={category.id}
-                className="flex justify-between items-center p-3 border rounded-lg"
+                className="flex justify-between items-center p-6 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors"
               >
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-3">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -188,8 +187,9 @@ const Categories = () => {
                       setIsDeleteDialogOpen(true);
                     }}
                     disabled={category.id === "all"}
+                    className="hover:bg-red-100 hover:text-red-600 rounded-xl"
                   >
-                    <Trash2 className="w-4 h-4 text-red-500" />
+                    <Trash2 className="w-4 h-4" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -199,65 +199,67 @@ const Categories = () => {
                       setIsEditDialogOpen(true);
                     }}
                     disabled={category.id === "all"}
+                    className="hover:bg-blue-100 hover:text-blue-600 rounded-xl"
                   >
-                    <Edit className="w-4 h-4 text-blue-500" />
+                    <Edit className="w-4 h-4" />
                   </Button>
                   
-                  <div className="flex space-x-1">
+                  <div className="flex space-x-2">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleMoveDown(index)}
                       disabled={index >= categories.length - 1}
+                      className="hover:bg-gray-200 rounded-xl"
                     >
-                      <span>⬇️</span>
+                      ⬇️
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleMoveUp(index)}
                       disabled={index <= 0}
+                      className="hover:bg-gray-200 rounded-xl"
                     >
-                      <span>⬆️</span>
+                      ⬆️
                     </Button>
                   </div>
                 </div>
                 
-                <span className="font-medium">{category.name}</span>
+                <span className="font-medium text-lg text-gray-800">{category.name}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Add Category Dialog */}
+      {/* Modern Add Category Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] text-right">
+        <DialogContent className="sm:max-w-[425px] text-right rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-right">إضافة تصنيف جديد</DialogTitle>
-            <DialogDescription className="text-right">
+            <DialogTitle className="text-right text-xl">إضافة تصنيف جديد</DialogTitle>
+            <DialogDescription className="text-right text-gray-600">
               أدخل اسم التصنيف الجديد الذي سيظهر في القائمة
             </DialogDescription>
           </DialogHeader>
           
           <div className="py-4">
-            <Label htmlFor="categoryName" className="block mb-1">اسم التصنيف</Label>
+            <Label htmlFor="categoryName" className="block mb-2 text-gray-700">اسم التصنيف</Label>
             <Input
               id="categoryName"
               value={newCategory.name}
               onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-              className="text-right"
+              className="text-right rounded-2xl"
               autoFocus
             />
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="rounded-2xl">
               إلغاء
             </Button>
             <Button 
-              style={{ backgroundColor: '#008080' }} 
-              className="hover:bg-opacity-90 text-white" 
+              className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-2xl" 
               onClick={handleAddCategory}
             >
               إضافة
@@ -266,18 +268,18 @@ const Categories = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Category Dialog */}
+      {/* Modern Edit Category Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] text-right">
+        <DialogContent className="sm:max-w-[425px] text-right rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-right">تعديل التصنيف</DialogTitle>
-            <DialogDescription className="text-right">
+            <DialogTitle className="text-right text-xl">تعديل التصنيف</DialogTitle>
+            <DialogDescription className="text-right text-gray-600">
               قم بتغيير اسم التصنيف
             </DialogDescription>
           </DialogHeader>
           
           <div className="py-4">
-            <Label htmlFor="editCategoryName" className="block mb-1">اسم التصنيف</Label>
+            <Label htmlFor="editCategoryName" className="block mb-2 text-gray-700">اسم التصنيف</Label>
             <Input
               id="editCategoryName"
               value={editingCategory?.name || ""}
@@ -288,18 +290,17 @@ const Categories = () => {
                     : null
                 )
               }
-              className="text-right"
+              className="text-right rounded-2xl"
               autoFocus
             />
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="rounded-2xl">
               إلغاء
             </Button>
             <Button 
-              style={{ backgroundColor: '#008080' }} 
-              className="hover:bg-opacity-90 text-white" 
+              className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-2xl" 
               onClick={handleEditCategory}
             >
               حفظ
@@ -308,23 +309,24 @@ const Categories = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Category Dialog */}
+      {/* Modern Delete Category Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] text-right">
+        <DialogContent className="sm:max-w-[425px] text-right rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-right">حذف التصنيف</DialogTitle>
-            <DialogDescription className="text-right">
+            <DialogTitle className="text-right text-xl">حذف التصنيف</DialogTitle>
+            <DialogDescription className="text-right text-gray-600">
               هل أنت متأكد من رغبتك في حذف هذا التصنيف؟ هذا الإجراء لا يمكن التراجع عنه.
             </DialogDescription>
           </DialogHeader>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="rounded-2xl">
               إلغاء
             </Button>
             <Button 
               variant="destructive"
               onClick={handleDeleteCategory}
+              className="rounded-2xl"
             >
               حذف
             </Button>
