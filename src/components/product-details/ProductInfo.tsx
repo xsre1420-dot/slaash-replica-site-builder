@@ -57,13 +57,13 @@ const ProductInfo = ({
   return (
     <div className="space-y-5">
       <div className="flex justify-between items-start">
-        <span className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
+        <span className="text-2xl font-bold text-black">
           {price.toLocaleString()} د.ع
         </span>
         <h2 className="text-2xl font-bold text-right">{name}</h2>
       </div>
 
-      <div className="bg-gradient-to-r from-orange-50 to-pink-50 p-4 rounded-lg shadow-inner border border-orange-100">
+      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
         <p className="text-gray-700 text-right leading-relaxed text-lg">{description}</p>
       </div>
 
@@ -83,7 +83,7 @@ const ProductInfo = ({
                 }`}
                 style={{
                   background: selectedSize === size 
-                    ? 'linear-gradient(135deg, #ff6b35, #f7931e, #ec4899)' 
+                    ? 'linear-gradient(135deg, #ff6b35, #ec4899)' 
                     : undefined
                 }}
               >
