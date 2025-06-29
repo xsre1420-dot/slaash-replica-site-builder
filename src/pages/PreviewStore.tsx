@@ -42,18 +42,8 @@ const PreviewStore = () => {
     }
   }, []);
 
-  // Get ordered banner images (primary first, then others)
-  const orderedBannerImages = () => {
-    if (storeSettings.bannerImages.length === 0) return [];
-    
-    const images = [...storeSettings.bannerImages];
-    const primaryImage = images[storeSettings.primaryBannerIndex];
-    const otherImages = images.filter((_, index) => index !== storeSettings.primaryBannerIndex);
-    
-    return [primaryImage, ...otherImages];
-  };
-
-  const bannerImages = orderedBannerImages();
+  // Only use banner images from settings (no automatic promotional banner)
+  const bannerImages = storeSettings.bannerImages || [];
 
   // This effect will run every time the component renders, ensuring we have the latest products
   useEffect(() => {
@@ -87,20 +77,28 @@ const PreviewStore = () => {
         setTimeout(() => {
           setCurrentImageIndex((prev) => (prev + 1) % bannerImages.length);
           setIsTransitioning(false);
-        }, 150);
-      }, 4000);
+        }, 300);
+      }, 5000);
       return () => clearInterval(interval);
     }
   }, [bannerImages.length]);
 
-  // Handle manual image navigation with smooth transitions
+  // Handle manual image navigation with smooth transitions and hover effects
   const handleImageNavigation = (index: number) => {
     if (index !== currentImageIndex) {
       setIsTransitioning(true);
       setTimeout(() => {
         setCurrentImageIndex(index);
         setIsTransitioning(false);
-      }, 150);
+      }, 300);
+    }
+  };
+
+  // Handle hover effects for smoother image transitions
+  const handleImageHover = () => {
+    if (bannerImages.length > 1) {
+      const nextIndex = (currentImageIndex + 1) % bannerImages.length;
+      handleImageNavigation(nextIndex);
     }
   };
 
@@ -182,43 +180,40 @@ const PreviewStore = () => {
         </div>
       </div>
 
-      {/* Enhanced Promotional Banner */}
+      {/* Enhanced Banner from Settings Only */}
       {bannerImages.length > 0 && (
         <div className="px-6 mb-6">
-          <div className="relative h-48 overflow-hidden rounded-3xl bg-gradient-to-r from-purple-600 to-pink-600">
+          <div 
+            className="relative h-48 overflow-hidden rounded-3xl bg-gradient-to-r from-purple-600 to-pink-600 cursor-pointer"
+            onMouseEnter={handleImageHover}
+          >
             <div 
-              className={`w-full h-full transition-all duration-500 ease-in-out ${
-                isTransitioning ? 'opacity-80 scale-105' : 'opacity-100 scale-100'
+              className={`w-full h-full transition-all duration-500 ease-in-out transform ${
+                isTransitioning ? 'opacity-70 scale-105' : 'opacity-100 scale-100'
               }`}
             >
               <img
                 src={bannerImages[currentImageIndex]}
-                alt="Promotional Banner"
-                className="w-full h-full object-cover"
+                alt="Store Banner"
+                className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
                 loading="lazy"
               />
             </div>
             
             {/* Gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-transparent" />
-            
-            {/* Banner content */}
-            <div className="absolute inset-0 flex flex-col justify-center pr-6 text-white">
-              <h3 className="text-2xl font-bold mb-2">خصم 50%</h3>
-              <p className="text-sm opacity-90">اعرف المزيد...</p>
-            </div>
+            <div className="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent" />
             
             {/* Enhanced Image Navigation Dots */}
             {bannerImages.length > 1 && (
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-3">
                 {bannerImages.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => handleImageNavigation(index)}
-                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    className={`transition-all duration-500 ease-in-out rounded-full ${
                       currentImageIndex === index 
-                        ? "bg-white w-6" 
-                        : "bg-white/60"
+                        ? "bg-white w-8 h-3 shadow-lg" 
+                        : "bg-white/70 w-3 h-3 hover:bg-white/90 hover:scale-110"
                     }`}
                   />
                 ))}
@@ -254,21 +249,21 @@ const PreviewStore = () => {
             {products.map((product) => (
               <div 
                 key={product.id} 
-                className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
+                className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:scale-105"
                 onClick={() => handleViewProduct(product.id)}
               >
                 <div className="relative">
                   <img
                     src={product.image}
                     alt={product.name}
-                    className="w-full h-32 object-cover"
+                    className="w-full h-32 object-cover transition-transform duration-300 hover:scale-110"
                     loading="lazy"
                   />
                   <button
-                    className={`absolute top-3 left-3 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                    className={`absolute top-3 left-3 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
                       favorites.includes(product.id) 
-                        ? 'bg-red-500 text-white' 
-                        : 'bg-white text-gray-400 hover:text-red-500'
+                        ? 'bg-red-500 text-white scale-110' 
+                        : 'bg-white text-gray-400 hover:text-red-500 hover:scale-110'
                     }`}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -296,7 +291,7 @@ const PreviewStore = () => {
                   
                   <Button 
                     size="sm"
-                    className="w-full h-9 text-white rounded-full border-0"
+                    className="w-full h-9 text-white rounded-full border-0 transition-all duration-200 hover:scale-105"
                     style={{ backgroundColor: storeSettings.menuAccentColor }}
                     onClick={(e) => {
                       e.stopPropagation();

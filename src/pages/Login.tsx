@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { ArrowRight, User, Lock } from "lucide-react";
+import { ArrowLeft, User, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -65,14 +65,14 @@ const Login = () => {
         </h1>
       </header>
 
-      <div className="flex-1 flex flex-col items-center justify-center p-6">
-        <div className="w-full max-w-md bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-50">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
           {/* Login Header */}
-          <div className="bg-primary text-white p-6 text-right">
-            <h2 className="text-2xl font-bold mb-1">
+          <div className="bg-primary text-white p-6 text-center">
+            <h2 className="text-2xl font-bold mb-2">
               {isRegistering ? "إنشاء حساب جديد" : "تسجيل الدخول"}
             </h2>
-            <p className="text-sm text-primary-foreground opacity-90">
+            <p className="text-sm opacity-90">
               {isRegistering 
                 ? "أدخل بيانات الحساب الجديد" 
                 : "أدخل بيانات الدخول لإدارة مطعمك"
@@ -83,16 +83,16 @@ const Login = () => {
           <form onSubmit={handleSubmit} className="p-6">
             {/* Error Alert */}
             {error && (
-              <Alert className="mb-6 bg-yellow-100 border-yellow-400 text-right">
+              <Alert className="mb-6 bg-red-50 border-red-200 text-right">
                 <div className="flex items-center">
-                  <AlertDescription className="flex-1 text-primary-custom">⚠️ {error}</AlertDescription>
+                  <AlertDescription className="flex-1 text-red-800">⚠️ {error}</AlertDescription>
                 </div>
               </Alert>
             )}
 
             {/* Username Input */}
             <div className="mb-6">
-              <label htmlFor="username" className="block text-right text-primary-custom mb-2 font-medium">
+              <label htmlFor="username" className="block text-right text-gray-700 mb-2 font-medium">
                 اسم المستخدم
               </label>
               <div className="relative">
@@ -102,17 +102,17 @@ const Login = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="أدخل اسم المستخدم"
-                  className="pl-10 text-right text-primary-custom border-gray-200"
+                  className="pl-10 text-right text-gray-700 border-gray-200 rounded-xl"
                   dir="rtl"
                   disabled={isLoading}
                 />
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary h-5 w-5" />
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
               </div>
             </div>
 
             {/* Password Input */}
             <div className="mb-6">
-              <label htmlFor="password" className="block text-right text-primary-custom mb-2 font-medium">
+              <label htmlFor="password" className="block text-right text-gray-700 mb-2 font-medium">
                 كلمة المرور
               </label>
               <div className="relative">
@@ -122,18 +122,18 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="أدخل كلمة المرور"
-                  className="pl-10 text-right text-primary-custom border-gray-200"
+                  className="pl-10 text-right text-gray-700 border-gray-200 rounded-xl"
                   dir="rtl"
                   disabled={isLoading}
                 />
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary h-5 w-5" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
               </div>
             </div>
 
             {/* Remember Me Checkbox (only for login) */}
             {!isRegistering && (
               <div className="flex items-center justify-end mb-6">
-                <label htmlFor="remember-me" className="ml-2 text-sm text-secondary-custom">
+                <label htmlFor="remember-me" className="ml-2 text-sm text-gray-600">
                   تذكر تسجيل الدخول
                 </label>
                 <Checkbox 
@@ -148,7 +148,7 @@ const Login = () => {
             {/* Submit Button */}
             <Button 
               type="submit" 
-              className="w-full bg-primary hover:bg-secondary text-white py-3 text-lg font-medium"
+              className="w-full bg-primary hover:bg-primary/90 text-white py-3 text-lg font-medium rounded-xl"
               disabled={isLoading}
             >
               <span className="ml-2">
@@ -159,7 +159,7 @@ const Login = () => {
                     : "تسجيل الدخول"
                 }
               </span>
-              <ArrowRight className="h-5 w-5 transform rotate-180" />
+              <ArrowLeft className="h-5 w-5" />
             </Button>
 
             {/* Toggle between login and register */}
@@ -170,7 +170,7 @@ const Login = () => {
                   setIsRegistering(!isRegistering);
                   setError(null);
                 }}
-                className="text-secondary hover:text-primary hover:underline text-sm"
+                className="text-primary hover:text-primary/80 hover:underline text-sm"
                 disabled={isLoading}
               >
                 {isRegistering 
@@ -184,7 +184,7 @@ const Login = () => {
       </div>
 
       {/* Footer */}
-      <footer className="bg-white text-center py-4 text-secondary-custom text-sm border-t border-gray-200">
+      <footer className="bg-white text-center py-4 text-gray-600 text-sm border-t border-gray-200">
         <p>جميع الحقوق محفوظة © 2025 نظام إدارة المطعم</p>
       </footer>
     </div>
