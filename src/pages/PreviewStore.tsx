@@ -67,27 +67,27 @@ export default function PreviewStore() {
 
   return (
     <div 
-      className="min-h-screen font-arabic"
+      className="min-h-screen font-arabic bg-gray-50"
       style={{ 
-        backgroundColor: storeSettings.menuBackgroundColor,
+        backgroundColor: storeSettings.menuBackgroundColor || '#f9fafb',
         color: storeSettings.menuTextColor 
       }}
     >
-      {/* Header - Show only store name */}
-      <div className="bg-black/90 backdrop-blur-md sticky top-0 z-50 shadow-lg">
+      {/* Header - White background with clean design */}
+      <div className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <Link to="/builder">
-              <Button variant="ghost" className="p-2 text-white hover:bg-white/10 rounded-xl">
+              <Button variant="ghost" className="p-2 text-gray-700 hover:bg-gray-100 rounded-xl">
                 <ArrowLeft className="w-6 h-6" />
               </Button>
             </Link>
             
-            {/* Only show store name */}
-            <h1 className="text-2xl font-bold text-white font-serif">{storeName}</h1>
+            {/* Store name only */}
+            <h1 className="text-2xl font-bold text-gray-800 font-serif">{storeName}</h1>
             
             <Link to="/checkout">
-              <Button variant="ghost" className="relative p-2 text-white hover:bg-white/10 rounded-xl">
+              <Button variant="ghost" className="relative p-2 text-gray-700 hover:bg-gray-100 rounded-xl">
                 <ShoppingCart className="w-6 h-6" />
                 {totalItemsInCart > 0 && (
                   <Badge className="absolute -top-2 -right-2 bg-orange-500 text-white min-w-[20px] h-5 rounded-full text-xs flex items-center justify-center">
@@ -104,7 +104,7 @@ export default function PreviewStore() {
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Primary Banner */}
         {storeSettings.bannerImages && storeSettings.bannerImages.length > 0 && (
-          <div className="mb-8 rounded-3xl overflow-hidden shadow-modern-lg">
+          <div className="mb-8 rounded-3xl overflow-hidden shadow-lg">
             <img 
               src={storeSettings.bannerImages[storeSettings.primaryBannerIndex] || storeSettings.bannerImages[0]} 
               alt="صورة رئيسية للمتجر"
@@ -119,10 +119,10 @@ export default function PreviewStore() {
             <Button
               variant={selectedCategory === "all" ? "default" : "outline"}
               onClick={() => setSelectedCategory("all")}
-              className={`whitespace-nowrap rounded-2xl transition-all duration-300 ${
+              className={`whitespace-nowrap rounded-full px-6 py-2 transition-all duration-300 ${
                 selectedCategory === "all" 
-                  ? "bg-black text-white shadow-lg scale-105" 
-                  : "bg-white/80 backdrop-blur-sm hover:bg-white border-gray-200"
+                  ? "bg-gray-800 text-white shadow-md" 
+                  : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"
               }`}
             >
               الكل
@@ -132,10 +132,10 @@ export default function PreviewStore() {
                 key={category.id}
                 variant={selectedCategory === category.id ? "default" : "outline"}
                 onClick={() => setSelectedCategory(category.id)}
-                className={`whitespace-nowrap rounded-2xl transition-all duration-300 ${
+                className={`whitespace-nowrap rounded-full px-6 py-2 transition-all duration-300 ${
                   selectedCategory === category.id 
-                    ? "bg-black text-white shadow-lg scale-105" 
-                    : "bg-white/80 backdrop-blur-sm hover:bg-white border-gray-200"
+                    ? "bg-gray-800 text-white shadow-md" 
+                    : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"
                 }`}
               >
                 {category.name}
@@ -158,17 +158,26 @@ export default function PreviewStore() {
             return (
               <Card 
                 key={product.id} 
-                className="group cursor-pointer bg-white/90 backdrop-blur-sm border-0 rounded-3xl shadow-modern hover:shadow-modern-lg transition-all duration-500 hover:scale-[1.02] overflow-hidden"
+                className="group cursor-pointer bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-[1.02] overflow-hidden"
                 onClick={() => navigate(`/product-details/${product.id}`)}
               >
-                <div className="relative overflow-hidden rounded-t-3xl">
+                <div className="relative overflow-hidden rounded-t-2xl">
                   {displayImage && (
-                    <div className="relative h-48 bg-gradient-to-br from-gray-50 to-gray-100">
+                    <div className="relative h-48 bg-gray-100">
                       <img
                         src={displayImage}
                         alt={product.name}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                       />
+                      
+                      {/* Heart icon for favorites */}
+                      <div className="absolute top-3 right-3">
+                        <div className="w-8 h-8 bg-white/80 rounded-full flex items-center justify-center">
+                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                          </svg>
+                        </div>
+                      </div>
                       
                       {/* Image Navigation Dots */}
                       {allImages.length > 1 && (
@@ -187,84 +196,72 @@ export default function PreviewStore() {
                           </div>
                         </div>
                       )}
-                      
-                      {/* Gradient Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </div>
                   )}
                 </div>
                 
-                <CardContent className="p-6">
+                <CardContent className="p-4">
                   <div className="space-y-3">
                     <div className="flex justify-between items-start">
                       <div className="flex-1 text-right">
-                        <h3 
-                          className="text-xl font-bold mb-2 group-hover:text-orange-600 transition-colors duration-300"
-                          style={{ color: storeSettings.menuTextColor }}
-                        >
+                        <h3 className="text-lg font-semibold text-gray-800 mb-1 group-hover:text-orange-600 transition-colors duration-300">
                           {product.name}
                         </h3>
                         {product.description && (
-                          <p 
-                            className="text-sm leading-relaxed opacity-75"
-                            style={{ color: storeSettings.menuTextColor }}
-                          >
+                          <p className="text-sm text-gray-500 leading-relaxed">
                             {product.description}
                           </p>
                         )}
                       </div>
                     </div>
                     
-                    <div className="flex justify-between items-center pt-4 border-t border-gray-100">
+                    <div className="flex justify-between items-center pt-3">
                       <div className="flex items-center gap-2">
                         {cartCount > 0 ? (
-                          <div className="flex items-center gap-2 bg-orange-50 rounded-2xl px-3 py-2">
+                          <div className="flex items-center gap-2 bg-orange-50 rounded-full px-3 py-2">
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-8 w-8 p-0 hover:bg-orange-100 rounded-xl"
+                              className="h-7 w-7 p-0 hover:bg-orange-100 rounded-full"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 // Remove from cart logic here
                               }}
                             >
-                              <Minus className="h-4 w-4 text-orange-600" />
+                              <Minus className="h-3 w-3 text-orange-600" />
                             </Button>
-                            <span className="font-medium text-orange-600 min-w-[20px] text-center">
+                            <span className="font-medium text-orange-600 min-w-[16px] text-center text-sm">
                               {cartCount}
                             </span>
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-8 w-8 p-0 hover:bg-orange-100 rounded-xl"
+                              className="h-7 w-7 p-0 hover:bg-orange-100 rounded-full"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleAddToCart(product);
                               }}
                             >
-                              <Plus className="h-4 w-4 text-orange-600" />
+                              <Plus className="h-3 w-3 text-orange-600" />
                             </Button>
                           </div>
                         ) : (
                           <Button
                             size="sm"
-                            className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-2xl px-6 shadow-lg hover:shadow-xl transition-all duration-300"
+                            className="bg-gray-800 hover:bg-gray-900 text-white rounded-full px-4 py-2 text-sm transition-all duration-300"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleAddToCart(product);
                             }}
                           >
-                            <Plus className="w-4 h-4 ml-1" />
+                            <Plus className="w-3 h-3 ml-1" />
                             إضافة
                           </Button>
                         )}
                       </div>
                       
                       <div className="text-right">
-                        <div 
-                          className="text-2xl font-bold"
-                          style={{ color: storeSettings.menuAccentColor || '#000' }}
-                        >
+                        <div className="text-lg font-bold text-gray-800">
                           {product.price} ر.س
                         </div>
                       </div>
@@ -279,10 +276,10 @@ export default function PreviewStore() {
         {filteredProducts.length === 0 && (
           <div className="text-center py-16">
             <div className="text-6xl mb-4">🍽️</div>
-            <h3 className="text-2xl font-bold mb-2" style={{ color: storeSettings.menuTextColor }}>
+            <h3 className="text-2xl font-bold mb-2 text-gray-800">
               لا توجد منتجات في هذا التصنيف
             </h3>
-            <p className="opacity-75" style={{ color: storeSettings.menuTextColor }}>
+            <p className="text-gray-500">
               جرب تصنيف آخر أو تصفح جميع المنتجات
             </p>
           </div>
