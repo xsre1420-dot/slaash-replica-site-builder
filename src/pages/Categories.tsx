@@ -1,7 +1,7 @@
+
 import { X, Plus, Edit, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { categories as initialCategories } from "@/data/dummyData";
 import { Category } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,8 +28,21 @@ const Categories = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    setCategories([...initialCategories]);
+    // Load categories from localStorage
+    const savedCategories = localStorage.getItem('categories');
+    if (savedCategories) {
+      try {
+        setCategories(JSON.parse(savedCategories));
+      } catch (error) {
+        console.error('Error loading categories:', error);
+      }
+    }
   }, []);
+
+  const saveCategories = (newCategories: Category[]) => {
+    setCategories(newCategories);
+    localStorage.setItem('categories', JSON.stringify(newCategories));
+  };
 
   const handleAddCategory = () => {
     if (!newCategory.name.trim()) {
@@ -52,7 +65,8 @@ const Categories = () => {
       order: categories.length,
     };
     
-    setCategories([...categories, newCategoryObject]);
+    const updatedCategories = [...categories, newCategoryObject];
+    saveCategories(updatedCategories);
     setNewCategory({ name: "", id: "" });
     setIsAddDialogOpen(false);
     
@@ -72,12 +86,11 @@ const Categories = () => {
       return;
     }
     
-    setCategories(
-      categories.map((cat) =>
-        cat.id === editingCategory.id ? { ...editingCategory } : cat
-      )
+    const updatedCategories = categories.map((cat) =>
+      cat.id === editingCategory.id ? { ...editingCategory } : cat
     );
     
+    saveCategories(updatedCategories);
     setIsEditDialogOpen(false);
     setEditingCategory(null);
     
@@ -90,16 +103,8 @@ const Categories = () => {
   const handleDeleteCategory = () => {
     if (!deletingCategoryId) return;
     
-    if (deletingCategoryId === "all") {
-      toast({
-        title: "غير مسموح",
-        description: "لا يمكن حذف تصنيف 'الكل'",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setCategories(categories.filter((cat) => cat.id !== deletingCategoryId));
+    const updatedCategories = categories.filter((cat) => cat.id !== deletingCategoryId);
+    saveCategories(updatedCategories);
     setIsDeleteDialogOpen(false);
     setDeletingCategoryId(null);
     
@@ -107,38 +112,6 @@ const Categories = () => {
       title: "تم بنجاح",
       description: "تم حذف التصنيف",
     });
-  };
-
-  const handleMoveUp = (index: number) => {
-    if (index <= 0) return;
-    
-    const newCategories = [...categories];
-    [newCategories[index], newCategories[index - 1]] = [
-      newCategories[index - 1],
-      newCategories[index],
-    ];
-    
-    newCategories.forEach((cat, idx) => {
-      cat.order = idx;
-    });
-    
-    setCategories(newCategories);
-  };
-
-  const handleMoveDown = (index: number) => {
-    if (index >= categories.length - 1) return;
-    
-    const newCategories = [...categories];
-    [newCategories[index], newCategories[index + 1]] = [
-      newCategories[index + 1],
-      newCategories[index],
-    ];
-    
-    newCategories.forEach((cat, idx) => {
-      cat.order = idx;
-    });
-    
-    setCategories(newCategories);
   };
 
   return (
@@ -172,64 +145,58 @@ const Categories = () => {
             <h2 className="text-2xl font-bold text-gray-800">الأصناف</h2>
           </div>
 
-          <div className="space-y-4">
-            {categories.map((category, index) => (
-              <div 
-                key={category.id}
-                className="flex justify-between items-center p-6 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors"
+          {categories.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="w-20 h-20 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+                <div className="text-4xl">📋</div>
+              </div>
+              <h3 className="text-xl font-bold text-gray-700 mb-2">لا توجد أصناف بعد</h3>
+              <p className="text-gray-500 mb-6">ابدأ بإضافة أول تصنيف لمنتجاتك</p>
+              <Button 
+                className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-2xl px-8 py-3"
+                onClick={() => setIsAddDialogOpen(true)}
               >
-                <div className="flex items-center space-x-3">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setDeletingCategoryId(category.id);
-                      setIsDeleteDialogOpen(true);
-                    }}
-                    disabled={category.id === "all"}
-                    className="hover:bg-red-100 hover:text-red-600 rounded-xl"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setEditingCategory(category);
-                      setIsEditDialogOpen(true);
-                    }}
-                    disabled={category.id === "all"}
-                    className="hover:bg-blue-100 hover:text-blue-600 rounded-xl"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  
-                  <div className="flex space-x-2">
+                <Plus className="w-5 h-5 ml-2" />
+                إضافة أول تصنيف
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {categories.map((category) => (
+                <div 
+                  key={category.id}
+                  className="flex justify-between items-center p-6 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center space-x-3">
                     <Button
                       variant="ghost"
-                      size="sm"
-                      onClick={() => handleMoveDown(index)}
-                      disabled={index >= categories.length - 1}
-                      className="hover:bg-gray-200 rounded-xl"
+                      size="icon"
+                      onClick={() => {
+                        setDeletingCategoryId(category.id);
+                        setIsDeleteDialogOpen(true);
+                      }}
+                      className="hover:bg-red-100 hover:text-red-600 rounded-xl"
                     >
-                      ⬇️
+                      <Trash2 className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="ghost"
-                      size="sm"
-                      onClick={() => handleMoveUp(index)}
-                      disabled={index <= 0}
-                      className="hover:bg-gray-200 rounded-xl"
+                      size="icon"
+                      onClick={() => {
+                        setEditingCategory(category);
+                        setIsEditDialogOpen(true);
+                      }}
+                      className="hover:bg-blue-100 hover:text-blue-600 rounded-xl"
                     >
-                      ⬆️
+                      <Edit className="w-4 h-4" />
                     </Button>
                   </div>
+                  
+                  <span className="font-medium text-lg text-gray-800">{category.name}</span>
                 </div>
-                
-                <span className="font-medium text-lg text-gray-800">{category.name}</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

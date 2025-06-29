@@ -2,8 +2,8 @@
 import { X, ShoppingCart, Plus, Trash2, Search, Heart, Star } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { categories, getProductsByCategory } from "@/data/dummyData";
-import { Product } from "@/types";
+import { getProductsByCategory } from "@/data/dummyData";
+import { Product, Category } from "@/types";
 import { useCart } from "@/context/CartContext";
 import { useStore } from "@/context/StoreContext";
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,36 @@ import { Button } from "@/components/ui/button";
 const PreviewStore = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const { addToCart, cartCount } = useCart();
+  const { addToCart, cartItems } = useCart();
   const { storeName, storeLogo, storeSettings } = useStore();
   const navigate = useNavigate();
+
+  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
+  // Load categories from localStorage
+  useEffect(() => {
+    const savedCategories = localStorage.getItem('categories');
+    if (savedCategories) {
+      try {
+        const parsedCategories = JSON.parse(savedCategories);
+        // Add "الكل" category at the beginning
+        const allCategories = [
+          { id: "all", name: "الكل", order: -1 },
+          ...parsedCategories
+        ];
+        setCategories(allCategories);
+      } catch (error) {
+        console.error('Error loading categories:', error);
+        setCategories([{ id: "all", name: "الكل", order: -1 }]);
+      }
+    } else {
+      setCategories([{ id: "all", name: "الكل", order: -1 }]);
+    }
+  }, []);
 
   // Get ordered banner images (primary first, then others)
   const orderedBannerImages = () => {
@@ -81,7 +105,13 @@ const PreviewStore = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div 
+      className="min-h-screen"
+      style={{ 
+        backgroundColor: storeSettings.menuBackgroundColor,
+        color: storeSettings.menuTextColor 
+      }}
+    >
       {/* Modern Header */}
       <div className="bg-white shadow-sm sticky top-0 z-40">
         <div className="px-6 py-4">
@@ -92,14 +122,9 @@ const PreviewStore = () => {
             
             <div className="flex items-center gap-3">
               <div className="text-center">
-                <p className="text-xs text-gray-500">الموقع</p>
+                <p className="text-xs text-gray-500">المتجر</p>
                 <p className="font-semibold text-gray-800">{storeName}</p>
               </div>
-              {storeLogo && (
-                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-orange-400 to-pink-500 p-0.5">
-                  <img src={storeLogo} alt={storeName} className="w-full h-full object-cover rounded-full" />
-                </div>
-              )}
             </div>
             
             <div className="w-10" />
@@ -120,8 +145,15 @@ const PreviewStore = () => {
       {/* Popular Food Categories */}
       <div className="px-6 py-4">
         <div className="flex justify-between items-center mb-4">
-          <button className="text-orange-500 text-sm font-medium">عرض الكل</button>
-          <h2 className="text-xl font-bold text-gray-800">الأصناف الشائعة</h2>
+          <button 
+            className="text-sm font-medium"
+            style={{ color: storeSettings.menuAccentColor }}
+          >
+            عرض الكل
+          </button>
+          <h2 className="text-xl font-bold" style={{ color: storeSettings.menuTextColor }}>
+            الأصناف
+          </h2>
         </div>
         
         <div className="flex gap-4 overflow-x-auto pb-2">
@@ -130,9 +162,17 @@ const PreviewStore = () => {
               key={category.id}
               className={`flex flex-col items-center min-w-[80px] py-3 px-4 rounded-2xl transition-all duration-200 ${
                 selectedCategory === category.id 
-                  ? "bg-orange-500 text-white shadow-lg" 
-                  : "bg-white text-gray-700 hover:bg-gray-50"
+                  ? "text-white shadow-lg" 
+                  : "bg-white hover:bg-gray-50"
               }`}
+              style={{
+                backgroundColor: selectedCategory === category.id 
+                  ? storeSettings.menuAccentColor 
+                  : '#ffffff',
+                color: selectedCategory === category.id 
+                  ? '#ffffff' 
+                  : storeSettings.menuTextColor
+              }}
               onClick={() => setSelectedCategory(category.id)}
             >
               <div className="text-2xl mb-2">🍽️</div>
@@ -195,10 +235,15 @@ const PreviewStore = () => {
             <div className="w-20 h-20 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
               <div className="text-4xl">🍽️</div>
             </div>
-            <h3 className="text-xl font-bold text-gray-700 mb-2">لا توجد منتجات بعد</h3>
+            <h3 className="text-xl font-bold mb-2" style={{ color: storeSettings.menuTextColor }}>
+              لا توجد منتجات بعد
+            </h3>
             <p className="text-gray-500 mb-6">ابدأ بإضافة وجباتك من قسم البناء</p>
             <Link to="/add-product">
-              <Button className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-full px-8">
+              <Button 
+                className="text-white rounded-full px-8"
+                style={{ backgroundColor: storeSettings.menuAccentColor }}
+              >
                 <Plus className="w-4 h-4 ml-2" />
                 إضافة أول وجبة
               </Button>
@@ -235,7 +280,7 @@ const PreviewStore = () => {
                 </div>
                 
                 <div className="p-4">
-                  <h3 className="font-bold text-gray-800 mb-1 text-right line-clamp-1">
+                  <h3 className="font-bold mb-1 text-right line-clamp-1" style={{ color: storeSettings.menuTextColor }}>
                     {product.name}
                   </h3>
                   
@@ -244,14 +289,15 @@ const PreviewStore = () => {
                       <Star className="w-4 h-4 text-yellow-400 fill-current" />
                       <span className="text-sm text-gray-600">4.5</span>
                     </div>
-                    <span className="font-bold text-gray-800">
+                    <span className="font-bold" style={{ color: storeSettings.menuTextColor }}>
                       {product.price.toLocaleString()} د.ع
                     </span>
                   </div>
                   
                   <Button 
                     size="sm"
-                    className="w-full h-9 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-full border-0"
+                    className="w-full h-9 text-white rounded-full border-0"
+                    style={{ backgroundColor: storeSettings.menuAccentColor }}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleAddToCart(product);
@@ -270,7 +316,10 @@ const PreviewStore = () => {
       <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
         <Link to="/checkout">
           <div className="relative">
-            <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110">
+            <div 
+              className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
+              style={{ backgroundColor: storeSettings.menuAccentColor }}
+            >
               <ShoppingCart className="w-6 h-6 text-white" />
               {cartCount > 0 && (
                 <span className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold animate-pulse">

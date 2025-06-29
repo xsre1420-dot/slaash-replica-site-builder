@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Settings, User, Link as LinkIcon, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -168,12 +169,6 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
       
       <div className="flex items-center gap-3">
         <div className="text-2xl font-bold font-serif">{storeName}</div>
-        {logo && (
-          <Avatar className="w-10 h-10 rounded-full overflow-visible bg-transparent">
-            <AvatarImage src={logo} alt="شعار المتجر" className="object-contain" />
-            <AvatarFallback className="bg-primary/10 text-primary">🍽️</AvatarFallback>
-          </Avatar>
-        )}
       </div>
     </div>
   );
