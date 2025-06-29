@@ -1,7 +1,7 @@
 
-import { X, Plus, Edit, Trash2, ArrowUp, ArrowDown } from "lucide-react";
+import { X, Plus, Edit, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Category } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,10 +14,7 @@ import {
   DialogDescription,
   DialogFooter 
 } from "@/components/ui/dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line } from "recharts";
 
 const Categories = () => {
   // Start with empty categories array - manual addition only
@@ -28,23 +25,8 @@ const Categories = () => {
   const [newCategory, setNewCategory] = useState({ name: "", id: "" });
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
-  const [dateFilter, setDateFilter] = useState("7"); // Last 7 days
   
   const { toast } = useToast();
-
-  // Mock statistics data
-  const visitorData = [
-    { date: "اليوم", visitors: 45, orders: 12 },
-    { date: "أمس", visitors: 38, orders: 8 },
-    { date: "قبل يومين", visitors: 52, orders: 15 },
-    { date: "قبل 3 أيام", visitors: 41, orders: 10 },
-    { date: "قبل 4 أيام", visitors: 47, orders: 13 },
-    { date: "قبل 5 أيام", visitors: 35, orders: 9 },
-    { date: "قبل 6 أيام", visitors: 43, orders: 11 },
-  ];
-
-  const totalVisitors = visitorData.reduce((sum, day) => sum + day.visitors, 0);
-  const totalOrders = visitorData.reduce((sum, day) => sum + day.orders, 0);
 
   const handleAddCategory = () => {
     if (!newCategory.name.trim()) {
@@ -115,154 +97,25 @@ const Categories = () => {
     });
   };
 
-  // New drag and drop style reordering
-  const handleMoveUp = (id: string) => {
-    const currentIndex = categories.findIndex(cat => cat.id === id);
-    if (currentIndex <= 0) return;
-    
-    const newCategories = [...categories];
-    [newCategories[currentIndex], newCategories[currentIndex - 1]] = [
-      newCategories[currentIndex - 1],
-      newCategories[currentIndex],
-    ];
-    
-    newCategories.forEach((cat, idx) => {
-      cat.order = idx;
-    });
-    
-    setCategories(newCategories);
-  };
-
-  const handleMoveDown = (id: string) => {
-    const currentIndex = categories.findIndex(cat => cat.id === id);
-    if (currentIndex >= categories.length - 1) return;
-    
-    const newCategories = [...categories];
-    [newCategories[currentIndex], newCategories[currentIndex + 1]] = [
-      newCategories[currentIndex + 1],
-      newCategories[currentIndex],
-    ];
-    
-    newCategories.forEach((cat, idx) => {
-      cat.order = idx;
-    });
-    
-    setCategories(newCategories);
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 font-arabic">
-      {/* Modern Header */}
+      {/* Modern Header - White background */}
       <div className="bg-white shadow-sm">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
             <Link to="/builder">
-              <Button variant="ghost" className="p-2 hover:bg-gray-100 rounded-xl">
+              <Button variant="ghost" className="p-2 hover:bg-gray-100 rounded-xl text-gray-700">
                 <X className="w-6 h-6" />
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold text-black">إدارة الأصناف</h1>
+            <h1 className="text-2xl font-bold text-gray-800">إدارة الأصناف</h1>
             <div className="w-10"></div>
           </div>
         </div>
       </div>
 
-      {/* Statistics Section */}
+      {/* Categories Management */}
       <div className="max-w-6xl mx-auto p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Statistics Cards */}
-          <div className="lg:col-span-1 space-y-4">
-            <Card className="border-0 shadow-lg rounded-3xl bg-gradient-to-br from-blue-50 to-indigo-50">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-right text-lg text-black">إجمالي الزوار</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-right">
-                  <div className="text-3xl font-bold text-black mb-1">{totalVisitors}</div>
-                  <div className="text-sm text-gray-600">خلال آخر {dateFilter} أيام</div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-0 shadow-lg rounded-3xl bg-gradient-to-br from-green-50 to-emerald-50">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-right text-lg text-black">إجمالي الطلبات</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-right">
-                  <div className="text-3xl font-bold text-black mb-1">{totalOrders}</div>
-                  <div className="text-sm text-gray-600">خلال آخر {dateFilter} أيام</div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-0 shadow-lg rounded-3xl">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-right text-lg text-black">فترة الإحصائيات</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <select 
-                  value={dateFilter} 
-                  onChange={(e) => setDateFilter(e.target.value)}
-                  className="w-full p-2 border border-gray-200 rounded-xl text-right bg-white text-black"
-                >
-                  <option value="7">آخر 7 أيام</option>
-                  <option value="30">آخر 30 يوم</option>
-                  <option value="90">آخر 3 شهور</option>
-                </select>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Charts */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card className="border-0 shadow-lg rounded-3xl">
-              <CardHeader>
-                <CardTitle className="text-right text-black">إحصائيات الزوار والطلبات</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer
-                  config={{
-                    visitors: { label: "الزوار", color: "#3b82f6" },
-                    orders: { label: "الطلبات", color: "#10b981" },
-                  }}
-                  className="h-[300px]"
-                >
-                  <BarChart data={visitorData}>
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="visitors" fill="#3b82f6" radius={8} />
-                    <Bar dataKey="orders" fill="#10b981" radius={8} />
-                  </BarChart>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-
-            <Card className="border-0 shadow-lg rounded-3xl">
-              <CardHeader>
-                <CardTitle className="text-right text-black">اتجاه الطلبات</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer
-                  config={{
-                    orders: { label: "الطلبات", color: "#f59e0b" },
-                  }}
-                  className="h-[200px]"
-                >
-                  <LineChart data={visitorData}>
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Line type="monotone" dataKey="orders" stroke="#f59e0b" strokeWidth={3} />
-                  </LineChart>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Categories Management */}
         <div className="bg-white rounded-3xl shadow-lg p-8">
           <div className="flex justify-between items-center mb-8">
             <Button 
@@ -272,7 +125,7 @@ const Categories = () => {
               <Plus className="w-5 h-5 ml-2" />
               إضافة تصنيف جديد
             </Button>
-            <h2 className="text-2xl font-bold text-black">الأصناف</h2>
+            <h2 className="text-2xl font-bold text-gray-800">الأصناف</h2>
           </div>
 
           {categories.length === 0 ? (
@@ -287,7 +140,7 @@ const Categories = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {categories.map((category, index) => (
+              {categories.map((category) => (
                 <div 
                   key={category.id}
                   className="flex justify-between items-center p-6 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors"
@@ -315,30 +168,9 @@ const Categories = () => {
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
-                    
-                    <div className="flex flex-col space-y-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleMoveUp(category.id)}
-                        disabled={index <= 0}
-                        className="hover:bg-gray-200 rounded-xl h-8 w-8 p-0"
-                      >
-                        <ArrowUp className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleMoveDown(category.id)}
-                        disabled={index >= categories.length - 1}
-                        className="hover:bg-gray-200 rounded-xl h-8 w-8 p-0"
-                      >
-                        <ArrowDown className="w-4 h-4" />
-                      </Button>
-                    </div>
                   </div>
                   
-                  <span className="font-medium text-lg text-black">{category.name}</span>
+                  <span className="font-medium text-lg text-gray-800">{category.name}</span>
                 </div>
               ))}
             </div>
@@ -350,14 +182,14 @@ const Categories = () => {
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="sm:max-w-[425px] text-right rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-right text-xl text-black">إضافة تصنيف جديد</DialogTitle>
+            <DialogTitle className="text-right text-xl text-gray-800">إضافة تصنيف جديد</DialogTitle>
             <DialogDescription className="text-right text-gray-600">
               أدخل اسم التصنيف الجديد الذي سيظهر في القائمة
             </DialogDescription>
           </DialogHeader>
           
           <div className="py-4">
-            <Label htmlFor="categoryName" className="block mb-2 text-black">اسم التصنيف</Label>
+            <Label htmlFor="categoryName" className="block mb-2 text-gray-800">اسم التصنيف</Label>
             <Input
               id="categoryName"
               value={newCategory.name}
@@ -385,14 +217,14 @@ const Categories = () => {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[425px] text-right rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-right text-xl text-black">تعديل التصنيف</DialogTitle>
+            <DialogTitle className="text-right text-xl text-gray-800">تعديل التصنيف</DialogTitle>
             <DialogDescription className="text-right text-gray-600">
               قم بتغيير اسم التصنيف
             </DialogDescription>
           </DialogHeader>
           
           <div className="py-4">
-            <Label htmlFor="editCategoryName" className="block mb-2 text-black">اسم التصنيف</Label>
+            <Label htmlFor="editCategoryName" className="block mb-2 text-gray-800">اسم التصنيف</Label>
             <Input
               id="editCategoryName"
               value={editingCategory?.name || ""}
@@ -426,7 +258,7 @@ const Categories = () => {
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[425px] text-right rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-right text-xl text-black">حذف التصنيف</DialogTitle>
+            <DialogTitle className="text-right text-xl text-gray-800">حذف التصنيف</DialogTitle>
             <DialogDescription className="text-right text-gray-600">
               هل أنت متأكد من رغبتك في حذف هذا التصنيف؟ هذا الإجراء لا يمكن التراجع عنه.
             </DialogDescription>
