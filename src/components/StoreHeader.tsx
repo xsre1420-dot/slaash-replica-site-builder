@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Settings, User, Link as LinkIcon, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -57,11 +58,11 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
           </PopoverTrigger>
           <PopoverContent className="w-72" align="start">
             <div className="space-y-4">
-              <h3 className="font-bold text-lg text-right">إعدادات المتجر</h3>
+              <h3 className="font-bold text-lg text-right text-black">إعدادات المتجر</h3>
               {isEditing ? (
                 <div className="space-y-3">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium block text-right">شعار المتجر</label>
+                    <label className="text-sm font-medium block text-right text-black">شعار المتجر</label>
                     <div className="flex flex-col items-center gap-2">
                       <Avatar className="w-20 h-20 rounded-full overflow-visible bg-transparent border-0">
                         {logo ? (
@@ -73,7 +74,7 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
                       
                       <div className="flex w-full flex-col gap-2">
                         <label htmlFor="logo-upload" className="cursor-pointer">
-                          <div className="flex items-center justify-center w-full p-2 bg-gray-100 hover:bg-gray-200 rounded-md text-center text-gray-700 text-sm">
+                          <div className="flex items-center justify-center w-full p-2 bg-gray-100 hover:bg-gray-200 rounded-md text-center text-black text-sm">
                             <Upload className="h-4 w-4 ml-2" />
                             تحميل شعار جديد
                           </div>
@@ -90,7 +91,7 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
                   </div>
                   
                   <div className="space-y-2">
-                    <label className="text-sm font-medium block text-right">اسم المتجر</label>
+                    <label className="text-sm font-medium block text-right text-black">اسم المتجر</label>
                     <Input 
                       type="text" 
                       value={name} 
@@ -121,7 +122,7 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
                     </Avatar>
                   </div>
                   <div className="text-center">
-                    <p className="font-bold text-xl text-primary font-serif">{name}</p>
+                    <p className="font-bold text-xl text-black font-serif">{name}</p>
                   </div>
                   <Button className="w-full" onClick={() => setIsEditing(true)}>
                     تعديل معلومات المتجر
@@ -144,7 +145,7 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
           </PopoverTrigger>
           <PopoverContent className="w-72" align="start">
             <div className="space-y-3">
-              <h3 className="font-bold text-lg text-right">مشاركة رابط المتجر</h3>
+              <h3 className="font-bold text-lg text-right text-black">مشاركة رابط المتجر</h3>
               <div className="flex gap-2">
                 <Button onClick={() => {
                   navigator.clipboard.writeText("https://yourstore.com/menu");
@@ -166,14 +167,9 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
         </Popover>
       </div>
       
-      <div className="flex items-center gap-3">
-        <div className="text-2xl font-bold font-serif">{storeName}</div>
-        {logo && (
-          <Avatar className="w-10 h-10 rounded-full overflow-visible bg-transparent">
-            <AvatarImage src={logo} alt="شعار المتجر" className="object-contain" />
-            <AvatarFallback className="bg-primary/10 text-primary">🍽️</AvatarFallback>
-          </Avatar>
-        )}
+      {/* Only show store name, remove logo */}
+      <div className="flex items-center">
+        <div className="text-2xl font-bold font-serif text-black">{storeName}</div>
       </div>
     </div>
   );

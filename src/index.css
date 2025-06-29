@@ -13,7 +13,7 @@
     --card-foreground: 201 36% 18%;
     --popover: 0 0% 100%;
     --popover-foreground: 201 36% 18%;
-    --primary: 180 100% 25%;
+    --primary: 0 0% 0%; /* Changed from teal to black */
     --primary-foreground: 0 0% 100%;
     --secondary: 169 65% 35%;
     --secondary-foreground: 0 0% 100%;
@@ -25,7 +25,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 161 35% 91%;
     --input: 161 35% 91%;
-    --ring: 180 100% 25%;
+    --ring: 0 0% 0%; /* Changed from teal to black */
     --radius: 1rem;
     
     /* Modern color scheme inspired by the image */
@@ -110,6 +110,32 @@
   
   .shadow-modern-lg {
     box-shadow: 0 10px 40px -4px rgba(0, 0, 0, 0.12);
+  }
+  
+  /* Change all teal/turquoise colors to black */
+  .text-teal-600,
+  .text-primary {
+    @apply text-black;
+  }
+  
+  .bg-teal-500,
+  .bg-primary {
+    @apply bg-black;
+  }
+  
+  .border-teal-500,
+  .border-primary {
+    @apply border-black;
+  }
+  
+  .hover\:text-teal-600:hover,
+  .hover\:text-primary:hover {
+    @apply hover:text-black;
+  }
+  
+  .hover\:bg-teal-600:hover,
+  .hover\:bg-primary:hover {
+    @apply hover:bg-black;
   }
 }
 
