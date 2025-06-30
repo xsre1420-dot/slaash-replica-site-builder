@@ -1,3 +1,4 @@
+
 import { ArrowRight, Eye, ShoppingBag, Users, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,19 +21,18 @@ const Statistics = () => {
     // جلب المعلومات الحقيقية من localStorage
     const orders = JSON.parse(localStorage.getItem('orders') || '[]');
     const products = JSON.parse(localStorage.getItem('products') || '[]');
-    const visitorsString = localStorage.getItem('totalVisitors') || '0';
-    const visitors = parseInt(visitorsString, 10) || 0;
+    const visitors = parseInt(localStorage.getItem('totalVisitors') || '0');
 
     // حساب الإحصائيات
     const totalOrders = orders.length;
-    const totalRevenue = orders.reduce((sum: number, order: any) => sum + (Number(order.total) || 0), 0);
-    const conversionRate = visitors > 0 ? ((totalOrders / visitors) * 100) : 0;
+    const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
+    const conversionRate = visitors > 0 ? ((totalOrders / visitors) * 100).toFixed(1) : 0;
 
     setStats({
       totalVisitors: visitors,
       totalOrders,
       totalRevenue,
-      conversionRate: parseFloat(conversionRate.toFixed(1))
+      conversionRate: parseFloat(conversionRate)
     });
 
     // إنشاء بيانات الأيام السابقة
@@ -40,7 +40,7 @@ const Statistics = () => {
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      const dayOrders = orders.filter((order: any) => {
+      const dayOrders = orders.filter(order => {
         const orderDate = new Date(order.date);
         return orderDate.toDateString() === date.toDateString();
       });
@@ -48,39 +48,33 @@ const Statistics = () => {
       last7Days.push({
         day: date.toLocaleDateString('ar-SA', { weekday: 'short' }),
         orders: dayOrders.length,
-        revenue: dayOrders.reduce((sum: number, order: any) => sum + (Number(order.total) || 0), 0),
+        revenue: dayOrders.reduce((sum, order) => sum + order.total, 0),
         visitors: Math.floor(Math.random() * 50) + 20 // محاكاة بيانات الزوار
       });
     }
     setDailyStats(last7Days);
 
     // أفضل المنتجات
-    const productSales: { [key: string]: number } = {};
-    orders.forEach((order: any) => {
-      if (order.items && Array.isArray(order.items)) {
-        order.items.forEach((item: any) => {
-          if (item.product && item.product.name) {
-            const quantity = Number(item.quantity) || 0;
-            if (productSales[item.product.name]) {
-              productSales[item.product.name] += quantity;
-            } else {
-              productSales[item.product.name] = quantity;
-            }
-          }
-        });
-      }
+    const productSales = {};
+    orders.forEach(order => {
+      order.items.forEach(item => {
+        if (productSales[item.product.name]) {
+          productSales[item.product.name] += item.quantity;
+        } else {
+          productSales[item.product.name] = item.quantity;
+        }
+      });
     });
 
     const topProductsArray = Object.entries(productSales)
-      .sort(([,a], [,b]) => Number(b) - Number(a))
+      .sort(([,a], [,b]) => b - a)
       .slice(0, 5)
-      .map(([name, sales]) => ({ name, sales: Number(sales) }));
+      .map(([name, sales]) => ({ name, sales }));
 
     setTopProducts(topProductsArray);
 
     // زيادة عداد الزوار
-    const newVisitorCount = visitors + 1;
-    localStorage.setItem('totalVisitors', newVisitorCount.toString());
+    localStorage.setItem('totalVisitors', (visitors + 1).toString());
   }, []);
 
   const chartConfig = {
@@ -245,7 +239,7 @@ const Statistics = () => {
             <CardContent>
               <div className="space-y-4">
                 {topProducts.length > 0 ? (
-                  topProducts.map((product: any, index: number) => (
+                  topProducts.map((product, index) => (
                     <div key={product.name} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold"
