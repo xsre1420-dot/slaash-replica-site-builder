@@ -136,7 +136,11 @@ const Categories = () => {
         <div className="bg-white rounded-3xl shadow-sm p-8">
           <div className="flex justify-between items-center mb-8">
             <Button 
-              className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-2xl px-8 py-3"
+              className="text-white rounded-2xl px-8 py-3 border-0 shadow-lg"
+              style={{ 
+                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                boxShadow: '0 8px 25px rgba(99, 102, 241, 0.3)'
+              }}
               onClick={() => setIsAddDialogOpen(true)}
             >
               <Plus className="w-5 h-5 ml-2" />
@@ -153,7 +157,11 @@ const Categories = () => {
               <h3 className="text-xl font-bold text-gray-700 mb-2">لا توجد أصناف بعد</h3>
               <p className="text-gray-500 mb-6">ابدأ بإضافة أول تصنيف لمنتجاتك</p>
               <Button 
-                className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-2xl px-8 py-3"
+                className="text-white rounded-2xl px-8 py-3 border-0 shadow-lg"
+                style={{ 
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  boxShadow: '0 8px 25px rgba(99, 102, 241, 0.3)'
+                }}
                 onClick={() => setIsAddDialogOpen(true)}
               >
                 <Plus className="w-5 h-5 ml-2" />
@@ -226,7 +234,11 @@ const Categories = () => {
               إلغاء
             </Button>
             <Button 
-              className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-2xl" 
+              className="text-white rounded-2xl border-0"
+              style={{ 
+                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
+              }}
               onClick={handleAddCategory}
             >
               إضافة
@@ -267,7 +279,11 @@ const Categories = () => {
               إلغاء
             </Button>
             <Button 
-              className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-2xl" 
+              className="text-white rounded-2xl border-0"
+              style={{ 
+                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
+              }}
               onClick={handleEditCategory}
             >
               حفظ

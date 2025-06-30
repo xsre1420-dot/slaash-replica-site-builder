@@ -19,7 +19,7 @@ const Settings = () => {
     storeLogo: storeLogo,
     menuBackgroundColor: storeSettings.menuBackgroundColor,
     menuTextColor: storeSettings.menuTextColor,
-    menuAccentColor: storeSettings.menuAccentColor,
+    menuAccentColor: "#6366f1", // تغيير اللون الافتراضي للأزرق
     bannerImages: storeSettings.bannerImages,
     primaryBannerIndex: storeSettings.primaryBannerIndex
   });
@@ -32,7 +32,7 @@ const Settings = () => {
       storeLogo,
       menuBackgroundColor: storeSettings.menuBackgroundColor,
       menuTextColor: storeSettings.menuTextColor,
-      menuAccentColor: storeSettings.menuAccentColor,
+      menuAccentColor: storeSettings.menuAccentColor === "#008080" ? "#6366f1" : storeSettings.menuAccentColor, // تحويل التركوازي للأزرق
       bannerImages: storeSettings.bannerImages,
       primaryBannerIndex: storeSettings.primaryBannerIndex
     });
@@ -180,7 +180,7 @@ const Settings = () => {
                       
                       <div className="flex-1">
                         <label htmlFor="logo-upload" className="cursor-pointer">
-                          <div className="flex items-center justify-center w-full p-6 border-2 border-dashed border-gray-300 rounded-2xl hover:bg-gray-50 hover:border-orange-300 transition-colors">
+                          <div className="flex items-center justify-center w-full p-6 border-2 border-dashed border-gray-300 rounded-2xl hover:bg-gray-50 hover:border-indigo-300 transition-colors">
                             <Upload className="w-6 h-6 ml-3 text-gray-500" />
                             <span className="text-gray-600">رفع شعار جديد</span>
                           </div>
@@ -284,7 +284,7 @@ const Settings = () => {
                   )}
 
                   <label htmlFor="banner-upload" className="cursor-pointer">
-                    <div className="flex items-center justify-center w-full p-8 border-2 border-dashed border-gray-300 rounded-2xl hover:bg-gray-50 hover:border-orange-300 transition-colors">
+                    <div className="flex items-center justify-center w-full p-8 border-2 border-dashed border-gray-300 rounded-2xl hover:bg-gray-50 hover:border-indigo-300 transition-colors">
                       <Upload className="w-6 h-6 ml-3 text-gray-500" />
                       <span className="text-gray-600">إضافة صورة بانر جديدة</span>
                     </div>
@@ -360,7 +360,7 @@ const Settings = () => {
                           value={settings.menuAccentColor}
                           onChange={(e) => setSettings(prev => ({ ...prev, menuAccentColor: e.target.value }))}
                           className="text-left rounded-2xl"
-                          placeholder="#008080"
+                          placeholder="#6366f1"
                         />
                       </div>
                     </div>
@@ -387,7 +387,11 @@ const Settings = () => {
           <div className="flex justify-center mt-12">
             <Button
               onClick={handleSaveSettings}
-              className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white px-12 py-4 text-lg rounded-2xl"
+              className="text-white px-12 py-4 text-lg rounded-2xl border-0 shadow-lg"
+              style={{ 
+                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                boxShadow: '0 8px 25px rgba(99, 102, 241, 0.3)'
+              }}
             >
               حفظ جميع الإعدادات
             </Button>
