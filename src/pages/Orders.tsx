@@ -1,10 +1,9 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Eye, CheckCircle, XCircle, Clock, ArrowLeft, AlertCircle, MoreHorizontal } from "lucide-react";
+import { Search, Eye, CheckCircle, XCircle, Clock, ArrowLeft, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useOrders } from "@/components/orders/useOrders";
 import { format } from "date-fns";
@@ -15,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 const Orders = () => {
   const { filteredOrders, searchQuery, setSearchQuery, updateOrderStatus } = useOrders();
@@ -40,9 +39,9 @@ const Orders = () => {
 
   const getStatusBadge = (status: string, orderId: string) => {
     const statusConfig = {
-      completed: { label: "مكتمل", icon: CheckCircle, color: "bg-green-100 text-green-800" },
-      pending: { label: "قيد الانتظار", icon: Clock, color: "bg-yellow-100 text-yellow-800" },
-      cancelled: { label: "ملغي", icon: XCircle, color: "bg-red-100 text-red-800" }
+      completed: { label: "مكتمل", icon: CheckCircle, color: "bg-green-100 text-green-800 hover:bg-green-200" },
+      pending: { label: "قيد الانتظار", icon: Clock, color: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200" },
+      cancelled: { label: "ملغي", icon: XCircle, color: "bg-red-100 text-red-800 hover:bg-red-200" }
     };
 
     const config = statusConfig[status as keyof typeof statusConfig];
@@ -51,22 +50,31 @@ const Orders = () => {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Badge className={`${config.color} border-0 cursor-pointer hover:opacity-80`}>
+          <Badge className={`${config.color} border-0 cursor-pointer transition-colors`}>
             <Icon className="w-3 h-3 ml-1" />
             {config.label}
           </Badge>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => handleStatusChange(orderId, "completed")}>
-            <CheckCircle className="h-4 w-4 ml-2" />
+        <DropdownMenuContent align="end" className="bg-white shadow-lg border rounded-lg z-50">
+          <DropdownMenuItem 
+            onClick={() => handleStatusChange(orderId, "completed")}
+            className="cursor-pointer hover:bg-green-50"
+          >
+            <CheckCircle className="h-4 w-4 ml-2 text-green-600" />
             <span>مكتمل</span>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleStatusChange(orderId, "pending")}>
-            <Clock className="h-4 w-4 ml-2" />
+          <DropdownMenuItem 
+            onClick={() => handleStatusChange(orderId, "pending")}
+            className="cursor-pointer hover:bg-yellow-50"
+          >
+            <Clock className="h-4 w-4 ml-2 text-yellow-600" />
             <span>قيد الانتظار</span>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleStatusChange(orderId, "cancelled")}>
-            <XCircle className="h-4 w-4 ml-2" />
+          <DropdownMenuItem 
+            onClick={() => handleStatusChange(orderId, "cancelled")}
+            className="cursor-pointer hover:bg-red-50"
+          >
+            <XCircle className="h-4 w-4 ml-2 text-red-600" />
             <span>ملغي</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -156,7 +164,7 @@ const Orders = () => {
               <SelectTrigger className="rounded-2xl border-gray-200">
                 <SelectValue placeholder="حالة الطلب" />
               </SelectTrigger>
-              <SelectContent className="rounded-2xl">
+              <SelectContent className="rounded-2xl bg-white shadow-lg border z-50">
                 <SelectItem value="all">جميع الحالات</SelectItem>
                 <SelectItem value="pending">قيد الانتظار</SelectItem>
                 <SelectItem value="completed">مكتمل</SelectItem>
@@ -168,7 +176,7 @@ const Orders = () => {
               <SelectTrigger className="rounded-2xl border-gray-200">
                 <SelectValue placeholder="التاريخ" />
               </SelectTrigger>
-              <SelectContent className="rounded-2xl">
+              <SelectContent className="rounded-2xl bg-white shadow-lg border z-50">
                 <SelectItem value="all">جميع التواريخ</SelectItem>
                 <SelectItem value="today">اليوم</SelectItem>
                 <SelectItem value="yesterday">أمس</SelectItem>

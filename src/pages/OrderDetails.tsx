@@ -170,7 +170,7 @@ const OrderDetails = () => {
 
       {/* Main Content */}
       <div className="max-w-4xl mx-auto p-6">
-        <Card className="mb-6 border-0 shadow-lg bg-white rounded-3xl">
+        <Card className="mb-6 border-0 shadow-lg bg-white rounded-3xl overflow-hidden">
           <CardHeader 
             className="rounded-t-3xl"
             style={{ 
@@ -187,10 +187,16 @@ const OrderDetails = () => {
           <CardContent className="bg-white rounded-b-3xl p-8">
             <div className="space-y-8">
               {/* Customer Info */}
-              <CustomerInfo customerInfo={order.customerInfo} />
+              <div className="bg-gray-50 rounded-2xl p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 text-right">معلومات العميل</h3>
+                <CustomerInfo customerInfo={order.customerInfo} />
+              </div>
 
               {/* Order Items */}
-              <OrderItems items={order.items} />
+              <div className="bg-gray-50 rounded-2xl p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 text-right">تفاصيل الطلب</h3>
+                <OrderItems items={order.items} />
+              </div>
 
               {/* Order Total */}
               <OrderTotal total={order.total} />
