@@ -74,7 +74,10 @@ const Checkout = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-primary text-white p-4">
+      <div className="text-white p-4" style={{ 
+        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+        boxShadow: '0 8px 25px rgba(99, 102, 241, 0.3)'
+      }}>
         <div className="flex justify-between items-center">
           <Link to="/preview">
             <ArrowRight className="w-6 h-6" />
@@ -93,10 +96,16 @@ const Checkout = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-dark-green mb-2">سلة التسوق فارغة</h3>
-            <p className="text-dark-green">قم بإضافة بعض المنتجات للاستمرار بالطلب</p>
+            <h3 className="text-xl font-bold text-black mb-2">سلة التسوق فارغة</h3>
+            <p className="text-black">قم بإضافة بعض المنتجات للاستمرار بالطلب</p>
             <Link to="/preview">
-              <Button className="mt-6 bg-primary hover:bg-primary/90">
+              <Button 
+                className="mt-6 text-white shadow-lg"
+                style={{ 
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  boxShadow: '0 8px 25px rgba(99, 102, 241, 0.3)'
+                }}
+              >
                 العودة للمنيو
               </Button>
             </Link>
@@ -105,28 +114,36 @@ const Checkout = () => {
           <>
             {/* Cart Items */}
             <div className="bg-white rounded-xl shadow-sm p-4 mt-4">
-              <h2 className="text-xl font-bold mb-4 text-right text-dark-green">طلبك</h2>
+              <h2 className="text-xl font-bold mb-4 text-right text-black">طلبك</h2>
               <div className="space-y-4">
                 {cartItems.map((item) => (
                   <div key={item.product.id} className="flex items-start justify-between border-b pb-4">
                     <div className="flex items-center">
                       <button
                         onClick={() => removeFromCart(item.product.id)}
-                        className="text-primary hover:text-primary/70"
+                        className="text-red-500 hover:text-red-700"
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
                       <div className="flex items-center mx-2">
                         <button
                           onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                          className="bg-gray-200 rounded-full w-6 h-6 flex items-center justify-center text-dark-green"
+                          className="rounded-full w-6 h-6 flex items-center justify-center text-white shadow-lg"
+                          style={{ 
+                            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                            boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
+                          }}
                         >
                           <Plus className="w-4 h-4" />
                         </button>
-                        <span className="mx-2 w-6 text-center text-dark-green">{item.quantity}</span>
+                        <span className="mx-2 w-6 text-center text-black">{item.quantity}</span>
                         <button
                           onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                          className="bg-gray-200 rounded-full w-6 h-6 flex items-center justify-center text-dark-green"
+                          className="rounded-full w-6 h-6 flex items-center justify-center text-white shadow-lg"
+                          style={{ 
+                            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                            boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
+                          }}
                         >
                           <Minus className="w-4 h-4" />
                         </button>
@@ -134,8 +151,8 @@ const Checkout = () => {
                     </div>
                     <div className="flex items-center">
                       <div className="text-right">
-                        <span className="block font-bold text-dark-green">{item.product.name}</span>
-                        <span className="text-dark-green text-sm">{item.product.price.toLocaleString()} د.ع × {item.quantity}</span>
+                        <span className="block font-bold text-black">{item.product.name}</span>
+                        <span className="text-black text-sm">{item.product.price.toLocaleString()} د.ع × {item.quantity}</span>
                       </div>
                       <img
                         src={item.product.image}
@@ -147,65 +164,72 @@ const Checkout = () => {
                 ))}
               </div>
               <div className="flex justify-between mt-4 pt-4 border-t">
-                <span className="font-bold text-lg text-primary">{cartTotal.toLocaleString()} د.ع</span>
-                <span className="font-bold text-dark-green">المجموع:</span>
+                <span className="font-bold text-lg" style={{ color: '#6366f1' }}>{cartTotal.toLocaleString()} د.ع</span>
+                <span className="font-bold text-black">المجموع:</span>
               </div>
             </div>
             
             {/* Customer Info Form */}
             <form onSubmit={handleSubmitOrder} className="bg-white rounded-xl shadow-sm p-4 mt-4">
-              <h2 className="text-xl font-bold mb-4 text-right text-dark-green">معلومات التوصيل</h2>
+              <h2 className="text-xl font-bold mb-4 text-right text-black">معلومات التوصيل</h2>
               
               <div className="space-y-4">
                 <div className="text-right">
-                  <Label htmlFor="name" className="block mb-1 text-dark-green">الاسم</Label>
+                  <Label htmlFor="name" className="block mb-1 text-black">الاسم</Label>
                   <Input
                     id="name"
                     name="name"
                     value={customerInfo.name}
                     onChange={handleInputChange}
-                    className="text-right text-dark-green"
+                    className="text-right text-black border-2 focus:border-blue-500 focus:ring-blue-500"
                     required
                   />
                 </div>
                 
                 <div className="text-right">
-                  <Label htmlFor="phone" className="block mb-1 text-dark-green">رقم الهاتف</Label>
+                  <Label htmlFor="phone" className="block mb-1 text-black">رقم الهاتف</Label>
                   <Input
                     id="phone"
                     name="phone"
                     value={customerInfo.phone}
                     onChange={handleInputChange}
-                    className="text-right text-dark-green"
+                    className="text-right text-black border-2 focus:border-blue-500 focus:ring-blue-500"
                     required
                   />
                 </div>
                 
                 <div className="text-right">
-                  <Label htmlFor="address" className="block mb-1 text-dark-green">العنوان</Label>
+                  <Label htmlFor="address" className="block mb-1 text-black">العنوان</Label>
                   <Input
                     id="address"
                     name="address"
                     value={customerInfo.address}
                     onChange={handleInputChange}
-                    className="text-right text-dark-green"
+                    className="text-right text-black border-2 focus:border-blue-500 focus:ring-blue-500"
                     required
                   />
                 </div>
                 
                 <div className="text-right">
-                  <Label htmlFor="notes" className="block mb-1 text-dark-green">ملاحظات إضافية (اختياري)</Label>
+                  <Label htmlFor="notes" className="block mb-1 text-black">ملاحظات إضافية (اختياري)</Label>
                   <Textarea
                     id="notes"
                     name="notes"
                     value={customerInfo.notes}
                     onChange={handleInputChange}
-                    className="text-right text-dark-green"
+                    className="text-right text-black border-2 focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
               </div>
               
-              <Button type="submit" className="w-full bg-primary hover:bg-primary/90 mt-6">
+              <Button 
+                type="submit" 
+                className="w-full mt-6 text-white shadow-lg"
+                style={{ 
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  boxShadow: '0 8px 25px rgba(99, 102, 241, 0.3)'
+                }}
+              >
                 تأكيد الطلب
               </Button>
             </form>
