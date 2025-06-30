@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -130,38 +131,38 @@ const Orders = () => {
   const displayedOrders = getFilteredOrders();
 
   return (
-    <div className="min-h-screen bg-gray-50 font-arabic">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 font-arabic">
       {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 shadow-xl">
+        <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex justify-between items-center">
             <Link to="/builder">
-              <Button variant="ghost" className="p-2 hover:bg-gray-100 rounded-xl">
+              <Button variant="ghost" className="p-3 hover:bg-blue-500/20 rounded-xl text-white">
                 <ArrowLeft className="w-6 h-6" />
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold text-gray-800">إدارة الطلبات</h1>
-            <div className="w-10"></div>
+            <h1 className="text-3xl font-bold text-white">إدارة الطلبات</h1>
+            <div className="w-12"></div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto p-6">
         {/* Search and Filters */}
-        <div className="bg-white rounded-3xl shadow-sm p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-3xl shadow-xl p-8 mb-8 border border-blue-100">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="relative">
-              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 text-blue-400 w-5 h-5" />
               <Input
                 placeholder="البحث عن طلب أو عميل..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pr-10 rounded-2xl border-gray-200"
+                className="pr-12 rounded-2xl border-blue-200 focus:border-blue-400 focus:ring-blue-400/20"
               />
             </div>
             
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="rounded-2xl border-gray-200">
+              <SelectTrigger className="rounded-2xl border-blue-200 focus:border-blue-400">
                 <SelectValue placeholder="حالة الطلب" />
               </SelectTrigger>
               <SelectContent className="rounded-2xl bg-white shadow-lg border z-50">
@@ -173,7 +174,7 @@ const Orders = () => {
             </Select>
 
             <Select value={dateFilter} onValueChange={setDateFilter}>
-              <SelectTrigger className="rounded-2xl border-gray-200">
+              <SelectTrigger className="rounded-2xl border-blue-200 focus:border-blue-400">
                 <SelectValue placeholder="التاريخ" />
               </SelectTrigger>
               <SelectContent className="rounded-2xl bg-white shadow-lg border z-50">
@@ -186,11 +187,7 @@ const Orders = () => {
             </Select>
 
             <Button 
-              className="rounded-2xl"
-              style={{ 
-                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
-              }}
+              className="rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
               onClick={() => {
                 setStatusFilter("all");
                 setDateFilter("all");
@@ -203,14 +200,14 @@ const Orders = () => {
         </div>
 
         {/* Orders Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {displayedOrders.map((order) => (
-            <Card key={order.id} className="border-0 shadow-sm rounded-3xl hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
+            <Card key={order.id} className="border-0 shadow-xl rounded-3xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 bg-white border-blue-100">
+              <CardHeader className="pb-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-t-3xl">
                 <div className="flex justify-between items-start">
                   <div className="text-right">
-                    <CardTitle className="text-lg">{order.customerInfo.name}</CardTitle>
-                    <CardDescription className="text-sm text-gray-500 mt-1">
+                    <CardTitle className="text-xl text-blue-800">{order.customerInfo.name}</CardTitle>
+                    <CardDescription className="text-sm text-blue-600 mt-1 font-medium">
                       {order.id}
                     </CardDescription>
                   </div>
@@ -218,26 +215,26 @@ const Orders = () => {
                 </div>
               </CardHeader>
               
-              <CardContent>
-                <div className="space-y-3">
+              <CardContent className="p-6">
+                <div className="space-y-4">
                   <div className="text-right">
-                    <p className="text-sm text-gray-600 mb-2">المنتجات:</p>
-                    <div className="space-y-1">
+                    <p className="text-sm text-blue-700 mb-3 font-semibold">المنتجات:</p>
+                    <div className="space-y-2">
                       {order.items.map((item, index) => (
-                        <span key={index} className="inline-block bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm ml-1 mb-1">
+                        <span key={index} className="inline-block bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-sm ml-1 mb-2 border border-blue-200">
                           {item.product.name} ({item.quantity})
                         </span>
                       ))}
                     </div>
                   </div>
                   
-                  <div className="flex justify-between items-center pt-3 border-t">
+                  <div className="flex justify-between items-center pt-4 border-t border-blue-100">
                     <div className="text-left">
-                      <p className="text-sm text-gray-500">{format(new Date(order.date), "yyyy-MM-dd")}</p>
-                      <p className="text-sm text-gray-500">{format(new Date(order.date), "hh:mm a")}</p>
+                      <p className="text-sm text-blue-600 font-medium">{format(new Date(order.date), "yyyy-MM-dd")}</p>
+                      <p className="text-sm text-blue-500">{format(new Date(order.date), "hh:mm a")}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-blue-600">
+                      <p className="text-xl font-bold text-blue-700">
                         {order.total.toLocaleString()} د.ع
                       </p>
                     </div>
@@ -245,11 +242,7 @@ const Orders = () => {
                   
                   <Link to={`/orders/${order.id}`}>
                     <Button 
-                      className="w-full rounded-2xl mt-3"
-                      style={{ 
-                        background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                        boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
-                      }}
+                      className="w-full rounded-2xl mt-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
                     >
                       <Eye className="w-4 h-4 ml-2" />
                       عرض التفاصيل
@@ -262,10 +255,10 @@ const Orders = () => {
         </div>
 
         {displayedOrders.length === 0 && (
-          <div className="text-center py-12">
-            <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">لا توجد طلبات</h3>
-            <p className="text-gray-500">لم يتم العثور على طلبات تطابق معايير البحث</p>
+          <div className="text-center py-16 bg-white rounded-3xl shadow-xl">
+            <AlertCircle className="w-20 h-20 text-blue-300 mx-auto mb-6" />
+            <h3 className="text-xl font-bold text-blue-800 mb-3">لا توجد طلبات</h3>
+            <p className="text-blue-600">لم يتم العثور على طلبات تطابق معايير البحث</p>
           </div>
         )}
       </div>

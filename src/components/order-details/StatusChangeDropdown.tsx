@@ -40,20 +40,20 @@ const StatusChangeDropdown = ({ currentStatus, orderId, onStatusChange }: Status
         return {
           label: "مكتمل",
           icon: Check,
-          className: "bg-green-100 text-green-800 hover:bg-green-200"
+          className: "bg-green-100 text-green-800 hover:bg-green-200 border border-green-200"
         };
       case 'cancelled':
         return {
           label: "ملغي",
           icon: X,
-          className: "bg-red-100 text-red-800 hover:bg-red-200"
+          className: "bg-red-100 text-red-800 hover:bg-red-200 border border-red-200"
         };
       case 'pending':
       default:
         return {
           label: "قيد الانتظار",
           icon: Loader2,
-          className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+          className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border border-yellow-200"
         };
     }
   };
@@ -64,32 +64,32 @@ const StatusChangeDropdown = ({ currentStatus, orderId, onStatusChange }: Status
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Badge className={`${statusDisplay.className} cursor-pointer transition-colors flex items-center gap-1`}>
-          <Icon className={`h-3 w-3 ${currentStatus === 'pending' ? 'animate-spin' : ''}`} />
+        <Badge className={`${statusDisplay.className} cursor-pointer transition-all duration-200 flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full hover:shadow-md`}>
+          <Icon className={`h-4 w-4 ${currentStatus === 'pending' ? 'animate-spin' : ''}`} />
           {statusDisplay.label}
         </Badge>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="bg-white shadow-lg border rounded-lg z-50">
+      <DropdownMenuContent align="end" className="bg-white shadow-xl border border-blue-200 rounded-2xl z-50 p-2">
         <DropdownMenuItem 
           onClick={() => handleStatusChange("completed")}
-          className="cursor-pointer hover:bg-green-50"
+          className="cursor-pointer hover:bg-green-50 rounded-xl p-3 transition-colors duration-200"
         >
-          <Check className="h-4 w-4 ml-2 text-green-600" />
-          <span>مكتمل</span>
+          <Check className="h-5 w-5 ml-3 text-green-600" />
+          <span className="font-medium">مكتمل</span>
         </DropdownMenuItem>
         <DropdownMenuItem 
           onClick={() => handleStatusChange("pending")}
-          className="cursor-pointer hover:bg-yellow-50"
+          className="cursor-pointer hover:bg-yellow-50 rounded-xl p-3 transition-colors duration-200"
         >
-          <Loader2 className="h-4 w-4 ml-2 text-yellow-600" />
-          <span>قيد الانتظار</span>
+          <Loader2 className="h-5 w-5 ml-3 text-yellow-600" />
+          <span className="font-medium">قيد الانتظار</span>
         </DropdownMenuItem>
         <DropdownMenuItem 
           onClick={() => handleStatusChange("cancelled")}
-          className="cursor-pointer hover:bg-red-50"
+          className="cursor-pointer hover:bg-red-50 rounded-xl p-3 transition-colors duration-200"
         >
-          <X className="h-4 w-4 ml-2 text-red-600" />
-          <span>ملغي</span>
+          <X className="h-5 w-5 ml-3 text-red-600" />
+          <span className="font-medium">ملغي</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
