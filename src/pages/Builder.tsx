@@ -23,47 +23,31 @@ export default function Builder() {
       </div>
       
       <div className="p-6 max-w-6xl mx-auto">
-        {/* Modern URL Sharing Card - White Background */}
-        <div className="bg-white rounded-3xl p-8 mb-8 border border-gray-200 shadow-sm">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold mb-3 text-gray-800">رابط المطعم</h2>
-            <p className="text-lg text-gray-600">شارك الرابط مع زبائنك</p>
-          </div>
-          
-          <div className="flex items-center gap-4 mb-8">
-            <Input 
-              value="https://yourstore.com/menu" 
-              readOnly 
-              className="text-left bg-gray-50 border-gray-200 text-gray-700 rounded-2xl h-14 text-lg"
-            />
-            <Button className="bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200 rounded-2xl h-14 px-8 text-lg">
-              نسخ
+        {/* Modern Action Grid */}
+        <div className="grid grid-cols-2 gap-6 mb-8">
+          <Link to="/preview">
+            <Button variant="ghost" className="w-full h-16 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-2xl text-lg shadow-sm">
+              <Eye className="h-5 w-5 ml-2" />
+              معاينة المتجر
             </Button>
-          </div>
-          
-          {/* Modern Action Grid */}
-          <div className="grid grid-cols-2 gap-6">
-            <Link to="/preview">
-              <Button variant="ghost" className="w-full h-16 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-2xl text-lg">
-                معاينة المتجر
-              </Button>
-            </Link>
-            <Link to="/add-product">
-              <Button className="w-full h-16 text-white rounded-2xl shadow-lg border-0 text-lg font-semibold"
-                      style={{ 
-                        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                        boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
-                      }}>
-                إضافة وجبة
-              </Button>
-            </Link>
-          </div>
+          </Link>
+          <Link to="/add-product">
+            <Button className="w-full h-16 text-white rounded-2xl shadow-lg border-0 text-lg font-semibold"
+                    style={{ 
+                      background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                      boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
+                    }}>
+              <Plus className="h-5 w-5 ml-2" />
+              إضافة وجبة
+            </Button>
+          </Link>
         </div>
 
         {/* Modern Dashboard Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Link to="/orders" className="group">
             <div className="bg-white p-8 rounded-3xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
+              <List className="h-8 w-8 text-indigo-500 mb-4" />
               <h3 className="font-bold text-xl text-gray-800 mb-2">الطلبات</h3>
               <p className="text-gray-500">إدارة الطلبات</p>
             </div>
@@ -71,6 +55,7 @@ export default function Builder() {
           
           <Link to="/categories" className="group">
             <div className="bg-white p-8 rounded-3xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
+              <Tag className="h-8 w-8 text-purple-500 mb-4" />
               <h3 className="font-bold text-xl text-gray-800 mb-2">الأصناف</h3>
               <p className="text-gray-500">تنظيم الأصناف</p>
             </div>
@@ -78,6 +63,7 @@ export default function Builder() {
           
           <Link to="/settings" className="group">
             <div className="bg-white p-8 rounded-3xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
+              <Settings className="h-8 w-8 text-blue-500 mb-4" />
               <h3 className="font-bold text-xl text-gray-800 mb-2">الإعدادات</h3>
               <p className="text-gray-500">إعدادات المتجر</p>
             </div>
@@ -85,6 +71,7 @@ export default function Builder() {
           
           <Link to="/statistics" className="group">
             <div className="bg-white p-8 rounded-3xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
+              <BarChart3 className="h-8 w-8 text-green-500 mb-4" />
               <h3 className="font-bold text-xl text-gray-800 mb-2">الإحصائيات</h3>
               <p className="text-gray-500">تقارير وإحصاءات</p>
             </div>
