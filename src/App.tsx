@@ -17,6 +17,7 @@ import Checkout from "./pages/Checkout";
 import Orders from "./pages/Orders";
 import OrderDetails from "./pages/OrderDetails";
 import Settings from "./pages/Settings";
+import Statistics from "./pages/Statistics";
 import { CartProvider } from "./context/CartContext";
 import { StoreProvider } from "./context/StoreContext";
 import { AuthProvider } from "./context/AuthContext";
@@ -37,6 +38,7 @@ const App = () => (
                 <Route path="/login" element={<Login />} />
                 <Route path="/builder" element={<Builder />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/statistics" element={<Statistics />} />
                 <Route path="/add-product" element={<AddProduct />} />
                 <Route path="/edit-product/:productId" element={<EditProduct />} />
                 <Route path="/preview" element={<PreviewStore />} />
