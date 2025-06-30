@@ -15,15 +15,19 @@ export const useOrders = () => {
     if (storedOrders) {
       try {
         const parsedOrders = JSON.parse(storedOrders);
-        setOrders(parsedOrders);
-        setFilteredOrders(parsedOrders);
+        // Filter orders to only include valid statuses
+        const validOrders = parsedOrders.filter((order: Order) => 
+          ['pending', 'completed', 'cancelled'].includes(order.status)
+        );
+        setOrders(validOrders);
+        setFilteredOrders(validOrders);
       } catch (error) {
         console.error('Error parsing stored orders:', error);
         setOrders([]);
         setFilteredOrders([]);
       }
     } else {
-      // Start with empty orders array
+      // Start with empty orders array - no demo data
       setOrders([]);
       setFilteredOrders([]);
     }
@@ -59,7 +63,7 @@ export const useOrders = () => {
 
   const archiveOrder = (orderId: string) => {
     const updatedOrders = orders.map((order) =>
-      order.id === orderId ? { ...order, status: "cancelled" as "pending" | "completed" | "cancelled" } : order
+      order.id === orderId ? { ...order, status: "cancelled" as const } : order
     );
     setOrders(updatedOrders);
     updateLocalStorage(updatedOrders);
