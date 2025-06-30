@@ -132,12 +132,16 @@ const OrderDetails = () => {
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex items-center justify-center">
-        <div className="text-center bg-white p-12 rounded-3xl shadow-xl border border-blue-100">
-          <h2 className="text-2xl font-bold text-blue-800 mb-4">الطلب غير موجود</h2>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-800">الطلب غير موجود</h2>
           <Link to="/orders">
             <Button 
-              className="mt-6 text-white border-0 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-200 px-8 py-3"
+              className="mt-4 text-white border-0 rounded-2xl"
+              style={{ 
+                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
+              }}
             >
               العودة للطلبات
             </Button>
@@ -148,43 +152,49 @@ const OrderDetails = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 font-arabic">
+    <div className="min-h-screen bg-gray-50 font-arabic">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 shadow-xl">
-        <div className="max-w-7xl mx-auto px-6 py-6">
+      <div className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
             <Link to="/orders">
-              <Button variant="ghost" className="p-3 hover:bg-blue-500/20 rounded-xl text-white">
+              <Button variant="ghost" className="p-2 hover:bg-gray-100 rounded-xl">
                 <ArrowLeft className="w-6 h-6" />
               </Button>
             </Link>
-            <h1 className="text-3xl font-bold text-white">تفاصيل الطلب #{order.id}</h1>
-            <div className="w-12"></div>
+            <h1 className="text-2xl font-bold text-gray-800">تفاصيل الطلب #{order.id}</h1>
+            <div className="w-10"></div>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="max-w-4xl mx-auto p-6">
-        <Card className="mb-8 border-0 shadow-2xl bg-white rounded-3xl overflow-hidden border-blue-100">
-          <CardHeader className="rounded-t-3xl bg-gradient-to-r from-blue-600 to-blue-700 text-white p-8">
+        <Card className="mb-6 border-0 shadow-lg bg-white rounded-3xl overflow-hidden">
+          <CardHeader 
+            className="rounded-t-3xl"
+            style={{ 
+              background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+              color: 'white'
+            }}
+          >
             <OrderHeader 
               orderId={order.id} 
               date={order.date} 
               status={order.status} 
             />
           </CardHeader>
-          <CardContent className="bg-white rounded-b-3xl p-10">
-            <div className="space-y-10">
+          <CardContent className="bg-white rounded-b-3xl p-8">
+            <div className="space-y-8">
               {/* Customer Info */}
-              <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-3xl p-8 border border-blue-200">
-                <h3 className="text-xl font-bold text-blue-800 mb-6 text-right">معلومات العميل</h3>
+              <div className="bg-gray-50 rounded-2xl p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 text-right">معلومات العميل</h3>
                 <CustomerInfo customerInfo={order.customerInfo} />
               </div>
 
               {/* Order Items */}
-              <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-3xl p-8 border border-blue-200">
-                <h3 className="text-xl font-bold text-blue-800 mb-6 text-right">تفاصيل الطلب</h3>
+              <div className="bg-gray-50 rounded-2xl p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 text-right">تفاصيل الطلب</h3>
                 <OrderItems items={order.items} />
               </div>
 

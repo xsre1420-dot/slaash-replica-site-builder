@@ -5,16 +5,16 @@ interface OrderTotalProps {
 
 const OrderTotal = ({ total }: OrderTotalProps) => {
   return (
-    <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-3xl p-8 shadow-xl">
+    <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-2xl p-6 mt-6">
       <div className="flex justify-between items-center">
         <div className="text-right">
-          <span className="text-3xl font-bold text-white">
+          <span className="text-2xl font-bold text-blue-900">
             {total.toLocaleString()} د.ع
           </span>
-          <p className="text-lg text-blue-100 mt-2 font-medium">المبلغ الإجمالي</p>
+          <p className="text-sm text-blue-600 mt-1">المبلغ الإجمالي</p>
         </div>
         <div className="text-left">
-          <span className="text-xl font-bold text-blue-100">المجموع الكلي:</span>
+          <span className="text-lg font-semibold text-blue-800">المجموع الكلي:</span>
         </div>
       </div>
     </div>
