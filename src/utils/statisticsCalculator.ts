@@ -33,11 +33,7 @@ export const getDefaultStatistics = (): RealStatistics => {
       { name: "محفظة رقمية", value: 10, color: "#A855F7" }
     ],
     peakTimes: [
-      { time: "12:00 - 13:00", orders: 45, percentage: 25 },
-      { time: "19:00 - 20:00", orders: 38, percentage: 21 },
-      { time: "20:00 - 21:00", orders: 32, percentage: 18 },
-      { time: "13:00 - 14:00", orders: 28, percentage: 16 },
-      { time: "18:00 - 19:00", orders: 25, percentage: 14 }
+      { time: "12:00 - 13:00", orders: 45, percentage: 25 }
     ]
   };
 };
@@ -136,7 +132,7 @@ export const calculateStatistics = (data: DatabaseData): RealStatistics => {
     },
   ];
 
-  // Peak times calculation
+  // Peak times calculation - show only the top one
   const hourCounts: { [key: number]: number } = {};
   orders.forEach(order => {
     const hour = new Date(order.created_at).getHours();
@@ -150,16 +146,12 @@ export const calculateStatistics = (data: DatabaseData): RealStatistics => {
       percentage: totalOrders > 0 ? (count / totalOrders) * 100 : 0
     }))
     .sort((a, b) => b.orders - a.orders)
-    .slice(0, 5);
+    .slice(0, 1); // Only show the top peak time
 
-  // Add default peak times if none exist
+  // Add default peak time if none exist
   if (peakTimes.length === 0) {
     peakTimes = [
-      { time: "12:00 - 13:00", orders: 45, percentage: 25 },
-      { time: "19:00 - 20:00", orders: 38, percentage: 21 },
-      { time: "20:00 - 21:00", orders: 32, percentage: 18 },
-      { time: "13:00 - 14:00", orders: 28, percentage: 16 },
-      { time: "18:00 - 19:00", orders: 25, percentage: 14 }
+      { time: "12:00 - 13:00", orders: 45, percentage: 25 }
     ];
   }
 

@@ -108,7 +108,7 @@ const Statistics = () => {
         <SalesStats stats={stats} topProducts={stats.topProducts} />
         <CustomerStats stats={stats} />
         <PerformanceStats stats={stats} />
-        <PaymentStats stats={stats} paymentMethods={stats.paymentMethods} />
+        <PaymentStats paymentMethods={stats.paymentMethods} />
         <TimeBasedStats peakTimes={stats.peakTimes} />
         <TopProductsSection topProducts={stats.topProducts} />
       </div>

@@ -1,14 +1,9 @@
 
-import { CreditCard, Truck, Package } from "lucide-react";
+import { CreditCard } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { StatCard } from "./StatCard";
 
 interface PaymentStatsProps {
-  stats: {
-    averageDeliveryTime: number;
-    cancelledOrdersRate: number;
-  };
   paymentMethods: Array<{
     name: string;
     value: number;
@@ -28,7 +23,7 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
-export const PaymentStats = ({ stats, paymentMethods }: PaymentStatsProps) => {
+export const PaymentStats = ({ paymentMethods }: PaymentStatsProps) => {
   return (
     <div className="mb-8">
       <div className="flex items-center gap-3 mb-6">
@@ -38,7 +33,7 @@ export const PaymentStats = ({ stats, paymentMethods }: PaymentStatsProps) => {
         <h2 className="text-2xl font-bold text-gray-800">💰 إحصائيات الدفع والشحن</h2>
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         <Card className="border-0 shadow-sm rounded-3xl">
           <CardHeader>
             <CardTitle className="text-right">طرق الدفع الأكثر استخداماً</CardTitle>
@@ -77,23 +72,6 @@ export const PaymentStats = ({ stats, paymentMethods }: PaymentStatsProps) => {
             </div>
           </CardContent>
         </Card>
-
-        <div className="grid grid-cols-1 gap-6">
-          <StatCard
-            title="متوسط وقت التوصيل"
-            value={`${stats.averageDeliveryTime} دقيقة`}
-            growth={-8.5}
-            icon={Truck}
-            gradient="bg-gradient-to-br from-[#6D63F2] to-[#5B52E8]"
-          />
-          <StatCard
-            title="معدل الطلبات الملغية"
-            value={`${stats.cancelledOrdersRate}%`}
-            growth={-2.1}
-            icon={Package}
-            gradient="bg-gradient-to-br from-red-500 to-red-600"
-          />
-        </div>
       </div>
     </div>
   );
