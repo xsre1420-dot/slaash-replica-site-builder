@@ -26,7 +26,7 @@ const SizesManager = ({ sizes, onSizesChange }: SizesManagerProps) => {
 
   return (
     <div className="space-y-4">
-      <Label className="block text-dark-green text-right">القياسات المتوفرة (اختياري)</Label>
+      <Label className="block text-gray-700 text-right">القياسات المتوفرة (اختياري)</Label>
       
       {/* Add new size */}
       <div className="flex gap-2">
@@ -34,7 +34,11 @@ const SizesManager = ({ sizes, onSizesChange }: SizesManagerProps) => {
           type="button"
           onClick={addSize}
           size="sm"
-          className="bg-primary hover:bg-primary/90"
+          className="text-white shadow-lg"
+          style={{ 
+            background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+            boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
+          }}
         >
           <Plus className="w-4 h-4" />
         </Button>
@@ -44,7 +48,7 @@ const SizesManager = ({ sizes, onSizesChange }: SizesManagerProps) => {
           value={newSize}
           onChange={(e) => setNewSize(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && addSize()}
-          className="text-right text-dark-green"
+          className="text-right text-gray-700 focus:border-blue-500 focus:ring-blue-500"
         />
       </div>
 
@@ -54,7 +58,7 @@ const SizesManager = ({ sizes, onSizesChange }: SizesManagerProps) => {
           {sizes.map((size, index) => (
             <div
               key={index}
-              className="relative flex items-center bg-gray-100 rounded-xl px-4 py-3 text-sm font-medium text-dark-green border-2 border-gray-200 hover:border-primary transition-colors"
+              className="relative flex items-center bg-gray-100 rounded-xl px-4 py-3 text-sm font-medium text-gray-700 border-2 border-gray-200 hover:border-blue-500 transition-colors"
             >
               <button
                 type="button"
