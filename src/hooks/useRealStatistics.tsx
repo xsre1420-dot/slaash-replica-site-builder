@@ -1,7 +1,5 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/context/AuthContext";
 
 interface RealStatistics {
   totalRevenue: number;
@@ -39,16 +37,13 @@ interface RealStatistics {
 }
 
 export const useRealStatistics = (dateRange: string = "7") => {
-  const { user } = useAuth();
   const [stats, setStats] = useState<RealStatistics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) return;
-    
     fetchRealStatistics();
-  }, [user, dateRange]);
+  }, [dateRange]);
 
   const getDateFilter = () => {
     const now = new Date();
@@ -58,53 +53,46 @@ export const useRealStatistics = (dateRange: string = "7") => {
   };
 
   const fetchRealStatistics = async () => {
-    if (!user) return;
-    
     setLoading(true);
     setError(null);
 
     try {
       const dateFilter = getDateFilter();
       
-      // Fetch orders data
+      // Fetch orders data (all orders from all owners)
       const { data: orders, error: ordersError } = await supabase
         .from('orders')
         .select('*')
-        .eq('owner_id', user.id)
         .gte('created_at', dateFilter);
 
       if (ordersError) throw ordersError;
 
-      // Fetch order items data
+      // Fetch order items data (all order items)
       const { data: orderItems, error: itemsError } = await supabase
         .from('order_items')
         .select('*, orders!inner(*)')
-        .eq('orders.owner_id', user.id)
         .gte('orders.created_at', dateFilter);
 
       if (itemsError) throw itemsError;
 
-      // Fetch customers data
+      // Fetch customers data (all customers)
       const { data: customers, error: customersError } = await supabase
         .from('customers')
-        .select('*')
-        .eq('owner_id', user.id);
+        .select('*');
 
       if (customersError) throw customersError;
 
-      // Fetch products data
+      // Fetch products data (all products)
       const { data: products, error: productsError } = await supabase
         .from('products')
-        .select('*')
-        .eq('owner_id', user.id);
+        .select('*');
 
       if (productsError) throw productsError;
 
-      // Fetch store visits data
+      // Fetch store visits data (all visits)
       const { data: visits, error: visitsError } = await supabase
         .from('store_visits')
         .select('*')
-        .eq('owner_id', user.id)
         .gte('created_at', dateFilter);
 
       if (visitsError) throw visitsError;

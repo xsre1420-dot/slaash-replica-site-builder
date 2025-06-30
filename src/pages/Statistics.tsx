@@ -11,32 +11,15 @@ import { TimeBasedStats } from "@/components/statistics/TimeBasedStats";
 import { TopProductsSection } from "@/components/statistics/TopProductsSection";
 import { DateRangeControls } from "@/components/statistics/DateRangeControls";
 import { useRealStatistics } from "@/hooks/useRealStatistics";
-import { useAuth } from "@/context/AuthContext";
 import { AlertCircle, Loader2 } from "lucide-react";
 
 const Statistics = () => {
-  const { user } = useAuth();
   const [dateRange, setDateRange] = useState("7");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [selectedMetric, setSelectedMetric] = useState("visitors");
 
   const { stats, loading, error, refetch } = useRealStatistics(dateRange);
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">تسجيل الدخول مطلوب</h3>
-          <p className="text-gray-500">يجب تسجيل الدخول لعرض الإحصائيات</p>
-          <Link to="/login">
-            <Button className="mt-4">تسجيل الدخول</Button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   if (loading) {
     return (
