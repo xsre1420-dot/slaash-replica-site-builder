@@ -1,4 +1,3 @@
-
 import { X, ShoppingCart, Plus, Trash2, Search, Heart, Star } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
@@ -140,7 +139,7 @@ const PreviewStore = () => {
         </div>
       </div>
 
-      {/* Updated Categories with White Design */}
+      {/* Updated Categories with Blue Design */}
       <div className="px-6 py-4">
         <div className="flex justify-between items-center mb-4">
           <button 
@@ -159,9 +158,14 @@ const PreviewStore = () => {
               key={category.id}
               className={`px-6 py-3 rounded-xl transition-all duration-200 whitespace-nowrap border ${
                 selectedCategory === category.id 
-                  ? "bg-gray-200 border-gray-300 text-gray-800" 
+                  ? "bg-indigo-500 border-indigo-500 text-white shadow-lg" 
                   : "bg-white hover:bg-gray-50 border-gray-200 text-gray-700"
               }`}
+              style={{
+                boxShadow: selectedCategory === category.id 
+                  ? '0 8px 25px rgba(99, 102, 241, 0.3)' 
+                  : undefined
+              }}
               onClick={() => setSelectedCategory(category.id)}
             >
               <span className="text-sm font-medium">{category.name}</span>
@@ -226,7 +230,11 @@ const PreviewStore = () => {
             <p className="text-gray-500 mb-6">ابدأ بإضافة وجباتك من قسم البناء</p>
             <Link to="/add-product">
               <Button 
-                className="bg-white text-gray-700 rounded-full px-8 border border-gray-200 hover:bg-gray-50"
+                className="text-white rounded-full px-8 border-0 shadow-lg"
+                style={{ 
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  boxShadow: '0 8px 25px rgba(99, 102, 241, 0.3)'
+                }}
               >
                 <Plus className="w-4 h-4 ml-2" />
                 إضافة أول وجبة
@@ -280,9 +288,10 @@ const PreviewStore = () => {
                   
                   <Button 
                     size="sm"
-                    className="w-full h-9 text-white rounded-full border-0 transition-all duration-200 hover:scale-105"
+                    className="w-full h-9 text-white rounded-full border-0 transition-all duration-200 hover:scale-105 shadow-lg"
                     style={{ 
-                      background: 'linear-gradient(135deg, #ff6b35, #f7931e, #ec4899)'
+                      background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                      boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -298,16 +307,20 @@ const PreviewStore = () => {
         )}
       </div>
 
-      {/* Updated Cart Button with Platform Design */}
+      {/* Updated Cart Button with Blue Design */}
       <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
         <Link to="/checkout">
           <div className="relative">
             <div 
-              className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 bg-white border border-gray-200"
+              className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
+              style={{ 
+                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                boxShadow: '0 8px 25px rgba(99, 102, 241, 0.3)'
+              }}
             >
-              <ShoppingCart className="w-6 h-6 text-gray-700" />
+              <ShoppingCart className="w-6 h-6 text-white" />
               {cartCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold animate-pulse">
+                <span className="absolute -top-2 -right-2 bg-white text-indigo-600 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold animate-pulse">
                   {cartCount}
                 </span>
               )}

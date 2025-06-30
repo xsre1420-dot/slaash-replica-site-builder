@@ -46,13 +46,21 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
     <div className="bg-white text-gray-800 py-3 px-4 flex justify-between items-center border-b border-gray-100">
       <div className="flex items-center gap-3">
         <Link to="/settings">
-          <Button variant="ghost" className="rounded-full p-2 h-auto w-auto bg-green-100 hover:bg-green-200 text-green-600">
+          <Button variant="ghost" className="rounded-full p-2 h-auto w-auto text-white shadow-lg"
+                  style={{ 
+                    background: 'linear-gradient(135deg, #06b6d4, #0891b2)',
+                    boxShadow: '0 4px 15px rgba(6, 182, 212, 0.3)'
+                  }}>
             <Settings className="h-5 w-5" />
           </Button>
         </Link>
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" className="rounded-full p-2 h-auto w-auto bg-gray-100 hover:bg-gray-200 text-gray-600">
+            <Button variant="ghost" className="rounded-full p-2 h-auto w-auto text-white shadow-lg"
+                    style={{ 
+                      background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                      boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
+                    }}>
               <User className="h-5 w-5" />
             </Button>
           </PopoverTrigger>
@@ -139,7 +147,11 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
         </Popover>
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" className="rounded-full p-2 h-auto w-auto bg-gray-100 hover:bg-gray-200 text-gray-600">
+            <Button variant="ghost" className="rounded-full p-2 h-auto w-auto text-white shadow-lg"
+                    style={{ 
+                      background: 'linear-gradient(135deg, #8b5cf6, #d946ef)',
+                      boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)'
+                    }}>
               <LinkIcon className="h-5 w-5" />
             </Button>
           </PopoverTrigger>

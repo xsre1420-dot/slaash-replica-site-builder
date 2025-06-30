@@ -50,7 +50,11 @@ export default function Builder() {
               </Button>
             </Link>
             <Link to="/add-product">
-              <Button className="w-full h-14 bg-gray-800 hover:bg-gray-900 text-white rounded-2xl">
+              <Button className="w-full h-14 text-white rounded-2xl shadow-lg border-0"
+                      style={{ 
+                        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                        boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
+                      }}>
                 <Plus className="w-5 h-5 ml-2" />
                 إضافة وجبة
               </Button>
@@ -62,8 +66,12 @@ export default function Builder() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Link to="/orders" className="group">
             <div className="bg-white p-6 rounded-3xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
-              <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center mb-4">
-                <List className="w-6 h-6 text-blue-600" />
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
+                   style={{ 
+                     background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                     boxShadow: '0 4px 15px rgba(99, 102, 241, 0.2)'
+                   }}>
+                <List className="w-6 h-6 text-white" />
               </div>
               <h3 className="font-bold text-gray-800 mb-1">الطلبات</h3>
               <p className="text-sm text-gray-500">إدارة الطلبات</p>
@@ -72,8 +80,12 @@ export default function Builder() {
           
           <Link to="/categories" className="group">
             <div className="bg-white p-6 rounded-3xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
-              <div className="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center mb-4">
-                <Tag className="w-6 h-6 text-purple-600" />
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
+                   style={{ 
+                     background: 'linear-gradient(135deg, #8b5cf6, #d946ef)',
+                     boxShadow: '0 4px 15px rgba(139, 92, 246, 0.2)'
+                   }}>
+                <Tag className="w-6 h-6 text-white" />
               </div>
               <h3 className="font-bold text-gray-800 mb-1">الأصناف</h3>
               <p className="text-sm text-gray-500">تنظيم الأصناف</p>
@@ -82,8 +94,12 @@ export default function Builder() {
           
           <Link to="/settings" className="group">
             <div className="bg-white p-6 rounded-3xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
-              <div className="w-12 h-12 bg-green-100 rounded-2xl flex items-center justify-center mb-4">
-                <Settings className="w-6 h-6 text-green-600" />
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
+                   style={{ 
+                     background: 'linear-gradient(135deg, #06b6d4, #0891b2)',
+                     boxShadow: '0 4px 15px rgba(6, 182, 212, 0.2)'
+                   }}>
+                <Settings className="w-6 h-6 text-white" />
               </div>
               <h3 className="font-bold text-gray-800 mb-1">الإعدادات</h3>
               <p className="text-sm text-gray-500">إعدادات المتجر</p>
@@ -92,8 +108,12 @@ export default function Builder() {
           
           <Link to="/statistics" className="group">
             <div className="bg-white p-6 rounded-3xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
-              <div className="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center mb-4">
-                <BarChart3 className="w-6 h-6 text-orange-600" />
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
+                   style={{ 
+                     background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                     boxShadow: '0 4px 15px rgba(59, 130, 246, 0.2)'
+                   }}>
+                <BarChart3 className="w-6 h-6 text-white" />
               </div>
               <h3 className="font-bold text-gray-800 mb-1">الإحصائيات</h3>
               <p className="text-sm text-gray-500">تقارير وإحصاءات</p>
@@ -106,7 +126,7 @@ export default function Builder() {
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-xl font-bold text-gray-800">منتجاتك</CardTitle>
-              <Link to="/add-product" className="text-orange-500 hover:text-orange-600 text-sm flex items-center font-medium">
+              <Link to="/add-product" className="text-indigo-500 hover:text-indigo-600 text-sm flex items-center font-medium">
                 <Plus className="w-4 h-4 ml-1" />
                 منتج جديد
               </Link>

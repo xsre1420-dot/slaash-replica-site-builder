@@ -10,11 +10,14 @@ const AddToCartButton = ({ onClick }: AddToCartButtonProps) => {
   return (
     <Button 
       onClick={onClick} 
-      className="w-full flex items-center justify-center gap-3 h-14 text-lg font-semibold text-white border-0"
-      style={{ background: 'linear-gradient(135deg, #ff6b35, #ec4899)' }}
+      className="w-full flex items-center justify-center gap-3 h-14 text-lg font-semibold text-white border-0 rounded-full shadow-lg"
+      style={{ 
+        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+        boxShadow: '0 8px 25px rgba(99, 102, 241, 0.3)'
+      }}
     >
       <ShoppingCart className="h-4 w-4 -mt-1" />
-      إضافة تصنيف جديد
+      إضافة إلى السلة
     </Button>
   );
 };
