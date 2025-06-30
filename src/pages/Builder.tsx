@@ -107,7 +107,7 @@ export default function Builder() {
           </Link>
           
           <Link to="/statistics" className="group">
-            <div className="bg-white p-6 rounded-3xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
+            <div className="bg-white p-6 rounded-3xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1 cursor-pointer">
               <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
                    style={{ 
                      background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
