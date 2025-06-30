@@ -13,7 +13,7 @@ export default function Builder() {
 
   return (
     <div className="min-h-screen bg-gray-50 font-arabic">
-      {/* Modern Store Header */}
+      {/* Modern Store Header - White Background */}
       <div className="bg-white shadow-sm">
         <StoreHeader 
           storeName={storeName} 
@@ -23,20 +23,20 @@ export default function Builder() {
       </div>
       
       <div className="p-6 max-w-6xl mx-auto">
-        {/* Modern URL Sharing Card */}
-        <div className="bg-gradient-to-r from-orange-500 to-pink-500 rounded-3xl p-6 mb-8 text-white">
+        {/* Modern URL Sharing Card - White Background */}
+        <div className="bg-white rounded-3xl p-6 mb-8 border border-gray-200 shadow-sm">
           <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold mb-2">رابط المطعم</h2>
-            <p className="opacity-90">شارك الرابط مع زبائنك</p>
+            <h2 className="text-2xl font-bold mb-2 text-gray-800">رابط المطعم</h2>
+            <p className="text-gray-600">شارك الرابط مع زبائنك</p>
           </div>
           
           <div className="flex items-center gap-3 mb-6">
             <Input 
               value="https://yourstore.com/menu" 
               readOnly 
-              className="text-left bg-white/20 border-white/30 text-white placeholder-white/70 rounded-2xl backdrop-blur-sm"
+              className="text-left bg-gray-50 border-gray-200 text-gray-700 rounded-2xl"
             />
-            <Button className="bg-white/20 hover:bg-white/30 text-white border-white/30 rounded-2xl backdrop-blur-sm">
+            <Button className="bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200 rounded-2xl">
               نسخ
             </Button>
           </div>
@@ -44,13 +44,13 @@ export default function Builder() {
           {/* Modern Action Grid */}
           <div className="grid grid-cols-2 gap-4">
             <Link to="/preview">
-              <Button variant="ghost" className="w-full h-14 bg-white/20 hover:bg-white/30 text-white border-white/30 rounded-2xl backdrop-blur-sm">
+              <Button variant="ghost" className="w-full h-14 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-2xl">
                 <Eye className="w-5 h-5 ml-2" />
                 معاينة المتجر
               </Button>
             </Link>
             <Link to="/add-product">
-              <Button className="w-full h-14 bg-white hover:bg-gray-100 text-gray-800 rounded-2xl">
+              <Button className="w-full h-14 bg-gray-800 hover:bg-gray-900 text-white rounded-2xl">
                 <Plus className="w-5 h-5 ml-2" />
                 إضافة وجبة
               </Button>

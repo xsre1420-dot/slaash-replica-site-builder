@@ -43,16 +43,16 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
   };
 
   return (
-    <div className="bg-primary text-white py-3 px-4 flex justify-between items-center">
+    <div className="bg-white text-gray-800 py-3 px-4 flex justify-between items-center border-b border-gray-100">
       <div className="flex items-center gap-3">
         <Link to="/settings">
-          <Button variant="ghost" className="rounded-full p-2 h-auto w-auto bg-primary/40 hover:bg-primary/60">
+          <Button variant="ghost" className="rounded-full p-2 h-auto w-auto bg-green-100 hover:bg-green-200 text-green-600">
             <Settings className="h-5 w-5" />
           </Button>
         </Link>
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" className="rounded-full p-2 h-auto w-auto bg-primary/40 hover:bg-primary/60">
+            <Button variant="ghost" className="rounded-full p-2 h-auto w-auto bg-gray-100 hover:bg-gray-200 text-gray-600">
               <User className="h-5 w-5" />
             </Button>
           </PopoverTrigger>
@@ -139,7 +139,7 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
         </Popover>
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" className="rounded-full p-2 h-auto w-auto bg-primary/40 hover:bg-primary/60">
+            <Button variant="ghost" className="rounded-full p-2 h-auto w-auto bg-gray-100 hover:bg-gray-200 text-gray-600">
               <LinkIcon className="h-5 w-5" />
             </Button>
           </PopoverTrigger>
@@ -168,7 +168,7 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
       </div>
       
       <div className="flex items-center gap-3">
-        <div className="text-2xl font-bold font-serif">{storeName}</div>
+        <div className="text-2xl font-bold font-serif text-gray-800">{storeName}</div>
       </div>
     </div>
   );
