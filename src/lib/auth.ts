@@ -9,6 +9,20 @@ export interface RestaurantOwner {
   restaurant_logo?: string;
 }
 
+// Function to set the current owner context in the database
+const setOwnerContext = async (ownerId: string) => {
+  try {
+    // Set the owner context for RLS policies
+    await supabase.rpc('set_config', {
+      setting_name: 'app.current_owner_id',
+      new_value: ownerId,
+      is_local: false
+    });
+  } catch (error) {
+    console.error('Error setting owner context:', error);
+  }
+};
+
 export const loginUser = async (username: string, password: string) => {
   try {
     // البحث عن المستخدم
@@ -27,6 +41,9 @@ export const loginUser = async (username: string, password: string) => {
     if (!isValidPassword) {
       return { error: 'كلمة المرور غير صحيحة' };
     }
+
+    // Set the database context for RLS policies
+    await setOwnerContext(user.id);
 
     return { 
       user: {
@@ -74,6 +91,9 @@ export const registerUser = async (username: string, password: string, restauran
       return { error: 'حدث خطأ أثناء إنشاء الحساب' };
     }
 
+    // Set the database context for RLS policies
+    await setOwnerContext(newUser.id);
+
     return { 
       user: {
         id: newUser.id,
@@ -86,4 +106,9 @@ export const registerUser = async (username: string, password: string, restauran
     console.error('Registration error:', error);
     return { error: 'حدث خطأ أثناء إنشاء الحساب' };
   }
+};
+
+// Function to initialize owner context when app loads
+export const initializeOwnerContext = async (ownerId: string) => {
+  await setOwnerContext(ownerId);
 };

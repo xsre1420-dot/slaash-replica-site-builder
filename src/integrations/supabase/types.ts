@@ -33,21 +33,21 @@ export type Database = {
           display_order: number | null
           id: string
           name: string
-          owner_id: string | null
+          owner_id: string
         }
         Insert: {
           created_at?: string
           display_order?: number | null
           id?: string
           name: string
-          owner_id?: string | null
+          owner_id: string
         }
         Update: {
           created_at?: string
           display_order?: number | null
           id?: string
           name?: string
-          owner_id?: string | null
+          owner_id?: string
         }
         Relationships: [
           {
@@ -219,7 +219,7 @@ export type Database = {
           id: string
           image_url: string | null
           name: string
-          owner_id: string | null
+          owner_id: string
           price: number
           updated_at: string
         }
@@ -231,7 +231,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           name: string
-          owner_id?: string | null
+          owner_id: string
           price: number
           updated_at?: string
         }
@@ -243,7 +243,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           name?: string
-          owner_id?: string | null
+          owner_id?: string
           price?: number
           updated_at?: string
         }
@@ -322,12 +322,33 @@ export type Database = {
           },
         ]
       }
+      "‏user_access": {
+        Row: {
+          created_at: string
+          id: number
+          User_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          User_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          User_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_current_restaurant_owner_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

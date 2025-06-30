@@ -14,6 +14,19 @@ export interface DatabaseProduct {
   updated_at: string;
 }
 
+// Helper function to set owner context
+const setOwnerContext = async (ownerId: string) => {
+  try {
+    await supabase.rpc('set_config', {
+      setting_name: 'app.current_owner_id',
+      new_value: ownerId,
+      is_local: false
+    });
+  } catch (error) {
+    console.error('Error setting owner context:', error);
+  }
+};
+
 export const saveProduct = async (productData: {
   name: string;
   description: string;
@@ -24,6 +37,9 @@ export const saveProduct = async (productData: {
   ownerId: string;
 }) => {
   try {
+    // Set owner context for RLS
+    await setOwnerContext(productData.ownerId);
+    
     const { data, error } = await supabase
       .from('products')
       .insert({
@@ -52,10 +68,12 @@ export const saveProduct = async (productData: {
 
 export const getProducts = async (ownerId: string) => {
   try {
+    // Set owner context for RLS
+    await setOwnerContext(ownerId);
+    
     const { data, error } = await supabase
       .from('products')
       .select('*')
-      .eq('owner_id', ownerId)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -70,15 +88,22 @@ export const getProducts = async (ownerId: string) => {
   }
 };
 
-export const updateProduct = async (productId: string, productData: {
-  name: string;
-  description: string;
-  category: string;
-  price: number;
-  image_url: string;
-  additional_images?: string[];
-}) => {
+export const updateProduct = async (
+  productId: string,
+  ownerId: string,
+  productData: {
+    name: string;
+    description: string;
+    category: string;
+    price: number;
+    image_url: string;
+    additional_images?: string[];
+  }
+) => {
   try {
+    // Set owner context for RLS
+    await setOwnerContext(ownerId);
+    
     const { data, error } = await supabase
       .from('products')
       .update({
@@ -101,8 +126,11 @@ export const updateProduct = async (productId: string, productData: {
   }
 };
 
-export const deleteProduct = async (productId: string) => {
+export const deleteProduct = async (productId: string, ownerId: string) => {
   try {
+    // Set owner context for RLS
+    await setOwnerContext(ownerId);
+    
     const { error } = await supabase
       .from('products')
       .delete()
