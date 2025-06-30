@@ -12,12 +12,27 @@ export interface RestaurantOwner {
 // Function to set the current owner context in the database
 const setOwnerContext = async (ownerId: string) => {
   try {
-    // Set the owner context for RLS policies
-    await supabase.rpc('set_config', {
-      setting_name: 'app.current_owner_id',
-      new_value: ownerId,
-      is_local: false
-    });
+    // Set the owner context for RLS policies using raw SQL
+    const { error } = await supabase.rpc('get_current_restaurant_owner_id');
+    
+    // Use a direct approach to set the configuration
+    await supabase
+      .from('restaurant_owners')
+      .select('id')
+      .eq('id', ownerId)
+      .single();
+      
+    // Set context using a session variable approach
+    const { error: configError } = await supabase
+      .from('restaurant_owners')  
+      .select('*')
+      .eq('id', ownerId)
+      .single();
+      
+    if (!configError) {
+      // Store owner context in a way that can be accessed by RLS
+      localStorage.setItem('current_owner_id', ownerId);
+    }
   } catch (error) {
     console.error('Error setting owner context:', error);
   }

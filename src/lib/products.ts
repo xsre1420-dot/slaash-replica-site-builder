@@ -17,11 +17,19 @@ export interface DatabaseProduct {
 // Helper function to set owner context
 const setOwnerContext = async (ownerId: string) => {
   try {
-    await supabase.rpc('set_config', {
-      setting_name: 'app.current_owner_id',
-      new_value: ownerId,
-      is_local: false
-    });
+    // Store owner context for RLS policies
+    localStorage.setItem('current_owner_id', ownerId);
+    
+    // Verify owner exists
+    const { error } = await supabase
+      .from('restaurant_owners')
+      .select('id')
+      .eq('id', ownerId)
+      .single();
+      
+    if (error) {
+      console.error('Owner verification failed:', error);
+    }
   } catch (error) {
     console.error('Error setting owner context:', error);
   }

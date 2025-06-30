@@ -41,12 +41,17 @@ const Login = () => {
       if (result.error) {
         setError(result.error);
       } else if (result.user) {
-        login(result.user);
-        toast({
-          title: isRegistering ? "تم إنشاء الحساب بنجاح" : "تم تسجيل الدخول بنجاح",
-          description: `مرحباً ${result.user.username}`
-        });
-        navigate("/builder");
+        // Use the login function from AuthContext with correct parameters
+        const loginResult = await login(username, password);
+        if (loginResult.error) {
+          setError(loginResult.error);
+        } else {
+          toast({
+            title: isRegistering ? "تم إنشاء الحساب بنجاح" : "تم تسجيل الدخول بنجاح",
+            description: `مرحباً ${result.user.username}`
+          });
+          navigate("/builder");
+        }
       }
     } catch (error) {
       console.error('Auth error:', error);

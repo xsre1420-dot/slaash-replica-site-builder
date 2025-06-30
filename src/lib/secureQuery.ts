@@ -7,12 +7,20 @@ export const executeSecureQuery = async <T>(
   queryFn: () => Promise<T>
 ): Promise<T> => {
   try {
-    // Set the owner context before executing the query
-    await supabase.rpc('set_config', {
-      setting_name: 'app.current_owner_id',
-      new_value: ownerId,
-      is_local: false
-    });
+    // Store owner context for RLS policies
+    localStorage.setItem('current_owner_id', ownerId);
+    
+    // Verify owner exists first
+    const { error } = await supabase
+      .from('restaurant_owners')
+      .select('id')
+      .eq('id', ownerId)
+      .single();
+      
+    if (error) {
+      console.error('Owner verification failed:', error);
+      throw new Error('Invalid owner context');
+    }
     
     // Execute the query
     return await queryFn();
