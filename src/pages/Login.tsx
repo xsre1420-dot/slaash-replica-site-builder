@@ -59,24 +59,20 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-white flex flex-col font-arabic">
       {/* Header */}
-      <header className="bg-white text-gray-800 py-4 px-6 text-center border-b border-gray-100">
-        <h1 className="text-xl font-bold flex items-center justify-center text-blue-600">
+      <header className="bg-primary text-white py-4 px-6 text-center">
+        <h1 className="text-xl font-bold flex items-center justify-center">
           نظام إدارة المطعم <span className="mx-2">🍽️</span>
         </h1>
       </header>
 
       <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-50">
-        <div className="w-full max-w-md bg-white rounded-3xl shadow-lg overflow-hidden border border-gray-100">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
           {/* Login Header */}
-          <div className="text-center p-6"
-               style={{ 
-                 background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                 boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
-               }}>
-            <h2 className="text-2xl font-bold mb-2 text-white">
+          <div className="bg-primary text-white p-6 text-center">
+            <h2 className="text-2xl font-bold mb-2">
               {isRegistering ? "إنشاء حساب جديد" : "تسجيل الدخول"}
             </h2>
-            <p className="text-sm opacity-90 text-white">
+            <p className="text-sm opacity-90">
               {isRegistering 
                 ? "أدخل بيانات الحساب الجديد" 
                 : "أدخل بيانات الدخول لإدارة مطعمك"
@@ -106,7 +102,7 @@ const Login = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="أدخل اسم المستخدم"
-                  className="pl-10 text-right text-gray-700 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500"
+                  className="pl-10 text-right text-gray-700 border-gray-200 rounded-xl"
                   dir="rtl"
                   disabled={isLoading}
                 />
@@ -126,7 +122,7 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="أدخل كلمة المرور"
-                  className="pl-10 text-right text-gray-700 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500"
+                  className="pl-10 text-right text-gray-700 border-gray-200 rounded-xl"
                   dir="rtl"
                   disabled={isLoading}
                 />
@@ -152,11 +148,7 @@ const Login = () => {
             {/* Submit Button */}
             <Button 
               type="submit" 
-              className="w-full text-white py-3 text-lg font-medium rounded-xl shadow-lg"
-              style={{ 
-                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
-              }}
+              className="w-full bg-primary hover:bg-primary/90 text-white py-3 text-lg font-medium rounded-xl"
               disabled={isLoading}
             >
               <span className="ml-2">
@@ -178,7 +170,7 @@ const Login = () => {
                   setIsRegistering(!isRegistering);
                   setError(null);
                 }}
-                className="text-blue-600 hover:text-blue-800 hover:underline text-sm"
+                className="text-primary hover:text-primary/80 hover:underline text-sm"
                 disabled={isLoading}
               >
                 {isRegistering 

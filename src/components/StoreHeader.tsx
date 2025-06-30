@@ -48,8 +48,8 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
         <Link to="/settings">
           <Button variant="ghost" className="rounded-full p-2 h-auto w-auto text-white shadow-lg"
                   style={{ 
-                    background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                    boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
+                    background: 'linear-gradient(135deg, #06b6d4, #0891b2)',
+                    boxShadow: '0 4px 15px rgba(6, 182, 212, 0.3)'
                   }}>
             <Settings className="h-5 w-5" />
           </Button>

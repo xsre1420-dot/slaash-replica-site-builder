@@ -24,9 +24,28 @@ const ColorsManager = ({ colors, onColorsChange }: ColorsManagerProps) => {
     onColorsChange(colors.filter(color => color !== colorToRemove));
   };
 
+  // Function to get color background based on color name
+  const getColorBackground = (colorName: string) => {
+    const colorMap: { [key: string]: string } = {
+      'أحمر': '#dc2626',
+      'أزرق': '#2563eb',
+      'أخضر': '#16a34a',
+      'أصفر': '#ca8a04',
+      'بنفسجي': '#7c3aed',
+      'وردي': '#db2777',
+      'برتقالي': '#ea580c',
+      'أسود': '#000000',
+      'أبيض': '#ffffff',
+      'رمادي': '#6b7280',
+      'بني': '#92400e',
+    };
+    
+    return colorMap[colorName.toLowerCase()] || '#6b7280';
+  };
+
   return (
     <div className="space-y-4">
-      <Label className="block text-gray-700 text-right">الألوان المتوفرة (اختياري)</Label>
+      <Label className="block text-dark-green text-right">الألوان المتوفرة (اختياري)</Label>
       
       {/* Add new color */}
       <div className="flex gap-2">
@@ -34,11 +53,7 @@ const ColorsManager = ({ colors, onColorsChange }: ColorsManagerProps) => {
           type="button"
           onClick={addColor}
           size="sm"
-          className="text-white shadow-lg"
-          style={{ 
-            background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-            boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
-          }}
+          className="bg-primary hover:bg-primary/90"
         >
           <Plus className="w-4 h-4" />
         </Button>
@@ -48,7 +63,7 @@ const ColorsManager = ({ colors, onColorsChange }: ColorsManagerProps) => {
           value={newColor}
           onChange={(e) => setNewColor(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && addColor()}
-          className="text-right text-gray-700 focus:border-blue-500 focus:ring-blue-500"
+          className="text-right text-dark-green"
         />
       </div>
 
@@ -58,7 +73,11 @@ const ColorsManager = ({ colors, onColorsChange }: ColorsManagerProps) => {
           {colors.map((color, index) => (
             <div
               key={index}
-              className="relative flex items-center bg-gray-100 rounded-xl px-4 py-3 text-sm font-medium text-gray-700 border-2 border-gray-200 hover:border-blue-500 transition-colors"
+              className="relative flex items-center rounded-xl px-4 py-3 text-sm font-medium text-white border-2 border-gray-200 hover:border-primary transition-colors"
+              style={{ 
+                backgroundColor: getColorBackground(color),
+                color: color === 'أبيض' || color === 'أصفر' ? '#000000' : '#ffffff'
+              }}
             >
               <button
                 type="button"

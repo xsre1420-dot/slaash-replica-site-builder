@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -128,7 +127,7 @@ const AddProduct = () => {
               <Label htmlFor="name" className="block text-gray-700 font-medium text-right">اسم الوجبة</Label>
               <Input 
                 id="name" 
-                className="text-right rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500" 
+                className="text-right rounded-2xl border-gray-200" 
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="أدخل اسم الوجبة"
@@ -139,7 +138,7 @@ const AddProduct = () => {
             <div className="space-y-3">
               <Label htmlFor="category" className="block text-gray-700 font-medium text-right">الفئة</Label>
               <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger className="w-full text-right rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500">
+                <SelectTrigger className="w-full text-right rounded-2xl border-gray-200">
                   <SelectValue placeholder="اختر فئة" />
                 </SelectTrigger>
                 <SelectContent className="rounded-2xl">
@@ -158,7 +157,7 @@ const AddProduct = () => {
             <Label htmlFor="description" className="block text-gray-700 font-medium text-right">الوصف</Label>
             <Textarea 
               id="description" 
-              className="text-right rounded-2xl border-gray-200 min-h-[120px] focus:border-blue-500 focus:ring-blue-500" 
+              className="text-right rounded-2xl border-gray-200 min-h-[120px]" 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="أدخل وصف الوجبة"
@@ -171,7 +170,7 @@ const AddProduct = () => {
             <Input 
               id="price" 
               type="number" 
-              className="text-right rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500" 
+              className="text-right rounded-2xl border-gray-200" 
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               placeholder="0"
@@ -193,11 +192,7 @@ const AddProduct = () => {
           <div className="flex justify-center pt-8">
             <Button 
               type="submit" 
-              className="text-white px-12 py-4 text-lg rounded-2xl shadow-lg"
-              style={{ 
-                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)'
-              }}
+              className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white px-12 py-4 text-lg rounded-2xl"
             >
               إضافة الوجبة +
             </Button>
