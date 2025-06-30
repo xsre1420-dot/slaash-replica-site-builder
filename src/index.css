@@ -8,11 +8,11 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 0 0% 0%;
+    --foreground: 201 36% 18%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 0%;
+    --card-foreground: 201 36% 18%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 0%;
+    --popover-foreground: 201 36% 18%;
     --primary: 180 100% 25%;
     --primary-foreground: 0 0% 100%;
     --secondary: 169 65% 35%;
@@ -20,7 +20,7 @@
     --muted: 161 29% 85%;
     --muted-foreground: 185 30% 53%;
     --accent: 161 35% 91%;
-    --accent-foreground: 0 0% 0%;
+    --accent-foreground: 201 36% 18%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
     --border: 161 35% 91%;
@@ -31,17 +31,16 @@
     /* Modern color scheme inspired by the image */
     --bg-primary: 250 10% 97%;
     --bg-secondary: 240 8% 95%;
-    --text-primary: 0 0% 0%;
-    --text-secondary: 0 0% 30%;
+    --text-primary: 210 20% 15%;
+    --text-secondary: 215 15% 45%;
     --accent-primary: 25 95% 53%;
     --accent-secondary: 340 75% 55%;
     --card-bg: 0 0% 100%;
-    --input-text: 0 0% 0%;
   }
 
   body {
     font-family: 'Tajawal', 'Inter', sans-serif;
-    color: #000000;
+    color: hsl(var(--text-primary));
     background-color: hsl(var(--bg-primary));
   }
   
@@ -53,21 +52,6 @@
   /* Apply Tajawal for Arabic text */
   .font-arabic {
     font-family: 'Tajawal', sans-serif;
-  }
-
-  /* Global input text color override - changed back to black */
-  input, textarea, select {
-    color: #000000 !important;
-  }
-
-  /* Specific input field styling - changed back to black */
-  .input-blue {
-    color: #000000 !important;
-  }
-
-  /* Placeholder text styling */
-  input::placeholder, textarea::placeholder {
-    color: #9ca3af !important;
   }
 }
 
@@ -96,11 +80,11 @@
   
   /* Custom modern utilities */
   .text-primary-modern {
-    color: #000000;
+    color: hsl(var(--text-primary));
   }
   
   .text-secondary-modern {
-    color: #4b5563;
+    color: hsl(var(--text-secondary));
   }
   
   .bg-primary-modern {

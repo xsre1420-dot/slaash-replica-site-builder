@@ -125,10 +125,10 @@ const AddProduct = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Name */}
             <div className="space-y-3">
-              <Label htmlFor="name" className="block text-blue-600 font-medium text-right">اسم الوجبة</Label>
+              <Label htmlFor="name" className="block text-gray-700 font-medium text-right">اسم الوجبة</Label>
               <Input 
                 id="name" 
-                className="text-right text-blue-600 rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500" 
+                className="text-right rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500" 
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="أدخل اسم الوجبة"
@@ -137,9 +137,9 @@ const AddProduct = () => {
 
             {/* Category */}
             <div className="space-y-3">
-              <Label htmlFor="category" className="block text-blue-600 font-medium text-right">الفئة</Label>
+              <Label htmlFor="category" className="block text-gray-700 font-medium text-right">الفئة</Label>
               <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger className="w-full text-right text-blue-600 rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500">
+                <SelectTrigger className="w-full text-right rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500">
                   <SelectValue placeholder="اختر فئة" />
                 </SelectTrigger>
                 <SelectContent className="rounded-2xl">
@@ -155,10 +155,10 @@ const AddProduct = () => {
 
           {/* Description */}
           <div className="space-y-3">
-            <Label htmlFor="description" className="block text-blue-600 font-medium text-right">الوصف</Label>
+            <Label htmlFor="description" className="block text-gray-700 font-medium text-right">الوصف</Label>
             <Textarea 
               id="description" 
-              className="text-right text-blue-600 rounded-2xl border-gray-200 min-h-[120px] focus:border-blue-500 focus:ring-blue-500" 
+              className="text-right rounded-2xl border-gray-200 min-h-[120px] focus:border-blue-500 focus:ring-blue-500" 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="أدخل وصف الوجبة"
@@ -167,11 +167,11 @@ const AddProduct = () => {
 
           {/* Price */}
           <div className="space-y-3">
-            <Label htmlFor="price" className="block text-blue-600 font-medium text-right">السعر (دينار عراقي)</Label>
+            <Label htmlFor="price" className="block text-gray-700 font-medium text-right">السعر (دينار عراقي)</Label>
             <Input 
               id="price" 
               type="number" 
-              className="text-right text-blue-600 rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500" 
+              className="text-right rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500" 
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               placeholder="0"
@@ -195,8 +195,8 @@ const AddProduct = () => {
               type="submit" 
               className="text-white px-12 py-4 text-lg rounded-2xl shadow-lg"
               style={{ 
-                background: 'linear-gradient(135deg, #5b47f5, #4c3ef7)',
-                boxShadow: '0 8px 25px rgba(91, 71, 245, 0.3)'
+                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)'
               }}
             >
               إضافة الوجبة +

@@ -48,8 +48,8 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
         <Link to="/settings">
           <Button variant="ghost" className="rounded-full p-2 h-auto w-auto text-white shadow-lg"
                   style={{ 
-                    background: 'linear-gradient(135deg, #5b47f5, #4c3ef7)',
-                    boxShadow: '0 4px 15px rgba(91, 71, 245, 0.3)'
+                    background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                    boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
                   }}>
             <Settings className="h-5 w-5" />
           </Button>
@@ -104,7 +104,7 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
                       type="text" 
                       value={name} 
                       onChange={(e) => setName(e.target.value)}
-                      className="text-right text-blue-600 focus:border-blue-500 focus:ring-blue-500" 
+                      className="text-right" 
                       placeholder="اسم المتجر"
                     />
                   </div>
@@ -130,7 +130,7 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
                     </Avatar>
                   </div>
                   <div className="text-center">
-                    <p className="font-bold text-xl text-blue-600 font-serif">{name}</p>
+                    <p className="font-bold text-xl text-primary font-serif">{name}</p>
                   </div>
                   <Button className="w-full" onClick={() => setIsEditing(true)}>
                     تعديل معلومات المتجر
