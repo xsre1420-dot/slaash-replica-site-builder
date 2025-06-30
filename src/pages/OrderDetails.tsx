@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
@@ -132,16 +131,12 @@ const OrderDetails = () => {
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-800">الطلب غير موجود</h2>
+          <h2 className="text-xl font-semibold text-blue-800">الطلب غير موجود</h2>
           <Link to="/orders">
             <Button 
-              className="mt-4 text-white border-0 rounded-2xl"
-              style={{ 
-                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
-              }}
+              className="mt-4 text-white border-0 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 shadow-lg"
             >
               العودة للطلبات
             </Button>
@@ -152,17 +147,17 @@ const OrderDetails = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 font-arabic">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 font-arabic">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 shadow-lg">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
             <Link to="/orders">
-              <Button variant="ghost" className="p-2 hover:bg-gray-100 rounded-xl">
+              <Button variant="ghost" className="p-2 hover:bg-blue-700 rounded-xl text-white">
                 <ArrowLeft className="w-6 h-6" />
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold text-gray-800">تفاصيل الطلب #{order.id}</h1>
+            <h1 className="text-2xl font-bold text-white">تفاصيل الطلب #{order.id}</h1>
             <div className="w-10"></div>
           </div>
         </div>
@@ -170,13 +165,9 @@ const OrderDetails = () => {
 
       {/* Main Content */}
       <div className="max-w-4xl mx-auto p-6">
-        <Card className="mb-6 border-0 shadow-lg bg-white rounded-3xl overflow-hidden">
+        <Card className="mb-6 border-0 shadow-xl bg-white rounded-3xl overflow-hidden border border-blue-100">
           <CardHeader 
-            className="rounded-t-3xl"
-            style={{ 
-              background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-              color: 'white'
-            }}
+            className="rounded-t-3xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white"
           >
             <OrderHeader 
               orderId={order.id} 
@@ -187,14 +178,14 @@ const OrderDetails = () => {
           <CardContent className="bg-white rounded-b-3xl p-8">
             <div className="space-y-8">
               {/* Customer Info */}
-              <div className="bg-gray-50 rounded-2xl p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 text-right">معلومات العميل</h3>
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
+                <h3 className="text-lg font-semibold text-blue-800 mb-4 text-right">معلومات العميل</h3>
                 <CustomerInfo customerInfo={order.customerInfo} />
               </div>
 
               {/* Order Items */}
-              <div className="bg-gray-50 rounded-2xl p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 text-right">تفاصيل الطلب</h3>
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
+                <h3 className="text-lg font-semibold text-blue-800 mb-4 text-right">تفاصيل الطلب</h3>
                 <OrderItems items={order.items} />
               </div>
 
