@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -128,11 +129,11 @@ const EditProduct = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-primary text-white p-4 flex justify-between items-center">
+      <div className="bg-white text-gray-800 p-4 flex justify-between items-center border-b border-gray-100">
         <Link to="/builder">
           <X className="w-6 h-6" />
         </Link>
-        <h1 className="text-xl font-bold">تعديل الوجبة</h1>
+        <h1 className="text-xl font-bold text-blue-600">تعديل الوجبة</h1>
         <div className="w-6" /> {/* Spacer for alignment */}
       </div>
 
@@ -148,10 +149,10 @@ const EditProduct = () => {
 
           {/* Name */}
           <div className="space-y-2 text-right">
-            <Label htmlFor="name" className="block text-dark-green">اسم الوجبة</Label>
+            <Label htmlFor="name" className="block text-blue-600">اسم الوجبة</Label>
             <Input 
               id="name" 
-              className="text-right text-dark-green" 
+              className="text-right text-blue-600 focus:border-blue-500 focus:ring-blue-500" 
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -159,9 +160,9 @@ const EditProduct = () => {
 
           {/* Category */}
           <div className="space-y-2 text-right">
-            <Label htmlFor="category" className="block text-dark-green">الفئة</Label>
+            <Label htmlFor="category" className="block text-blue-600">الفئة</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="w-full text-right text-dark-green">
+              <SelectTrigger className="w-full text-right text-blue-600 focus:border-blue-500 focus:ring-blue-500">
                 <SelectValue placeholder="اختر فئة" />
               </SelectTrigger>
               <SelectContent>
@@ -176,10 +177,10 @@ const EditProduct = () => {
 
           {/* Description */}
           <div className="space-y-2 text-right">
-            <Label htmlFor="description" className="block text-dark-green">الوصف</Label>
+            <Label htmlFor="description" className="block text-blue-600">الوصف</Label>
             <Textarea 
               id="description" 
-              className="text-right text-dark-green" 
+              className="text-right text-blue-600 focus:border-blue-500 focus:ring-blue-500" 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
@@ -187,11 +188,11 @@ const EditProduct = () => {
 
           {/* Price */}
           <div className="space-y-2 text-right">
-            <Label htmlFor="price" className="block text-dark-green">السعر (دينار عراقي)</Label>
+            <Label htmlFor="price" className="block text-blue-600">السعر (دينار عراقي)</Label>
             <Input 
               id="price" 
               type="number" 
-              className="text-right text-dark-green" 
+              className="text-right text-blue-600 focus:border-blue-500 focus:ring-blue-500" 
               value={price}
               onChange={(e) => setPrice(e.target.value)}
             />
@@ -204,7 +205,14 @@ const EditProduct = () => {
           <ColorsManager colors={colors} onColorsChange={setColors} />
 
           {/* Submit Button */}
-          <Button type="submit" className="w-full bg-primary hover:bg-primary/90">
+          <Button 
+            type="submit" 
+            className="w-full text-white shadow-lg"
+            style={{ 
+              background: 'linear-gradient(135deg, #5b47f5, #4c3ef7)',
+              boxShadow: '0 4px 15px rgba(91, 71, 245, 0.3)'
+            }}
+          >
             حفظ التغييرات
           </Button>
         </form>
