@@ -1,4 +1,3 @@
-
 import { ArrowRight, Eye, ShoppingBag, Users, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,18 +20,19 @@ const Statistics = () => {
     // جلب المعلومات الحقيقية من localStorage
     const orders = JSON.parse(localStorage.getItem('orders') || '[]');
     const products = JSON.parse(localStorage.getItem('products') || '[]');
-    const visitors = parseInt(localStorage.getItem('totalVisitors') || '0');
+    const visitorsString = localStorage.getItem('totalVisitors') || '0';
+    const visitors = parseInt(visitorsString, 10) || 0;
 
     // حساب الإحصائيات
     const totalOrders = orders.length;
     const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
-    const conversionRate = visitors > 0 ? ((totalOrders / visitors) * 100).toFixed(1) : 0;
+    const conversionRate = visitors > 0 ? ((totalOrders / visitors) * 100) : 0;
 
     setStats({
       totalVisitors: visitors,
       totalOrders,
       totalRevenue,
-      conversionRate: parseFloat(conversionRate)
+      conversionRate: parseFloat(conversionRate.toFixed(1))
     });
 
     // إنشاء بيانات الأيام السابقة
@@ -74,7 +74,8 @@ const Statistics = () => {
     setTopProducts(topProductsArray);
 
     // زيادة عداد الزوار
-    localStorage.setItem('totalVisitors', (visitors + 1).toString());
+    const newVisitorCount = visitors + 1;
+    localStorage.setItem('totalVisitors', newVisitorCount.toString());
   }, []);
 
   const chartConfig = {
