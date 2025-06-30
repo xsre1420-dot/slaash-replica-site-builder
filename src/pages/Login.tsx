@@ -70,8 +70,8 @@ const Login = () => {
           {/* Login Header */}
           <div className="text-center p-6"
                style={{ 
-                 background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                 boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
+                 background: 'linear-gradient(135deg, #5b47f5, #4c3ef7)',
+                 boxShadow: '0 4px 15px rgba(91, 71, 245, 0.3)'
                }}>
             <h2 className="text-2xl font-bold mb-2 text-white">
               {isRegistering ? "إنشاء حساب جديد" : "تسجيل الدخول"}
@@ -96,7 +96,7 @@ const Login = () => {
 
             {/* Username Input */}
             <div className="mb-6">
-              <label htmlFor="username" className="block text-right text-gray-700 mb-2 font-medium">
+              <label htmlFor="username" className="block text-right text-blue-600 mb-2 font-medium">
                 اسم المستخدم
               </label>
               <div className="relative">
@@ -106,7 +106,7 @@ const Login = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="أدخل اسم المستخدم"
-                  className="pl-10 text-right text-gray-700 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500"
+                  className="pl-10 text-right text-blue-600 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500"
                   dir="rtl"
                   disabled={isLoading}
                 />
@@ -116,7 +116,7 @@ const Login = () => {
 
             {/* Password Input */}
             <div className="mb-6">
-              <label htmlFor="password" className="block text-right text-gray-700 mb-2 font-medium">
+              <label htmlFor="password" className="block text-right text-blue-600 mb-2 font-medium">
                 كلمة المرور
               </label>
               <div className="relative">
@@ -126,7 +126,7 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="أدخل كلمة المرور"
-                  className="pl-10 text-right text-gray-700 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500"
+                  className="pl-10 text-right text-blue-600 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500"
                   dir="rtl"
                   disabled={isLoading}
                 />
@@ -137,7 +137,7 @@ const Login = () => {
             {/* Remember Me Checkbox (only for login) */}
             {!isRegistering && (
               <div className="flex items-center justify-end mb-6">
-                <label htmlFor="remember-me" className="ml-2 text-sm text-gray-600">
+                <label htmlFor="remember-me" className="ml-2 text-sm text-blue-600">
                   تذكر تسجيل الدخول
                 </label>
                 <Checkbox 
@@ -154,8 +154,8 @@ const Login = () => {
               type="submit" 
               className="w-full text-white py-3 text-lg font-medium rounded-xl shadow-lg"
               style={{ 
-                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
+                background: 'linear-gradient(135deg, #5b47f5, #4c3ef7)',
+                boxShadow: '0 4px 15px rgba(91, 71, 245, 0.3)'
               }}
               disabled={isLoading}
             >

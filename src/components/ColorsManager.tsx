@@ -26,7 +26,7 @@ const ColorsManager = ({ colors, onColorsChange }: ColorsManagerProps) => {
 
   return (
     <div className="space-y-4">
-      <Label className="block text-gray-700 text-right">الألوان المتوفرة (اختياري)</Label>
+      <Label className="block text-blue-600 text-right">الألوان المتوفرة (اختياري)</Label>
       
       {/* Add new color */}
       <div className="flex gap-2">
@@ -36,8 +36,8 @@ const ColorsManager = ({ colors, onColorsChange }: ColorsManagerProps) => {
           size="sm"
           className="text-white shadow-lg"
           style={{ 
-            background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-            boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
+            background: 'linear-gradient(135deg, #5b47f5, #4c3ef7)',
+            boxShadow: '0 4px 15px rgba(91, 71, 245, 0.3)'
           }}
         >
           <Plus className="w-4 h-4" />
@@ -48,7 +48,7 @@ const ColorsManager = ({ colors, onColorsChange }: ColorsManagerProps) => {
           value={newColor}
           onChange={(e) => setNewColor(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && addColor()}
-          className="text-right text-gray-700 focus:border-blue-500 focus:ring-blue-500"
+          className="text-right text-blue-600 focus:border-blue-500 focus:ring-blue-500"
         />
       </div>
 
@@ -58,7 +58,7 @@ const ColorsManager = ({ colors, onColorsChange }: ColorsManagerProps) => {
           {colors.map((color, index) => (
             <div
               key={index}
-              className="relative flex items-center bg-gray-100 rounded-xl px-4 py-3 text-sm font-medium text-gray-700 border-2 border-gray-200 hover:border-blue-500 transition-colors"
+              className="relative flex items-center bg-gray-100 rounded-xl px-4 py-3 text-sm font-medium text-blue-600 border-2 border-gray-200 hover:border-blue-500 transition-colors"
             >
               <button
                 type="button"
