@@ -1,8 +1,7 @@
 
 import { Clock } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
 
 interface TimeBasedStatsProps {
   peakTimes: Array<{
@@ -12,14 +11,19 @@ interface TimeBasedStatsProps {
   }>;
 }
 
-export const TimeBasedStats = ({ peakTimes }: TimeBasedStatsProps) => {
-  const chartConfig = {
-    sales: {
-      label: "المبيعات",
-      color: "#6D63F2",
-    },
-  };
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white p-2 border rounded shadow">
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-sm text-gray-600">{payload[0].value.toLocaleString()} د.ع</p>
+      </div>
+    );
+  }
+  return null;
+};
 
+export const TimeBasedStats = ({ peakTimes }: TimeBasedStatsProps) => {
   const monthlyData = [
     { period: "يناير", sales: 180000 },
     { period: "فبراير", sales: 220000 },
@@ -45,23 +49,21 @@ export const TimeBasedStats = ({ peakTimes }: TimeBasedStatsProps) => {
             <CardDescription className="text-right">تطور المبيعات خلال الفترات الزمنية</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={chartConfig}>
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="period" stroke="#666" />
-                  <YAxis stroke="#666" />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Area
-                    type="monotone"
-                    dataKey="sales"
-                    stroke="#6D63F2"
-                    fill="#6D63F2"
-                    fillOpacity={0.3}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </ChartContainer>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="period" stroke="#666" />
+                <YAxis stroke="#666" />
+                <Tooltip content={<CustomTooltip />} />
+                <Area
+                  type="monotone"
+                  dataKey="sales"
+                  stroke="#6D63F2"
+                  fill="#6D63F2"
+                  fillOpacity={0.3}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
 

@@ -1,8 +1,7 @@
 
 import { CreditCard, Truck, Package } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-import { ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { StatCard } from "./StatCard";
 
 interface PaymentStatsProps {
@@ -16,6 +15,18 @@ interface PaymentStatsProps {
     color: string;
   }>;
 }
+
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white p-2 border rounded shadow">
+        <p className="text-sm font-medium">{payload[0].payload.name}</p>
+        <p className="text-sm text-gray-600">{payload[0].value}%</p>
+      </div>
+    );
+  }
+  return null;
+};
 
 export const PaymentStats = ({ stats, paymentMethods }: PaymentStatsProps) => {
   return (
@@ -49,7 +60,7 @@ export const PaymentStats = ({ stats, paymentMethods }: PaymentStatsProps) => {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Tooltip content={<CustomTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
             </div>

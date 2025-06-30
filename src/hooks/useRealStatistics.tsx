@@ -5,8 +5,8 @@ import { calculateStatistics, getDefaultStatistics } from "@/utils/statisticsCal
 import { fetchStatisticsData } from "@/services/statisticsService";
 
 export const useRealStatistics = (dateRange: string = "7") => {
-  const [stats, setStats] = useState<RealStatistics | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<RealStatistics | null>(getDefaultStatistics());
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -23,8 +23,9 @@ export const useRealStatistics = (dateRange: string = "7") => {
       setStats(calculatedStats);
     } catch (err) {
       console.error('Error fetching statistics:', err);
-      // Instead of showing error, show default statistics
+      // Always show default statistics instead of error
       setStats(getDefaultStatistics());
+      setError(null); // Don't show error to user, just use defaults
     } finally {
       setLoading(false);
     }
