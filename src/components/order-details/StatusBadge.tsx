@@ -27,7 +27,7 @@ const StatusBadge = ({ status }: StatusBadgeProps) => {
       return (
         <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 flex items-center gap-1">
           <Loader2 className="h-3 w-3 animate-spin" />
-          في الانتظار
+          قيد الانتظار
         </Badge>
       );
   }

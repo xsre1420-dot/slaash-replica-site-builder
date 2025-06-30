@@ -4,21 +4,44 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Eye, CheckCircle, XCircle, Clock, ArrowLeft, AlertCircle } from "lucide-react";
+import { Search, Eye, CheckCircle, XCircle, Clock, ArrowLeft, AlertCircle, MoreHorizontal } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useOrders } from "@/components/orders/useOrders";
 import { format } from "date-fns";
 import { useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useToast } from "@/components/ui/use-toast";
 
 const Orders = () => {
   const { filteredOrders, searchQuery, setSearchQuery, updateOrderStatus } = useOrders();
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
+  const { toast } = useToast();
 
-  const getStatusBadge = (status: string) => {
+  const handleStatusChange = (orderId: string, newStatus: "pending" | "completed" | "cancelled") => {
+    updateOrderStatus(orderId, newStatus);
+    
+    const statusMessages = {
+      completed: "تم تحديث حالة الطلب إلى مكتمل",
+      pending: "تم تحديث حالة الطلب إلى قيد الانتظار",
+      cancelled: "تم تحديث حالة الطلب إلى ملغي"
+    };
+    
+    toast({
+      title: statusMessages[newStatus],
+      duration: 2000
+    });
+  };
+
+  const getStatusBadge = (status: string, orderId: string) => {
     const statusConfig = {
       completed: { label: "مكتمل", icon: CheckCircle, color: "bg-green-100 text-green-800" },
-      pending: { label: "في الانتظار", icon: Clock, color: "bg-yellow-100 text-yellow-800" },
+      pending: { label: "قيد الانتظار", icon: Clock, color: "bg-yellow-100 text-yellow-800" },
       cancelled: { label: "ملغي", icon: XCircle, color: "bg-red-100 text-red-800" }
     };
 
@@ -26,10 +49,28 @@ const Orders = () => {
     const Icon = config.icon;
 
     return (
-      <Badge className={`${config.color} border-0`}>
-        <Icon className="w-3 h-3 ml-1" />
-        {config.label}
-      </Badge>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Badge className={`${config.color} border-0 cursor-pointer hover:opacity-80`}>
+            <Icon className="w-3 h-3 ml-1" />
+            {config.label}
+          </Badge>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => handleStatusChange(orderId, "completed")}>
+            <CheckCircle className="h-4 w-4 ml-2" />
+            <span>مكتمل</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleStatusChange(orderId, "pending")}>
+            <Clock className="h-4 w-4 ml-2" />
+            <span>قيد الانتظار</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleStatusChange(orderId, "cancelled")}>
+            <XCircle className="h-4 w-4 ml-2" />
+            <span>ملغي</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
   };
 
@@ -44,13 +85,19 @@ const Orders = () => {
     // Filter by date
     if (dateFilter !== "all") {
       const today = new Date();
-      const orderDate = new Date();
+      const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
       
       switch (dateFilter) {
         case "today":
           filtered = filtered.filter(order => {
             const orderDate = new Date(order.date);
             return format(orderDate, "yyyy-MM-dd") === format(today, "yyyy-MM-dd");
+          });
+          break;
+        case "yesterday":
+          filtered = filtered.filter(order => {
+            const orderDate = new Date(order.date);
+            return format(orderDate, "yyyy-MM-dd") === format(yesterday, "yyyy-MM-dd");
           });
           break;
         case "week":
@@ -64,12 +111,6 @@ const Orders = () => {
           filtered = filtered.filter(order => {
             const orderDate = new Date(order.date);
             return format(orderDate, "yyyy-MM") === format(today, "yyyy-MM");
-          });
-          break;
-        case "year":
-          filtered = filtered.filter(order => {
-            const orderDate = new Date(order.date);
-            return format(orderDate, "yyyy") === format(today, "yyyy");
           });
           break;
       }
@@ -117,7 +158,7 @@ const Orders = () => {
               </SelectTrigger>
               <SelectContent className="rounded-2xl">
                 <SelectItem value="all">جميع الحالات</SelectItem>
-                <SelectItem value="pending">في الانتظار</SelectItem>
+                <SelectItem value="pending">قيد الانتظار</SelectItem>
                 <SelectItem value="completed">مكتمل</SelectItem>
                 <SelectItem value="cancelled">ملغي</SelectItem>
               </SelectContent>
@@ -130,9 +171,9 @@ const Orders = () => {
               <SelectContent className="rounded-2xl">
                 <SelectItem value="all">جميع التواريخ</SelectItem>
                 <SelectItem value="today">اليوم</SelectItem>
+                <SelectItem value="yesterday">أمس</SelectItem>
                 <SelectItem value="week">هذا الأسبوع</SelectItem>
                 <SelectItem value="month">هذا الشهر</SelectItem>
-                <SelectItem value="year">هذا العام</SelectItem>
               </SelectContent>
             </Select>
 
@@ -165,7 +206,7 @@ const Orders = () => {
                       {order.id}
                     </CardDescription>
                   </div>
-                  {getStatusBadge(order.status)}
+                  {getStatusBadge(order.status, order.id)}
                 </div>
               </CardHeader>
               
