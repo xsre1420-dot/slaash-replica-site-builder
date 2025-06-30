@@ -1,281 +1,334 @@
 
-import { ArrowRight, Eye, ShoppingBag, Users, TrendingUp } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
-import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar, TrendingUp, Package, ShoppingCart, DollarSign, Users, ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from "recharts";
 
 const Statistics = () => {
+  const [dateRange, setDateRange] = useState("7"); // days
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  // Sample data - in a real app, this would come from an API
   const [stats, setStats] = useState({
-    totalVisitors: 0,
-    totalOrders: 0,
-    totalRevenue: 0,
-    conversionRate: 0
+    totalOrders: 156,
+    totalRevenue: 2450000,
+    totalProducts: 24,
+    totalCustomers: 89,
+    ordersGrowth: 12.5,
+    revenueGrowth: 8.3,
+    productsGrowth: 4.2,
+    customersGrowth: 15.7
   });
 
-  const [dailyStats, setDailyStats] = useState([]);
-  const [topProducts, setTopProducts] = useState([]);
+  const [dailyOrders] = useState([
+    { date: "2024-01-01", orders: 12, revenue: 180000 },
+    { date: "2024-01-02", orders: 15, revenue: 225000 },
+    { date: "2024-01-03", orders: 8, revenue: 120000 },
+    { date: "2024-01-04", orders: 20, revenue: 300000 },
+    { date: "2024-01-05", orders: 18, revenue: 270000 },
+    { date: "2024-01-06", orders: 22, revenue: 330000 },
+    { date: "2024-01-07", orders: 25, revenue: 375000 },
+  ]);
+
+  const [topProducts] = useState([
+    { name: "برجر لحم", orders: 45, revenue: 675000 },
+    { name: "بيتزا مارجريتا", orders: 32, revenue: 480000 },
+    { name: "شاورما دجاج", orders: 28, revenue: 350000 },
+    { name: "سلطة قيصر", orders: 20, revenue: 200000 },
+    { name: "باستا ألفريدو", orders: 18, revenue: 270000 },
+  ]);
+
+  const [ordersByCategory] = useState([
+    { name: "وجبات رئيسية", value: 45, color: "#FF6B6B" },
+    { name: "مقبلات", value: 25, color: "#4ECDC4" },
+    { name: "مشروبات", value: 20, color: "#45B7D1" },
+    { name: "حلويات", value: 10, color: "#FFA07A" },
+  ]);
 
   useEffect(() => {
-    // جلب المعلومات الحقيقية من localStorage
-    const orders = JSON.parse(localStorage.getItem('orders') || '[]');
-    const products = JSON.parse(localStorage.getItem('products') || '[]');
-    const visitors = parseInt(localStorage.getItem('totalVisitors') || '0');
-
-    // حساب الإحصائيات
-    const totalOrders = orders.length;
-    const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
-    const conversionRate = visitors > 0 ? ((totalOrders / visitors) * 100).toFixed(1) : 0;
-
-    setStats({
-      totalVisitors: visitors,
-      totalOrders,
-      totalRevenue,
-      conversionRate: parseFloat(conversionRate)
-    });
-
-    // إنشاء بيانات الأيام السابقة
-    const last7Days = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dayOrders = orders.filter(order => {
-        const orderDate = new Date(order.date);
-        return orderDate.toDateString() === date.toDateString();
-      });
-      
-      last7Days.push({
-        day: date.toLocaleDateString('ar-SA', { weekday: 'short' }),
-        orders: dayOrders.length,
-        revenue: dayOrders.reduce((sum, order) => sum + order.total, 0),
-        visitors: Math.floor(Math.random() * 50) + 20 // محاكاة بيانات الزوار
-      });
+    // Simulate data update based on date range
+    if (dateRange === "30") {
+      setStats(prev => ({
+        ...prev,
+        totalOrders: 580,
+        totalRevenue: 8750000,
+        ordersGrowth: 18.2,
+        revenueGrowth: 15.8
+      }));
+    } else if (dateRange === "90") {
+      setStats(prev => ({
+        ...prev,
+        totalOrders: 1680,
+        totalRevenue: 25200000,
+        ordersGrowth: 22.1,
+        revenueGrowth: 19.5
+      }));
     }
-    setDailyStats(last7Days);
+  }, [dateRange]);
 
-    // أفضل المنتجات
-    const productSales = {};
-    orders.forEach(order => {
-      order.items.forEach(item => {
-        if (productSales[item.product.name]) {
-          productSales[item.product.name] += item.quantity;
-        } else {
-          productSales[item.product.name] = item.quantity;
-        }
-      });
-    });
-
-    const topProductsArray = Object.entries(productSales)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 5)
-      .map(([name, sales]) => ({ name, sales }));
-
-    setTopProducts(topProductsArray);
-
-    // زيادة عداد الزوار
-    localStorage.setItem('totalVisitors', (visitors + 1).toString());
-  }, []);
-
-  const chartConfig = {
-    orders: {
-      label: "الطلبات",
-      color: "#6366f1",
-    },
-    revenue: {
-      label: "الإيرادات",
-      color: "#8b5cf6",
-    },
-    visitors: {
-      label: "الزوار",
-      color: "#06b6d4",
-    }
-  };
-
-  const COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#3b82f6', '#d946ef'];
+  const StatCard = ({ title, value, growth, icon: Icon, color }: any) => (
+    <Card className="border-0 shadow-sm rounded-2xl overflow-hidden">
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div className="text-right">
+            <p className="text-sm text-gray-600 mb-1">{title}</p>
+            <p className="text-2xl font-bold text-gray-800">{value}</p>
+            <div className={`flex items-center gap-1 mt-2 ${growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <TrendingUp className="w-4 h-4" />
+              <span className="text-sm font-medium">{growth >= 0 ? '+' : ''}{growth}%</span>
+            </div>
+          </div>
+          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${color}`}>
+            <Icon className="w-8 h-8 text-white" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 font-arabic">
-      {/* Header */}
-      <div className="text-white p-6" style={{ 
-        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-        boxShadow: '0 8px 25px rgba(99, 102, 241, 0.3)'
-      }}>
-        <div className="flex justify-between items-center max-w-6xl mx-auto">
-          <Link to="/builder">
-            <ArrowRight className="w-6 h-6" />
-          </Link>
-          <h1 className="text-2xl font-bold">الإحصائيات والتقارير</h1>
-          <div className="w-6"></div>
+      {/* Modern Header */}
+      <div className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex justify-between items-center">
+            <Link to="/builder">
+              <Button variant="ghost" className="p-2 hover:bg-gray-100 rounded-xl">
+                <ArrowLeft className="w-6 h-6" />
+              </Button>
+            </Link>
+            <h1 className="text-2xl font-bold text-gray-800">الإحصائيات</h1>
+            <div className="w-10"></div>
+          </div>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto p-6">
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="border-0 shadow-sm rounded-3xl overflow-hidden">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">إجمالي الزوار</p>
-                  <p className="text-3xl font-bold text-gray-800">{stats.totalVisitors.toLocaleString()}</p>
-                </div>
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
-                     style={{ 
-                       background: 'linear-gradient(135deg, #06b6d4, #0891b2)',
-                       boxShadow: '0 4px 15px rgba(6, 182, 212, 0.2)'
-                     }}>
-                  <Users className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Date Range Controls */}
+        <div className="bg-white rounded-3xl shadow-sm p-6 mb-8">
+          <div className="flex flex-col md:flex-row gap-6 items-end">
+            <div className="flex-1">
+              <Label className="block text-gray-700 font-medium mb-2 text-right">فترة زمنية محددة</Label>
+              <Select value={dateRange} onValueChange={setDateRange}>
+                <SelectTrigger className="rounded-2xl border-gray-200">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl">
+                  <SelectItem value="7">آخر 7 أيام</SelectItem>
+                  <SelectItem value="30">آخر 30 يوم</SelectItem>
+                  <SelectItem value="90">آخر 90 يوم</SelectItem>
+                  <SelectItem value="custom">فترة مخصصة</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          <Card className="border-0 shadow-sm rounded-3xl overflow-hidden">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">إجمالي الطلبات</p>
-                  <p className="text-3xl font-bold text-gray-800">{stats.totalOrders}</p>
+            {dateRange === "custom" && (
+              <>
+                <div className="flex-1">
+                  <Label className="block text-gray-700 font-medium mb-2 text-right">من تاريخ</Label>
+                  <Input 
+                    type="date" 
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="rounded-2xl border-gray-200"
+                  />
                 </div>
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
-                     style={{ 
-                       background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                       boxShadow: '0 4px 15px rgba(99, 102, 241, 0.2)'
-                     }}>
-                  <ShoppingBag className="w-6 h-6 text-white" />
+                <div className="flex-1">
+                  <Label className="block text-gray-700 font-medium mb-2 text-right">إلى تاريخ</Label>
+                  <Input 
+                    type="date" 
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="rounded-2xl border-gray-200"
+                  />
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </>
+            )}
 
-          <Card className="border-0 shadow-sm rounded-3xl overflow-hidden">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">إجمالي الإيرادات</p>
-                  <p className="text-3xl font-bold text-gray-800">{stats.totalRevenue.toLocaleString()} د.ع</p>
-                </div>
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
-                     style={{ 
-                       background: 'linear-gradient(135deg, #8b5cf6, #d946ef)',
-                       boxShadow: '0 4px 15px rgba(139, 92, 246, 0.2)'
-                     }}>
-                  <TrendingUp className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-sm rounded-3xl overflow-hidden">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">معدل التحويل</p>
-                  <p className="text-3xl font-bold text-gray-800">{stats.conversionRate}%</p>
-                </div>
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
-                     style={{ 
-                       background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                       boxShadow: '0 4px 15px rgba(59, 130, 246, 0.2)'
-                     }}>
-                  <Eye className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            <Button className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-2xl px-8">
+              تطبيق
+            </Button>
+          </div>
         </div>
 
-        {/* Charts */}
-        <div className="grid lg:grid-cols-2 gap-6 mb-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <StatCard
+            title="إجمالي الطلبات"
+            value={stats.totalOrders.toLocaleString()}
+            growth={stats.ordersGrowth}
+            icon={ShoppingCart}
+            color="bg-gradient-to-br from-blue-500 to-blue-600"
+          />
+          <StatCard
+            title="إجمالي الإيرادات"
+            value={`${stats.totalRevenue.toLocaleString()} د.ع`}
+            growth={stats.revenueGrowth}
+            icon={DollarSign}
+            color="bg-gradient-to-br from-green-500 to-green-600"
+          />
+          <StatCard
+            title="عدد المنتجات"
+            value={stats.totalProducts.toLocaleString()}
+            growth={stats.productsGrowth}
+            icon={Package}
+            color="bg-gradient-to-br from-purple-500 to-purple-600"
+          />
+          <StatCard
+            title="العملاء"
+            value={stats.totalCustomers.toLocaleString()}
+            growth={stats.customersGrowth}
+            icon={Users}
+            color="bg-gradient-to-br from-orange-500 to-pink-500"
+          />
+        </div>
+
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* Daily Orders Chart */}
           <Card className="border-0 shadow-sm rounded-3xl">
             <CardHeader>
-              <CardTitle className="text-xl font-bold text-gray-800">الطلبات اليومية</CardTitle>
-              <CardDescription className="text-gray-600">آخر 7 أيام</CardDescription>
+              <CardTitle className="text-right">الطلبات اليومية</CardTitle>
+              <CardDescription className="text-right">عدد الطلبات خلال الأيام الماضية</CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={chartConfig} className="h-64">
+              <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dailyStats}>
-                    <XAxis dataKey="day" />
-                    <YAxis />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="orders" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-
-          {/* Revenue Trend */}
-          <Card className="border-0 shadow-sm rounded-3xl">
-            <CardHeader>
-              <CardTitle className="text-xl font-bold text-gray-800">الإيرادات اليومية</CardTitle>
-              <CardDescription className="text-gray-600">اتجاه الإيرادات</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={dailyStats}>
-                    <XAxis dataKey="day" />
-                    <YAxis />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Line type="monotone" dataKey="revenue" stroke="#8b5cf6" strokeWidth={3} dot={{ fill: '#8b5cf6', strokeWidth: 2, r: 4 }} />
+                  <LineChart data={dailyOrders}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="date" stroke="#666" />
+                    <YAxis stroke="#666" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '12px',
+                        direction: 'rtl'
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="orders"
+                      stroke="#FF6B6B"
+                      strokeWidth={3}
+                      dot={{ fill: '#FF6B6B', strokeWidth: 2, r: 6 }}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Top Products */}
-        <div className="grid lg:grid-cols-2 gap-6">
-          <Card className="border-0 shadow-sm rounded-3xl">
-            <CardHeader>
-              <CardTitle className="text-xl font-bold text-gray-800">أفضل المنتجات</CardTitle>
-              <CardDescription className="text-gray-600">الأكثر مبيعاً</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {topProducts.length > 0 ? (
-                  topProducts.map((product, index) => (
-                    <div key={product.name} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold"
-                             style={{ backgroundColor: COLORS[index % COLORS.length] }}>
-                          {index + 1}
-                        </div>
-                        <span className="font-semibold text-gray-800">{product.name}</span>
-                      </div>
-                      <span className="font-bold text-gray-600">{product.sales} مبيعة</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-center text-gray-500 py-8">لا توجد مبيعات حتى الآن</p>
-                )}
               </div>
             </CardContent>
           </Card>
 
-          {/* Visitors vs Orders */}
+          {/* Revenue Chart */}
           <Card className="border-0 shadow-sm rounded-3xl">
             <CardHeader>
-              <CardTitle className="text-xl font-bold text-gray-800">الزوار مقابل الطلبات</CardTitle>
-              <CardDescription className="text-gray-600">آخر 7 أيام</CardDescription>
+              <CardTitle className="text-right">الإيرادات اليومية</CardTitle>
+              <CardDescription className="text-right">الإيرادات بالدينار العراقي</CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={chartConfig} className="h-64">
+              <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={dailyStats}>
-                    <XAxis dataKey="day" />
-                    <YAxis />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Line type="monotone" dataKey="visitors" stroke="#06b6d4" strokeWidth={2} dot={{ fill: '#06b6d4', strokeWidth: 2, r: 3 }} />
-                    <Line type="monotone" dataKey="orders" stroke="#6366f1" strokeWidth={2} dot={{ fill: '#6366f1', strokeWidth: 2, r: 3 }} />
-                  </LineChart>
+                  <BarChart data={dailyOrders}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="date" stroke="#666" />
+                    <YAxis stroke="#666" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '12px',
+                        direction: 'rtl'
+                      }}
+                    />
+                    <Bar
+                      dataKey="revenue"
+                      fill="url(#revenueGradient)"
+                      radius={[8, 8, 0, 0]}
+                    />
+                    <defs>
+                      <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#4ECDC4" />
+                        <stop offset="100%" stopColor="#44A08D" />
+                      </linearGradient>
+                    </defs>
+                  </BarChart>
                 </ResponsiveContainer>
-              </ChartContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Bottom Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Top Products */}
+          <Card className="lg:col-span-2 border-0 shadow-sm rounded-3xl">
+            <CardHeader>
+              <CardTitle className="text-right">أفضل المنتجات مبيعاً</CardTitle>
+              <CardDescription className="text-right">المنتجات الأكثر طلباً</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {topProducts.map((product, index) => (
+                  <div key={product.name} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                    <div className="text-right">
+                      <span className="text-sm text-gray-600">{product.orders} طلب</span>
+                      <br />
+                      <span className="text-sm font-medium text-green-600">{product.revenue.toLocaleString()} د.ع</span>
+                    </div>
+                    <div className="text-right">
+                      <h4 className="font-medium text-gray-800">{product.name}</h4>
+                      <span className="text-sm text-gray-500">المرتبة #{index + 1}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Orders by Category */}
+          <Card className="border-0 shadow-sm rounded-3xl">
+            <CardHeader>
+              <CardTitle className="text-right">الطلبات حسب الفئة</CardTitle>
+              <CardDescription className="text-right">توزيع الطلبات</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={ordersByCategory}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {ordersByCategory.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-4 space-y-2">
+                {ordersByCategory.map((item) => (
+                  <div key={item.name} className="flex items-center justify-between text-sm">
+                    <span>{item.value}%</span>
+                    <div className="flex items-center gap-2">
+                      <span>{item.name}</span>
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </div>
