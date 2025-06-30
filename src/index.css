@@ -8,11 +8,11 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 201 36% 18%;
+    --foreground: 0 0% 0%;
     --card: 0 0% 100%;
-    --card-foreground: 201 36% 18%;
+    --card-foreground: 0 0% 0%;
     --popover: 0 0% 100%;
-    --popover-foreground: 201 36% 18%;
+    --popover-foreground: 0 0% 0%;
     --primary: 180 100% 25%;
     --primary-foreground: 0 0% 100%;
     --secondary: 169 65% 35%;
@@ -20,7 +20,7 @@
     --muted: 161 29% 85%;
     --muted-foreground: 185 30% 53%;
     --accent: 161 35% 91%;
-    --accent-foreground: 201 36% 18%;
+    --accent-foreground: 0 0% 0%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
     --border: 161 35% 91%;
@@ -31,16 +31,17 @@
     /* Modern color scheme inspired by the image */
     --bg-primary: 250 10% 97%;
     --bg-secondary: 240 8% 95%;
-    --text-primary: 210 20% 15%;
-    --text-secondary: 215 15% 45%;
+    --text-primary: 0 0% 0%;
+    --text-secondary: 0 0% 30%;
     --accent-primary: 25 95% 53%;
     --accent-secondary: 340 75% 55%;
     --card-bg: 0 0% 100%;
+    --input-text: 236 72% 79%;
   }
 
   body {
     font-family: 'Tajawal', 'Inter', sans-serif;
-    color: hsl(var(--text-primary));
+    color: #000000;
     background-color: hsl(var(--bg-primary));
   }
   
@@ -52,6 +53,21 @@
   /* Apply Tajawal for Arabic text */
   .font-arabic {
     font-family: 'Tajawal', sans-serif;
+  }
+
+  /* Global input text color override */
+  input, textarea, select {
+    color: #6366f1 !important;
+  }
+
+  /* Specific input field styling */
+  .input-blue {
+    color: #6366f1 !important;
+  }
+
+  /* Placeholder text styling */
+  input::placeholder, textarea::placeholder {
+    color: #9ca3af !important;
   }
 }
 
@@ -80,11 +96,11 @@
   
   /* Custom modern utilities */
   .text-primary-modern {
-    color: hsl(var(--text-primary));
+    color: #000000;
   }
   
   .text-secondary-modern {
-    color: hsl(var(--text-secondary));
+    color: #4b5563;
   }
   
   .bg-primary-modern {
