@@ -139,7 +139,7 @@ const PreviewStore = () => {
         </div>
       </div>
 
-      {/* Updated Categories with improved design */}
+      {/* Updated Categories with improved shadow */}
       <div className="px-6 py-4">
         <div className="flex justify-between items-center mb-4">
           <button 
@@ -163,8 +163,8 @@ const PreviewStore = () => {
               }`}
               style={{
                 boxShadow: selectedCategory === category.id 
-                  ? '0 4px 20px rgba(99, 102, 241, 0.4), 0 2px 8px rgba(99, 102, 241, 0.2)' 
-                  : '0 1px 3px rgba(0, 0, 0, 0.1)'
+                  ? '0 8px 25px -5px rgba(99, 102, 241, 0.3), 0 4px 15px -3px rgba(99, 102, 241, 0.2)' 
+                  : '0 2px 8px -2px rgba(0, 0, 0, 0.1), 0 1px 3px -1px rgba(0, 0, 0, 0.06)'
               }}
               onClick={() => setSelectedCategory(category.id)}
             >
