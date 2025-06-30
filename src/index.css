@@ -36,7 +36,7 @@
     --accent-primary: 25 95% 53%;
     --accent-secondary: 340 75% 55%;
     --card-bg: 0 0% 100%;
-    --input-text: 236 72% 79%;
+    --input-text: 0 0% 0%;
   }
 
   body {
@@ -55,14 +55,14 @@
     font-family: 'Tajawal', sans-serif;
   }
 
-  /* Global input text color override */
+  /* Global input text color override - changed back to black */
   input, textarea, select {
-    color: #6366f1 !important;
+    color: #000000 !important;
   }
 
-  /* Specific input field styling */
+  /* Specific input field styling - changed back to black */
   .input-blue {
-    color: #6366f1 !important;
+    color: #000000 !important;
   }
 
   /* Placeholder text styling */
