@@ -45,7 +45,7 @@ const DeliveryTab = ({ settings, setSettings }: DeliveryTabProps) => {
     <Card className="border-0 shadow-none rounded-2xl bg-gray-50">
       <CardHeader>
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#6366f1' }}>
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#007bff' }}>
             <Truck className="w-6 h-6 text-white" />
           </div>
           <div>
@@ -62,7 +62,7 @@ const DeliveryTab = ({ settings, setSettings }: DeliveryTabProps) => {
             <Button
               onClick={addDeliveryPrice}
               className="flex items-center gap-2 text-white rounded-2xl"
-              style={{ backgroundColor: '#6366f1' }}
+              style={{ backgroundColor: '#007bff' }}
             >
               <Plus className="w-4 h-4" />
               إضافة محافظة جديدة

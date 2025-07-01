@@ -63,10 +63,10 @@ const Settings = () => {
         <div className="bg-white rounded-3xl shadow-sm p-8">
           <Tabs defaultValue="store" className="w-full">
             <TabsList className="grid w-full grid-cols-4 bg-gray-100 rounded-2xl p-1">
-              <TabsTrigger value="store" className="rounded-xl">معلومات المتجر</TabsTrigger>
-              <TabsTrigger value="images" className="rounded-xl">الصور</TabsTrigger>
-              <TabsTrigger value="design" className="rounded-xl">التصميم</TabsTrigger>
-              <TabsTrigger value="delivery" className="rounded-xl">التوصيل</TabsTrigger>
+              <TabsTrigger value="store" className="rounded-xl text-black">معلومات المتجر</TabsTrigger>
+              <TabsTrigger value="images" className="rounded-xl text-black">الصور</TabsTrigger>
+              <TabsTrigger value="design" className="rounded-xl text-black">التصميم</TabsTrigger>
+              <TabsTrigger value="delivery" className="rounded-xl text-black">التوصيل</TabsTrigger>
             </TabsList>
 
             <TabsContent value="store" className="space-y-6 mt-8">
