@@ -55,12 +55,12 @@
     font-family: 'Tajawal', sans-serif;
   }
 
-  /* Global input text color override - changed back to black */
+  /* Global input text color override - ensure black text */
   input, textarea, select {
     color: #000000 !important;
   }
 
-  /* Specific input field styling - changed back to black */
+  /* Specific input field styling - ensure black text */
   .input-blue {
     color: #000000 !important;
   }

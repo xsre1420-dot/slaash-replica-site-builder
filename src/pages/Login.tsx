@@ -65,7 +65,7 @@ const Login = () => {
     <div className="min-h-screen bg-white flex flex-col font-arabic">
       {/* Header */}
       <header className="bg-white text-gray-800 py-4 px-6 text-center border-b border-gray-100">
-        <h1 className="text-xl font-bold flex items-center justify-center text-blue-600">
+        <h1 className="text-xl font-bold flex items-center justify-center text-black">
           نظام إدارة المطعم <span className="mx-2">🍽️</span>
         </h1>
       </header>
@@ -101,7 +101,7 @@ const Login = () => {
 
             {/* Username Input */}
             <div className="mb-6">
-              <label htmlFor="username" className="block text-right text-blue-600 mb-2 font-medium">
+              <label htmlFor="username" className="block text-right text-black mb-2 font-medium">
                 اسم المستخدم
               </label>
               <div className="relative">
@@ -111,7 +111,7 @@ const Login = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="أدخل اسم المستخدم"
-                  className="pl-10 text-right text-blue-600 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500"
+                  className="pl-10 text-right text-black border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500"
                   dir="rtl"
                   disabled={isLoading}
                 />
@@ -121,7 +121,7 @@ const Login = () => {
 
             {/* Password Input */}
             <div className="mb-6">
-              <label htmlFor="password" className="block text-right text-blue-600 mb-2 font-medium">
+              <label htmlFor="password" className="block text-right text-black mb-2 font-medium">
                 كلمة المرور
               </label>
               <div className="relative">
@@ -131,7 +131,7 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="أدخل كلمة المرور"
-                  className="pl-10 text-right text-blue-600 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500"
+                  className="pl-10 text-right text-black border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500"
                   dir="rtl"
                   disabled={isLoading}
                 />
@@ -142,7 +142,7 @@ const Login = () => {
             {/* Remember Me Checkbox (only for login) */}
             {!isRegistering && (
               <div className="flex items-center justify-end mb-6">
-                <label htmlFor="remember-me" className="ml-2 text-sm text-blue-600">
+                <label htmlFor="remember-me" className="ml-2 text-sm text-black">
                   تذكر تسجيل الدخول
                 </label>
                 <Checkbox 
@@ -183,7 +183,7 @@ const Login = () => {
                   setIsRegistering(!isRegistering);
                   setError(null);
                 }}
-                className="text-blue-600 hover:text-blue-800 hover:underline text-sm"
+                className="text-black hover:text-gray-800 hover:underline text-sm"
                 disabled={isLoading}
               >
                 {isRegistering 

@@ -322,21 +322,24 @@ export type Database = {
           },
         ]
       }
-      "‏user_access": {
+      user_access: {
         Row: {
-          created_at: string
-          id: number
-          User_id: string
+          created_at: string | null
+          end_date: string | null
+          start_date: string | null
+          user_id: string
         }
         Insert: {
-          created_at?: string
-          id?: number
-          User_id?: string
+          created_at?: string | null
+          end_date?: string | null
+          start_date?: string | null
+          user_id: string
         }
         Update: {
-          created_at?: string
-          id?: number
-          User_id?: string
+          created_at?: string | null
+          end_date?: string | null
+          start_date?: string | null
+          user_id?: string
         }
         Relationships: []
       }

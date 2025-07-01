@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -132,7 +133,7 @@ const Settings = () => {
                 <ArrowRight className="w-6 h-6" />
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold text-gray-800">إعدادات المتجر</h1>
+            <h1 className="text-2xl font-bold text-black">إعدادات المتجر</h1>
             <div className="w-10"></div>
           </div>
         </div>
@@ -151,24 +152,24 @@ const Settings = () => {
             <TabsContent value="store" className="space-y-6 mt-8">
               <Card className="border-0 shadow-none bg-gray-50 rounded-2xl">
                 <CardHeader>
-                  <CardTitle className="text-right text-xl">معلومات المتجر الأساسية</CardTitle>
+                  <CardTitle className="text-right text-xl text-black">معلومات المتجر الأساسية</CardTitle>
                   <CardDescription className="text-right text-gray-600">
                     قم بتحديث اسم المتجر والشعار
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-3">
-                    <Label className="text-right block text-gray-700 font-medium">اسم المتجر</Label>
+                    <Label className="text-right block text-black font-medium">اسم المتجر</Label>
                     <Input
                       value={settings.storeName}
                       onChange={(e) => setSettings(prev => ({ ...prev, storeName: e.target.value }))}
-                      className="text-right rounded-2xl border-gray-200"
+                      className="text-right rounded-2xl border-gray-200 text-black"
                       placeholder="أدخل اسم المتجر"
                     />
                   </div>
 
                   <div className="space-y-3">
-                    <Label className="text-right block text-gray-700 font-medium">شعار المتجر</Label>
+                    <Label className="text-right block text-black font-medium">شعار المتجر</Label>
                     <div className="flex items-center gap-6">
                       <Avatar className="w-24 h-24">
                         {settings.storeLogo ? (
@@ -203,7 +204,7 @@ const Settings = () => {
             <TabsContent value="images" className="space-y-6 mt-8">
               <Card className="border-0 shadow-none bg-gray-50 rounded-2xl">
                 <CardHeader>
-                  <CardTitle className="text-right text-xl">صور البانر</CardTitle>
+                  <CardTitle className="text-right text-xl text-black">صور البانر</CardTitle>
                   <CardDescription className="text-right text-gray-600">
                     أضف صور البانر وحدد الصورة الرئيسية التي ستظهر أولاً في المنيو
                   </CardDescription>
@@ -304,7 +305,7 @@ const Settings = () => {
             <TabsContent value="design" className="space-y-6 mt-8">
               <Card className="border-0 shadow-none bg-gray-50 rounded-2xl">
                 <CardHeader>
-                  <CardTitle className="text-right text-xl">ألوان المنيو</CardTitle>
+                  <CardTitle className="text-right text-xl text-black">ألوان المنيو</CardTitle>
                   <CardDescription className="text-right text-gray-600">
                     خصص ألوان صفحة المنيو لتناسب هوية متجرك
                   </CardDescription>
@@ -312,7 +313,7 @@ const Settings = () => {
                 <CardContent className="space-y-8">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="space-y-3">
-                      <Label className="text-right block text-gray-700 font-medium">لون الخلفية</Label>
+                      <Label className="text-right block text-black font-medium">لون الخلفية</Label>
                       <div className="flex items-center gap-3">
                         <input
                           type="color"
@@ -323,14 +324,14 @@ const Settings = () => {
                         <Input
                           value={settings.menuBackgroundColor}
                           onChange={(e) => setSettings(prev => ({ ...prev, menuBackgroundColor: e.target.value }))}
-                          className="text-left rounded-2xl"
+                          className="text-left rounded-2xl text-black"
                           placeholder="#ffffff"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-3">
-                      <Label className="text-right block text-gray-700 font-medium">لون النص</Label>
+                      <Label className="text-right block text-black font-medium">لون النص</Label>
                       <div className="flex items-center gap-3">
                         <input
                           type="color"
@@ -341,14 +342,14 @@ const Settings = () => {
                         <Input
                           value={settings.menuTextColor}
                           onChange={(e) => setSettings(prev => ({ ...prev, menuTextColor: e.target.value }))}
-                          className="text-left rounded-2xl"
+                          className="text-left rounded-2xl text-black"
                           placeholder="#333333"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-3">
-                      <Label className="text-right block text-gray-700 font-medium">اللون المميز</Label>
+                      <Label className="text-right block text-black font-medium">اللون المميز</Label>
                       <div className="flex items-center gap-3">
                         <input
                           type="color"
@@ -359,7 +360,7 @@ const Settings = () => {
                         <Input
                           value={settings.menuAccentColor}
                           onChange={(e) => setSettings(prev => ({ ...prev, menuAccentColor: e.target.value }))}
-                          className="text-left rounded-2xl"
+                          className="text-left rounded-2xl text-black"
                           placeholder="#6366f1"
                         />
                       </div>

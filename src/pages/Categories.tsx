@@ -125,7 +125,7 @@ const Categories = () => {
                 <X className="w-6 h-6" />
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold text-gray-800">إدارة الأصناف</h1>
+            <h1 className="text-2xl font-bold text-black">إدارة الأصناف</h1>
             <div className="w-10"></div>
           </div>
         </div>
@@ -146,7 +146,7 @@ const Categories = () => {
               <Plus className="w-5 h-5 ml-2" />
               إضافة تصنيف جديد
             </Button>
-            <h2 className="text-2xl font-bold text-gray-800">الأصناف</h2>
+            <h2 className="text-2xl font-bold text-black">الأصناف</h2>
           </div>
 
           {categories.length === 0 ? (
@@ -154,7 +154,7 @@ const Categories = () => {
               <div className="w-20 h-20 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
                 <div className="text-4xl">📋</div>
               </div>
-              <h3 className="text-xl font-bold text-gray-700 mb-2">لا توجد أصناف بعد</h3>
+              <h3 className="text-xl font-bold text-black mb-2">لا توجد أصناف بعد</h3>
               <p className="text-gray-500 mb-6">ابدأ بإضافة أول تصنيف لمنتجاتك</p>
               <Button 
                 className="text-white rounded-2xl px-8 py-3 border-0 shadow-lg"
@@ -200,7 +200,7 @@ const Categories = () => {
                     </Button>
                   </div>
                   
-                  <span className="font-medium text-lg text-gray-800">{category.name}</span>
+                  <span className="font-medium text-lg text-black">{category.name}</span>
                 </div>
               ))}
             </div>
@@ -212,19 +212,19 @@ const Categories = () => {
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="sm:max-w-[425px] text-right rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-right text-xl">إضافة تصنيف جديد</DialogTitle>
+            <DialogTitle className="text-right text-xl text-black">إضافة تصنيف جديد</DialogTitle>
             <DialogDescription className="text-right text-gray-600">
               أدخل اسم التصنيف الجديد الذي سيظهر في القائمة
             </DialogDescription>
           </DialogHeader>
           
           <div className="py-4">
-            <Label htmlFor="categoryName" className="block mb-2 text-gray-700">اسم التصنيف</Label>
+            <Label htmlFor="categoryName" className="block mb-2 text-black">اسم التصنيف</Label>
             <Input
               id="categoryName"
               value={newCategory.name}
               onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-              className="text-right rounded-2xl"
+              className="text-right rounded-2xl text-black"
               autoFocus
             />
           </div>
@@ -251,14 +251,14 @@ const Categories = () => {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[425px] text-right rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-right text-xl">تعديل التصنيف</DialogTitle>
+            <DialogTitle className="text-right text-xl text-black">تعديل التصنيف</DialogTitle>
             <DialogDescription className="text-right text-gray-600">
               قم بتغيير اسم التصنيف
             </DialogDescription>
           </DialogHeader>
           
           <div className="py-4">
-            <Label htmlFor="editCategoryName" className="block mb-2 text-gray-700">اسم التصنيف</Label>
+            <Label htmlFor="editCategoryName" className="block mb-2 text-black">اسم التصنيف</Label>
             <Input
               id="editCategoryName"
               value={editingCategory?.name || ""}
@@ -269,7 +269,7 @@ const Categories = () => {
                     : null
                 )
               }
-              className="text-right rounded-2xl"
+              className="text-right rounded-2xl text-black"
               autoFocus
             />
           </div>
@@ -296,7 +296,7 @@ const Categories = () => {
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[425px] text-right rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-right text-xl">حذف التصنيف</DialogTitle>
+            <DialogTitle className="text-right text-xl text-black">حذف التصنيف</DialogTitle>
             <DialogDescription className="text-right text-gray-600">
               هل أنت متأكد من رغبتك في حذف هذا التصنيف؟ هذا الإجراء لا يمكن التراجع عنه.
             </DialogDescription>
