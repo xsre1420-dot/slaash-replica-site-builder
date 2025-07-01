@@ -7,6 +7,8 @@ interface StoreSettings {
   menuAccentColor: string;
   bannerImages: string[];
   primaryBannerIndex: number;
+  deliveryPrice: number;
+  deliveryEnabled: boolean;
 }
 
 interface StoreContextType {
@@ -27,7 +29,9 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     menuTextColor: "#333333",
     menuAccentColor: "#008080",
     bannerImages: [],
-    primaryBannerIndex: 0
+    primaryBannerIndex: 0,
+    deliveryPrice: 2000,
+    deliveryEnabled: true
   });
 
   // Load settings from localStorage on mount

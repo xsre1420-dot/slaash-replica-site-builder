@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { useStore } from "@/context/StoreContext";
 
 interface ProductInfoProps {
   name: string;
@@ -24,6 +25,7 @@ const ProductInfo = ({
 }: ProductInfoProps) => {
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [selectedColor, setSelectedColor] = useState<string>("");
+  const { storeSettings } = useStore();
 
   const handleSizeSelect = (size: string) => {
     setSelectedSize(size);
@@ -57,9 +59,16 @@ const ProductInfo = ({
   return (
     <div className="space-y-5">
       <div className="flex justify-between items-start">
-        <span className="text-2xl font-bold text-black">
-          {price.toLocaleString()} د.ع
-        </span>
+        <div className="text-left">
+          <span className="text-2xl font-bold text-black">
+            {price.toLocaleString()} د.ع
+          </span>
+          {storeSettings.deliveryEnabled && (
+            <div className="text-sm text-gray-600 mt-1">
+              + {storeSettings.deliveryPrice.toLocaleString()} د.ع توصيل
+            </div>
+          )}
+        </div>
         <h2 className="text-2xl font-bold text-right">{name}</h2>
       </div>
 
