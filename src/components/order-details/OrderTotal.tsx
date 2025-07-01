@@ -3,11 +3,17 @@ import { useStore } from "@/context/StoreContext";
 
 interface OrderTotalProps {
   total: number;
+  selectedGovernorate?: string;
 }
 
-const OrderTotal = ({ total }: OrderTotalProps) => {
+const OrderTotal = ({ total, selectedGovernorate }: OrderTotalProps) => {
   const { storeSettings } = useStore();
-  const deliveryPrice = storeSettings.deliveryEnabled ? storeSettings.deliveryPrice : 0;
+  
+  // Find delivery price for selected governorate or default to first one
+  const deliveryPrice = storeSettings.deliveryPrices?.find(
+    d => d.governorate === selectedGovernorate
+  )?.price || storeSettings.deliveryPrices?.[0]?.price || 0;
+  
   const grandTotal = total + deliveryPrice;
 
   return (
@@ -20,12 +26,19 @@ const OrderTotal = ({ total }: OrderTotalProps) => {
           </span>
         </div>
         
-        {storeSettings.deliveryEnabled && (
-          <div className="flex justify-between items-center">
-            <span className="text-lg font-semibold text-blue-800">رسوم التوصيل:</span>
-            <span className="text-lg font-bold text-blue-900">
-              {deliveryPrice.toLocaleString()} د.ع
-            </span>
+        {storeSettings.deliveryPrices && storeSettings.deliveryPrices.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-lg font-semibold text-blue-800">رسوم التوصيل:</span>
+              <span className="text-lg font-bold text-blue-900">
+                {deliveryPrice.toLocaleString()} د.ع
+              </span>
+            </div>
+            {selectedGovernorate && (
+              <div className="text-sm text-blue-700 text-right">
+                التوصيل إلى: {selectedGovernorate}
+              </div>
+            )}
           </div>
         )}
         

@@ -22,8 +22,7 @@ const Settings = () => {
     menuAccentColor: "#6366f1",
     bannerImages: storeSettings.bannerImages,
     primaryBannerIndex: storeSettings.primaryBannerIndex,
-    deliveryPrice: storeSettings.deliveryPrice || 2000,
-    deliveryEnabled: storeSettings.deliveryEnabled !== false
+    deliveryPrices: storeSettings.deliveryPrices || [{ governorate: "بغداد", price: 2000 }]
   });
 
   useEffect(() => {
@@ -35,8 +34,7 @@ const Settings = () => {
       menuAccentColor: storeSettings.menuAccentColor === "#008080" ? "#6366f1" : storeSettings.menuAccentColor,
       bannerImages: storeSettings.bannerImages,
       primaryBannerIndex: storeSettings.primaryBannerIndex,
-      deliveryPrice: storeSettings.deliveryPrice || 2000,
-      deliveryEnabled: storeSettings.deliveryEnabled !== false
+      deliveryPrices: storeSettings.deliveryPrices || [{ governorate: "بغداد", price: 2000 }]
     });
   }, [storeName, storeLogo, storeSettings]);
 
@@ -48,8 +46,7 @@ const Settings = () => {
       menuAccentColor: settings.menuAccentColor,
       bannerImages: settings.bannerImages,
       primaryBannerIndex: settings.primaryBannerIndex,
-      deliveryPrice: settings.deliveryPrice,
-      deliveryEnabled: settings.deliveryEnabled
+      deliveryPrices: settings.deliveryPrices
     });
     
     toast({
@@ -67,17 +64,13 @@ const Settings = () => {
           <Tabs defaultValue="store" className="w-full">
             <TabsList className="grid w-full grid-cols-4 bg-gray-100 rounded-2xl p-1">
               <TabsTrigger value="store" className="rounded-xl">معلومات المتجر</TabsTrigger>
-              <TabsTrigger value="delivery" className="rounded-xl">التوصيل</TabsTrigger>
               <TabsTrigger value="images" className="rounded-xl">الصور</TabsTrigger>
               <TabsTrigger value="design" className="rounded-xl">التصميم</TabsTrigger>
+              <TabsTrigger value="delivery" className="rounded-xl">التوصيل</TabsTrigger>
             </TabsList>
 
             <TabsContent value="store" className="space-y-6 mt-8">
               <StoreInfoTab settings={settings} setSettings={setSettings} />
-            </TabsContent>
-
-            <TabsContent value="delivery" className="space-y-6 mt-8">
-              <DeliveryTab settings={settings} setSettings={setSettings} />
             </TabsContent>
 
             <TabsContent value="images" className="space-y-6 mt-8">
@@ -86,6 +79,10 @@ const Settings = () => {
 
             <TabsContent value="design" className="space-y-6 mt-8">
               <DesignTab settings={settings} setSettings={setSettings} />
+            </TabsContent>
+
+            <TabsContent value="delivery" className="space-y-6 mt-8">
+              <DeliveryTab settings={settings} setSettings={setSettings} />
             </TabsContent>
           </Tabs>
 

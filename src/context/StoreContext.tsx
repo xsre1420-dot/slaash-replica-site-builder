@@ -1,14 +1,18 @@
 
 import { createContext, useState, useContext, ReactNode, useEffect } from "react";
 
+interface DeliveryPrice {
+  governorate: string;
+  price: number;
+}
+
 interface StoreSettings {
   menuBackgroundColor: string;
   menuTextColor: string;
   menuAccentColor: string;
   bannerImages: string[];
   primaryBannerIndex: number;
-  deliveryPrice: number;
-  deliveryEnabled: boolean;
+  deliveryPrices: DeliveryPrice[];
 }
 
 interface StoreContextType {
@@ -30,8 +34,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     menuAccentColor: "#008080",
     bannerImages: [],
     primaryBannerIndex: 0,
-    deliveryPrice: 2000,
-    deliveryEnabled: true
+    deliveryPrices: [{ governorate: "بغداد", price: 2000 }]
   });
 
   // Load settings from localStorage on mount
