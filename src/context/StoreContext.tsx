@@ -26,15 +26,15 @@ interface StoreContextType {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export const StoreProvider = ({ children }: { children: ReactNode }) => {
-  const [storeName, setStoreName] = useState("نمو");
-  const [storeLogo, setStoreLogo] = useState("/lovable-uploads/c85f9015-cfa6-476e-9165-72dfbfb5c4b0.png");
+  const [storeName, setStoreName] = useState("");
+  const [storeLogo, setStoreLogo] = useState("");
   const [storeSettings, setStoreSettings] = useState<StoreSettings>({
     menuBackgroundColor: "#ffffff",
     menuTextColor: "#333333",
-    menuAccentColor: "#008080",
+    menuAccentColor: "#6366f1",
     bannerImages: [],
     primaryBannerIndex: 0,
-    deliveryPrices: [{ governorate: "بغداد", price: 2000 }]
+    deliveryPrices: []
   });
 
   // Load settings from localStorage on mount

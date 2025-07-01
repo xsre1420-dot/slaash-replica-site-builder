@@ -45,7 +45,7 @@ const DeliveryTab = ({ settings, setSettings }: DeliveryTabProps) => {
     <Card className="border-0 shadow-none rounded-2xl bg-gray-50">
       <CardHeader>
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-gray-600">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#6366f1' }}>
             <Truck className="w-6 h-6 text-white" />
           </div>
           <div>
@@ -61,7 +61,8 @@ const DeliveryTab = ({ settings, setSettings }: DeliveryTabProps) => {
           <div className="flex items-center justify-between">
             <Button
               onClick={addDeliveryPrice}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl"
+              className="flex items-center gap-2 text-white rounded-2xl"
+              style={{ backgroundColor: '#6366f1' }}
             >
               <Plus className="w-4 h-4" />
               إضافة محافظة جديدة
@@ -69,36 +70,40 @@ const DeliveryTab = ({ settings, setSettings }: DeliveryTabProps) => {
             <Label className="text-right text-black font-medium text-lg">أسعار التوصيل حسب المحافظة</Label>
           </div>
 
-          {settings.deliveryPrices.map((delivery, index) => (
-            <div key={index} className="p-6 bg-white rounded-2xl border border-gray-100">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                <div className="space-y-2">
-                  <Label className="text-right block text-black font-medium">المحافظة</Label>
-                  <Input
-                    value={delivery.governorate}
-                    onChange={(e) => updateDeliveryPrice(index, 'governorate', e.target.value)}
-                    className="text-right rounded-2xl border-gray-200 text-black"
-                    placeholder="اسم المحافظة"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-right block text-black font-medium">سعر التوصيل (د.ع)</Label>
-                  <div className="flex items-center gap-3">
-                    <span className="text-gray-500">د.ع</span>
+          {settings.deliveryPrices.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              لا توجد محافظات مضافة. اضغط على "إضافة محافظة جديدة" للبدء.
+            </div>
+          ) : (
+            settings.deliveryPrices.map((delivery, index) => (
+              <div key={index} className="p-6 bg-white rounded-2xl border border-gray-100">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                  <div className="space-y-2">
+                    <Label className="text-right block text-black font-medium">المحافظة</Label>
                     <Input
-                      type="number"
-                      value={delivery.price}
-                      onChange={(e) => updateDeliveryPrice(index, 'price', parseInt(e.target.value) || 0)}
+                      value={delivery.governorate}
+                      onChange={(e) => updateDeliveryPrice(index, 'governorate', e.target.value)}
                       className="text-right rounded-2xl border-gray-200 text-black"
-                      placeholder="2000"
-                      min="0"
+                      placeholder="اسم المحافظة"
                     />
                   </div>
-                </div>
 
-                <div className="flex justify-start">
-                  {settings.deliveryPrices.length > 1 && (
+                  <div className="space-y-2">
+                    <Label className="text-right block text-black font-medium">سعر التوصيل (د.ع)</Label>
+                    <div className="flex items-center gap-3">
+                      <span className="text-gray-500">د.ع</span>
+                      <Input
+                        type="number"
+                        value={delivery.price}
+                        onChange={(e) => updateDeliveryPrice(index, 'price', parseInt(e.target.value) || 0)}
+                        className="text-right rounded-2xl border-gray-200 text-black"
+                        placeholder="0"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-start">
                     <Button
                       onClick={() => removeDeliveryPrice(index)}
                       variant="outline"
@@ -107,11 +112,11 @@ const DeliveryTab = ({ settings, setSettings }: DeliveryTabProps) => {
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
-                  )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </CardContent>
     </Card>

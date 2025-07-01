@@ -19,10 +19,10 @@ const Settings = () => {
     storeLogo: storeLogo,
     menuBackgroundColor: storeSettings.menuBackgroundColor,
     menuTextColor: storeSettings.menuTextColor,
-    menuAccentColor: "#6366f1",
+    menuAccentColor: storeSettings.menuAccentColor,
     bannerImages: storeSettings.bannerImages,
     primaryBannerIndex: storeSettings.primaryBannerIndex,
-    deliveryPrices: storeSettings.deliveryPrices || [{ governorate: "بغداد", price: 2000 }]
+    deliveryPrices: storeSettings.deliveryPrices || []
   });
 
   useEffect(() => {
@@ -31,10 +31,10 @@ const Settings = () => {
       storeLogo,
       menuBackgroundColor: storeSettings.menuBackgroundColor,
       menuTextColor: storeSettings.menuTextColor,
-      menuAccentColor: storeSettings.menuAccentColor === "#008080" ? "#6366f1" : storeSettings.menuAccentColor,
+      menuAccentColor: storeSettings.menuAccentColor,
       bannerImages: storeSettings.bannerImages,
       primaryBannerIndex: storeSettings.primaryBannerIndex,
-      deliveryPrices: storeSettings.deliveryPrices || [{ governorate: "بغداد", price: 2000 }]
+      deliveryPrices: storeSettings.deliveryPrices || []
     });
   }, [storeName, storeLogo, storeSettings]);
 
