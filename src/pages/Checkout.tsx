@@ -3,15 +3,18 @@ import { X, ArrowRight, Plus, Minus, Trash2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useCart } from "@/context/CartContext";
+import { useStore } from "@/context/StoreContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Order } from "@/types";
 
 const Checkout = () => {
   const { cartItems, removeFromCart, updateQuantity, clearCart, cartTotal } = useCart();
+  const { storeSettings } = useStore();
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -21,6 +24,16 @@ const Checkout = () => {
     address: "",
     notes: "",
   });
+  
+  const [selectedGovernorate, setSelectedGovernorate] = useState<string>("");
+  
+  // Get selected delivery price
+  const selectedDeliveryPrice = selectedGovernorate 
+    ? storeSettings.deliveryPrices?.find(d => d.governorate === selectedGovernorate)?.price || 0
+    : 0;
+  
+  // Calculate total with delivery
+  const totalWithDelivery = cartTotal + selectedDeliveryPrice;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -49,7 +62,7 @@ const Checkout = () => {
         address: customerInfo.address,
         notes: customerInfo.notes || undefined,
       },
-      total: cartTotal,
+      total: totalWithDelivery,
       date: new Date().toISOString(),
       status: 'pending',
     };
@@ -212,6 +225,25 @@ const Checkout = () => {
                     required
                   />
                 </div>
+
+                {/* Governorate Selection */}
+                {storeSettings.deliveryPrices && storeSettings.deliveryPrices.length > 0 && (
+                  <div className="text-right">
+                    <Label className="block mb-1 text-black">المحافظة</Label>
+                    <Select value={selectedGovernorate} onValueChange={setSelectedGovernorate}>
+                      <SelectTrigger className="text-right text-black border-2 focus:border-blue-500">
+                        <SelectValue placeholder="اختر المحافظة" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {storeSettings.deliveryPrices.map((delivery, index) => (
+                          <SelectItem key={index} value={delivery.governorate}>
+                            {delivery.governorate}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 
                 <div className="text-right">
                   <Label htmlFor="address" className="block mb-1 text-black">العنوان</Label>
@@ -225,28 +257,56 @@ const Checkout = () => {
                   />
                 </div>
                 
-                <div className="text-right">
-                  <Label htmlFor="notes" className="block mb-1 text-black">ملاحظات إضافية (اختياري)</Label>
-                  <Textarea
-                    id="notes"
-                    name="notes"
-                    value={customerInfo.notes}
-                    onChange={handleInputChange}
-                    className="text-right text-black border-2 focus:border-blue-500 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-              
-              <Button 
-                type="submit" 
-                className="w-full mt-6 text-white shadow-lg"
-                style={{ 
-                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                  boxShadow: '0 8px 25px rgba(99, 102, 241, 0.3)'
-                }}
-              >
-                تأكيد الطلب
-              </Button>
+                 <div className="text-right">
+                   <Label htmlFor="notes" className="block mb-1 text-black">ملاحظات إضافية (اختياري)</Label>
+                   <Textarea
+                     id="notes"
+                     name="notes"
+                     value={customerInfo.notes}
+                     onChange={handleInputChange}
+                     className="text-right text-black border-2 focus:border-blue-500 focus:ring-blue-500"
+                   />
+                 </div>
+
+                 {/* Delivery Price Display */}
+                 {selectedGovernorate && selectedDeliveryPrice > 0 && (
+                   <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                     <div className="flex justify-between items-center">
+                       <span className="font-bold text-lg" style={{ color: '#6366f1' }}>
+                         {selectedDeliveryPrice.toLocaleString()} د.ع
+                       </span>
+                       <span className="text-black font-medium">
+                         رسوم التوصيل إلى {selectedGovernorate}:
+                       </span>
+                     </div>
+                   </div>
+                 )}
+
+                 {/* Total with Delivery */}
+                 {selectedDeliveryPrice > 0 && (
+                   <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                     <div className="flex justify-between items-center">
+                       <span className="font-bold text-xl" style={{ color: '#6366f1' }}>
+                         {totalWithDelivery.toLocaleString()} د.ع
+                       </span>
+                       <span className="text-black font-bold text-lg">
+                         المجموع النهائي:
+                       </span>
+                     </div>
+                   </div>
+                 )}
+               </div>
+               
+               <Button 
+                 type="submit" 
+                 className="w-full mt-6 text-white shadow-lg"
+                 style={{ 
+                   background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                   boxShadow: '0 8px 25px rgba(99, 102, 241, 0.3)'
+                 }}
+               >
+                 تأكيد الطلب
+               </Button>
             </form>
           </>
         )}
