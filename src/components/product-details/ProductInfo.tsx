@@ -10,6 +10,8 @@ interface ProductInfoProps {
   category: string;
   sizes?: string[];
   colors?: ColorOption[];
+  selectedSize?: string;
+  selectedColor?: string;
   onSizeSelect?: (size: string) => void;
   onColorSelect?: (color: string) => void;
 }
@@ -21,20 +23,18 @@ const ProductInfo = ({
   category, 
   sizes, 
   colors, 
+  selectedSize: externalSelectedSize,
+  selectedColor: externalSelectedColor,
   onSizeSelect, 
   onColorSelect 
 }: ProductInfoProps) => {
-  const [selectedSize, setSelectedSize] = useState<string>("");
-  const [selectedColor, setSelectedColor] = useState<string>("");
   const { storeSettings } = useStore();
 
   const handleSizeSelect = (size: string) => {
-    setSelectedSize(size);
     onSizeSelect?.(size);
   };
 
   const handleColorSelect = (color: ColorOption) => {
-    setSelectedColor(color.name);
     onColorSelect?.(color.name);
   };
 
@@ -79,13 +79,13 @@ const ProductInfo = ({
                 key={index}
                 onClick={() => handleSizeSelect(size)}
                 className={`px-4 py-3 rounded-xl text-sm font-medium border-2 transition-all ${
-                  selectedSize === size
+                  externalSelectedSize === size
                     ? 'text-white border-transparent shadow-md'
-                    : 'bg-gray-100 text-gray-700 border-gray-200 hover:border-orange-400 hover:bg-orange-50'
+                    : 'bg-gray-100 text-gray-700 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                 }`}
                 style={{
-                  background: selectedSize === size 
-                    ? 'linear-gradient(135deg, #ff6b35, #ec4899)' 
+                  background: externalSelectedSize === size 
+                    ? '#6366f1' 
                     : undefined
                 }}
               >
@@ -106,11 +106,15 @@ const ProductInfo = ({
                 key={index}
                 onClick={() => handleColorSelect(color)}
                 className={`w-16 h-16 rounded-xl border-2 transition-all relative overflow-hidden ${
-                  selectedColor === color.name
-                    ? 'border-orange-400 shadow-md ring-2 ring-orange-200'
-                    : 'border-gray-200 hover:border-orange-400'
+                  externalSelectedColor === color.name
+                    ? 'shadow-md ring-2'
+                    : 'border-gray-200 hover:border-gray-300'
                 }`}
-                style={{ backgroundColor: getColorBackground(color) }}
+                style={{ 
+                  backgroundColor: getColorBackground(color),
+                  borderColor: externalSelectedColor === color.name ? '#6366f1' : undefined,
+                  '--tw-ring-color': '#6366f1'
+                } as React.CSSProperties}
               >
                 <span 
                   className="absolute bottom-0 left-0 right-0 text-xs font-medium px-1 py-0.5 bg-white/90 backdrop-blur-sm"

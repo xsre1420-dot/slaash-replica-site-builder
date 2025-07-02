@@ -27,6 +27,9 @@ const ProductDetails = () => {
       // Add with selected options
       addToCart(product, selectedSize, selectedColor);
       setQuantity(1);
+      // Clear selections after adding to cart
+      setSelectedSize("");
+      setSelectedColor("");
       console.log('Selected options:', { size: selectedSize, color: selectedColor });
     }
   };
@@ -82,6 +85,8 @@ const ProductDetails = () => {
             category={product.category}
             sizes={product.sizes}
             colors={product.colors}
+            selectedSize={selectedSize}
+            selectedColor={selectedColor}
             onSizeSelect={setSelectedSize}
             onColorSelect={setSelectedColor}
           />
