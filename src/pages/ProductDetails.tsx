@@ -24,8 +24,8 @@ const ProductDetails = () => {
 
   const handleAddToCart = () => {
     if (product) {
-      // Add only one item at a time regardless of quantity selected
-      addToCart(product);
+      // Add with selected options
+      addToCart(product, selectedSize, selectedColor);
       setQuantity(1);
       console.log('Selected options:', { size: selectedSize, color: selectedColor });
     }

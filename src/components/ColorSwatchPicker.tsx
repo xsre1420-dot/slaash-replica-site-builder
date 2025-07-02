@@ -10,14 +10,8 @@ interface ColorSwatchPickerProps {
   onColorsChange: (colors: ColorOption[]) => void;
 }
 
-const defaultColors: ColorOption[] = [
-  { name: "أزرق", value: "#2563eb" },
-  { name: "أسود", value: "#000000" },
-  { name: "أحمر", value: "#dc2626" },
-  { name: "أزرق داكن", value: "#1e3a8a" },
-  { name: "رمادي", value: "#6b7280" },
-  { name: "رمادي فاتح", value: "#d1d5db" },
-];
+// Remove default colors as requested
+const defaultColors: ColorOption[] = [];
 
 const ColorSwatchPicker = ({ colors, onColorsChange }: ColorSwatchPickerProps) => {
   const [selectedColor, setSelectedColor] = useState("#2563eb");
@@ -34,12 +28,6 @@ const ColorSwatchPicker = ({ colors, onColorsChange }: ColorSwatchPickerProps) =
     }
   };
 
-  const addDefaultColor = (color: ColorOption) => {
-    if (!colors.some(c => c.value === color.value)) {
-      onColorsChange([...colors, color]);
-    }
-  };
-
   const removeColor = (colorToRemove: ColorOption) => {
     onColorsChange(colors.filter(color => color.value !== colorToRemove.value));
   };
@@ -48,32 +36,9 @@ const ColorSwatchPicker = ({ colors, onColorsChange }: ColorSwatchPickerProps) =
     <div className="space-y-4">
       <Label className="block text-black text-right">الألوان المتوفرة (اختياري)</Label>
       
-      {/* Default color swatches */}
-      <div>
-        <Label className="block text-sm text-gray-600 text-right mb-2">اختر من الألوان الافتراضية:</Label>
-        <div className="flex flex-wrap gap-2">
-          {defaultColors.map((color, index) => (
-            <button
-              key={index}
-              type="button"
-              onClick={() => addDefaultColor(color)}
-              className="w-12 h-12 rounded-xl border-2 border-gray-200 hover:border-blue-500 transition-all hover:scale-105 relative group"
-              style={{ backgroundColor: color.value }}
-              title={color.name}
-            >
-              {colors.some(c => c.value === color.value) && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-3 h-3 bg-white rounded-full border-2 border-gray-800"></div>
-                </div>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Custom color picker */}
       <div className="space-y-3">
-        <Label className="block text-sm text-gray-600 text-right">أو أضف لون مخصص:</Label>
+        <Label className="block text-sm text-gray-600 text-right">أضف لون مخصص:</Label>
         <div className="flex gap-2">
           <Button 
             type="button"

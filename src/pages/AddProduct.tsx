@@ -13,6 +13,7 @@ import { Product, Category, ColorOption } from "@/types";
 import ProductImagesManager from "@/components/ProductImagesManager";
 import SizesManager from "@/components/SizesManager";
 import ColorSwatchPicker from "@/components/ColorSwatchPicker";
+import { formatPriceInput, isValidPrice } from "@/utils/numberUtils";
 
 const AddProduct = () => {
   const [mainImage, setMainImage] = useState<string | null>(null);
@@ -58,7 +59,7 @@ const AddProduct = () => {
       return;
     }
     
-    if (!price || isNaN(Number(price)) || Number(price) <= 0) {
+    if (!price || !isValidPrice(price)) {
       toast({
         title: "خطأ",
         description: "يرجى إدخال سعر صحيح",
@@ -81,7 +82,7 @@ const AddProduct = () => {
       name,
       description,
       category,
-      price: Number(price),
+      price: Number(formatPriceInput(price)),
       image: mainImage,
       additionalImages: additionalImages,
       sizes: sizes.length > 0 ? sizes : undefined,
@@ -174,14 +175,14 @@ const AddProduct = () => {
           {/* Price */}
           <div className="space-y-3">
             <Label htmlFor="price" className="block text-black font-medium text-right">السعر (دينار عراقي)</Label>
-            <Input 
-              id="price" 
-              type="number" 
-              className="text-right text-black rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500" 
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="0"
-            />
+              <Input 
+                id="price" 
+                type="text" 
+                className="text-right text-black rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500" 
+                value={price}
+                onChange={(e) => setPrice(formatPriceInput(e.target.value))}
+                placeholder="0"
+              />
           </div>
 
           {/* Sizes and Colors */}

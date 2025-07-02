@@ -13,6 +13,7 @@ import { Product, Category, ColorOption } from "@/types";
 import ProductImagesManager from "@/components/ProductImagesManager";
 import SizesManager from "@/components/SizesManager";
 import ColorSwatchPicker from "@/components/ColorSwatchPicker";
+import { formatPriceInput, isValidPrice } from "@/utils/numberUtils";
 
 const EditProduct = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -83,7 +84,7 @@ const EditProduct = () => {
       return;
     }
     
-    if (!price || isNaN(Number(price)) || Number(price) <= 0) {
+    if (!price || !isValidPrice(price)) {
       toast({
         title: "خطأ",
         description: "يرجى إدخال سعر صحيح",
@@ -108,7 +109,7 @@ const EditProduct = () => {
         name,
         description,
         category,
-        price: Number(price),
+        price: Number(formatPriceInput(price)),
         image: mainImage,
         additionalImages,
         sizes: sizes.length > 0 ? sizes : undefined,
@@ -197,10 +198,10 @@ const EditProduct = () => {
             <Label htmlFor="price" className="block text-black">السعر (دينار عراقي)</Label>
             <Input 
               id="price" 
-              type="number" 
-              className="text-right text-black focus:border-blue-500 focus:ring-blue-500"
+              type="text" 
+              className="text-right text-black focus:border-blue-500 focus:ring-blue-500" 
               value={price}
-              onChange={(e) => setPrice(e.target.value)}
+              onChange={(e) => setPrice(formatPriceInput(e.target.value))}
             />
           </div>
 

@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface CartContextType {
   cartItems: CartItem[];
-  addToCart: (product: Product) => void;
+  addToCart: (product: Product, selectedSize?: string, selectedColor?: string) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -19,23 +19,27 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const { toast } = useToast();
 
-  const addToCart = (product: Product) => {
+  const addToCart = (product: Product, selectedSize?: string, selectedColor?: string) => {
     setCartItems((prevItems) => {
-      // Check if the item is already in the cart
+      // Check if the item with same product, size, and color is already in the cart
       const existingItem = prevItems.find(
-        (item) => item.product.id === product.id
+        (item) => item.product.id === product.id && 
+                  item.selectedSize === selectedSize && 
+                  item.selectedColor === selectedColor
       );
 
       if (existingItem) {
         // If it exists, increment the quantity
         return prevItems.map((item) =>
-          item.product.id === product.id
+          item.product.id === product.id && 
+          item.selectedSize === selectedSize && 
+          item.selectedColor === selectedColor
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       } else {
         // If it's new, add it with quantity 1
-        return [...prevItems, { product, quantity: 1 }];
+        return [...prevItems, { product, quantity: 1, selectedSize, selectedColor }];
       }
     });
 

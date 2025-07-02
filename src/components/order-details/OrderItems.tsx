@@ -29,6 +29,21 @@ const OrderItems = ({ items }: OrderItemsProps) => {
                 <span className="text-gray-600 text-sm line-clamp-1">
                   {item.product.description}
                 </span>
+                {/* Display selected options */}
+                {(item.selectedSize || item.selectedColor) && (
+                  <div className="flex gap-2 mt-1">
+                    {item.selectedSize && (
+                      <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">
+                        القياس: {item.selectedSize}
+                      </span>
+                    )}
+                    {item.selectedColor && (
+                      <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">
+                        اللون: {item.selectedColor}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-white flex items-center justify-center">
                 <img
