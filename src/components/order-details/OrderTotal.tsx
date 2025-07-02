@@ -14,7 +14,9 @@ const OrderTotal = ({ total, selectedGovernorate }: OrderTotalProps) => {
     d => d.governorate === selectedGovernorate
   )?.price || storeSettings.deliveryPrices?.[0]?.price || 0;
   
-  const grandTotal = total + deliveryPrice;
+  // The total passed in already includes delivery, so subtract it for subtotal
+  const productSubtotal = total - deliveryPrice;
+  const grandTotal = total;
 
   return (
     <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-2xl p-6 mt-6">
@@ -22,7 +24,7 @@ const OrderTotal = ({ total, selectedGovernorate }: OrderTotalProps) => {
         <div className="flex justify-between items-center">
           <span className="text-lg font-semibold text-blue-800">المجموع الفرعي:</span>
           <span className="text-lg font-bold text-blue-900">
-            {total.toLocaleString()} د.ع
+            {productSubtotal.toLocaleString()} د.ع
           </span>
         </div>
         
