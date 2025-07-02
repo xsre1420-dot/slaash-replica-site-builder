@@ -7,12 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { X } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { categories, getProductById, products } from "@/data/dummyData";
+import { getCategories, getProductById, products } from "@/data/dummyData";
 import { useToast } from "@/hooks/use-toast";
-import { Product } from "@/types";
+import { Product, Category, ColorOption } from "@/types";
 import ProductImagesManager from "@/components/ProductImagesManager";
 import SizesManager from "@/components/SizesManager";
-import ColorsManager from "@/components/ColorsManager";
+import ColorSwatchPicker from "@/components/ColorSwatchPicker";
 
 const EditProduct = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -23,9 +23,15 @@ const EditProduct = () => {
   const [category, setCategory] = useState("");
   const [price, setPrice] = useState("");
   const [sizes, setSizes] = useState<string[]>([]);
-  const [colors, setColors] = useState<string[]>([]);
+  const [colors, setColors] = useState<ColorOption[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Load categories on mount
+  useEffect(() => {
+    setCategories(getCategories());
+  }, []);
 
   useEffect(() => {
     if (productId) {
@@ -133,7 +139,7 @@ const EditProduct = () => {
         <Link to="/builder">
           <X className="w-6 h-6" />
         </Link>
-        <h1 className="text-xl font-bold text-blue-600">تعديل الوجبة</h1>
+        <h1 className="text-xl font-bold text-black">تعديل الوجبة</h1>
         <div className="w-6" /> {/* Spacer for alignment */}
       </div>
 
@@ -149,10 +155,10 @@ const EditProduct = () => {
 
           {/* Name */}
           <div className="space-y-2 text-right">
-            <Label htmlFor="name" className="block text-blue-600">اسم الوجبة</Label>
+            <Label htmlFor="name" className="block text-black">اسم الوجبة</Label>
             <Input 
               id="name" 
-              className="text-right text-blue-600 focus:border-blue-500 focus:ring-blue-500" 
+              className="text-right text-black focus:border-blue-500 focus:ring-blue-500"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -160,13 +166,13 @@ const EditProduct = () => {
 
           {/* Category */}
           <div className="space-y-2 text-right">
-            <Label htmlFor="category" className="block text-blue-600">الفئة</Label>
+            <Label htmlFor="category" className="block text-black">الفئة</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="w-full text-right text-blue-600 focus:border-blue-500 focus:ring-blue-500">
+              <SelectTrigger className="w-full text-right text-black focus:border-blue-500 focus:ring-blue-500">
                 <SelectValue placeholder="اختر فئة" />
               </SelectTrigger>
               <SelectContent>
-                {categories.filter(c => c.id !== "all").map((cat) => (
+                {categories.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id}>
                     {cat.name}
                   </SelectItem>
@@ -177,10 +183,10 @@ const EditProduct = () => {
 
           {/* Description */}
           <div className="space-y-2 text-right">
-            <Label htmlFor="description" className="block text-blue-600">الوصف</Label>
+            <Label htmlFor="description" className="block text-black">الوصف</Label>
             <Textarea 
               id="description" 
-              className="text-right text-blue-600 focus:border-blue-500 focus:ring-blue-500" 
+              className="text-right text-black focus:border-blue-500 focus:ring-blue-500"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
@@ -188,11 +194,11 @@ const EditProduct = () => {
 
           {/* Price */}
           <div className="space-y-2 text-right">
-            <Label htmlFor="price" className="block text-blue-600">السعر (دينار عراقي)</Label>
+            <Label htmlFor="price" className="block text-black">السعر (دينار عراقي)</Label>
             <Input 
               id="price" 
               type="number" 
-              className="text-right text-blue-600 focus:border-blue-500 focus:ring-blue-500" 
+              className="text-right text-black focus:border-blue-500 focus:ring-blue-500"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
             />
@@ -202,7 +208,7 @@ const EditProduct = () => {
           <SizesManager sizes={sizes} onSizesChange={setSizes} />
 
           {/* Colors Manager */}
-          <ColorsManager colors={colors} onColorsChange={setColors} />
+          <ColorSwatchPicker colors={colors} onColorsChange={setColors} />
 
           {/* Submit Button */}
           <Button 

@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import { useStore } from "@/context/StoreContext";
+import { ColorOption } from "@/types";
 
 interface ProductInfoProps {
   name: string;
@@ -8,7 +9,7 @@ interface ProductInfoProps {
   description: string;
   category: string;
   sizes?: string[];
-  colors?: string[];
+  colors?: ColorOption[];
   onSizeSelect?: (size: string) => void;
   onColorSelect?: (color: string) => void;
 }
@@ -32,28 +33,14 @@ const ProductInfo = ({
     onSizeSelect?.(size);
   };
 
-  const handleColorSelect = (color: string) => {
-    setSelectedColor(color);
-    onColorSelect?.(color);
+  const handleColorSelect = (color: ColorOption) => {
+    setSelectedColor(color.name);
+    onColorSelect?.(color.name);
   };
 
-  // Function to get color background based on color name
-  const getColorBackground = (colorName: string) => {
-    const colorMap: { [key: string]: string } = {
-      'أحمر': '#dc2626',
-      'أزرق': '#2563eb',
-      'أخضر': '#16a34a',
-      'أصفر': '#ca8a04',
-      'بنفسجي': '#7c3aed',
-      'وردي': '#db2777',
-      'برتقالي': '#ea580c',
-      'أسود': '#000000',
-      'أبيض': '#ffffff',
-      'رمادي': '#6b7280',
-      'بني': '#92400e',
-    };
-    
-    return colorMap[colorName.toLowerCase()] || '#6b7280';
+  // Function to get color background from ColorOption
+  const getColorBackground = (color: ColorOption) => {
+    return color.value;
   };
 
   return (
@@ -118,17 +105,19 @@ const ProductInfo = ({
               <button
                 key={index}
                 onClick={() => handleColorSelect(color)}
-                className={`px-4 py-3 rounded-xl text-sm font-medium border-2 transition-all ${
-                  selectedColor === color
+                className={`w-16 h-16 rounded-xl border-2 transition-all relative overflow-hidden ${
+                  selectedColor === color.name
                     ? 'border-orange-400 shadow-md ring-2 ring-orange-200'
                     : 'border-gray-200 hover:border-orange-400'
                 }`}
-                style={{ 
-                  backgroundColor: getColorBackground(color),
-                  color: color === 'أبيض' || color === 'أصفر' ? '#000000' : '#ffffff'
-                }}
+                style={{ backgroundColor: getColorBackground(color) }}
               >
-                {color}
+                <span 
+                  className="absolute bottom-0 left-0 right-0 text-xs font-medium px-1 py-0.5 bg-white/90 backdrop-blur-sm"
+                  style={{ color: '#000000' }}
+                >
+                  {color.name}
+                </span>
               </button>
             ))}
           </div>

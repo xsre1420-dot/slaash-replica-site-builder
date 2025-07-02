@@ -26,7 +26,7 @@ const SizesManager = ({ sizes, onSizesChange }: SizesManagerProps) => {
 
   return (
     <div className="space-y-4">
-      <Label className="block text-blue-600 text-right">القياسات المتوفرة (اختياري)</Label>
+      <Label className="block text-black text-right">القياسات المتوفرة (اختياري)</Label>
       
       {/* Add new size */}
       <div className="flex gap-2">
@@ -48,7 +48,7 @@ const SizesManager = ({ sizes, onSizesChange }: SizesManagerProps) => {
           value={newSize}
           onChange={(e) => setNewSize(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && addSize()}
-          className="text-right text-blue-600 focus:border-blue-500 focus:ring-blue-500"
+          className="text-right text-black focus:border-blue-500 focus:ring-blue-500"
         />
       </div>
 
@@ -58,7 +58,7 @@ const SizesManager = ({ sizes, onSizesChange }: SizesManagerProps) => {
           {sizes.map((size, index) => (
             <div
               key={index}
-              className="relative flex items-center bg-gray-100 rounded-xl px-4 py-3 text-sm font-medium text-blue-600 border-2 border-gray-200 hover:border-blue-500 transition-colors"
+              className="relative flex items-center bg-gray-100 rounded-xl px-4 py-3 text-sm font-medium text-black border-2 border-gray-200 hover:border-blue-500 transition-colors"
             >
               <button
                 type="button"

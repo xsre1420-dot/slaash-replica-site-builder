@@ -1,3 +1,8 @@
+export interface ColorOption {
+  name: string;
+  value: string; // hex color code
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -7,7 +12,7 @@ export interface Product {
   image: string; // صورة رئيسية
   additionalImages?: string[]; // صور إضافية
   sizes?: string[]; // قياسات اختيارية
-  colors?: string[]; // ألوان اختيارية
+  colors?: ColorOption[]; // ألوان اختيارية مع أكواد الألوان
 }
 
 export interface CartItem {

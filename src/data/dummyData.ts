@@ -1,13 +1,20 @@
 
 import { Product, Category } from "@/types";
 
-export const categories: Category[] = [
-  { id: "all", name: "الكل", order: 0 },
-  { id: "fast-food", name: "الوجبات السريعة", order: 1 },
-  { id: "main-dish", name: "الوجبات الرئيسية", order: 2 },
-  { id: "appetizers", name: "المقبلات", order: 3 },
-  { id: "drinks", name: "المشروبات", order: 4 },
-];
+// Load categories from localStorage instead of hardcoded ones
+export const getCategories = (): Category[] => {
+  const savedCategories = localStorage.getItem('categories');
+  if (savedCategories) {
+    try {
+      return JSON.parse(savedCategories);
+    } catch (error) {
+      console.error('Error loading categories:', error);
+    }
+  }
+  return []; // Return empty array instead of default categories
+};
+
+export const categories: Category[] = getCategories();
 
 // Start with an empty products array - all products will be added manually
 export let products: Product[] = [];

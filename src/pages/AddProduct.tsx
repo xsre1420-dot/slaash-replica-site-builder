@@ -6,13 +6,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
-import { categories, addProduct } from "@/data/dummyData";
+import { useState, useEffect } from "react";
+import { getCategories, addProduct } from "@/data/dummyData";
 import { useToast } from "@/hooks/use-toast";
-import { Product } from "@/types";
+import { Product, Category, ColorOption } from "@/types";
 import ProductImagesManager from "@/components/ProductImagesManager";
 import SizesManager from "@/components/SizesManager";
-import ColorsManager from "@/components/ColorsManager";
+import ColorSwatchPicker from "@/components/ColorSwatchPicker";
 
 const AddProduct = () => {
   const [mainImage, setMainImage] = useState<string | null>(null);
@@ -22,9 +22,15 @@ const AddProduct = () => {
   const [category, setCategory] = useState("");
   const [price, setPrice] = useState("");
   const [sizes, setSizes] = useState<string[]>([]);
-  const [colors, setColors] = useState<string[]>([]);
+  const [colors, setColors] = useState<ColorOption[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Load categories on mount
+  useEffect(() => {
+    setCategories(getCategories());
+  }, []);
 
   const handleImagesChange = (newMainImage: string | null, newAdditionalImages: string[]) => {
     setMainImage(newMainImage);
@@ -125,10 +131,10 @@ const AddProduct = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Name */}
             <div className="space-y-3">
-              <Label htmlFor="name" className="block text-blue-600 font-medium text-right">اسم الوجبة</Label>
+              <Label htmlFor="name" className="block text-black font-medium text-right">اسم الوجبة</Label>
               <Input 
                 id="name" 
-                className="text-right text-blue-600 rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500" 
+                className="text-right text-black rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500" 
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="أدخل اسم الوجبة"
@@ -137,13 +143,13 @@ const AddProduct = () => {
 
             {/* Category */}
             <div className="space-y-3">
-              <Label htmlFor="category" className="block text-blue-600 font-medium text-right">الفئة</Label>
+              <Label htmlFor="category" className="block text-black font-medium text-right">الفئة</Label>
               <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger className="w-full text-right text-blue-600 rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500">
+                <SelectTrigger className="w-full text-right text-black rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500">
                   <SelectValue placeholder="اختر فئة" />
                 </SelectTrigger>
                 <SelectContent className="rounded-2xl">
-                  {categories.filter(c => c.id !== "all").map((cat) => (
+                  {categories.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id} className="text-right">
                       {cat.name}
                     </SelectItem>
@@ -155,10 +161,10 @@ const AddProduct = () => {
 
           {/* Description */}
           <div className="space-y-3">
-            <Label htmlFor="description" className="block text-blue-600 font-medium text-right">الوصف</Label>
+            <Label htmlFor="description" className="block text-black font-medium text-right">الوصف</Label>
             <Textarea 
               id="description" 
-              className="text-right text-blue-600 rounded-2xl border-gray-200 min-h-[120px] focus:border-blue-500 focus:ring-blue-500" 
+              className="text-right text-black rounded-2xl border-gray-200 min-h-[120px] focus:border-blue-500 focus:ring-blue-500" 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="أدخل وصف الوجبة"
@@ -167,11 +173,11 @@ const AddProduct = () => {
 
           {/* Price */}
           <div className="space-y-3">
-            <Label htmlFor="price" className="block text-blue-600 font-medium text-right">السعر (دينار عراقي)</Label>
+            <Label htmlFor="price" className="block text-black font-medium text-right">السعر (دينار عراقي)</Label>
             <Input 
               id="price" 
               type="number" 
-              className="text-right text-blue-600 rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500" 
+              className="text-right text-black rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500" 
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               placeholder="0"
@@ -185,7 +191,7 @@ const AddProduct = () => {
             </div>
             
             <div className="bg-gray-50 rounded-2xl p-6">
-              <ColorsManager colors={colors} onColorsChange={setColors} />
+              <ColorSwatchPicker colors={colors} onColorsChange={setColors} />
             </div>
           </div>
 
