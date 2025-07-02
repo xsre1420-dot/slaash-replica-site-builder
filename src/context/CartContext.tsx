@@ -6,8 +6,8 @@ import { useToast } from "@/hooks/use-toast";
 interface CartContextType {
   cartItems: CartItem[];
   addToCart: (product: Product, selectedSize?: string, selectedColor?: string) => void;
-  removeFromCart: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  removeFromCart: (productId: string, selectedSize?: string, selectedColor?: string) => void;
+  updateQuantity: (productId: string, quantity: number, selectedSize?: string, selectedColor?: string) => void;
   clearCart: () => void;
   cartTotal: number;
   cartCount: number;
@@ -51,11 +51,19 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const removeFromCart = (productId: string) => {
-    const product = cartItems.find(item => item.product.id === productId);
+  const removeFromCart = (productId: string, selectedSize?: string, selectedColor?: string) => {
+    const product = cartItems.find(item => 
+      item.product.id === productId && 
+      item.selectedSize === selectedSize && 
+      item.selectedColor === selectedColor
+    );
     
     setCartItems((prevItems) => 
-      prevItems.filter((item) => item.product.id !== productId)
+      prevItems.filter((item) => !(
+        item.product.id === productId && 
+        item.selectedSize === selectedSize && 
+        item.selectedColor === selectedColor
+      ))
     );
 
     if (product) {
@@ -67,17 +75,25 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = (productId: string, quantity: number, selectedSize?: string, selectedColor?: string) => {
     if (quantity <= 0) {
-      removeFromCart(productId);
+      removeFromCart(productId, selectedSize, selectedColor);
       return;
     }
 
-    const product = cartItems.find(item => item.product.id === productId);
+    const product = cartItems.find(item => 
+      item.product.id === productId && 
+      item.selectedSize === selectedSize && 
+      item.selectedColor === selectedColor
+    );
 
     setCartItems((prevItems) =>
       prevItems.map((item) =>
-        item.product.id === productId ? { ...item, quantity } : item
+        item.product.id === productId && 
+        item.selectedSize === selectedSize && 
+        item.selectedColor === selectedColor
+          ? { ...item, quantity } 
+          : item
       )
     );
 

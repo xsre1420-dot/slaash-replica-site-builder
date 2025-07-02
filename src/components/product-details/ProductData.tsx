@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { Product } from "@/types";
-import { getProductById } from "@/data/dummyData";
+import { getProductById, reloadProducts } from "@/data/dummyData";
 
 interface ProductDataProps {
   productId: string | undefined;
@@ -15,6 +15,9 @@ const ProductData = ({ productId, onProductLoaded }: ProductDataProps) => {
       return;
     }
 
+    // Reload products from storage to ensure we have the latest data
+    reloadProducts();
+    
     // Get product from the main data source
     const foundProduct = getProductById(productId);
     onProductLoaded(foundProduct || null);

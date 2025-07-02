@@ -16,12 +16,42 @@ export const getCategories = (): Category[] => {
 
 export const categories: Category[] = getCategories();
 
-// Start with an empty products array - all products will be added manually
-export let products: Product[] = [];
+// Load products from localStorage
+const loadProductsFromStorage = (): Product[] => {
+  const savedProducts = localStorage.getItem('products');
+  if (savedProducts) {
+    try {
+      return JSON.parse(savedProducts);
+    } catch (error) {
+      console.error('Error loading products:', error);
+    }
+  }
+  return [];
+};
+
+// Save products to localStorage
+const saveProductsToStorage = (productsToSave: Product[]): void => {
+  localStorage.setItem('products', JSON.stringify(productsToSave));
+};
+
+// Start with products from localStorage
+export let products: Product[] = loadProductsFromStorage();
+
+// Function to reload products from storage (useful when navigating between pages)
+export const reloadProducts = (): void => {
+  products = loadProductsFromStorage();
+};
 
 // Function to add a new product
 export const addProduct = (product: Product): void => {
   products = [...products, product];
+  saveProductsToStorage(products);
+};
+
+// Function to update an existing product
+export const updateProduct = (productId: string, updatedProduct: Product): void => {
+  products = products.map(p => p.id === productId ? updatedProduct : p);
+  saveProductsToStorage(products);
 };
 
 // Get products by category

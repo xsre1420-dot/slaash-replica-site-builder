@@ -116,18 +116,18 @@ const Checkout = () => {
             <div className="bg-white rounded-xl shadow-sm p-4 mt-4">
               <h2 className="text-xl font-bold mb-4 text-right text-black">طلبك</h2>
               <div className="space-y-4">
-                {cartItems.map((item) => (
-                  <div key={item.product.id} className="flex items-start justify-between border-b pb-4">
+                {cartItems.map((item, index) => (
+                  <div key={`${item.product.id}-${item.selectedSize || 'no-size'}-${item.selectedColor || 'no-color'}-${index}`} className="flex items-start justify-between border-b pb-4">
                     <div className="flex items-center">
                       <button
-                        onClick={() => removeFromCart(item.product.id)}
+                        onClick={() => removeFromCart(item.product.id, item.selectedSize, item.selectedColor)}
                         className="text-red-500 hover:text-red-700"
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
                       <div className="flex items-center mx-2">
                         <button
-                          onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                          onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedSize, item.selectedColor)}
                           className="rounded-full w-6 h-6 flex items-center justify-center text-white shadow-lg"
                           style={{ 
                             background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
@@ -138,7 +138,7 @@ const Checkout = () => {
                         </button>
                         <span className="mx-2 w-6 text-center text-black">{item.quantity}</span>
                         <button
-                          onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedSize, item.selectedColor)}
                           className="rounded-full w-6 h-6 flex items-center justify-center text-white shadow-lg"
                           style={{ 
                             background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
@@ -153,6 +153,21 @@ const Checkout = () => {
                       <div className="text-right">
                         <span className="block font-bold text-black">{item.product.name}</span>
                         <span className="text-black text-sm">{item.product.price.toLocaleString()} د.ع × {item.quantity}</span>
+                        {/* Display selected options */}
+                        {(item.selectedSize || item.selectedColor) && (
+                          <div className="flex gap-2 mt-1 justify-end">
+                            {item.selectedSize && (
+                              <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">
+                                القياس: {item.selectedSize}
+                              </span>
+                            )}
+                            {item.selectedColor && (
+                              <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">
+                                اللون: {item.selectedColor}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <img
                         src={item.product.image}

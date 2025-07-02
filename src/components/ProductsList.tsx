@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Edit, Plus, Trash2, Star, Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { products as initialProducts } from "@/data/dummyData";
+import { products as initialProducts, reloadProducts } from "@/data/dummyData";
 import { Product } from "@/types";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -13,7 +13,8 @@ export const ProductsList = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // In a real app, we would fetch products from an API
+    // Reload products from localStorage to get the latest data
+    reloadProducts();
     setProducts(initialProducts);
   }, []);
 

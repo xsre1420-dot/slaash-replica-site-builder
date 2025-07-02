@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { X } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { getCategories, getProductById, products } from "@/data/dummyData";
+import { getCategories, getProductById, updateProduct } from "@/data/dummyData";
 import { useToast } from "@/hooks/use-toast";
 import { Product, Category, ColorOption } from "@/types";
 import ProductImagesManager from "@/components/ProductImagesManager";
@@ -116,11 +116,8 @@ const EditProduct = () => {
         colors: colors.length > 0 ? colors : undefined,
       };
 
-      // Find and update the product in the array
-      const productIndex = products.findIndex(p => p.id === productId);
-      if (productIndex !== -1) {
-        products[productIndex] = updatedProduct;
-      }
+      // Update the product using the updateProduct function
+      updateProduct(productId, updatedProduct);
 
       // Show success toast
       toast({
