@@ -33,6 +33,7 @@ export interface CustomerInfo {
   phone: string;
   address: string;
   notes?: string;
+  governorate?: string;
 }
 
 export interface Order {

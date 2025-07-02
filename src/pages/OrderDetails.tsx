@@ -47,6 +47,7 @@ const demoOrders: Order[] = [
       phone: "07701234567",
       address: "بغداد - الكرادة",
       notes: "الرجاء التوصيل سريعاً",
+      governorate: "بغداد",
     },
     total: 19000,
     date: "2025-05-03T14:30:00",
@@ -71,6 +72,7 @@ const demoOrders: Order[] = [
       name: "سارة علي",
       phone: "07709876543",
       address: "بغداد - المنصور",
+      governorate: "البصرة",
     },
     total: 18000,
     date: "2025-05-02T19:45:00",
@@ -95,6 +97,7 @@ const demoOrders: Order[] = [
       name: "محمد حسين",
       phone: "07712345678",
       address: "بغداد - زيونة",
+      governorate: "نينوى",
     },
     total: 12000,
     date: "2025-05-01T11:15:00",
@@ -199,7 +202,7 @@ const OrderDetails = () => {
               </div>
 
               {/* Order Total */}
-              <OrderTotal total={order.total} />
+              <OrderTotal total={order.total} selectedGovernorate={order.customerInfo.governorate} />
             </div>
           </CardContent>
         </Card>

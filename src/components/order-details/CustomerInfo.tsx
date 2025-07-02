@@ -22,6 +22,12 @@ const CustomerInfo = ({ customerInfo }: CustomerInfoProps) => {
           <span>{customerInfo.address}</span>
           <span className="font-medium">العنوان:</span>
         </div>
+        {customerInfo.governorate && (
+          <div className="flex justify-between">
+            <span>{customerInfo.governorate}</span>
+            <span className="font-medium">المحافظة:</span>
+          </div>
+        )}
         {customerInfo.notes && (
           <div className="flex justify-between">
             <span>{customerInfo.notes}</span>
