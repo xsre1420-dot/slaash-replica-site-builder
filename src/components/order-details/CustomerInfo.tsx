@@ -7,34 +7,31 @@ interface CustomerInfoProps {
 
 const CustomerInfo = ({ customerInfo }: CustomerInfoProps) => {
   return (
-    <div className="bg-gray-50 p-4 rounded-lg">
-      <h3 className="text-lg font-semibold mb-2 text-right">معلومات العميل</h3>
-      <div className="space-y-2 text-right">
-        <div className="flex justify-between">
-          <span>{customerInfo.name}</span>
-          <span className="font-medium">الاسم:</span>
-        </div>
-        <div className="flex justify-between">
-          <span dir="ltr">{customerInfo.phone}</span>
-          <span className="font-medium">رقم الهاتف:</span>
-        </div>
-        <div className="flex justify-between">
-          <span>{customerInfo.address}</span>
-          <span className="font-medium">العنوان:</span>
-        </div>
-        {customerInfo.governorate && (
-          <div className="flex justify-between">
-            <span>{customerInfo.governorate}</span>
-            <span className="font-medium">المحافظة:</span>
-          </div>
-        )}
-        {customerInfo.notes && (
-          <div className="flex justify-between">
-            <span>{customerInfo.notes}</span>
-            <span className="font-medium">ملاحظات:</span>
-          </div>
-        )}
+    <div className="space-y-2 text-right">
+      <div className="flex justify-between">
+        <span>{customerInfo.name}</span>
+        <span className="font-medium">الاسم:</span>
       </div>
+      <div className="flex justify-between">
+        <span dir="ltr">{customerInfo.phone}</span>
+        <span className="font-medium">رقم الهاتف:</span>
+      </div>
+      <div className="flex justify-between">
+        <span>{customerInfo.address}</span>
+        <span className="font-medium">العنوان:</span>
+      </div>
+      {customerInfo.governorate && (
+        <div className="flex justify-between">
+          <span>{customerInfo.governorate}</span>
+          <span className="font-medium">المحافظة:</span>
+        </div>
+      )}
+      {customerInfo.notes && (
+        <div className="flex justify-between">
+          <span>{customerInfo.notes}</span>
+          <span className="font-medium">ملاحظات:</span>
+        </div>
+      )}
     </div>
   );
 };
