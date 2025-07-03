@@ -32,11 +32,17 @@ export default function Builder() {
           
           <div className="flex items-center gap-3 mb-6">
             <Input 
-              value="https://yourstore.com/menu" 
+              value={`${window.location.origin}/store`}
               readOnly 
               className="text-left bg-gray-50 border-gray-200 text-gray-700 rounded-2xl"
             />
-            <Button className="bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200 rounded-2xl">
+            <Button 
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200 rounded-2xl"
+              onClick={() => {
+                navigator.clipboard.writeText(`${window.location.origin}/store`);
+                // You could add a toast notification here
+              }}
+            >
               نسخ
             </Button>
           </div>
