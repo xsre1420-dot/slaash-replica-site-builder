@@ -44,12 +44,7 @@ const Checkout = () => {
     e.preventDefault();
     
     if (!customerInfo.name || !customerInfo.phone || !customerInfo.address) {
-      toast({
-        title: "خطأ في المعلومات",
-        description: "يرجى تعبئة جميع الحقول المطلوبة",
-        variant: "destructive",
-      });
-      return;
+      return; // Just return without showing error notification
     }
     
     // Create a new order object
@@ -73,9 +68,9 @@ const Checkout = () => {
     const updatedOrders = [newOrder, ...existingOrders];
     localStorage.setItem('orders', JSON.stringify(updatedOrders));
     
-    // Show simple success notification
+    // Show order completion notification
     toast({
-      title: "تم الطلب بنجاح",
+      title: "تم الطلب",
       className: "bg-green-500 text-white border-green-600 mx-auto max-w-fit",
     });
     

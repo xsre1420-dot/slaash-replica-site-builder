@@ -43,12 +43,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    // Show success notification
-    toast({
-      title: "تم الطلب",
-      variant: "default",
-      className: "bg-green-50 border-green-200 text-green-800",
-    });
+    // No notification needed for adding to cart
   };
 
   const removeFromCart = (productId: string, selectedSize?: string, selectedColor?: string) => {
@@ -66,13 +61,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       ))
     );
 
-    if (product) {
-      toast({
-        title: "تم الحذف",
-        variant: "default",
-        className: "bg-red-50 border-red-200 text-red-800",
-      });
-    }
+    // No notification needed for removing from cart
   };
 
   const updateQuantity = (productId: string, quantity: number, selectedSize?: string, selectedColor?: string) => {
@@ -97,24 +86,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       )
     );
 
-    if (product) {
-      toast({
-        title: "تم تحديث الكمية",
-        description: `تم تحديث كمية ${product.product.name} إلى ${quantity}`,
-        variant: "default",
-        className: "bg-blue-50 border-blue-200 text-blue-800",
-      });
-    }
+    // No notification needed for updating quantity
   };
 
   const clearCart = () => {
     setCartItems([]);
-    toast({
-      title: "تم تفريغ السلة",
-      description: "تم إزالة جميع المنتجات من السلة",
-      variant: "default",
-      className: "bg-amber-50 border-amber-200 text-amber-800",
-    });
+    // No notification needed for clearing cart
   };
 
   // Calculate the total price of all items in the cart
