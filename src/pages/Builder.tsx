@@ -26,8 +26,8 @@ export default function Builder() {
         {/* Modern URL Sharing Card - White Background */}
         <div className="bg-white rounded-3xl p-6 mb-8 border border-gray-200 shadow-sm">
           <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold mb-2 text-gray-800">رابط المطعم</h2>
-            <p className="text-gray-600">شارك الرابط مع زبائنك</p>
+            <h2 className="text-2xl font-bold mb-2 text-gray-800">رابط المتجر</h2>
+            <p className="text-gray-600">شارك المطعم مع عملائك</p>
           </div>
           
           <div className="flex items-center gap-3 mb-6">
@@ -62,7 +62,7 @@ export default function Builder() {
                         boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
                       }}>
                 <Plus className="w-5 h-5 ml-2" />
-                إضافة وجبة
+                إضافة منتج
               </Button>
             </Link>
           </div>

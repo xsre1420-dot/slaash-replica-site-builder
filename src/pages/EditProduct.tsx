@@ -69,7 +69,7 @@ const EditProduct = () => {
     if (!name.trim()) {
       toast({
         title: "خطأ",
-        description: "يرجى إدخال اسم الوجبة",
+        description: "يرجى إدخال اسم المنتج",
         variant: "destructive"
       });
       return;
@@ -78,7 +78,7 @@ const EditProduct = () => {
     if (!category) {
       toast({
         title: "خطأ",
-        description: "يرجى اختيار فئة الوجبة",
+        description: "يرجى اختيار فئة المنتج",
         variant: "destructive"
       });
       return;
@@ -122,7 +122,7 @@ const EditProduct = () => {
       // Show success toast
       toast({
         title: "تم بنجاح",
-        description: "تم تحديث بيانات الوجبة",
+        description: "تم تحديث بيانات المنتج",
       });
 
       // Navigate back to builder
@@ -137,7 +137,7 @@ const EditProduct = () => {
         <Link to="/builder">
           <X className="w-6 h-6" />
         </Link>
-        <h1 className="text-xl font-bold text-black">تعديل الوجبة</h1>
+        <h1 className="text-xl font-bold text-black">تعديل المنتج</h1>
         <div className="w-6" /> {/* Spacer for alignment */}
       </div>
 
@@ -153,7 +153,7 @@ const EditProduct = () => {
 
           {/* Name */}
           <div className="space-y-2 text-right">
-            <Label htmlFor="name" className="block text-black">اسم الوجبة</Label>
+            <Label htmlFor="name" className="block text-black">اسم المنتج</Label>
             <Input 
               id="name" 
               className="text-right text-black focus:border-blue-500 focus:ring-blue-500"

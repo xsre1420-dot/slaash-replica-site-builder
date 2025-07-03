@@ -121,7 +121,7 @@ const Store = () => {
             <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="search"
-              placeholder="ابحث عن وجبة..."
+              placeholder="ابحث عن منتج..."
               className="w-full h-12 pr-12 pl-4 rounded-2xl bg-gray-100 border-0 text-right placeholder-gray-500 focus:ring-2 focus:ring-orange-500 focus:bg-white transition-all"
             />
           </div>

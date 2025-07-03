@@ -51,7 +51,7 @@ export const ProductsList = () => {
             }}
           >
             <Plus className="w-4 h-4 ml-2" />
-            إضافة وجبة جديدة
+            إضافة منتج جديد
           </Button>
         </Link>
       </div>

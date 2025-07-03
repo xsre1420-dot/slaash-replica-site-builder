@@ -44,7 +44,7 @@ const AddProduct = () => {
     if (!name.trim()) {
       toast({
         title: "خطأ",
-        description: "يرجى إدخال اسم الوجبة",
+        description: "يرجى إدخال اسم المنتج",
         variant: "destructive"
       });
       return;
@@ -53,7 +53,7 @@ const AddProduct = () => {
     if (!category) {
       toast({
         title: "خطأ",
-        description: "يرجى اختيار فئة الوجبة",
+        description: "يرجى اختيار فئة المنتج",
         variant: "destructive"
       });
       return;
@@ -93,7 +93,7 @@ const AddProduct = () => {
 
     toast({
       title: "تم بنجاح",
-      description: "تمت إضافة وجبة جديدة",
+      description: "تمت إضافة منتج جديد",
     });
 
     navigate('/builder');
@@ -110,7 +110,7 @@ const AddProduct = () => {
                 <X className="w-6 h-6" />
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold text-gray-800">إضافة وجبة جديدة</h1>
+            <h1 className="text-2xl font-bold text-gray-800">إضافة منتج جديد</h1>
             <div className="w-10"></div>
           </div>
         </div>
@@ -132,13 +132,13 @@ const AddProduct = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Name */}
             <div className="space-y-3">
-              <Label htmlFor="name" className="block text-black font-medium text-right">اسم الوجبة</Label>
+              <Label htmlFor="name" className="block text-black font-medium text-right">اسم المنتج</Label>
               <Input 
                 id="name" 
                 className="text-right text-black rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500" 
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="أدخل اسم الوجبة"
+                placeholder="أدخل اسم المنتج"
               />
             </div>
 
@@ -168,7 +168,7 @@ const AddProduct = () => {
               className="text-right text-black rounded-2xl border-gray-200 min-h-[120px] focus:border-blue-500 focus:ring-blue-500" 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="أدخل وصف الوجبة"
+              placeholder="أدخل وصف المنتج"
             />
           </div>
 
@@ -206,7 +206,7 @@ const AddProduct = () => {
                 boxShadow: '0 8px 25px rgba(91, 71, 245, 0.3)'
               }}
             >
-              إضافة الوجبة +
+              إضافة المنتج +
             </Button>
           </div>
         </form>
