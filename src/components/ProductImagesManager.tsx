@@ -3,7 +3,7 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ImagePlus, X, CheckCircle } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+
 
 interface ProductImagesManagerProps {
   mainImage: string | null;
@@ -17,7 +17,6 @@ const ProductImagesManager = ({
   onImagesChange,
 }: ProductImagesManagerProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
 
   const allImages = [
     ...(mainImage ? [mainImage] : []),
@@ -38,17 +37,9 @@ const ProductImagesManager = ({
     if (!mainImage && newImages.length > 0) {
       // إذا لم تكن هناك صورة رئيسية، فاستخدم الصورة الأولى المضافة كصورة رئيسية
       onImagesChange(newImages[0], [...additionalImages, ...newImages.slice(1)]);
-      toast({
-        title: "تم إضافة الصور",
-        description: `تم إضافة ${newImages.length} صور بنجاح`,
-      });
     } else {
       // أضف الصور الجديدة إلى الصور الإضافية
       onImagesChange(mainImage, [...additionalImages, ...newImages]);
-      toast({
-        title: "تم إضافة الصور",
-        description: `تم إضافة ${newImages.length} صور بنجاح`,
-      });
     }
 
     // أعد تعيين حقل الإدخال ليتمكن المستخدم من اختيار نفس الصور مرة أخرى إذا أراد
@@ -76,11 +67,6 @@ const ProductImagesManager = ({
     } else {
       onImagesChange(mainImage, updatedImages.filter(img => img !== mainImage));
     }
-
-    toast({
-      title: "تم حذف الصورة",
-      description: "تم حذف الصورة بنجاح",
-    });
   };
 
   const setAsMain = (index: number) => {
@@ -94,10 +80,6 @@ const ProductImagesManager = ({
     const newAdditional = [...updatedImages];
 
     onImagesChange(newMain, newAdditional);
-    toast({
-      title: "تم تعيين الصورة الرئيسية",
-      description: "تم تعيين الصورة الرئيسية بنجاح",
-    });
   };
 
   const moveImage = (index: number, direction: 'up' | 'down') => {

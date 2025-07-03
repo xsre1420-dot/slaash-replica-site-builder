@@ -5,12 +5,11 @@ import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { products as initialProducts, reloadProducts } from "@/data/dummyData";
 import { Product } from "@/types";
-import { useToast } from "@/components/ui/use-toast";
+
 
 export const ProductsList = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const { toast } = useToast();
 
   useEffect(() => {
     // Reload products from localStorage to get the latest data
@@ -20,10 +19,6 @@ export const ProductsList = () => {
 
   const handleDelete = (id: string) => {
     setProducts(products.filter(p => p.id !== id));
-    toast({
-      title: "تم الحذف بنجاح",
-      description: "تم حذف المنتج بنجاح"
-    });
   };
 
   const toggleFavorite = (productId: string) => {

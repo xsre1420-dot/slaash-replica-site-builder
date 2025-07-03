@@ -1,7 +1,6 @@
 
 import { createContext, useContext, useState, ReactNode } from "react";
 import { CartItem, Product } from "@/types";
-import { useToast } from "@/hooks/use-toast";
 
 interface CartContextType {
   cartItems: CartItem[];
@@ -17,7 +16,6 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const { toast } = useToast();
 
   const addToCart = (product: Product, selectedSize?: string, selectedColor?: string) => {
     setCartItems((prevItems) => {

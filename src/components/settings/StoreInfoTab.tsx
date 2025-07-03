@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Upload } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+
 
 interface StoreInfoTabProps {
   settings: {
@@ -15,18 +15,12 @@ interface StoreInfoTabProps {
 }
 
 const StoreInfoTab = ({ settings, setSettings }: StoreInfoTabProps) => {
-  const { toast } = useToast();
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const objectUrl = URL.createObjectURL(file);
       setSettings((prev: any) => ({ ...prev, storeLogo: objectUrl }));
-      
-      toast({
-        title: "تم رفع الصورة",
-        description: "تم رفع شعار المتجر بنجاح",
-      });
     }
   };
 

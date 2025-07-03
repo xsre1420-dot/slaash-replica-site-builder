@@ -1,6 +1,6 @@
 
 import { Order } from "@/types";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Check, X, Loader2 } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+
 
 interface OrdersSimpleTableProps {
   orders: Order[];
@@ -29,21 +29,10 @@ interface OrdersSimpleTableProps {
 }
 
 const OrdersSimpleTable = ({ orders, onUpdateStatus }: OrdersSimpleTableProps) => {
-  const { toast } = useToast();
+  const navigate = useNavigate();
   
   const handleStatusChange = (orderId: string, newStatus: "pending" | "completed" | "cancelled") => {
     onUpdateStatus(orderId, newStatus);
-    
-    const statusMessages = {
-      completed: "تم تحديث حالة الطلب إلى مكتمل",
-      pending: "تم تحديث حالة الطلب إلى قيد الانتظار",
-      cancelled: "تم تحديث حالة الطلب إلى ملغي"
-    };
-    
-    toast({
-      title: statusMessages[newStatus],
-      duration: 2000
-    });
   };
 
   return (

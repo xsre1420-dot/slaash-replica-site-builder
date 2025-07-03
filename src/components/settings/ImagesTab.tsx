@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload, X, ChevronLeft, ChevronRight, Star } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+
 
 interface ImagesTabProps {
   settings: {
@@ -14,7 +14,6 @@ interface ImagesTabProps {
 }
 
 const ImagesTab = ({ settings, setSettings }: ImagesTabProps) => {
-  const { toast } = useToast();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -25,11 +24,6 @@ const ImagesTab = ({ settings, setSettings }: ImagesTabProps) => {
         ...prev, 
         bannerImages: [...prev.bannerImages, objectUrl] 
       }));
-      
-      toast({
-        title: "تم رفع الصورة",
-        description: "تم إضافة صورة البانر بنجاح",
-      });
     }
   };
 
@@ -61,10 +55,6 @@ const ImagesTab = ({ settings, setSettings }: ImagesTabProps) => {
       ...prev,
       primaryBannerIndex: index
     }));
-    toast({
-      title: "تم التحديث",
-      description: "تم تعيين الصورة كصورة رئيسية",
-    });
   };
 
   const nextImage = () => {

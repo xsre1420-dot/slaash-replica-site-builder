@@ -9,14 +9,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+
 import { Order } from "@/types";
 
 const Checkout = () => {
   const { cartItems, removeFromCart, updateQuantity, clearCart, cartTotal } = useCart();
   const { storeSettings } = useStore();
-  const { toast } = useToast();
   const navigate = useNavigate();
+  
+  const [orderCompleted, setOrderCompleted] = useState(false);
   
   const [customerInfo, setCustomerInfo] = useState({
     name: "",
@@ -69,18 +70,18 @@ const Checkout = () => {
     localStorage.setItem('orders', JSON.stringify(updatedOrders));
     
     // Show order completion notification
-    toast({
-      title: "تم الطلب",
-      className: "bg-green-500 text-white border-green-600 mx-auto max-w-fit",
-    });
+    setOrderCompleted(true);
     
-    clearCart();
-    // Navigate to thank you page or back to store
-    navigate("/preview");
+    // Hide notification after 3 seconds and navigate
+    setTimeout(() => {
+      setOrderCompleted(false);
+      clearCart();
+      navigate("/preview");
+    }, 3000);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 relative">
       {/* Header */}
       <div className="text-white p-4" style={{ 
         background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
@@ -306,6 +307,17 @@ const Checkout = () => {
           </>
         )}
       </div>
+
+      {/* Order Completion Notification */}
+      {orderCompleted && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-green-100 border-2 border-green-400 text-green-800 px-8 py-6 rounded-lg shadow-lg max-w-sm mx-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold">تم الطلب</div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

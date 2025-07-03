@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useToast } from "@/hooks/use-toast";
+
 
 interface StatusChangeDropdownProps {
   currentStatus: 'pending' | 'completed' | 'cancelled';
@@ -17,21 +17,10 @@ interface StatusChangeDropdownProps {
 }
 
 const StatusChangeDropdown = ({ currentStatus, orderId, onStatusChange }: StatusChangeDropdownProps) => {
-  const { toast } = useToast();
+  const [selectedStatus, setSelectedStatus] = useState(currentStatus);
 
   const handleStatusChange = (newStatus: 'pending' | 'completed' | 'cancelled') => {
     onStatusChange(orderId, newStatus);
-    
-    const statusMessages = {
-      completed: "تم تحديث حالة الطلب إلى مكتمل",
-      pending: "تم تحديث حالة الطلب إلى قيد الانتظار",
-      cancelled: "تم تحديث حالة الطلب إلى ملغي"
-    };
-    
-    toast({
-      title: statusMessages[newStatus],
-      duration: 2000
-    });
   };
 
   const getStatusDisplay = (status: string) => {

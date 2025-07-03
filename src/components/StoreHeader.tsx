@@ -4,7 +4,7 @@ import { Settings, User, Link as LinkIcon, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
+
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Link } from "react-router-dom";
 
@@ -18,8 +18,8 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(storeName);
   const [logo, setLogo] = useState(storeLogo);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [logoFile, setLogoFile] = useState<File | null>(null);
-  const { toast } = useToast();
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -36,10 +36,6 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
     // and get back the URL. For now, we'll just use the temporary URL
     onUpdateStore(logo, name);
     setIsEditing(false);
-    toast({
-      title: "تم الحفظ",
-      description: "تم تحديث معلومات المتجر بنجاح",
-    });
   };
 
   return (
@@ -161,10 +157,6 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
               <div className="flex gap-2">
                 <Button onClick={() => {
                   navigator.clipboard.writeText("https://yourstore.com/menu");
-                  toast({
-                    title: "تم النسخ",
-                    description: "تم نسخ الرابط بنجاح",
-                  });
                 }}>
                   نسخ
                 </Button>
