@@ -27,7 +27,7 @@ export default function Builder() {
         <div className="bg-white rounded-3xl p-6 mb-8 border border-gray-200 shadow-sm">
           <div className="text-center mb-6">
             <h2 className="text-2xl font-bold mb-2 text-gray-800">رابط المتجر</h2>
-            <p className="text-gray-600">شارك المطعم مع عملائك</p>
+            <p className="text-gray-600">شارك المتجر مع عملائك</p>
           </div>
           
           <div className="flex items-center gap-3 mb-6">

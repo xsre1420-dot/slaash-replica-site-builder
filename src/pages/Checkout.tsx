@@ -119,7 +119,7 @@ const Checkout = () => {
                   boxShadow: '0 8px 25px rgba(99, 102, 241, 0.3)'
                 }}
               >
-                العودة للمنيو
+                العودة للمتجر
               </Button>
             </Link>
           </div>

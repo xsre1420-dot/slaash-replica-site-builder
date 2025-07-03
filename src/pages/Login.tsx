@@ -66,7 +66,7 @@ const Login = () => {
       {/* Header */}
       <header className="bg-white text-gray-800 py-4 px-6 text-center border-b border-gray-100">
         <h1 className="text-xl font-bold flex items-center justify-center text-black">
-          نظام إدارة المطعم <span className="mx-2">🍽️</span>
+          نظام إدارة المتاجر <span className="mx-2">🍽️</span>
         </h1>
       </header>
 
@@ -198,7 +198,7 @@ const Login = () => {
 
       {/* Footer */}
       <footer className="bg-white text-center py-4 text-gray-600 text-sm border-t border-gray-200">
-        <p>جميع الحقوق محفوظة © 2025 نظام إدارة المطعم</p>
+        <p>جميع الحقوق محفوظة © 2025 نظام إدارة المتاجر</p>
       </footer>
     </div>
   );

@@ -84,7 +84,7 @@ const ImagesTab = ({ settings, setSettings }: ImagesTabProps) => {
       <CardHeader>
         <CardTitle className="text-right text-xl text-black">صور البانر</CardTitle>
         <CardDescription className="text-right text-gray-600">
-          أضف صور البانر وحدد الصورة الرئيسية التي ستظهر أولاً في المنيو
+          أضف صور البانر وحدد الصورة الرئيسية التي ستظهر أولاً في المتجر
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

@@ -11,7 +11,7 @@ const Index = () => {
       {/* Header */}
       <div className="w-full bg-primary text-white py-4 px-6 text-center fixed top-0 left-0 z-10">
         <h1 className="text-xl font-bold flex items-center justify-center">
-          نظام إدارة المطعم <span className="mx-2">🍽️</span>
+          نظام إدارة المتاجر <span className="mx-2">🍽️</span>
         </h1>
       </div>
 
@@ -39,7 +39,7 @@ const Index = () => {
       
       {/* Footer */}
       <div className="mt-10 text-center text-sm text-gray-600">
-        <p>جميع الحقوق محفوظة © 2025 نظام إدارة المطاعم والمقاهي</p>
+        <p>جميع الحقوق محفوظة © 2025 نظام إدارة المتاجر والمقاهي</p>
       </div>
     </div>
   );

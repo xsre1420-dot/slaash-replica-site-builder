@@ -111,7 +111,7 @@ const Store = () => {
               )}
               <div className="text-center">
                 <p className="font-bold text-xl text-gray-800">{storeName}</p>
-                <p className="text-xs text-gray-500">منيو المطعم</p>
+                <p className="text-xs text-gray-500">متجر المتجر</p>
               </div>
             </div>
           </div>

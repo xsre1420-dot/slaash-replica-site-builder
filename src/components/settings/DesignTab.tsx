@@ -16,9 +16,9 @@ const DesignTab = ({ settings, setSettings }: DesignTabProps) => {
   return (
     <Card className="border-0 shadow-none bg-gray-50 rounded-2xl">
       <CardHeader>
-        <CardTitle className="text-right text-xl text-black">ألوان المنيو</CardTitle>
+        <CardTitle className="text-right text-xl text-black">ألوان المتجر</CardTitle>
         <CardDescription className="text-right text-gray-600">
-          خصص ألوان صفحة المنيو لتناسب هوية متجرك
+          خصص ألوان صفحة المتجر لتناسب هوية متجرك
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-8">
