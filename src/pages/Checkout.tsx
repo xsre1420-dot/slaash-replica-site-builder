@@ -44,7 +44,7 @@ const Checkout = () => {
   const handleSubmitOrder = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!customerInfo.name || !customerInfo.phone || !customerInfo.address) {
+    if (!customerInfo.name || !customerInfo.phone || !customerInfo.address || !selectedGovernorate) {
       return; // Just return without showing error notification
     }
     
@@ -225,8 +225,8 @@ const Checkout = () => {
                 {/* Governorate Selection */}
                 {storeSettings.deliveryPrices && storeSettings.deliveryPrices.length > 0 && (
                   <div className="text-right">
-                    <Label className="block mb-1 text-black">المحافظة</Label>
-                    <Select value={selectedGovernorate} onValueChange={setSelectedGovernorate}>
+                    <Label className="block mb-1 text-black">المحافظة *</Label>
+                    <Select value={selectedGovernorate} onValueChange={setSelectedGovernorate} required>
                       <SelectTrigger className="text-right text-black border-2 focus:border-blue-500">
                         <SelectValue placeholder="اختر المحافظة" />
                       </SelectTrigger>
