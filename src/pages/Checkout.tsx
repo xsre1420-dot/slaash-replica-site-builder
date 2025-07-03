@@ -310,10 +310,10 @@ const Checkout = () => {
 
       {/* Order Completion Notification */}
       {orderCompleted && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-green-100 border-2 border-green-400 text-green-800 px-8 py-6 rounded-lg shadow-lg max-w-sm mx-4">
+        <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pt-4 px-4">
+          <div className="bg-green-100 border-2 border-green-400 text-green-800 px-12 py-4 rounded-lg shadow-lg w-full max-w-md">
             <div className="text-center">
-              <div className="text-2xl font-bold">تم الطلب</div>
+              <div className="text-xl font-bold">تم الطلب</div>
             </div>
           </div>
         </div>
