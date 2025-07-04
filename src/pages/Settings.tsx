@@ -14,6 +14,8 @@ const Settings = () => {
   const { toast } = useToast();
   const { storeName, storeLogo, storeSettings, updateStore, updateStoreSettings } = useStore();
   
+  const [showSaveNotification, setShowSaveNotification] = useState(false);
+  
   const [settings, setSettings] = useState({
     storeName: storeName,
     storeLogo: storeLogo,
@@ -49,15 +51,27 @@ const Settings = () => {
       deliveryPrices: settings.deliveryPrices
     });
     
-    toast({
-      title: "تم الحفظ",
-      description: "تم حفظ إعدادات المتجر بنجاح",
-    });
+    // Show notification
+    setShowSaveNotification(true);
+    
+    // Hide notification after 3 seconds
+    setTimeout(() => {
+      setShowSaveNotification(false);
+    }, 3000);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 font-arabic">
+    <div className="min-h-screen bg-gray-50 font-arabic relative">
       <SettingsHeader />
+
+      {/* Save Notification */}
+      {showSaveNotification && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="bg-green-500 text-white px-8 py-3 rounded-lg shadow-lg">
+            <div className="text-center font-medium">تم الحفظ</div>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-6xl mx-auto p-6">
         <div className="bg-white rounded-3xl shadow-sm p-8">
