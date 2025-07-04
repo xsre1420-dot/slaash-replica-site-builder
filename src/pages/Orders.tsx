@@ -186,10 +186,10 @@ const Orders = () => {
             </Select>
 
             <Button 
-              className="rounded-2xl"
+              className="rounded-2xl text-white"
               style={{ 
-                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
+                background: 'linear-gradient(135deg, hsl(var(--accent-primary)), hsl(var(--accent-secondary)))',
+                boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)'
               }}
               onClick={() => {
                 setStatusFilter("all");
@@ -244,12 +244,12 @@ const Orders = () => {
                   </div>
                   
                   <Link to={`/orders/${order.id}`}>
-                    <Button 
-                      className="w-full rounded-2xl mt-3"
-                      style={{ 
-                        background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                        boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
-                      }}
+                     <Button 
+                       className="w-full rounded-2xl mt-3 text-white"
+                       style={{ 
+                         background: 'linear-gradient(135deg, hsl(var(--accent-primary)), hsl(var(--accent-secondary)))',
+                         boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)'
+                       }}
                     >
                       <Eye className="w-4 h-4 ml-2" />
                       عرض التفاصيل
