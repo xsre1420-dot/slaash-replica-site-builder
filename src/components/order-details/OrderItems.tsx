@@ -17,7 +17,7 @@ const OrderItems = ({ items }: OrderItemsProps) => {
           >
             <div className="flex items-center">
               <div>
-                <span className="block font-medium">{item.product.price.toLocaleString()} د.ع × {item.quantity}</span>
+                <span className="block font-medium">{item.product.price.toLocaleString()} x {item.quantity}</span>
                 <span className="text-gray-500 text-sm">
                   المجموع: {(item.product.price * item.quantity).toLocaleString()} د.ع
                 </span>

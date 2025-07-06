@@ -161,7 +161,7 @@ const Checkout = () => {
                     <div className="flex items-center">
                       <div className="text-right">
                         <span className="block font-bold text-black">{item.product.name}</span>
-                        <span className="text-black text-sm">{item.product.price.toLocaleString()} د.ع × {item.quantity}</span>
+                        <span className="text-black text-sm">{item.product.price.toLocaleString()} x {item.quantity}</span>
                         {/* Display selected options */}
                         {(item.selectedSize || item.selectedColor) && (
                           <div className="flex gap-2 mt-1 justify-end">
