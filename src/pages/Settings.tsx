@@ -12,13 +12,14 @@ import SettingsActions from "@/components/settings/SettingsActions";
 
 const Settings = () => {
   const { toast } = useToast();
-  const { storeName, storeLogo, storeSettings, updateStore, updateStoreSettings } = useStore();
+  const { storeName, storeLogo, storeGovernorate, storeSettings, updateStore, updateStoreSettings } = useStore();
   
   const [showSaveNotification, setShowSaveNotification] = useState(false);
   
   const [settings, setSettings] = useState({
     storeName: storeName,
     storeLogo: storeLogo,
+    storeGovernorate: storeGovernorate,
     menuBackgroundColor: storeSettings.menuBackgroundColor,
     menuTextColor: storeSettings.menuTextColor,
     menuAccentColor: storeSettings.menuAccentColor,
@@ -31,6 +32,7 @@ const Settings = () => {
     setSettings({
       storeName,
       storeLogo,
+      storeGovernorate,
       menuBackgroundColor: storeSettings.menuBackgroundColor,
       menuTextColor: storeSettings.menuTextColor,
       menuAccentColor: storeSettings.menuAccentColor,
@@ -38,10 +40,10 @@ const Settings = () => {
       primaryBannerIndex: storeSettings.primaryBannerIndex,
       deliveryPrices: storeSettings.deliveryPrices || []
     });
-  }, [storeName, storeLogo, storeSettings]);
+  }, [storeName, storeLogo, storeGovernorate, storeSettings]);
 
   const handleSaveSettings = () => {
-    updateStore(settings.storeLogo, settings.storeName);
+    updateStore(settings.storeLogo, settings.storeName, settings.storeGovernorate);
     updateStoreSettings({
       menuBackgroundColor: settings.menuBackgroundColor,
       menuTextColor: settings.menuTextColor,

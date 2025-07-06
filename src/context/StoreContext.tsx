@@ -18,8 +18,9 @@ interface StoreSettings {
 interface StoreContextType {
   storeName: string;
   storeLogo: string;
+  storeGovernorate: string;
   storeSettings: StoreSettings;
-  updateStore: (logo: string, name: string) => void;
+  updateStore: (logo: string, name: string, governorate?: string) => void;
   updateStoreSettings: (settings: StoreSettings) => void;
 }
 
@@ -28,6 +29,7 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const [storeName, setStoreName] = useState("");
   const [storeLogo, setStoreLogo] = useState("");
+  const [storeGovernorate, setStoreGovernorate] = useState("");
   const [storeSettings, setStoreSettings] = useState<StoreSettings>({
     menuBackgroundColor: "#ffffff",
     menuTextColor: "#333333",
@@ -45,25 +47,28 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         const parsed = JSON.parse(savedSettings);
         setStoreSettings(prev => ({ ...prev, ...parsed }));
         
-        // Also load store name and logo if they exist in settings
+        // Also load store name, logo and governorate if they exist in settings
         if (parsed.storeName) setStoreName(parsed.storeName);
         if (parsed.storeLogo) setStoreLogo(parsed.storeLogo);
+        if (parsed.storeGovernorate) setStoreGovernorate(parsed.storeGovernorate);
       } catch (error) {
         console.error('Failed to parse saved settings:', error);
       }
     }
   }, []);
 
-  const updateStore = (logo: string, name: string) => {
+  const updateStore = (logo: string, name: string, governorate?: string) => {
     setStoreLogo(logo);
     setStoreName(name);
+    if (governorate) setStoreGovernorate(governorate);
     
     // Save to localStorage
     const currentSettings = JSON.parse(localStorage.getItem('storeSettings') || '{}');
     localStorage.setItem('storeSettings', JSON.stringify({
       ...currentSettings,
       storeName: name,
-      storeLogo: logo
+      storeLogo: logo,
+      storeGovernorate: governorate || storeGovernorate
     }));
   };
 
@@ -74,7 +79,8 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('storeSettings', JSON.stringify({
       ...settings,
       storeName,
-      storeLogo
+      storeLogo,
+      storeGovernorate
     }));
   };
 
@@ -82,6 +88,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     <StoreContext.Provider value={{ 
       storeName, 
       storeLogo, 
+      storeGovernorate,
       storeSettings, 
       updateStore, 
       updateStoreSettings 

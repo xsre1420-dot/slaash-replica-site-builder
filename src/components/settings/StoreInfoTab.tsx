@@ -10,6 +10,7 @@ interface StoreInfoTabProps {
   settings: {
     storeName: string;
     storeLogo: string;
+    storeGovernorate: string;
   };
   setSettings: React.Dispatch<React.SetStateAction<any>>;
 }
@@ -40,6 +41,16 @@ const StoreInfoTab = ({ settings, setSettings }: StoreInfoTabProps) => {
             onChange={(e) => setSettings((prev: any) => ({ ...prev, storeName: e.target.value }))}
             className="text-right rounded-2xl border-gray-200 text-black"
             placeholder="أدخل اسم المتجر"
+          />
+        </div>
+
+        <div className="space-y-3">
+          <Label className="text-right block text-black font-medium">محافظة المتجر</Label>
+          <Input
+            value={settings.storeGovernorate}
+            onChange={(e) => setSettings((prev: any) => ({ ...prev, storeGovernorate: e.target.value }))}
+            className="text-right rounded-2xl border-gray-200 text-black"
+            placeholder="أدخل محافظة المتجر"
           />
         </div>
 

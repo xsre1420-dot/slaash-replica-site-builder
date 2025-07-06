@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { Calendar } from "lucide-react";
 import { CardTitle, CardDescription } from "@/components/ui/card";
 import StatusChangeDropdown from "./StatusChangeDropdown";
+import { useStore } from "@/context/StoreContext";
 
 interface OrderHeaderProps {
   orderId: string;
@@ -12,6 +13,7 @@ interface OrderHeaderProps {
 }
 
 const OrderHeader = ({ orderId, date, status, governorate }: OrderHeaderProps) => {
+  const { storeGovernorate } = useStore();
   const handleStatusChange = (orderId: string, newStatus: 'pending' | 'completed' | 'cancelled') => {
     // Get current orders from localStorage
     const storedOrders = localStorage.getItem('orders');
@@ -48,9 +50,9 @@ const OrderHeader = ({ orderId, date, status, governorate }: OrderHeaderProps) =
         </CardTitle>
         <CardDescription className="text-right text-blue-100 mt-2">
           {orderId}
-          {governorate && (
+          {storeGovernorate && (
             <div className="mt-1">
-              المحافظة: {governorate}
+              المحافظة: {storeGovernorate}
             </div>
           )}
         </CardDescription>
