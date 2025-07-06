@@ -14,6 +14,7 @@ interface OrderHeaderProps {
 
 const OrderHeader = ({ orderId, date, status, governorate }: OrderHeaderProps) => {
   const { storeGovernorate } = useStore();
+  
   const handleStatusChange = (orderId: string, newStatus: 'pending' | 'completed' | 'cancelled') => {
     // Get current orders from localStorage
     const storedOrders = localStorage.getItem('orders');
@@ -53,7 +54,7 @@ const OrderHeader = ({ orderId, date, status, governorate }: OrderHeaderProps) =
         </CardDescription>
         {storeGovernorate && (
           <div className="text-right text-blue-100 mt-1 text-sm">
-            المحافظة: {storeGovernorate}
+            محافظة المتجر: {storeGovernorate}
           </div>
         )}
       </div>
