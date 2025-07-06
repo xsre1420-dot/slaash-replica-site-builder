@@ -55,7 +55,12 @@ const StatusChangeDropdown = ({ currentStatus, orderId, onStatusChange }: Status
           {statusDisplay.label}
         </Badge>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="bg-white shadow-lg border rounded-lg z-50">
+      <DropdownMenuContent 
+        align="end" 
+        side="bottom"
+        className="bg-white shadow-lg border rounded-lg z-[9999] min-w-[120px]"
+        sideOffset={5}
+      >
         <DropdownMenuItem 
           onClick={() => handleStatusChange("completed")}
           className="cursor-pointer hover:bg-green-50 flex items-center gap-2"

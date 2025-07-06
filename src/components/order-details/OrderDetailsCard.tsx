@@ -15,9 +15,9 @@ interface OrderDetailsCardProps {
 
 const OrderDetailsCard = ({ order }: OrderDetailsCardProps) => {
   return (
-    <Card className="mb-6 border-0 shadow-lg bg-white rounded-3xl overflow-hidden">
+    <Card className="mb-6 border-0 shadow-lg bg-white rounded-3xl overflow-visible">
       <CardHeader 
-        className="rounded-t-3xl"
+        className="rounded-t-3xl overflow-hidden"
         style={{ 
           background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
           color: 'white'
