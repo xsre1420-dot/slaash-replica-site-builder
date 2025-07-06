@@ -50,12 +50,12 @@ const OrderHeader = ({ orderId, date, status, governorate }: OrderHeaderProps) =
         </CardTitle>
         <CardDescription className="text-right text-blue-100 mt-2">
           {orderId}
+          {storeGovernorate && (
+            <div className="mt-1">
+              المحافظة: {storeGovernorate}
+            </div>
+          )}
         </CardDescription>
-        {storeGovernorate && (
-          <div className="text-right text-blue-100 mt-1 text-sm">
-            المحافظة: {storeGovernorate}
-          </div>
-        )}
       </div>
     </div>
   );
