@@ -184,7 +184,8 @@ const OrderDetails = () => {
             <OrderHeader 
               orderId={order.id} 
               date={order.date} 
-              status={order.status} 
+              status={order.status}
+              governorate={order.customerInfo.governorate}
             />
           </CardHeader>
           <CardContent className="bg-white rounded-b-3xl p-8">

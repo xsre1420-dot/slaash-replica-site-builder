@@ -8,9 +8,10 @@ interface OrderHeaderProps {
   orderId: string;
   date: string;
   status: 'pending' | 'completed' | 'cancelled';
+  governorate?: string;
 }
 
-const OrderHeader = ({ orderId, date, status }: OrderHeaderProps) => {
+const OrderHeader = ({ orderId, date, status, governorate }: OrderHeaderProps) => {
   const handleStatusChange = (orderId: string, newStatus: 'pending' | 'completed' | 'cancelled') => {
     // Get current orders from localStorage
     const storedOrders = localStorage.getItem('orders');
@@ -47,6 +48,11 @@ const OrderHeader = ({ orderId, date, status }: OrderHeaderProps) => {
         </CardTitle>
         <CardDescription className="text-right text-blue-100 mt-2">
           {orderId}
+          {governorate && (
+            <div className="mt-1">
+              المحافظة: {governorate}
+            </div>
+          )}
         </CardDescription>
       </div>
     </div>
