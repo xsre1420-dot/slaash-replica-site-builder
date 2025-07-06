@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Truck, Plus, Trash2 } from "lucide-react";
+import { formatPriceInput, convertArabicToEnglish } from "@/utils/numberUtils";
 
 interface DeliveryPrice {
   governorate: string;
@@ -39,6 +40,21 @@ const DeliveryTab = ({ settings, setSettings }: DeliveryTabProps) => {
         i === index ? { ...item, [field]: value } : item
       )
     }));
+  };
+
+  const handlePriceChange = (index: number, inputValue: string) => {
+    // Convert Arabic numerics to English and format
+    const formattedValue = formatPriceInput(inputValue);
+    
+    // Remove commas before parsing
+    const numericValue = parseFloat(formattedValue.replace(/,/g, '')) || 0;
+    
+    updateDeliveryPrice(index, 'price', numericValue);
+  };
+
+  const formatDisplayPrice = (price: number): string => {
+    if (price === 0) return '';
+    return price.toLocaleString('en-US');
   };
 
   return (
@@ -94,12 +110,11 @@ const DeliveryTab = ({ settings, setSettings }: DeliveryTabProps) => {
                     <div className="flex items-center gap-3">
                       <span className="text-gray-500">د.ع</span>
                       <Input
-                        type="number"
-                        value={delivery.price}
-                        onChange={(e) => updateDeliveryPrice(index, 'price', parseInt(e.target.value) || 0)}
+                        type="text"
+                        value={formatDisplayPrice(delivery.price)}
+                        onChange={(e) => handlePriceChange(index, e.target.value)}
                         className="text-right rounded-2xl border-gray-200 text-black"
-                        placeholder="0"
-                        min="0"
+                        placeholder="أدخل السعر"
                       />
                     </div>
                   </div>
