@@ -13,7 +13,7 @@ const OrderDetailsPageHeader = ({ orderId }: OrderDetailsPageHeaderProps) => {
         <div className="flex justify-between items-center">
           <Link to="/orders">
             <Button variant="ghost" className="p-2 hover:bg-gray-100 rounded-xl">
-              <ArrowLeft className="w-6 h-6" />
+              <ArrowLeft className="w-4 h-4" />
             </Button>
           </Link>
           <h1 className="text-2xl font-bold text-gray-800">تفاصيل الطلب #{orderId}</h1>
