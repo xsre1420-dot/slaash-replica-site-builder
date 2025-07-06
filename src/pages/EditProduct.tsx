@@ -41,7 +41,7 @@ const EditProduct = () => {
         setName(product.name);
         setDescription(product.description);
         setCategory(product.category);
-        setPrice(product.price.toString());
+        setPrice(product.price > 0 ? product.price.toString() : '');
         setMainImage(product.image);
         setAdditionalImages(product.additionalImages || []);
         setSizes(product.sizes || []);
@@ -60,6 +60,19 @@ const EditProduct = () => {
   const handleImagesChange = (newMainImage: string | null, newAdditionalImages: string[]) => {
     setMainImage(newMainImage);
     setAdditionalImages(newAdditionalImages);
+  };
+
+  const handlePriceChange = (inputValue: string) => {
+    // Convert Arabic numerics to English and format
+    const formattedValue = formatPriceInput(inputValue);
+    setPrice(formattedValue);
+  };
+
+  const formatDisplayPrice = (priceValue: string): string => {
+    if (!priceValue) return '';
+    const numericValue = parseFloat(priceValue.replace(/,/g, ''));
+    if (isNaN(numericValue) || numericValue === 0) return '';
+    return numericValue.toLocaleString('en-US');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -197,8 +210,9 @@ const EditProduct = () => {
               id="price" 
               type="text" 
               className="text-right text-black focus:border-blue-500 focus:ring-blue-500" 
-              value={price}
-              onChange={(e) => setPrice(formatPriceInput(e.target.value))}
+              value={formatDisplayPrice(price)}
+              onChange={(e) => handlePriceChange(e.target.value)}
+              placeholder="أدخل السعر"
             />
           </div>
 

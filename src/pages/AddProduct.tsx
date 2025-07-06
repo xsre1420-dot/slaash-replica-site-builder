@@ -38,6 +38,19 @@ const AddProduct = () => {
     setAdditionalImages(newAdditionalImages);
   };
 
+  const handlePriceChange = (inputValue: string) => {
+    // Convert Arabic numerics to English and format
+    const formattedValue = formatPriceInput(inputValue);
+    setPrice(formattedValue);
+  };
+
+  const formatDisplayPrice = (priceValue: string): string => {
+    if (!priceValue) return '';
+    const numericValue = parseFloat(priceValue.replace(/,/g, ''));
+    if (isNaN(numericValue) || numericValue === 0) return '';
+    return numericValue.toLocaleString('en-US');
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -179,9 +192,9 @@ const AddProduct = () => {
                 id="price" 
                 type="text" 
                 className="text-right text-black rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500" 
-                value={price}
-                onChange={(e) => setPrice(formatPriceInput(e.target.value))}
-                placeholder="0"
+                value={formatDisplayPrice(price)}
+                onChange={(e) => handlePriceChange(e.target.value)}
+                placeholder="أدخل السعر"
               />
           </div>
 
