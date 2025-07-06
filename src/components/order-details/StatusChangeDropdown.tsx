@@ -63,7 +63,7 @@ const StatusChangeDropdown = ({ currentStatus, orderId, onStatusChange }: Status
           disabled={isUpdating}
           className={`${statusDisplay.className} ${isUpdating ? 'opacity-70' : ''} transition-all duration-300 ease-in-out flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transform hover:scale-105 active:scale-95`}
         >
-          <Icon className={`h-4 w-4 ${currentStatus === 'pending' || isUpdating ? 'animate-spin' : ''}`} />
+          <Icon className={`w-4 h-4 ${currentStatus === 'pending' || isUpdating ? 'animate-spin' : ''}`} />
           {isUpdating ? 'جاري التحديث...' : statusDisplay.label}
         </button>
       </DropdownMenuTrigger>
@@ -77,21 +77,21 @@ const StatusChangeDropdown = ({ currentStatus, orderId, onStatusChange }: Status
           onClick={() => handleStatusChange("completed")}
           className="cursor-pointer hover:bg-green-50 flex items-center gap-2"
         >
-          <Check className="h-4 w-4 text-green-600" />
+          <Check className="w-4 h-4 text-green-600" />
           <span>مكتمل</span>
         </DropdownMenuItem>
         <DropdownMenuItem 
           onClick={() => handleStatusChange("pending")}
           className="cursor-pointer hover:bg-yellow-50 flex items-center gap-2"
         >
-          <Loader2 className="h-4 w-4 text-yellow-600" />
+          <Loader2 className="w-4 h-4 text-yellow-600" />
           <span>قيد الانتظار</span>
         </DropdownMenuItem>
         <DropdownMenuItem 
           onClick={() => handleStatusChange("cancelled")}
           className="cursor-pointer hover:bg-red-50 flex items-center gap-2"
         >
-          <X className="h-4 w-4 text-red-600" />
+          <X className="w-4 h-4 text-red-600" />
           <span>ملغي</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
