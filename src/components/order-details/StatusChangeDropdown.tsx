@@ -17,7 +17,12 @@ interface StatusChangeDropdownProps {
 
 const StatusChangeDropdown = ({ currentStatus, orderId, onStatusChange }: StatusChangeDropdownProps) => {
   const handleStatusChange = (newStatus: 'pending' | 'completed' | 'cancelled') => {
+    console.log('Status change clicked:', newStatus);
     onStatusChange(orderId, newStatus);
+  };
+
+  const handleDropdownClick = () => {
+    console.log('Dropdown clicked');
   };
 
   const getStatusDisplay = (status: string) => {
@@ -50,10 +55,13 @@ const StatusChangeDropdown = ({ currentStatus, orderId, onStatusChange }: Status
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Badge className={`${statusDisplay.className} transition-colors flex items-center gap-1 px-3 py-1`}>
+        <button 
+          onClick={handleDropdownClick}
+          className={`${statusDisplay.className} transition-colors flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+        >
           <Icon className={`h-3 w-3 ${currentStatus === 'pending' ? 'animate-spin' : ''}`} />
           {statusDisplay.label}
-        </Badge>
+        </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent 
         align="end" 
