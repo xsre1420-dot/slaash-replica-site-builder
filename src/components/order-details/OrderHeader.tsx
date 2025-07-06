@@ -4,6 +4,8 @@ import { Calendar } from "lucide-react";
 import { CardTitle, CardDescription } from "@/components/ui/card";
 import StatusChangeDropdown from "./StatusChangeDropdown";
 import { useStore } from "@/context/StoreContext";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface OrderHeaderProps {
   orderId: string;
@@ -12,25 +14,44 @@ interface OrderHeaderProps {
   governorate?: string;
 }
 
-const OrderHeader = ({ orderId, date, status, governorate }: OrderHeaderProps) => {
+const OrderHeader = ({ orderId, date, status: initialStatus, governorate }: OrderHeaderProps) => {
   const { storeGovernorate } = useStore();
+  const [currentStatus, setCurrentStatus] = useState(initialStatus);
+  const { toast } = useToast();
   
-  const handleStatusChange = (orderId: string, newStatus: 'pending' | 'completed' | 'cancelled') => {
-    // Get current orders from localStorage
-    const storedOrders = localStorage.getItem('orders');
-    if (storedOrders) {
-      try {
+  const handleStatusChange = async (orderId: string, newStatus: 'pending' | 'completed' | 'cancelled') => {
+    try {
+      // Get current orders from localStorage
+      const storedOrders = localStorage.getItem('orders');
+      if (storedOrders) {
         const orders = JSON.parse(storedOrders);
         const updatedOrders = orders.map((order: any) =>
           order.id === orderId ? { ...order, status: newStatus } : order
         );
         localStorage.setItem('orders', JSON.stringify(updatedOrders));
         
-        // Reload the page to reflect changes
-        window.location.reload();
-      } catch (error) {
-        console.error('Error updating order status:', error);
+        // Update local state for smooth transition
+        setCurrentStatus(newStatus);
+        
+        // Show success message
+        const statusMessages = {
+          completed: "تم تحديث حالة الطلب إلى مكتمل",
+          pending: "تم تحديث حالة الطلب إلى قيد الانتظار", 
+          cancelled: "تم تحديث حالة الطلب إلى ملغي"
+        };
+        
+        toast({
+          title: statusMessages[newStatus],
+          duration: 2000
+        });
       }
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      toast({
+        title: "حدث خطأ في تحديث حالة الطلب",
+        variant: "destructive",
+        duration: 2000
+      });
     }
   };
 
@@ -44,7 +65,7 @@ const OrderHeader = ({ orderId, date, status, governorate }: OrderHeaderProps) =
         <CardTitle className="text-right flex items-center justify-end gap-3 text-white">
           تفاصيل الطلب
           <StatusChangeDropdown 
-            currentStatus={status}
+            currentStatus={currentStatus}
             orderId={orderId}
             onStatusChange={handleStatusChange}
           />

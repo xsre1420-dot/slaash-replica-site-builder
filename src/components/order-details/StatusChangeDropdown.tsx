@@ -16,9 +16,12 @@ interface StatusChangeDropdownProps {
 }
 
 const StatusChangeDropdown = ({ currentStatus, orderId, onStatusChange }: StatusChangeDropdownProps) => {
-  const handleStatusChange = (newStatus: 'pending' | 'completed' | 'cancelled') => {
-    console.log('Status change clicked:', newStatus);
-    onStatusChange(orderId, newStatus);
+  const [isUpdating, setIsUpdating] = useState(false);
+  
+  const handleStatusChange = async (newStatus: 'pending' | 'completed' | 'cancelled') => {
+    setIsUpdating(true);
+    await onStatusChange(orderId, newStatus);
+    setIsUpdating(false);
   };
 
   const handleDropdownClick = () => {
@@ -31,20 +34,20 @@ const StatusChangeDropdown = ({ currentStatus, orderId, onStatusChange }: Status
         return {
           label: "مكتمل",
           icon: Check,
-          className: "bg-green-500 text-white hover:bg-green-600 cursor-pointer"
+          className: "bg-green-500 text-white hover:bg-green-600 cursor-pointer border-green-500"
         };
       case 'cancelled':
         return {
           label: "ملغي",
           icon: X,
-          className: "bg-red-500 text-white hover:bg-red-600 cursor-pointer"
+          className: "bg-red-500 text-white hover:bg-red-600 cursor-pointer border-red-500"
         };
       case 'pending':
       default:
         return {
           label: "قيد الانتظار",
           icon: Loader2,
-          className: "bg-yellow-500 text-white hover:bg-yellow-600 cursor-pointer"
+          className: "bg-yellow-500 text-white hover:bg-yellow-600 cursor-pointer border-yellow-500"
         };
     }
   };
@@ -57,10 +60,11 @@ const StatusChangeDropdown = ({ currentStatus, orderId, onStatusChange }: Status
       <DropdownMenuTrigger asChild>
         <button 
           onClick={handleDropdownClick}
-          className={`${statusDisplay.className} transition-colors flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+          disabled={isUpdating}
+          className={`${statusDisplay.className} ${isUpdating ? 'opacity-70' : ''} transition-all duration-300 ease-in-out flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transform hover:scale-105 active:scale-95`}
         >
-          <Icon className={`h-3 w-3 ${currentStatus === 'pending' ? 'animate-spin' : ''}`} />
-          {statusDisplay.label}
+          <Icon className={`h-4 w-4 ${currentStatus === 'pending' || isUpdating ? 'animate-spin' : ''}`} />
+          {isUpdating ? 'جاري التحديث...' : statusDisplay.label}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent 
