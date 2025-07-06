@@ -57,6 +57,7 @@ const Checkout = () => {
         phone: customerInfo.phone,
         address: customerInfo.address,
         notes: customerInfo.notes || undefined,
+        governorate: selectedGovernorate,
       },
       total: totalWithDelivery,
       date: new Date().toISOString(),
