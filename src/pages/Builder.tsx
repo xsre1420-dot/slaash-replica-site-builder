@@ -137,7 +137,7 @@ export default function Builder() {
                 منتج جديد
               </Link>
             </div>
-            <CardDescription className="text-gray-500">إدارة قائمة الطعام</CardDescription>
+            <CardDescription className="text-gray-500">إدارة قائمة المنتجات</CardDescription>
           </CardHeader>
           <CardContent>
             <ProductsList />

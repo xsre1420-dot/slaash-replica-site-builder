@@ -35,8 +35,8 @@ export const ProductsList = () => {
         <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full flex items-center justify-center">
           <div className="text-4xl">🍽️</div>
         </div>
-        <h3 className="text-xl font-bold text-gray-700 mb-2">لا توجد وجبات مسجلة</h3>
-        <p className="text-gray-500 mb-6">يمكنك البدء بإضافة وجبات جديدة</p>
+        <h3 className="text-xl font-bold text-gray-700 mb-2">لا توجد منتجات مسجلة</h3>
+        <p className="text-gray-500 mb-6">يمكنك البدء بإضافة منتجات جديدة</p>
         <Link to="/add-product">
           <Button 
             className="text-white rounded-full px-8 border-0 shadow-lg"
