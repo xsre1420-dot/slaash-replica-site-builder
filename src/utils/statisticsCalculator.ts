@@ -3,38 +3,29 @@ import { RealStatistics, DatabaseData } from "@/types/statistics";
 
 export const getDefaultStatistics = (): RealStatistics => {
   return {
-    totalRevenue: 45000,
-    totalOrders: 128,
-    totalVisitors: 450,
-    totalProducts: 25,
-    averageOrderValue: 350,
-    conversionRate: 28.4,
-    visitorsGrowth: 12.5,
-    ordersGrowth: 8.3,
-    revenueGrowth: 15.7,
-    productsGrowth: 5.2,
-    newCustomers: 45,
-    returningCustomers: 83,
-    customerLifetimeValue: 2250,
-    cartAbandonmentRate: 23.4,
-    averageDeliveryTime: 28,
-    cancelledOrdersRate: 4.2,
-    topProducts: [
-      { name: "برجر لحم", orders: 25, revenue: 12500, percentage: 19.5 },
-      { name: "بيتزا مارغريتا", orders: 18, revenue: 9000, percentage: 14.1 },
-      { name: "شاورما دجاج", orders: 15, revenue: 6000, percentage: 11.7 },
-      { name: "سلطة قيصر", orders: 12, revenue: 3600, percentage: 9.4 },
-      { name: "مشروب غازي", orders: 30, revenue: 1500, percentage: 23.4 },
-      { name: "عصير طبيعي", orders: 28, revenue: 2800, percentage: 21.9 }
-    ],
+    totalRevenue: 0,
+    totalOrders: 0,
+    totalVisitors: 0,
+    totalProducts: 0,
+    averageOrderValue: 0,
+    conversionRate: 0,
+    visitorsGrowth: 0,
+    ordersGrowth: 0,
+    revenueGrowth: 0,
+    productsGrowth: 0,
+    newCustomers: 0,
+    returningCustomers: 0,
+    customerLifetimeValue: 0,
+    cartAbandonmentRate: 0,
+    averageDeliveryTime: 0,
+    cancelledOrdersRate: 0,
+    topProducts: [],
     paymentMethods: [
-      { name: "الدفع عند الاستلام", value: 65, color: "#6D63F2" },
-      { name: "بطاقة ائتمان", value: 25, color: "#8B5CF6" },
-      { name: "محفظة رقمية", value: 10, color: "#A855F7" }
+      { name: "الدفع عند الاستلام", value: 0, color: "#6D63F2" },
+      { name: "بطاقة ائتمان", value: 0, color: "#8B5CF6" },
+      { name: "محفظة رقمية", value: 0, color: "#A855F7" }
     ],
-    peakTimes: [
-      { time: "12:00 - 13:00", orders: 45, percentage: 25 }
-    ]
+    peakTimes: []
   };
 };
 
@@ -76,7 +67,7 @@ export const calculateStatistics = (data: DatabaseData): RealStatistics => {
   // Average delivery time
   const deliveryTimes = orders.filter(order => order.delivery_time).map(order => order.delivery_time);
   const averageDeliveryTime = deliveryTimes.length > 0 ? 
-    deliveryTimes.reduce((sum, time) => sum + time, 0) / deliveryTimes.length : 30;
+    deliveryTimes.reduce((sum, time) => sum + time, 0) / deliveryTimes.length : 0;
 
   // Top products calculation
   const productSales: { [key: string]: { name: string; orders: number; revenue: number } } = {};
@@ -100,11 +91,7 @@ export const calculateStatistics = (data: DatabaseData): RealStatistics => {
 
   // Add default products if none exist
   if (topProducts.length === 0) {
-    topProducts = [
-      { name: "برجر لحم", orders: 25, revenue: 12500, percentage: 19.5 },
-      { name: "بيتزا مارغريتا", orders: 18, revenue: 9000, percentage: 14.1 },
-      { name: "شاورما دجاج", orders: 15, revenue: 6000, percentage: 11.7 }
-    ];
+    topProducts = [];
   }
 
   // Payment methods calculation
@@ -117,17 +104,17 @@ export const calculateStatistics = (data: DatabaseData): RealStatistics => {
   const paymentMethods = [
     { 
       name: "الدفع عند الاستلام", 
-      value: totalOrders > 0 ? Math.round(((paymentMethodCounts.cash_on_delivery || 0) / totalOrders) * 100) : 65,
+      value: totalOrders > 0 ? Math.round(((paymentMethodCounts.cash_on_delivery || 0) / totalOrders) * 100) : 0,
       color: "#6D63F2" 
     },
     { 
       name: "بطاقة ائتمان", 
-      value: totalOrders > 0 ? Math.round(((paymentMethodCounts.credit_card || 0) / totalOrders) * 100) : 25,
+      value: totalOrders > 0 ? Math.round(((paymentMethodCounts.credit_card || 0) / totalOrders) * 100) : 0,
       color: "#8B5CF6" 
     },
     { 
       name: "محفظة رقمية", 
-      value: totalOrders > 0 ? Math.round(((paymentMethodCounts.digital_wallet || 0) / totalOrders) * 100) : 10,
+      value: totalOrders > 0 ? Math.round(((paymentMethodCounts.digital_wallet || 0) / totalOrders) * 100) : 0,
       color: "#A855F7" 
     },
   ];
@@ -150,28 +137,26 @@ export const calculateStatistics = (data: DatabaseData): RealStatistics => {
 
   // Add default peak time if none exist
   if (peakTimes.length === 0) {
-    peakTimes = [
-      { time: "12:00 - 13:00", orders: 45, percentage: 25 }
-    ];
+    peakTimes = [];
   }
 
   const finalStats = {
-    totalRevenue: totalRevenue || 45000,
-    totalOrders: totalOrders || 128,
-    totalVisitors: totalVisitors || 450,
-    totalProducts: totalProducts || 25,
-    averageOrderValue: averageOrderValue || 350,
-    conversionRate: conversionRate || 28.4,
-    visitorsGrowth: 12.5,
-    ordersGrowth: 8.3,
-    revenueGrowth: 15.7,
-    productsGrowth: 5.2,
-    newCustomers: newCustomers || 45,
-    returningCustomers: returningCustomers || 83,
-    customerLifetimeValue: customerLifetimeValue || 2250,
-    cartAbandonmentRate: 23.4,
-    averageDeliveryTime: averageDeliveryTime || 28,
-    cancelledOrdersRate: cancelledOrdersRate || 4.2,
+    totalRevenue: totalRevenue,
+    totalOrders: totalOrders,
+    totalVisitors: totalVisitors,
+    totalProducts: totalProducts,
+    averageOrderValue: averageOrderValue,
+    conversionRate: conversionRate,
+    visitorsGrowth: 0,
+    ordersGrowth: 0,
+    revenueGrowth: 0,
+    productsGrowth: 0,
+    newCustomers: newCustomers,
+    returningCustomers: returningCustomers,
+    customerLifetimeValue: customerLifetimeValue,
+    cartAbandonmentRate: 0,
+    averageDeliveryTime: averageDeliveryTime,
+    cancelledOrdersRate: cancelledOrdersRate,
     topProducts,
     paymentMethods,
     peakTimes

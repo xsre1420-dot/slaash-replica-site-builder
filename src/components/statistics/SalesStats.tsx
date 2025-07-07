@@ -47,7 +47,7 @@ export const SalesStats = ({ stats, topProducts }: SalesStatsProps) => {
         />
         <StatCard
           title="أفضل المنتجات"
-          value={topProducts[0]?.name || "برجر لحم"}
+          value={topProducts.length > 0 ? topProducts[0].name : "لا توجد منتجات"}
           icon={Eye}
           gradient="bg-gradient-to-br from-green-500 to-green-600"
         />
