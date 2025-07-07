@@ -12,7 +12,6 @@ export interface RealStatistics {
   productsGrowth: number;
   newCustomers: number;
   returningCustomers: number;
-  customerLifetimeValue: number;
   cartAbandonmentRate: number;
   averageDeliveryTime: number;
   cancelledOrdersRate: number;

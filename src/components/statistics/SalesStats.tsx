@@ -27,21 +27,21 @@ export const SalesStats = ({ stats, topProducts }: SalesStatsProps) => {
         <StatCard
           title="إجمالي المبيعات"
           value={`${stats.totalRevenue.toLocaleString()} د.ع`}
-          growth={stats.revenueGrowth}
+          growth={0}
           icon={DollarSign}
           gradient="bg-gradient-to-br from-[#6D63F2] to-[#5B52E8]"
         />
         <StatCard
           title="إجمالي الطلبات"
           value={stats.totalOrders.toLocaleString()}
-          growth={stats.ordersGrowth}
+          growth={0}
           icon={Package}
           gradient="bg-gradient-to-br from-purple-500 to-purple-600"
         />
         <StatCard
           title="متوسط قيمة الطلب"
           value={`${stats.averageOrderValue.toLocaleString()} د.ع`}
-          growth={5.2}
+          growth={0}
           icon={TrendingUp}
           gradient="bg-gradient-to-br from-blue-500 to-blue-600"
         />

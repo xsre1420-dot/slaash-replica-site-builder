@@ -25,21 +25,21 @@ export const PerformanceStats = ({ stats }: PerformanceStatsProps) => {
         <StatCard
           title="معدل التحويل"
           value={`${stats.conversionRate}%`}
-          growth={2.3}
+          growth={0}
           icon={TrendingUp}
           gradient="bg-gradient-to-br from-[#6D63F2] to-[#5B52E8]"
         />
         <StatCard
           title="زوار المتجر"
           value={stats.totalVisitors.toLocaleString()}
-          growth={stats.visitorsGrowth}
+          growth={0}
           icon={Eye}
           gradient="bg-gradient-to-br from-blue-500 to-blue-600"
         />
         <StatCard
           title="معدل هجر السلة"
           value={`${stats.cartAbandonmentRate}%`}
-          growth={-5.2}
+          growth={0}
           icon={ShoppingCart}
           gradient="bg-gradient-to-br from-orange-500 to-orange-600"
         />

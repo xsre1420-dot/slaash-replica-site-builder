@@ -6,8 +6,6 @@ import { Link } from "react-router-dom";
 import { SalesStats } from "@/components/statistics/SalesStats";
 import { CustomerStats } from "@/components/statistics/CustomerStats";
 import { PerformanceStats } from "@/components/statistics/PerformanceStats";
-import { PaymentStats } from "@/components/statistics/PaymentStats";
-import { TimeBasedStats } from "@/components/statistics/TimeBasedStats";
 import { TopProductsSection } from "@/components/statistics/TopProductsSection";
 import { DateRangeControls } from "@/components/statistics/DateRangeControls";
 import { useRealStatistics } from "@/hooks/useRealStatistics";
@@ -108,8 +106,6 @@ const Statistics = () => {
         <SalesStats stats={stats} topProducts={stats.topProducts} />
         <CustomerStats stats={stats} />
         <PerformanceStats stats={stats} />
-        <PaymentStats paymentMethods={stats.paymentMethods} />
-        <TimeBasedStats peakTimes={stats.peakTimes} />
         <TopProductsSection topProducts={stats.topProducts} />
       </div>
     </div>

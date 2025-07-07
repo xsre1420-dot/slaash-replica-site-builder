@@ -15,7 +15,6 @@ export const getDefaultStatistics = (): RealStatistics => {
     productsGrowth: 0,
     newCustomers: 0,
     returningCustomers: 0,
-    customerLifetimeValue: 0,
     cartAbandonmentRate: 0,
     averageDeliveryTime: 0,
     cancelledOrdersRate: 0,
@@ -57,8 +56,6 @@ export const calculateStatistics = (data: DatabaseData): RealStatistics => {
   // Customer calculations
   const newCustomers = customers.filter(customer => customer.total_orders === 1).length;
   const returningCustomers = customers.filter(customer => customer.total_orders > 1).length;
-  const customerLifetimeValue = customers.length > 0 ? 
-    customers.reduce((sum, customer) => sum + parseFloat(customer.total_spent || 0), 0) / customers.length : 0;
 
   // Order status calculations
   const cancelledOrders = orders.filter(order => order.status === 'cancelled').length;
@@ -153,7 +150,6 @@ export const calculateStatistics = (data: DatabaseData): RealStatistics => {
     productsGrowth: 0,
     newCustomers: newCustomers,
     returningCustomers: returningCustomers,
-    customerLifetimeValue: customerLifetimeValue,
     cartAbandonmentRate: 0,
     averageDeliveryTime: averageDeliveryTime,
     cancelledOrdersRate: cancelledOrdersRate,
