@@ -1,11 +1,17 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { loginUser, registerUser, initializeOwnerContext, RestaurantOwner } from '@/lib/auth';
+import { supabase } from '@/integrations/supabase/client';
+
+interface User {
+  id: string;
+  username: string;
+  store_name?: string;
+}
 
 interface AuthContextType {
-  user: RestaurantOwner | null;
-  login: (username: string, password: string) => Promise<{ error?: string }>;
-  register: (username: string, password: string, restaurantName?: string) => Promise<{ error?: string }>;
+  user: User | null;
+  login: (email: string, password: string) => Promise<{ error?: string }>;
+  register: (email: string, password: string, username: string, storeName?: string) => Promise<{ error?: string }>;
   logout: () => void;
   loading: boolean;
 }
@@ -25,42 +31,72 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<RestaurantOwner | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Initialize auth state from localStorage
+  // Initialize auth state from Supabase
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const storedUser = localStorage.getItem('restaurantOwner');
-        if (storedUser) {
-          const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
-          // Initialize the database context for RLS policies
-          await initializeOwnerContext(parsedUser.id);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          // Get user profile
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          if (profile) {
+            setUser({
+              id: profile.id,
+              username: profile.username,
+              store_name: profile.store_name
+            });
+          }
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
-        // Clear invalid stored data
-        localStorage.removeItem('restaurantOwner');
       } finally {
         setLoading(false);
       }
     };
 
     initializeAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profile) {
+          setUser({
+            id: profile.id,
+            username: profile.username,
+            store_name: profile.store_name
+          });
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (username: string, password: string) => {
+  const login = async (email: string, password: string) => {
     try {
-      const result = await loginUser(username, password);
-      if (result.error) {
-        return { error: result.error };
-      }
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
       
-      if (result.user) {
-        setUser(result.user);
-        localStorage.setItem('restaurantOwner', JSON.stringify(result.user));
+      if (error) {
+        return { error: error.message };
       }
       
       return {};
@@ -69,16 +105,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const register = async (username: string, password: string, restaurantName?: string) => {
+  const register = async (email: string, password: string, username: string, storeName?: string) => {
     try {
-      const result = await registerUser(username, password, restaurantName);
-      if (result.error) {
-        return { error: result.error };
-      }
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username,
+            store_name: storeName || 'متجري'
+          }
+        }
+      });
       
-      if (result.user) {
-        setUser(result.user);
-        localStorage.setItem('restaurantOwner', JSON.stringify(result.user));
+      if (error) {
+        return { error: error.message };
       }
       
       return {};
@@ -87,11 +128,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('restaurantOwner');
-    // Clear the database context
-    // Note: The context will be cleared when the page refreshes or user logs in again
   };
 
   const value = {

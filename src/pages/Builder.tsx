@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import StoreHeader from "@/components/StoreHeader";
 import { useStore } from "@/context/StoreContext";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Builder() {
   const { storeName, storeLogo, updateStore } = useStore();
+  const { user } = useAuth();
 
   return (
     <div className="min-h-screen bg-gray-50 font-arabic">
@@ -32,15 +34,16 @@ export default function Builder() {
           
           <div className="flex items-center gap-3 mb-6">
             <Input 
-              value={`${window.location.origin}/store`}
+              value={user ? `${window.location.origin}/store/${user.username}` : 'جاري التحميل...'}
               readOnly 
               className="text-left bg-gray-50 border-gray-200 text-gray-700 rounded-2xl"
             />
             <Button 
               className="bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200 rounded-2xl"
               onClick={() => {
-                navigator.clipboard.writeText(`${window.location.origin}/store`);
-                // You could add a toast notification here
+                if (user) {
+                  navigator.clipboard.writeText(`${window.location.origin}/store/${user.username}`);
+                }
               }}
             >
               نسخ

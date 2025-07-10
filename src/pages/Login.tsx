@@ -1,32 +1,45 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, User, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Link, useNavigate } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { loginUser, registerUser } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
+  const [storeName, setStoreName] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   
-  const { login } = useAuth();
+  const { login, register, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate("/builder");
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!username.trim() || !password.trim()) {
-      setError("يرجى إدخال اسم المستخدم وكلمة المرور");
+    if (!email.trim() || !password.trim()) {
+      setError("يرجى إدخال البريد الإلكتروني وكلمة المرور");
+      return;
+    }
+
+    if (isRegistering && !username.trim()) {
+      setError("يرجى إدخال اسم المستخدم");
       return;
     }
 
@@ -35,23 +48,17 @@ const Login = () => {
 
     try {
       const result = isRegistering 
-        ? await registerUser(username, password)
-        : await loginUser(username, password);
+        ? await register(email, password, username, storeName || undefined)
+        : await login(email, password);
 
       if (result.error) {
         setError(result.error);
-      } else if (result.user) {
-        // Use the login function from AuthContext with correct parameters
-        const loginResult = await login(username, password);
-        if (loginResult.error) {
-          setError(loginResult.error);
-        } else {
-          toast({
-            title: isRegistering ? "تم إنشاء الحساب بنجاح" : "تم تسجيل الدخول بنجاح",
-            description: `مرحباً ${result.user.username}`
-          });
-          navigate("/builder");
-        }
+      } else {
+        toast({
+          title: isRegistering ? "تم إنشاء الحساب بنجاح" : "تم تسجيل الدخول بنجاح",
+          description: isRegistering ? "يمكنك الآن استخدام لوحة التحكم" : "مرحباً بك مرة أخرى"
+        });
+        navigate("/builder");
       }
     } catch (error) {
       console.error('Auth error:', error);
@@ -99,18 +106,18 @@ const Login = () => {
               </Alert>
             )}
 
-            {/* Username Input */}
+            {/* Email Input */}
             <div className="mb-6">
-              <label htmlFor="username" className="block text-right text-black mb-2 font-medium">
-                اسم المستخدم
+              <label htmlFor="email" className="block text-right text-black mb-2 font-medium">
+                البريد الإلكتروني
               </label>
               <div className="relative">
                 <Input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="أدخل اسم المستخدم"
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="أدخل البريد الإلكتروني"
                   className="pl-10 text-right text-black border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500"
                   dir="rtl"
                   disabled={isLoading}
@@ -118,6 +125,50 @@ const Login = () => {
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
               </div>
             </div>
+
+            {/* Username Input (only for registration) */}
+            {isRegistering && (
+              <div className="mb-6">
+                <label htmlFor="username" className="block text-right text-black mb-2 font-medium">
+                  اسم المستخدم
+                </label>
+                <div className="relative">
+                  <Input
+                    id="username"
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="أدخل اسم المستخدم"
+                    className="pl-10 text-right text-black border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500"
+                    dir="rtl"
+                    disabled={isLoading}
+                  />
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                </div>
+              </div>
+            )}
+
+            {/* Store Name Input (only for registration) */}
+            {isRegistering && (
+              <div className="mb-6">
+                <label htmlFor="storeName" className="block text-right text-black mb-2 font-medium">
+                  اسم المتجر (اختياري)
+                </label>
+                <div className="relative">
+                  <Input
+                    id="storeName"
+                    type="text"
+                    value={storeName}
+                    onChange={(e) => setStoreName(e.target.value)}
+                    placeholder="أدخل اسم المتجر"
+                    className="pl-10 text-right text-black border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500"
+                    dir="rtl"
+                    disabled={isLoading}
+                  />
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                </div>
+              </div>
+            )}
 
             {/* Password Input */}
             <div className="mb-6">

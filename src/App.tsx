@@ -22,6 +22,7 @@ import Statistics from "./pages/Statistics";
 import { CartProvider } from "./context/CartContext";
 import { StoreProvider } from "./context/StoreContext";
 import { AuthProvider } from "./context/AuthContext";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -37,18 +38,18 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
-                <Route path="/builder" element={<Builder />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/statistics" element={<Statistics />} />
-                <Route path="/add-product" element={<AddProduct />} />
-                <Route path="/edit-product/:productId" element={<EditProduct />} />
-                <Route path="/preview" element={<PreviewStore />} />
-                <Route path="/store" element={<Store />} />
-                <Route path="/product-details/:productId" element={<ProductDetails />} />
-                <Route path="/categories" element={<Categories />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route path="/orders" element={<Orders />} />
-                <Route path="/orders/:orderId" element={<OrderDetails />} />
+                <Route path="/builder" element={<ProtectedRoute><Builder /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
+                <Route path="/add-product" element={<ProtectedRoute><AddProduct /></ProtectedRoute>} />
+                <Route path="/edit-product/:productId" element={<ProtectedRoute><EditProduct /></ProtectedRoute>} />
+                <Route path="/categories" element={<ProtectedRoute><Categories /></ProtectedRoute>} />
+                <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+                <Route path="/orders/:orderId" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
+                <Route path="/store/:username" element={<Store />} />
+                <Route path="/store/:username/product/:productId" element={<ProductDetails />} />
+                <Route path="/store/:username/checkout" element={<Checkout />} />
+                <Route path="/preview" element={<ProtectedRoute><PreviewStore /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

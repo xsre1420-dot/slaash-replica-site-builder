@@ -262,6 +262,30 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          created_at: string | null
+          id: string
+          store_name: string | null
+          updated_at: string | null
+          username: string
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          store_name?: string | null
+          updated_at?: string | null
+          username: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          store_name?: string | null
+          updated_at?: string | null
+          username?: string
+        }
+        Relationships: []
+      }
       restaurant_owners: {
         Row: {
           created_at: string
