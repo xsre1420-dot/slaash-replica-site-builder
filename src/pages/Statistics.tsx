@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, RefreshCw } from "lucide-react";
+import { ArrowLeft, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { SalesStats } from "@/components/statistics/SalesStats";
 import { CustomerStats } from "@/components/statistics/CustomerStats";
@@ -68,26 +68,14 @@ const Statistics = () => {
               </Button>
             </Link>
             <h1 className="text-2xl font-bold text-gray-800">الإحصائيات والتقارير</h1>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                className="rounded-2xl"
-                onClick={refetch}
-              >
-                <RefreshCw className="w-4 h-4 ml-2" />
-                تحديث
-              </Button>
-              <Button 
-                className="rounded-2xl text-white"
-                style={{ 
-                  background: 'linear-gradient(135deg, #6D63F2, #5B52E8)',
-                  boxShadow: '0 4px 15px rgba(109, 99, 242, 0.3)'
-                }}
-              >
-                <Download className="w-4 h-4 ml-2" />
-                تصدير
-              </Button>
-            </div>
+            <Button 
+              variant="outline" 
+              className="rounded-2xl"
+              onClick={refetch}
+            >
+              <RefreshCw className="w-4 h-4 ml-2" />
+              تحديث
+            </Button>
           </div>
         </div>
       </div>
