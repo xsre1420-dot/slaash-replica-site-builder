@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { ArrowLeft, User, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -113,7 +112,6 @@ const Login = () => {
               </div>
             </div>
 
-
             {/* Password Input */}
             <div className="mb-6">
               <label htmlFor="password" className="block text-right text-black mb-2 font-medium">
@@ -165,7 +163,6 @@ const Login = () => {
               </span>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-
           </form>
         </div>
       </div>
