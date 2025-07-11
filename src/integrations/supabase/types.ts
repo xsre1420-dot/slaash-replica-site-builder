@@ -316,6 +316,54 @@ export type Database = {
         }
         Relationships: []
       }
+      store_settings: {
+        Row: {
+          banner_images: string[] | null
+          created_at: string
+          delivery_prices: Json | null
+          id: string
+          menu_accent_color: string | null
+          menu_background_color: string | null
+          menu_text_color: string | null
+          owner_id: string
+          primary_banner_index: number | null
+          store_governorate: string | null
+          store_logo: string | null
+          store_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          banner_images?: string[] | null
+          created_at?: string
+          delivery_prices?: Json | null
+          id?: string
+          menu_accent_color?: string | null
+          menu_background_color?: string | null
+          menu_text_color?: string | null
+          owner_id: string
+          primary_banner_index?: number | null
+          store_governorate?: string | null
+          store_logo?: string | null
+          store_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          banner_images?: string[] | null
+          created_at?: string
+          delivery_prices?: Json | null
+          id?: string
+          menu_accent_color?: string | null
+          menu_background_color?: string | null
+          menu_text_color?: string | null
+          owner_id?: string
+          primary_banner_index?: number | null
+          store_governorate?: string | null
+          store_logo?: string | null
+          store_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       store_visits: {
         Row: {
           created_at: string
