@@ -12,14 +12,11 @@ import { useToast } from "@/hooks/use-toast";
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [username, setUsername] = useState("");
-  const [storeName, setStoreName] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isRegistering, setIsRegistering] = useState(false);
   
-  const { login, register, user } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -38,25 +35,18 @@ const Login = () => {
       return;
     }
 
-    if (isRegistering && !username.trim()) {
-      setError("يرجى إدخال اسم المستخدم");
-      return;
-    }
-
     setIsLoading(true);
     setError(null);
 
     try {
-      const result = isRegistering 
-        ? await register(email, password, username, storeName || undefined)
-        : await login(email, password);
+      const result = await login(email, password);
 
       if (result.error) {
         setError(result.error);
       } else {
         toast({
-          title: isRegistering ? "تم إنشاء الحساب بنجاح" : "تم تسجيل الدخول بنجاح",
-          description: isRegistering ? "يمكنك الآن استخدام لوحة التحكم" : "مرحباً بك مرة أخرى"
+          title: "تم تسجيل الدخول بنجاح",
+          description: "مرحباً بك مرة أخرى"
         });
         navigate("/builder");
       }
@@ -86,13 +76,10 @@ const Login = () => {
                  boxShadow: '0 4px 15px rgba(91, 71, 245, 0.3)'
                }}>
             <h2 className="text-2xl font-bold mb-2 text-white">
-              {isRegistering ? "إنشاء حساب جديد" : "تسجيل الدخول"}
+              تسجيل الدخول
             </h2>
             <p className="text-sm opacity-90 text-white">
-              {isRegistering 
-                ? "أدخل بيانات الحساب الجديد" 
-                : "أدخل بيانات الدخول لإدارة مطعمك"
-              }
+              أدخل بيانات الدخول لإدارة مطعمك
             </p>
           </div>
 
@@ -126,49 +113,6 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Username Input (only for registration) */}
-            {isRegistering && (
-              <div className="mb-6">
-                <label htmlFor="username" className="block text-right text-black mb-2 font-medium">
-                  اسم المستخدم
-                </label>
-                <div className="relative">
-                  <Input
-                    id="username"
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="أدخل اسم المستخدم"
-                    className="pl-10 text-right text-black border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500"
-                    dir="rtl"
-                    disabled={isLoading}
-                  />
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                </div>
-              </div>
-            )}
-
-            {/* Store Name Input (only for registration) */}
-            {isRegistering && (
-              <div className="mb-6">
-                <label htmlFor="storeName" className="block text-right text-black mb-2 font-medium">
-                  اسم المتجر (اختياري)
-                </label>
-                <div className="relative">
-                  <Input
-                    id="storeName"
-                    type="text"
-                    value={storeName}
-                    onChange={(e) => setStoreName(e.target.value)}
-                    placeholder="أدخل اسم المتجر"
-                    className="pl-10 text-right text-black border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500"
-                    dir="rtl"
-                    disabled={isLoading}
-                  />
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                </div>
-              </div>
-            )}
 
             {/* Password Input */}
             <div className="mb-6">
@@ -190,20 +134,18 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Remember Me Checkbox (only for login) */}
-            {!isRegistering && (
-              <div className="flex items-center justify-end mb-6">
-                <label htmlFor="remember-me" className="ml-2 text-sm text-black">
-                  تذكر تسجيل الدخول
-                </label>
-                <Checkbox 
-                  id="remember-me" 
-                  checked={rememberMe}
-                  onCheckedChange={(checked) => setRememberMe(checked === true)}
-                  disabled={isLoading}
-                />
-              </div>
-            )}
+            {/* Remember Me Checkbox */}
+            <div className="flex items-center justify-end mb-6">
+              <label htmlFor="remember-me" className="ml-2 text-sm text-black">
+                تذكر تسجيل الدخول
+              </label>
+              <Checkbox 
+                id="remember-me" 
+                checked={rememberMe}
+                onCheckedChange={(checked) => setRememberMe(checked === true)}
+                disabled={isLoading}
+              />
+            </div>
 
             {/* Submit Button */}
             <Button 
@@ -218,31 +160,12 @@ const Login = () => {
               <span className="ml-2">
                 {isLoading 
                   ? "جارٍ المعالجة..." 
-                  : isRegistering 
-                    ? "إنشاء الحساب" 
-                    : "تسجيل الدخول"
+                  : "تسجيل الدخول"
                 }
               </span>
               <ArrowLeft className="h-5 w-5" />
             </Button>
 
-            {/* Toggle between login and register */}
-            <div className="text-center mt-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsRegistering(!isRegistering);
-                  setError(null);
-                }}
-                className="text-black hover:text-gray-800 hover:underline text-sm"
-                disabled={isLoading}
-              >
-                {isRegistering 
-                  ? "لديك حساب بالفعل؟ تسجيل الدخول" 
-                  : "ليس لديك حساب؟ إنشاء حساب جديد"
-                }
-              </button>
-            </div>
           </form>
         </div>
       </div>
