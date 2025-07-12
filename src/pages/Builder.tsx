@@ -1,17 +1,20 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { Calendar, Eye, List, Plus, Tag, Settings, BarChart3, Users } from "lucide-react";
+import { Calendar, Eye, List, Plus, Tag, Settings, BarChart3, Users, Copy, Check } from "lucide-react";
 import { ProductsList } from "@/components/ProductsList";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import StoreHeader from "@/components/StoreHeader";
 import { useStore } from "@/context/StoreContext";
 import { useAuth } from "@/context/AuthContext";
+import { useState } from "react";
+import { toast } from "sonner";
 
 export default function Builder() {
   const { storeName, storeLogo, updateStore } = useStore();
   const { user } = useAuth();
+  const [copied, setCopied] = useState(false);
 
   return (
     <div className="min-h-screen bg-gray-50 font-arabic">
@@ -36,17 +39,38 @@ export default function Builder() {
             <Input 
               value={user ? `${window.location.origin}/store/${user.username}` : 'جاري التحميل...'}
               readOnly 
-              className="text-left bg-gray-50 border-gray-200 text-gray-700 rounded-2xl"
+              className="text-left bg-gray-50 border-gray-200 text-gray-700 rounded-2xl font-mono text-sm"
             />
             <Button 
-              className="bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200 rounded-2xl"
-              onClick={() => {
+              className={`transition-all duration-200 rounded-2xl min-w-[80px] ${
+                copied 
+                  ? 'bg-green-100 hover:bg-green-200 text-green-700 border-green-200' 
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200'
+              }`}
+              onClick={async () => {
                 if (user) {
-                  navigator.clipboard.writeText(`${window.location.origin}/store/${user.username}`);
+                  try {
+                    await navigator.clipboard.writeText(`${window.location.origin}/store/${user.username}`);
+                    setCopied(true);
+                    toast.success("تم نسخ الرابط بنجاح!");
+                    setTimeout(() => setCopied(false), 2000);
+                  } catch (error) {
+                    toast.error("فشل في نسخ الرابط");
+                  }
                 }
               }}
             >
-              نسخ
+              {copied ? (
+                <>
+                  <Check className="w-4 h-4 ml-2" />
+                  تم النسخ
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4 ml-2" />
+                  نسخ
+                </>
+              )}
             </Button>
           </div>
           
