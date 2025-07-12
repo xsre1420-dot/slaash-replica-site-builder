@@ -1,4 +1,3 @@
-
 import { createContext, useState, useContext, ReactNode, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./AuthContext";
@@ -46,6 +45,19 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (user?.id) {
       loadStoreSettings();
+    } else {
+      // Reset to defaults when user logs out
+      setStoreName("");
+      setStoreLogo("");
+      setStoreGovernorate("");
+      setStoreSettings({
+        menuBackgroundColor: "#ffffff",
+        menuTextColor: "#333333",
+        menuAccentColor: "#6366f1",
+        bannerImages: [],
+        primaryBannerIndex: 0,
+        deliveryPrices: []
+      });
     }
   }, [user?.id]);
 
@@ -53,6 +65,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     if (!user?.id) return;
 
     try {
+      console.log('Loading store settings for user:', user.id);
       const { data, error } = await supabase
         .from('store_settings')
         .select('*')
@@ -64,6 +77,8 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
+      console.log('Store settings loaded:', data);
+      
       if (data) {
         setStoreName(data.store_name || "");
         setStoreLogo(data.store_logo || "");
@@ -76,6 +91,20 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
           primaryBannerIndex: data.primary_banner_index || 0,
           deliveryPrices: (data.delivery_prices as unknown as DeliveryPrice[]) || []
         });
+      } else {
+        console.log('No store settings found, creating default ones');
+        // Create default settings if none exist
+        await saveStoreSettings({
+          store_name: "",
+          store_logo: "",
+          store_governorate: "",
+          menu_background_color: "#ffffff",
+          menu_text_color: "#333333",
+          menu_accent_color: "#6366f1",
+          banner_images: [],
+          primary_banner_index: 0,
+          delivery_prices: []
+        });
       }
     } catch (error) {
       console.error('Failed to load store settings:', error);
@@ -83,9 +112,10 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateStore = async (logo: string, name: string, governorate?: string) => {
+    console.log('Updating store:', { logo, name, governorate });
     setStoreLogo(logo);
     setStoreName(name);
-    if (governorate) setStoreGovernorate(governorate);
+    if (governorate !== undefined) setStoreGovernorate(governorate);
     
     // Save to database
     if (user?.id) {
@@ -98,6 +128,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateStoreSettings = async (settings: StoreSettings) => {
+    console.log('Updating store settings:', settings);
     setStoreSettings(settings);
     
     // Save to database
@@ -117,6 +148,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     if (!user?.id) return;
 
     try {
+      console.log('Saving store settings:', updates);
       const { error } = await supabase
         .from('store_settings')
         .upsert({
@@ -126,6 +158,8 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('Error saving store settings:', error);
+      } else {
+        console.log('Store settings saved successfully');
       }
     } catch (error) {
       console.error('Failed to save store settings:', error);
