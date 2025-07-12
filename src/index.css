@@ -147,3 +147,53 @@
 .animate-glow {
   animation: glow 2s ease-in-out infinite;
 }
+
+/* Custom toast styles with close button */
+.toaster [data-sonner-toast] {
+  font-family: 'Tajawal', sans-serif !important;
+  direction: rtl;
+}
+
+.toaster [data-sonner-toast] [data-close-button] {
+  right: 8px !important;
+  top: 8px !important;
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 6px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #6b7280 !important;
+  transition: all 0.2s ease !important;
+}
+
+.toaster [data-sonner-toast] [data-close-button]:hover {
+  background: #f3f4f6 !important;
+  color: #374151 !important;
+}
+
+.toaster [data-sonner-toast] [data-close-button] svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+/* Success toast specific styling */
+.toaster [data-sonner-toast][data-type="success"] [data-close-button]:hover {
+  background: #f0fdf4 !important;
+  color: #16a34a !important;
+}
+
+/* Error toast specific styling */
+.toaster [data-sonner-toast][data-type="error"] [data-close-button]:hover {
+  background: #fef2f2 !important;
+  color: #dc2626 !important;
+}
+
+/* Warning toast specific styling */
+.toaster [data-sonner-toast][data-type="warning"] [data-close-button]:hover {
+  background: #fffbeb !important;
+  color: #d97706 !important;
+}
