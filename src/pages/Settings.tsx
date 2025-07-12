@@ -1,8 +1,8 @@
 
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
 import { useStore } from "@/context/StoreContext";
+import { toast } from "sonner";
 import SettingsHeader from "@/components/settings/SettingsHeader";
 import StoreInfoTab from "@/components/settings/StoreInfoTab";
 import DeliveryTab from "@/components/settings/DeliveryTab";
@@ -11,10 +11,7 @@ import DesignTab from "@/components/settings/DesignTab";
 import SettingsActions from "@/components/settings/SettingsActions";
 
 const Settings = () => {
-  const { toast } = useToast();
   const { storeName, storeLogo, storeGovernorate, storeSettings, updateStore, updateStoreSettings } = useStore();
-  
-  const [showSaveNotification, setShowSaveNotification] = useState(false);
   
   const [settings, setSettings] = useState({
     storeName: storeName,
@@ -42,38 +39,48 @@ const Settings = () => {
     });
   }, [storeName, storeLogo, storeGovernorate, storeSettings]);
 
-  const handleSaveSettings = () => {
-    updateStore(settings.storeLogo, settings.storeName, settings.storeGovernorate);
-    updateStoreSettings({
-      menuBackgroundColor: settings.menuBackgroundColor,
-      menuTextColor: settings.menuTextColor,
-      menuAccentColor: settings.menuAccentColor,
-      bannerImages: settings.bannerImages,
-      primaryBannerIndex: settings.primaryBannerIndex,
-      deliveryPrices: settings.deliveryPrices
-    });
-    
-    // Show notification
-    setShowSaveNotification(true);
-    
-    // Hide notification after 3 seconds
-    setTimeout(() => {
-      setShowSaveNotification(false);
-    }, 3000);
+  const handleSaveSettings = async () => {
+    try {
+      await updateStore(settings.storeLogo, settings.storeName, settings.storeGovernorate);
+      await updateStoreSettings({
+        menuBackgroundColor: settings.menuBackgroundColor,
+        menuTextColor: settings.menuTextColor,
+        menuAccentColor: settings.menuAccentColor,
+        bannerImages: settings.bannerImages,
+        primaryBannerIndex: settings.primaryBannerIndex,
+        deliveryPrices: settings.deliveryPrices
+      });
+      
+      // Show success notification with Sonner
+      toast.success("تم حفظ الإعدادات بنجاح!", {
+        description: "تم تحديث جميع إعدادات المتجر",
+        duration: 4000,
+      });
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast.error("فشل في حفظ الإعدادات", {
+        description: "حدث خطأ أثناء محاولة حفظ الإعدادات",
+        duration: 4000,
+      });
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 font-arabic relative">
       <SettingsHeader />
-
-      {/* Save Notification */}
-      {showSaveNotification && (
-        <div className="fixed top-4 left-4 right-4 z-50">
-          <div className="bg-green-100 border-2 border-green-300 text-green-800 px-6 py-4 rounded-lg shadow-lg w-full">
-            <div className="text-center font-bold text-lg">تم الحفظ</div>
-          </div>
-        </div>
-      )}
+      
+      {/* Test notification button */}
+      <div className="fixed top-4 left-4 z-50">
+        <button 
+          onClick={() => toast.success("اختبار الإشعار مع زر الإغلاق", {
+            description: "هذا إشعار تجريبي لاختبار زر الإغلاق",
+            duration: 10000,
+          })}
+          className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm"
+        >
+          اختبار إشعار
+        </button>
+      </div>
 
       <div className="max-w-6xl mx-auto p-6">
         <div className="bg-white rounded-3xl shadow-sm p-8">
