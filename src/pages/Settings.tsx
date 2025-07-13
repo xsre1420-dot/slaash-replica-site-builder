@@ -51,7 +51,6 @@ const Settings = () => {
         deliveryPrices: settings.deliveryPrices
       });
       
-      // Show success notification with Sonner
       toast.success("تم حفظ الإعدادات بنجاح!", {
         description: "تم تحديث جميع إعدادات المتجر",
         duration: 4000,
@@ -68,19 +67,6 @@ const Settings = () => {
   return (
     <div className="min-h-screen bg-gray-50 font-arabic relative">
       <SettingsHeader />
-      
-      {/* Test notification button */}
-      <div className="fixed top-4 left-4 z-50">
-        <button 
-          onClick={() => toast.success("اختبار الإشعار مع زر الإغلاق", {
-            description: "هذا إشعار تجريبي لاختبار زر الإغلاق",
-            duration: 10000,
-          })}
-          className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm"
-        >
-          اختبار إشعار
-        </button>
-      </div>
 
       <div className="max-w-6xl mx-auto p-6">
         <div className="bg-white rounded-3xl shadow-sm p-8">
