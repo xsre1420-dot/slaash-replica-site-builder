@@ -16,7 +16,6 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
         {storeLogo && (
           <img src={storeLogo} alt={storeName} className="w-8 h-8 rounded-full object-cover" />
         )}
-        <div className="text-2xl font-bold font-serif text-gray-800">{storeName}</div>
       </div>
     </div>
   );
