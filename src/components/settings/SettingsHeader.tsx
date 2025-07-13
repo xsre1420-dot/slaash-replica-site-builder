@@ -1,7 +1,7 @@
 
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 const SettingsHeader = () => {
   return (
@@ -10,7 +10,7 @@ const SettingsHeader = () => {
         <div className="flex items-center justify-between">
           <Link to="/builder">
             <Button variant="ghost" className="p-2 hover:bg-gray-100 rounded-xl">
-              <ArrowRight className="w-6 h-6" />
+              <ArrowLeft className="w-6 h-6" />
             </Button>
           </Link>
           <h1 className="text-2xl font-bold text-black">إعدادات المتجر</h1>

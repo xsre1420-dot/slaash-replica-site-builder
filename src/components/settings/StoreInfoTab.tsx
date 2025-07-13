@@ -3,7 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Upload } from "lucide-react";
+import { Upload, X } from "lucide-react";
 
 
 interface StoreInfoTabProps {
@@ -44,26 +44,27 @@ const StoreInfoTab = ({ settings, setSettings }: StoreInfoTabProps) => {
           />
         </div>
 
-        <div className="space-y-3">
-          <Label className="text-right block text-black font-medium">محافظة المتجر</Label>
-          <Input
-            value={settings.storeGovernorate}
-            onChange={(e) => setSettings((prev: any) => ({ ...prev, storeGovernorate: e.target.value }))}
-            className="text-right rounded-2xl border-gray-200 text-black"
-            placeholder="أدخل محافظة المتجر"
-          />
-        </div>
 
-        <div className="space-y-3">
+          <div className="space-y-3">
           <Label className="text-right block text-black font-medium">شعار المتجر</Label>
           <div className="flex items-center gap-6">
-            <Avatar className="w-24 h-24">
-              {settings.storeLogo ? (
-                <AvatarImage src={settings.storeLogo} alt="شعار المتجر" />
-              ) : (
-                <AvatarFallback className="text-3xl">🍽️</AvatarFallback>
+            <div className="relative">
+              <Avatar className="w-24 h-24">
+                {settings.storeLogo ? (
+                  <AvatarImage src={settings.storeLogo} alt="شعار المتجر" />
+                ) : (
+                  <AvatarFallback className="text-3xl">🍽️</AvatarFallback>
+                )}
+              </Avatar>
+              {settings.storeLogo && (
+                <button
+                  onClick={() => setSettings((prev: any) => ({ ...prev, storeLogo: '' }))}
+                  className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               )}
-            </Avatar>
+            </div>
             
             <div className="flex-1">
               <label htmlFor="logo-upload" className="cursor-pointer">
