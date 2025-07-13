@@ -104,16 +104,14 @@ const Store = () => {
       {/* Customer Header - No admin links */}
       <div className="bg-white shadow-sm sticky top-0 z-40">
         <div className="px-6 py-4">
-          <div className="flex justify-center items-center mb-4">
-            <div className="flex items-center gap-3">
-              {storeLogo && (
-                <img src={storeLogo} alt="Store Logo" className="w-8 h-8 rounded-full object-cover" />
-              )}
-              <div className="text-center">
-                <p className="font-bold text-xl text-gray-800">{storeName}</p>
-                <p className="text-xs text-gray-500">متجر المتجر</p>
-              </div>
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-center flex-1">
+              <p className="font-bold text-xl text-gray-800">{storeName}</p>
+              <p className="text-xs text-gray-500">متجر المتجر</p>
             </div>
+            {storeLogo && (
+              <img src={storeLogo} alt="Store Logo" className="w-10 h-10 rounded-full object-cover" />
+            )}
           </div>
           
           {/* Search Bar */}

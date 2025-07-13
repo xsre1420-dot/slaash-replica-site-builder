@@ -13,9 +13,6 @@ const StoreHeader = ({ storeLogo, storeName, onUpdateStore }: StoreHeaderProps) 
       </div>
       
       <div className="flex items-center gap-3">
-        {storeLogo && (
-          <img src={storeLogo} alt={storeName} className="w-8 h-8 rounded-full object-cover" />
-        )}
       </div>
     </div>
   );
