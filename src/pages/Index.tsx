@@ -47,7 +47,7 @@ const Index = () => {
           
           <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-tight animate-fade-in">
             حلول تجارية شاملة
-            <span className="text-gradient block"> للمتاجر الإلكترونية النامية</span>
+            <span className="text-gradient block bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"> للمتاجر الإلكترونية النامية</span>
           </h1>
           
           <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed animate-fade-in">
@@ -56,11 +56,11 @@ const Index = () => {
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8 animate-fade-in">
             <Link to="/builder">
-              <Button size="lg" className="px-8 py-4 text-lg bg-primary hover:bg-primary/90 shadow-lg">
+              <Button size="lg" className="px-8 py-4 text-lg bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
                 ابدأ مجاناً
               </Button>
             </Link>
-            <Button variant="outline" size="lg" className="px-8 py-4 text-lg border-gray-300 hover:border-primary hover:text-primary">
+            <Button variant="outline" size="lg" className="px-8 py-4 text-lg border-primary/30 text-primary hover:border-primary hover:bg-primary/5 transition-all duration-300">
               احجز عرضاً تجريبياً
             </Button>
           </div>
@@ -199,7 +199,7 @@ const Index = () => {
                 </li>
               </ul>
               
-              <Button className="w-full bg-primary hover:bg-primary/90">اختر المحترف</Button>
+              <Button className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 transition-all duration-300 transform hover:scale-[1.02]">اختر المحترف</Button>
             </div>
             
             {/* Enterprise Plan */}

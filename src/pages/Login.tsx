@@ -58,118 +58,120 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col font-arabic">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex flex-col font-arabic">
       {/* Header */}
-      <header className="bg-white text-gray-800 py-4 px-6 text-center border-b border-gray-100">
-        <h1 className="text-xl font-bold flex items-center justify-center text-black">
-          نظام إدارة المتاجر <span className="mx-2">🍽️</span>
-        </h1>
+      <header className="bg-white/80 backdrop-blur-md text-gray-800 py-6 px-6 text-center border-b border-gray-100/50">
+        <div className="flex items-center justify-center gap-3">
+          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg">
+            <div className="w-5 h-5 bg-white rounded-sm"></div>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-800">نومو</h1>
+        </div>
+        <p className="text-sm text-gray-600 mt-2">منصة إدارة المتاجر الإلكترونية</p>
       </header>
 
-      <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-50">
-        <div className="w-full max-w-md bg-white rounded-3xl shadow-lg overflow-hidden border border-gray-100">
-          {/* Login Header */}
-          <div className="text-center p-6"
-               style={{ 
-                 background: 'linear-gradient(135deg, #5b47f5, #4c3ef7)',
-                 boxShadow: '0 4px 15px rgba(91, 71, 245, 0.3)'
-               }}>
-            <h2 className="text-2xl font-bold mb-2 text-white">
-              تسجيل الدخول
-            </h2>
-            <p className="text-sm opacity-90 text-white">
-              أدخل بيانات الدخول لإدارة مطعمك
-            </p>
-          </div>
+      <div className="flex-1 flex flex-col items-center justify-center p-6">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100/50 backdrop-blur-lg">
+            {/* Login Header */}
+            <div className="text-center p-8 bg-gradient-to-br from-primary to-secondary relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 backdrop-blur-sm"></div>
+              <div className="relative z-10">
+                <h2 className="text-3xl font-bold mb-3 text-white">
+                  تسجيل الدخول
+                </h2>
+                <p className="text-white/90">
+                  أدخل بيانات الدخول لإدارة متجرك الإلكتروني
+                </p>
+              </div>
+            </div>
 
-          <form onSubmit={handleSubmit} className="p-6">
-            {/* Error Alert */}
-            {error && (
-              <Alert className="mb-6 bg-red-50 border-red-200 text-right">
-                <div className="flex items-center">
-                  <AlertDescription className="flex-1 text-red-800">⚠️ {error}</AlertDescription>
+            <form onSubmit={handleSubmit} className="p-8">
+              {/* Error Alert */}
+              {error && (
+                <Alert className="mb-6 bg-red-50 border-red-200 text-right rounded-xl">
+                  <div className="flex items-center">
+                    <AlertDescription className="flex-1 text-red-800">⚠️ {error}</AlertDescription>
+                  </div>
+                </Alert>
+              )}
+
+              {/* Email Input */}
+              <div className="mb-6">
+                <label htmlFor="email" className="block text-right text-gray-700 mb-3 font-semibold">
+                  البريد الإلكتروني
+                </label>
+                <div className="relative">
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="أدخل البريد الإلكتروني"
+                    className="pl-12 pr-4 py-4 text-right text-gray-800 border-gray-200 rounded-xl focus:border-primary focus:ring-primary bg-gray-50/50 text-lg"
+                    dir="rtl"
+                    disabled={isLoading}
+                  />
+                  <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-primary h-5 w-5" />
                 </div>
-              </Alert>
-            )}
-
-            {/* Email Input */}
-            <div className="mb-6">
-              <label htmlFor="email" className="block text-right text-black mb-2 font-medium">
-                البريد الإلكتروني
-              </label>
-              <div className="relative">
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="أدخل البريد الإلكتروني"
-                  className="pl-10 text-right text-black border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500"
-                  dir="rtl"
-                  disabled={isLoading}
-                />
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
               </div>
-            </div>
 
-            {/* Password Input */}
-            <div className="mb-6">
-              <label htmlFor="password" className="block text-right text-black mb-2 font-medium">
-                كلمة المرور
-              </label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="أدخل كلمة المرور"
-                  className="pl-10 text-right text-black border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500"
-                  dir="rtl"
-                  disabled={isLoading}
-                />
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              {/* Password Input */}
+              <div className="mb-6">
+                <label htmlFor="password" className="block text-right text-gray-700 mb-3 font-semibold">
+                  كلمة المرور
+                </label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="أدخل كلمة المرور"
+                    className="pl-12 pr-4 py-4 text-right text-gray-800 border-gray-200 rounded-xl focus:border-primary focus:ring-primary bg-gray-50/50 text-lg"
+                    dir="rtl"
+                    disabled={isLoading}
+                  />
+                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-primary h-5 w-5" />
+                </div>
               </div>
-            </div>
 
-            {/* Remember Me Checkbox */}
-            <div className="flex items-center justify-end mb-6">
-              <label htmlFor="remember-me" className="ml-2 text-sm text-black">
-                تذكر تسجيل الدخول
-              </label>
-              <Checkbox 
-                id="remember-me" 
-                checked={rememberMe}
-                onCheckedChange={(checked) => setRememberMe(checked === true)}
+              {/* Remember Me Checkbox */}
+              <div className="flex items-center justify-end mb-8">
+                <label htmlFor="remember-me" className="ml-3 text-sm text-gray-600 font-medium">
+                  تذكر تسجيل الدخول
+                </label>
+                <Checkbox 
+                  id="remember-me" 
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked === true)}
+                  disabled={isLoading}
+                  className="border-primary data-[state=checked]:bg-primary"
+                />
+              </div>
+
+              {/* Submit Button */}
+              <Button 
+                type="submit" 
+                className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
                 disabled={isLoading}
-              />
-            </div>
-
-            {/* Submit Button */}
-            <Button 
-              type="submit" 
-              className="w-full text-white py-3 text-lg font-medium rounded-xl shadow-lg"
-              style={{ 
-                background: 'linear-gradient(135deg, #5b47f5, #4c3ef7)',
-                boxShadow: '0 4px 15px rgba(91, 71, 245, 0.3)'
-              }}
-              disabled={isLoading}
-            >
-              <span className="ml-2">
-                {isLoading 
-                  ? "جارٍ المعالجة..." 
-                  : "تسجيل الدخول"
-                }
-              </span>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </form>
+              >
+                <span className="ml-2">
+                  {isLoading 
+                    ? "جارٍ المعالجة..." 
+                    : "تسجيل الدخول"
+                  }
+                </span>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </form>
+          </div>
         </div>
       </div>
 
       {/* Footer */}
-      <footer className="bg-white text-center py-4 text-gray-600 text-sm border-t border-gray-200">
-        <p>جميع الحقوق محفوظة © 2025 نظام إدارة المتاجر</p>
+      <footer className="bg-white/80 backdrop-blur-md text-center py-6 text-gray-600 text-sm border-t border-gray-200/50">
+        <p>جميع الحقوق محفوظة © 2025 نومو - منصة المتاجر الإلكترونية</p>
       </footer>
     </div>
   );
