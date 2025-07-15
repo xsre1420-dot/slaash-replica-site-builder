@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Check, Star, Shield, Zap, Globe, BarChart3, Settings } from "lucide-react";
+import { ArrowLeft, Check, Star, Shield, Zap, Globe, BarChart3, Settings, Package, TrendingUp, Lock, Palette, Headphones, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Index = () => {
@@ -75,20 +75,23 @@ const Index = () => {
       <section id="features" className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">كل ما يحتاجه عملك</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              حلول شاملة للتجارة الإلكترونية لتبسيط عملياتك التجارية ودفع نمو أعمالك
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">كل ما يحتاجه متجرك في مكان واحد</h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              من إدارة الطلبات إلى تحليل بيانات العملاء — كل الأدوات التي تحتاجها لبناء متجرك وتنميته
+            </p>
+            <p className="text-lg text-gray-500 mt-4 max-w-4xl mx-auto">
+              حلول متكاملة لإدارة عملياتك، وتحليل أدائك، وتحقيق نموك بثقة
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
             <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 group">
               <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
-                <Zap className="w-6 h-6 text-primary" />
+                <Package className="w-6 h-6 text-primary" />
               </div>
-              <h3 className="text-xl font-bold mb-4">أتمتة إدارة المنتجات</h3>
+              <h3 className="text-xl font-bold mb-4">إدارة منتجات ذكية وسهلة</h3>
               <p className="text-gray-600 leading-relaxed">
-                أتمتة إدارة المخزون والمنتجات لتقليل الأخطاء اليدوية وتحسين الكفاءة في متجرك الإلكتروني.
+                نظّم مخزونك وتابع منتجاتك بخطوات بسيطة. قل وداعًا للأخطاء اليدوية، ومرحبًا بالكفاءة.
               </p>
             </div>
             
@@ -96,29 +99,49 @@ const Index = () => {
               <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
                 <BarChart3 className="w-6 h-6 text-primary" />
               </div>
-              <h3 className="text-xl font-bold mb-4">تحليلات في الوقت الفعلي</h3>
+              <h3 className="text-xl font-bold mb-4">تحليلات لحظية تقود قراراتك</h3>
               <p className="text-gray-600 leading-relaxed">
-                راقب الأداء المالي مع لوحات معلومات في الوقت الفعلي وتقارير شاملة.
+                لوحات بيانات تفاعلية تُمكِّنك من تتبع الأداء المالي والتشغيلي في الوقت الفعلي، لتصنع قرارات مدروسة بثقة.
               </p>
             </div>
             
             <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 group">
               <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
-                <Shield className="w-6 h-6 text-primary" />
+                <Lock className="w-6 h-6 text-primary" />
               </div>
-              <h3 className="text-xl font-bold mb-4">إدارة المخاطر</h3>
+              <h3 className="text-xl font-bold mb-4">راحة بالك تبدأ من هنا</h3>
               <p className="text-gray-600 leading-relaxed">
-                أدوات متقدمة لاكتشاف الاحتيال وتقييم المخاطر لحماية أعمالك التجارية.
+                بياناتك وبيانات عملائك في أيدٍ أمينة – مع نظام حماية متكامل
               </p>
             </div>
             
             <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 group">
               <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
-                <Settings className="w-6 h-6 text-primary" />
+                <Palette className="w-6 h-6 text-primary" />
               </div>
-              <h3 className="text-xl font-bold mb-4">أدوات الامتثال</h3>
+              <h3 className="text-xl font-bold mb-4">تصميم متجرك في دقائق بدون برمجة أو تعقيد</h3>
               <p className="text-gray-600 leading-relaxed">
-                ميزات امتثال مدمجة لتلبية المتطلبات التنظيمية بسهولة ودون عناء.
+                صمّم متجرك بنفسك دون أي خبرة تقنية واجهة سهلة وبسيطة يمنحك تحكمًا كاملاً بتصميم متجرك
+              </p>
+            </div>
+            
+            <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 group">
+              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
+                <Headphones className="w-6 h-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-4">دعم فني حقيقي وشخصي</h3>
+              <p className="text-gray-600 leading-relaxed">
+                فريق دعم متجاوب وسريع يساعدك خطوة بخطوة في رحلتك التجارية
+              </p>
+            </div>
+            
+            <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 group">
+              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
+                <TrendingUp className="w-6 h-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-4">تابع أداء متجرك لحظة بلحظة</h3>
+              <p className="text-gray-600 leading-relaxed">
+                تحليلات حيّة ولوحات بيانات تساعدك على اتخاذ قرارات ذكية بثقة
               </p>
             </div>
           </div>
@@ -129,31 +152,47 @@ const Index = () => {
       <section id="pricing" className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">أسعار شفافة لكل مرحلة</h2>
-            <p className="text-xl text-gray-600">
-              قم بتوسيع عملياتك التجارية مع خطط تنمو مع أعمالك
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">خطط تسعير واضحة، تناسب كل مرحلة من نموك</h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              اختر الخطة التي تناسب حجم أعمالك واحتياجاتك، وابدأ بثقة
             </p>
           </div>
           
+          {/* Monthly Plans Toggle */}
+          <div className="flex justify-center mb-12">
+            <div className="bg-gray-100 rounded-xl p-1 flex">
+              <button className="px-6 py-2 bg-white rounded-lg shadow-sm font-medium">شهري</button>
+              <button className="px-6 py-2 text-gray-500 font-medium">سنوي</button>
+            </div>
+          </div>
+          
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {/* Starter Plan */}
+            {/* Beginner Plan */}
             <div className="bg-white rounded-2xl p-8 shadow-sm border hover:shadow-lg transition-all duration-300">
-              <h3 className="text-2xl font-bold mb-2">المبتدئ</h3>
-              <div className="text-4xl font-bold mb-4">مجاني</div>
-              <p className="text-gray-600 mb-6">مثالي للشركات الصغيرة التي تبدأ رحلتها في التجارة الإلكترونية</p>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <div className="w-4 h-4 bg-blue-500 rounded-sm"></div>
+                </div>
+                <h3 className="text-2xl font-bold">باقة المبتدئ</h3>
+              </div>
+              <div className="flex items-baseline gap-1 mb-4">
+                <span className="text-4xl font-bold">$19</span>
+                <span className="text-gray-600">/ شهرياً</span>
+              </div>
+              <p className="text-gray-600 mb-6">مثالي للمتاجر الناشئة</p>
               
               <ul className="space-y-4 mb-8">
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>حتى 100 معاملة شهرياً</span>
+                  <span>50 طلب شهرياً</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>معالجة دفع أساسية</span>
+                  <span>25 منتج</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>تقارير قياسية</span>
+                  <span>تصميم أساسي للمتجر</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
@@ -162,6 +201,9 @@ const Index = () => {
               </ul>
               
               <Button className="w-full" variant="outline">ابدأ مجاناً</Button>
+              <p className="text-xs text-gray-500 text-center mt-3">
+                يمكنك تجاوز الحد مؤقتاً، ولكن يلزم الترقية عند انتهاء الاشتراك
+              </p>
             </div>
             
             {/* Professional Plan */}
@@ -169,69 +211,113 @@ const Index = () => {
               <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-white px-4 py-2 rounded-full text-sm font-medium">
                 الأكثر شعبية
               </div>
-              <h3 className="text-2xl font-bold mb-2">المحترف</h3>
-              <div className="flex items-baseline gap-1 mb-4">
-                <span className="text-4xl font-bold">99 ريال</span>
-                <span className="text-gray-600">شهرياً</span>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <div className="w-4 h-4 bg-primary rounded-sm"></div>
+                </div>
+                <h3 className="text-2xl font-bold">باقة المحترف</h3>
               </div>
-              <p className="text-gray-600 mb-6">مثالي للشركات النامية مع معاملات أكثر</p>
+              <div className="flex items-baseline gap-1 mb-4">
+                <span className="text-4xl font-bold">$35</span>
+                <span className="text-gray-600">/ شهرياً</span>
+              </div>
+              <p className="text-gray-600 mb-6">للمتاجر النامية والمحترفة</p>
               
               <ul className="space-y-4 mb-8">
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>حتى 10,000 معاملة شهرياً</span>
+                  <span>150 طلب شهرياً</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>معالجة دفع متقدمة</span>
+                  <span>75 منتج</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>تحليلات في الوقت الفعلي</span>
+                  <span>تصميم متقدم للمتجر</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>دعم متعدد العملات</span>
+                  <span>تحليلات مفصلة</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>حماية متقدمة من الاحتيال</span>
+                  <span>دعم ذو أولوية</span>
                 </li>
               </ul>
               
               <Button className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 transition-all duration-300 transform hover:scale-[1.02]">اختر المحترف</Button>
+              <p className="text-xs text-gray-500 text-center mt-3">
+                يمكنك تجاوز الحد مؤقتاً، ولكن يلزم الترقية عند انتهاء الاشتراك
+              </p>
             </div>
             
-            {/* Enterprise Plan */}
+            {/* Elite Plan */}
             <div className="bg-white rounded-2xl p-8 shadow-sm border hover:shadow-lg transition-all duration-300">
-              <h3 className="text-2xl font-bold mb-2">المؤسسات</h3>
-              <div className="text-4xl font-bold mb-4">مخصص</div>
-              <p className="text-gray-600 mb-6">للمؤسسات الكبيرة مع عمليات مالية معقدة</p>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                  <div className="w-4 h-4 bg-amber-500 rounded-sm"></div>
+                </div>
+                <h3 className="text-2xl font-bold">باقة النخبة</h3>
+              </div>
+              <div className="flex items-baseline gap-1 mb-4">
+                <span className="text-4xl font-bold">$49</span>
+                <span className="text-gray-600">/ شهرياً</span>
+              </div>
+              <p className="text-gray-600 mb-6">للمتاجر الكبيرة والمؤسسات</p>
               
               <ul className="space-y-4 mb-8">
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>معاملات غير محدودة</span>
+                  <span>طلبات غير محدودة</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>سير عمل مخصص للمدفوعات</span>
+                  <span>منتجات غير محدودة</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>أدوات امتثال متقدمة</span>
+                  <span>تصميم متميز وشخصي</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>بنية تحتية مخصصة</span>
+                  <span>تحليلات متقدمة</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>دعم متميز 24/7</span>
+                  <span>دعم فني 24/7</span>
                 </li>
               </ul>
               
-              <Button className="w-full" variant="outline">تواصل معنا</Button>
+              <Button className="w-full" variant="outline">اختر النخبة</Button>
+            </div>
+          </div>
+          
+          {/* Annual Plan Section */}
+          <div className="mt-16 bg-gradient-to-r from-primary/5 to-secondary/5 rounded-3xl p-8 text-center">
+            <h3 className="text-3xl font-bold mb-4">الباقة السنوية - وفر 49%</h3>
+            <div className="flex items-center justify-center gap-4 mb-6">
+              <span className="text-5xl font-bold">$299</span>
+              <div className="text-right">
+                <div className="text-gray-500 line-through">$588</div>
+                <div className="text-primary font-medium">/ سنوياً</div>
+              </div>
+            </div>
+            <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+              كل الميزات غير المحدودة، بدفعة واحدة سنوياً. اقتصادية ومريحة لنمو متجرك
+            </p>
+            <Button size="lg" className="px-8 py-4 text-lg bg-gradient-to-r from-primary to-secondary">
+              احصل على الباقة السنوية
+            </Button>
+          </div>
+          
+          {/* Guarantee Section */}
+          <div className="mt-12 text-center">
+            <div className="bg-green-50 border border-green-200 rounded-xl p-6 max-w-2xl mx-auto">
+              <h4 className="text-lg font-bold text-green-800 mb-2">ضمان استرجاع الأموال</h4>
+              <p className="text-green-700">
+                إذا لم تكن راضياً، سنعيد لك كامل المبلغ خلال أول 7 أيام – بدون أي أسباب
+              </p>
             </div>
           </div>
         </div>
