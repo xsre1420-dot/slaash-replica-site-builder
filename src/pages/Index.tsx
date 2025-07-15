@@ -1,9 +1,13 @@
 
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Check, Star, Shield, Zap, Globe, BarChart3, Settings, Package, TrendingUp, Lock, Palette, Headphones, Users } from "lucide-react";
+import { ArrowLeft, Check, Star, Shield, Zap, Globe, BarChart3, Settings, Package, TrendingUp, Lock, Palette, Headphones, Users, ChevronDown } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useState } from "react";
 
 const Index = () => {
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [billingType, setBillingType] = useState<'monthly' | 'annual'>('monthly');
+  
   return (
     <div className="min-h-screen bg-white font-arabic" dir="rtl">
       {/* Header */}
@@ -46,27 +50,12 @@ const Index = () => {
           </div>
           
           <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-tight animate-fade-in">
-            حلول تجارية شاملة
-            <span className="text-gradient block bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"> للمتاجر الإلكترونية النامية</span>
+            أنشئ متجرك الإلكتروني خلال دقائق،
+            <span className="text-gradient block bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"> وابدأ البيع اليوم</span>
           </h1>
           
           <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed animate-fade-in">
-            قم بتبسيط عملياتك التجارية مع منصتنا الشاملة للتجارة الإلكترونية. مصممة للشركات العصرية التي تقدر الكفاءة والامتثال والنمو القابل للتوسع.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8 animate-fade-in">
-            <Link to="/builder">
-              <Button size="lg" className="px-8 py-4 text-lg bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
-                ابدأ مجاناً
-              </Button>
-            </Link>
-            <Button variant="outline" size="lg" className="px-8 py-4 text-lg border-primary/30 text-primary hover:border-primary hover:bg-primary/5 transition-all duration-300">
-              احجز عرضاً تجريبياً
-            </Button>
-          </div>
-          
-          <p className="text-sm text-gray-500 animate-fade-in">
-            لا حاجة لبطاقة ائتمان • نسخة تجريبية مجانية لمدة 14 يوماً
+            منصة متكاملة تساعدك على بناء، إدارة، وتطوير متجرك بكل سهولة — بدون أي خبرة تقنية.
           </p>
         </div>
       </section>
@@ -158,158 +147,182 @@ const Index = () => {
             </p>
           </div>
           
-          {/* Monthly Plans Toggle */}
+          {/* Billing Toggle */}
           <div className="flex justify-center mb-12">
             <div className="bg-gray-100 rounded-xl p-1 flex">
-              <button className="px-6 py-2 bg-white rounded-lg shadow-sm font-medium">شهري</button>
-              <button className="px-6 py-2 text-gray-500 font-medium">سنوي</button>
+              <button 
+                onClick={() => setBillingType('monthly')}
+                className={`px-6 py-2 rounded-lg font-medium transition-all duration-300 ${
+                  billingType === 'monthly' 
+                    ? 'bg-white shadow-sm text-primary' 
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                شهري
+              </button>
+              <button 
+                onClick={() => setBillingType('annual')}
+                className={`px-6 py-2 rounded-lg font-medium transition-all duration-300 ${
+                  billingType === 'annual' 
+                    ? 'bg-white shadow-sm text-primary' 
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                سنوي
+              </button>
             </div>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {/* Beginner Plan */}
-            <div className="bg-white rounded-2xl p-8 shadow-sm border hover:shadow-lg transition-all duration-300">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <div className="w-4 h-4 bg-blue-500 rounded-sm"></div>
+          {/* Monthly Plans */}
+          {billingType === 'monthly' && (
+            <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+              {/* Beginner Plan */}
+              <div 
+                onClick={() => setSelectedPlan('beginner')}
+                className={`bg-white rounded-2xl p-8 shadow-sm border-2 hover:shadow-lg transition-all duration-300 cursor-pointer ${
+                  selectedPlan === 'beginner' 
+                    ? 'border-primary ring-2 ring-primary/20' 
+                    : 'border-gray-200 hover:border-primary/30'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <div className="w-4 h-4 bg-blue-500 rounded-sm"></div>
+                  </div>
+                  <h3 className="text-2xl font-bold">باقة المبتدئ</h3>
                 </div>
-                <h3 className="text-2xl font-bold">باقة المبتدئ</h3>
-              </div>
-              <div className="flex items-baseline gap-1 mb-4">
-                <span className="text-4xl font-bold">$19</span>
-                <span className="text-gray-600">/ شهرياً</span>
-              </div>
-              <p className="text-gray-600 mb-6">مثالي للمتاجر الناشئة</p>
-              
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>50 طلب شهرياً</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>25 منتج</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>تصميم أساسي للمتجر</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>دعم بالبريد الإلكتروني</span>
-                </li>
-              </ul>
-              
-              <Button className="w-full" variant="outline">ابدأ مجاناً</Button>
-              <p className="text-xs text-gray-500 text-center mt-3">
-                يمكنك تجاوز الحد مؤقتاً، ولكن يلزم الترقية عند انتهاء الاشتراك
-              </p>
-            </div>
-            
-            {/* Professional Plan */}
-            <div className="bg-white rounded-2xl p-8 shadow-lg border-2 border-primary relative transform hover:scale-105 transition-all duration-300">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-white px-4 py-2 rounded-full text-sm font-medium">
-                الأكثر شعبية
-              </div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                  <div className="w-4 h-4 bg-primary rounded-sm"></div>
+                <div className="flex items-baseline gap-1 mb-4">
+                  <span className="text-4xl font-bold">$19</span>
+                  <span className="text-gray-600">/ شهرياً</span>
                 </div>
-                <h3 className="text-2xl font-bold">باقة المحترف</h3>
+                
+                <ul className="space-y-4 mb-8">
+                  <li className="flex items-center gap-3">
+                    <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span>50 طلب شهرياً</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span>25 منتج</span>
+                  </li>
+                </ul>
+                
+                <Button className="w-full" variant="outline">ابدأ الآن</Button>
               </div>
-              <div className="flex items-baseline gap-1 mb-4">
-                <span className="text-4xl font-bold">$35</span>
-                <span className="text-gray-600">/ شهرياً</span>
-              </div>
-              <p className="text-gray-600 mb-6">للمتاجر النامية والمحترفة</p>
               
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>150 طلب شهرياً</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>75 منتج</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>تصميم متقدم للمتجر</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>تحليلات مفصلة</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>دعم ذو أولوية</span>
-                </li>
-              </ul>
-              
-              <Button className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 transition-all duration-300 transform hover:scale-[1.02]">اختر المحترف</Button>
-              <p className="text-xs text-gray-500 text-center mt-3">
-                يمكنك تجاوز الحد مؤقتاً، ولكن يلزم الترقية عند انتهاء الاشتراك
-              </p>
-            </div>
-            
-            {/* Elite Plan */}
-            <div className="bg-white rounded-2xl p-8 shadow-sm border hover:shadow-lg transition-all duration-300">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
-                  <div className="w-4 h-4 bg-amber-500 rounded-sm"></div>
+              {/* Professional Plan */}
+              <div 
+                onClick={() => setSelectedPlan('professional')}
+                className={`bg-white rounded-2xl p-8 shadow-lg border-2 relative transition-all duration-300 cursor-pointer ${
+                  selectedPlan === 'professional' 
+                    ? 'border-primary ring-2 ring-primary/20 transform scale-105' 
+                    : 'border-primary hover:border-primary/80 transform hover:scale-105'
+                }`}
+              >
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-white px-4 py-2 rounded-full text-sm font-medium">
+                  الأكثر شعبية
                 </div>
-                <h3 className="text-2xl font-bold">باقة النخبة</h3>
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <div className="w-4 h-4 bg-primary rounded-sm"></div>
+                  </div>
+                  <h3 className="text-2xl font-bold">باقة المحترف</h3>
+                </div>
+                <div className="flex items-baseline gap-1 mb-4">
+                  <span className="text-4xl font-bold">$35</span>
+                  <span className="text-gray-600">/ شهرياً</span>
+                </div>
+                
+                <ul className="space-y-4 mb-8">
+                  <li className="flex items-center gap-3">
+                    <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span>150 طلب شهرياً</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span>75 منتج</span>
+                  </li>
+                </ul>
+                
+                <Button className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90">ابدأ الآن</Button>
               </div>
-              <div className="flex items-baseline gap-1 mb-4">
-                <span className="text-4xl font-bold">$49</span>
-                <span className="text-gray-600">/ شهرياً</span>
+              
+              {/* Elite Plan */}
+              <div 
+                onClick={() => setSelectedPlan('elite')}
+                className={`bg-white rounded-2xl p-8 shadow-sm border-2 hover:shadow-lg transition-all duration-300 cursor-pointer ${
+                  selectedPlan === 'elite' 
+                    ? 'border-primary ring-2 ring-primary/20' 
+                    : 'border-gray-200 hover:border-primary/30'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                    <div className="w-4 h-4 bg-amber-500 rounded-sm"></div>
+                  </div>
+                  <h3 className="text-2xl font-bold">باقة النخبة</h3>
+                </div>
+                <div className="flex items-baseline gap-1 mb-4">
+                  <span className="text-4xl font-bold">$49</span>
+                  <span className="text-gray-600">/ شهرياً</span>
+                </div>
+                
+                <ul className="space-y-4 mb-8">
+                  <li className="flex items-center gap-3">
+                    <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span>طلبات غير محدودة</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span>منتجات غير محدودة</span>
+                  </li>
+                </ul>
+                
+                <Button className="w-full" variant="outline">ابدأ الآن</Button>
               </div>
-              <p className="text-gray-600 mb-6">للمتاجر الكبيرة والمؤسسات</p>
-              
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>طلبات غير محدودة</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>منتجات غير محدودة</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>تصميم متميز وشخصي</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>تحليلات متقدمة</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>دعم فني 24/7</span>
-                </li>
-              </ul>
-              
-              <Button className="w-full" variant="outline">اختر النخبة</Button>
             </div>
-          </div>
+          )}
           
-          {/* Annual Plan Section */}
-          <div className="mt-16 bg-gradient-to-r from-primary/5 to-secondary/5 rounded-3xl p-8 text-center">
-            <h3 className="text-3xl font-bold mb-4">الباقة السنوية - وفر 49%</h3>
-            <div className="flex items-center justify-center gap-4 mb-6">
-              <span className="text-5xl font-bold">$299</span>
-              <div className="text-right">
-                <div className="text-gray-500 line-through">$588</div>
-                <div className="text-primary font-medium">/ سنوياً</div>
+          {/* Annual Plan */}
+          {billingType === 'annual' && (
+            <div className="max-w-2xl mx-auto">
+              <div 
+                onClick={() => setSelectedPlan('annual')}
+                className={`bg-gradient-to-r from-primary/5 to-secondary/5 rounded-3xl p-8 text-center border-2 transition-all duration-300 cursor-pointer ${
+                  selectedPlan === 'annual' 
+                    ? 'border-primary ring-2 ring-primary/20 transform scale-105' 
+                    : 'border-primary/20 hover:border-primary/40'
+                }`}
+              >
+                <h3 className="text-3xl font-bold mb-4">الباقة السنوية</h3>
+                <div className="flex items-center justify-center gap-4 mb-6">
+                  <span className="text-5xl font-bold">$299</span>
+                  <div className="text-right">
+                    <div className="text-gray-500 line-through">$588</div>
+                    <div className="text-primary font-medium">/ سنوياً</div>
+                  </div>
+                </div>
+                <div className="bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-6 inline-block">
+                  أرخص بنسبة 49% من الدفع الشهري
+                </div>
+                
+                <ul className="space-y-4 mb-8 max-w-md mx-auto">
+                  <li className="flex items-center gap-3">
+                    <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span>طلبات غير محدودة</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <span>منتجات غير محدودة</span>
+                  </li>
+                </ul>
+                
+                <Button size="lg" className="px-8 py-4 text-lg bg-gradient-to-r from-primary to-secondary">
+                  ابدأ الآن
+                </Button>
               </div>
             </div>
-            <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-              كل الميزات غير المحدودة، بدفعة واحدة سنوياً. اقتصادية ومريحة لنمو متجرك
-            </p>
-            <Button size="lg" className="px-8 py-4 text-lg bg-gradient-to-r from-primary to-secondary">
-              احصل على الباقة السنوية
-            </Button>
-          </div>
+          )}
           
           {/* Guarantee Section */}
           <div className="mt-12 text-center">
@@ -318,6 +331,59 @@ const Index = () => {
               <p className="text-green-700">
                 إذا لم تكن راضياً، سنعيد لك كامل المبلغ خلال أول 7 أيام – بدون أي أسباب
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="py-20 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">الأسئلة الشائعة</h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              كل ما تحتاج معرفته عن باقاتنا ومنصتنا
+            </p>
+          </div>
+          
+          <div className="max-w-4xl mx-auto space-y-8">
+            {/* FAQ Item 1 */}
+            <div className="bg-white rounded-2xl p-8 shadow-sm">
+              <h3 className="text-2xl font-bold mb-4 text-primary">❓ ما المقصود بـ عدد الطلبات؟</h3>
+              <p className="text-gray-700 mb-4 leading-relaxed">
+                هو الحد الأقصى المسموح به للطلبات التي يمكن لمتجرك استقبالها شهرياً ضمن الباقة الحالية.
+              </p>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                <p className="text-green-800 font-medium">
+                  ✅ إذا تجاوزت هذا الحد، سيستمر متجرك باستقبال الطلبات بشكل طبيعي، لكن لا يمكن تجديد الاشتراك أو الاستمرار في نفس الباقة بعد انتهائها، إلا من خلال الترقية إلى باقة أعلى تناسب حجم مبيعاتك المتزايد.
+                </p>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-blue-800">
+                  💡 هدفنا أن لا نعيق نمو متجرك، بل نمنحك المرونة لتتوسع أولاً، ثم تقرر الترقية لاحقاً بكل سهولة.
+                </p>
+              </div>
+            </div>
+            
+            {/* FAQ Item 2 */}
+            <div className="bg-white rounded-2xl p-8 shadow-sm">
+              <h3 className="text-2xl font-bold mb-4 text-primary">❓ ما معنى عدد المنتجات؟</h3>
+              <p className="text-gray-700 mb-4 leading-relaxed">
+                هو الحد الأقصى لعدد المنتجات المختلفة التي يمكنك عرضها في متجرك.
+              </p>
+              <p className="text-gray-700 mb-4 leading-relaxed">
+                مثلاً، إذا كانت الباقة تدعم 75 منتجاً، فيمكنك عرض 75 صنفاً مختلفاً.
+              </p>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                <p className="text-green-800 font-medium">
+                  ✅ بإمكانك داخل كل منتج إضافة خيارات متعددة (مثل القياسات، الألوان، الأحجام) دون أن يُحسب كمنتج إضافي – يظل منتجاً واحداً مهما اختلفت نسخه.
+                </p>
+              </div>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-red-800">
+                  🚫 عند الوصول للحد الأقصى، لن تتمكن من إضافة منتجات جديدة إلا بعد حذف منتج قديم أو ترقية الباقة لعدد أكبر من المنتجات.
+                </p>
+              </div>
             </div>
           </div>
         </div>
