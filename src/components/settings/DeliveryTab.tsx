@@ -18,6 +18,13 @@ interface DeliveryTabProps {
   setSettings: React.Dispatch<React.SetStateAction<any>>;
 }
 
+const governorates = [
+  "بغداد", "نينوى (الموصل)", "البصرة", "الأنبار", "ذي قار (الناصرية)",
+  "السليمانية", "أربيل", "دهوك", "كركوك", "ديالى", "صلاح الدين",
+  "واسط (الكوت)", "بابل (الحلة)", "النجف", "كربلاء", "المثنى (السماوة)",
+  "ميسان (العمارة)", "القادسية (الديوانية)"
+];
+
 const DeliveryTab = ({ settings, setSettings }: DeliveryTabProps) => {
   const addDeliveryPrice = () => {
     setSettings((prev: any) => ({
@@ -97,12 +104,16 @@ const DeliveryTab = ({ settings, setSettings }: DeliveryTabProps) => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                   <div className="space-y-2">
                     <Label className="text-right block text-black font-medium">المحافظة</Label>
-                    <Input
+                    <select
                       value={delivery.governorate}
                       onChange={(e) => updateDeliveryPrice(index, 'governorate', e.target.value)}
-                      className="text-right rounded-2xl border-gray-200 text-black"
-                      placeholder="اسم المحافظة"
-                    />
+                      className="w-full text-right rounded-2xl border border-gray-200 text-black p-2 bg-white"
+                    >
+                      <option value="">اختر المحافظة</option>
+                      {governorates.map((gov) => (
+                        <option key={gov} value={gov}>{gov}</option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="space-y-2">

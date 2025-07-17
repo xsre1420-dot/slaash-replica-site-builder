@@ -107,7 +107,6 @@ const Store = () => {
           <div className="flex justify-between items-center mb-4">
             <div className="text-center flex-1">
               <p className="font-bold text-xl text-gray-800">{storeName}</p>
-              <p className="text-xs text-gray-500">متجر المتجر</p>
             </div>
             {storeLogo && (
               <img src={storeLogo} alt="Store Logo" className="w-10 h-10 rounded-full object-cover" />
@@ -140,13 +139,15 @@ const Store = () => {
               key={category.id}
               className={`px-4 py-2 rounded-full transition-all duration-200 whitespace-nowrap border text-sm font-medium ${
                 selectedCategory === category.id 
-                  ? "bg-indigo-500 border-indigo-500 text-white" 
+                  ? "text-white" 
                   : "bg-white hover:bg-gray-50 border-gray-200 text-gray-700 hover:border-gray-300"
               }`}
               style={{
+                backgroundColor: selectedCategory === category.id ? 'hsl(248, 53%, 58%)' : undefined,
+                borderColor: selectedCategory === category.id ? 'hsl(248, 53%, 58%)' : undefined,
                 boxShadow: selectedCategory === category.id 
-                  ? '0 8px 25px -5px rgba(99, 102, 241, 0.3), 0 4px 15px -3px rgba(99, 102, 241, 0.2)' 
-                  : '0 2px 8px -2px rgba(0, 0, 0, 0.1), 0 1px 3px -1px rgba(0, 0, 0, 0.06)'
+                  ? '0 8px 25px -5px rgba(120, 119, 198, 0.3), 0 4px 15px -3px rgba(120, 119, 198, 0.2)' 
+                  : undefined
               }}
               onClick={() => setSelectedCategory(category.id)}
             >
@@ -254,8 +255,8 @@ const Store = () => {
                     size="sm"
                     className="w-full h-9 text-white rounded-full border-0 transition-all duration-200 hover:scale-105 shadow-lg"
                     style={{ 
-                      background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                      boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
+                      background: 'linear-gradient(135deg, hsl(248, 53%, 58%), hsl(248, 53%, 68%))',
+                      boxShadow: '0 4px 15px rgba(120, 119, 198, 0.3)'
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -279,8 +280,8 @@ const Store = () => {
               <div 
                 className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
                 style={{ 
-                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                  boxShadow: '0 8px 25px rgba(99, 102, 241, 0.3)'
+                  background: 'linear-gradient(135deg, hsl(248, 53%, 58%), hsl(248, 53%, 68%))',
+                  boxShadow: '0 8px 25px rgba(120, 119, 198, 0.3)'
                 }}
               >
                 <ShoppingCart className="w-6 h-6 text-white" />

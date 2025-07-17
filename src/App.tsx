@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Builder from "./pages/Builder";
+import Signup from "./pages/Signup";
 import AddProduct from "./pages/AddProduct";
 import EditProduct from "./pages/EditProduct";
 import NotFound from "./pages/NotFound";
@@ -38,6 +39,7 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
                 <Route path="/builder" element={<ProtectedRoute><Builder /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />

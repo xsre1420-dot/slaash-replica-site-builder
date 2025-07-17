@@ -1,10 +1,11 @@
 
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Check, Star, Shield, Zap, Globe, BarChart3, Settings, Package, TrendingUp, Lock, Palette, Headphones, Users, ChevronDown } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 
 const Index = () => {
+  const navigate = useNavigate();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [billingType, setBillingType] = useState<'monthly' | 'annual'>('monthly');
   
@@ -189,7 +190,7 @@ const Index = () => {
                   <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
                     <div className="w-4 h-4 bg-blue-500 rounded-sm"></div>
                   </div>
-                  <h3 className="text-2xl font-bold">باقة المبتدئ</h3>
+                  <h3 className="text-2xl font-bold">باقة المبتدئين</h3>
                 </div>
                 <div className="flex items-baseline gap-1 mb-4">
                   <span className="text-4xl font-bold">$19</span>
@@ -197,17 +198,44 @@ const Index = () => {
                 </div>
                 
                 <ul className="space-y-4 mb-8">
-                  <li className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span>50 طلب شهرياً</span>
+                  <li className="flex items-center justify-between">
+                    <span>عدد الطلبات: 50 شهرياً</span>
                   </li>
-                  <li className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span>25 منتج</span>
+                  <li className="flex items-center justify-between">
+                    <span>عدد المنتجات: 25</span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="text-red-500">❌</span>
+                    <span>تحليل البيانات</span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="text-green-500">✅</span>
+                    <span>إدارة الطلبات</span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="text-green-500">✅</span>
+                    <span>دعم فني</span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="text-green-500">✅</span>
+                    <span>عدد الأصناف غير محدود</span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="text-green-500">✅</span>
+                    <span>شهادة حماية SSL</span>
                   </li>
                 </ul>
                 
-                <Button className="w-full" variant="outline">ابدأ الآن</Button>
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate('/signup', { state: { selectedPlan: { id: 'beginner', name: 'باقة المبتدئين', price: '$19' } } });
+                  }}
+                >
+                  ابدأ الآن
+                </Button>
               </div>
               
               {/* Professional Plan */}
@@ -215,18 +243,20 @@ const Index = () => {
                 onClick={() => setSelectedPlan('professional')}
                 className={`bg-white rounded-2xl p-8 shadow-lg border-2 relative transition-all duration-300 cursor-pointer ${
                   selectedPlan === 'professional' 
-                    ? 'border-primary ring-2 ring-primary/20 transform scale-105' 
+                    ? 'ring-0' 
                     : 'border-primary hover:border-primary/80 transform hover:scale-105'
                 }`}
               >
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-white px-4 py-2 rounded-full text-sm font-medium">
-                  الأكثر شعبية
-                </div>
+                {selectedPlan !== 'professional' && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-white px-4 py-2 rounded-full text-sm font-medium">
+                    الأكثر شعبية
+                  </div>
+                )}
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
                     <div className="w-4 h-4 bg-primary rounded-sm"></div>
                   </div>
-                  <h3 className="text-2xl font-bold">باقة المحترف</h3>
+                  <h3 className="text-2xl font-bold">باقة المحترفين</h3>
                 </div>
                 <div className="flex items-baseline gap-1 mb-4">
                   <span className="text-4xl font-bold">$35</span>
@@ -234,17 +264,43 @@ const Index = () => {
                 </div>
                 
                 <ul className="space-y-4 mb-8">
-                  <li className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span>150 طلب شهرياً</span>
+                  <li className="flex items-center justify-between">
+                    <span>عدد الطلبات: 150 شهرياً</span>
                   </li>
-                  <li className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span>75 منتج</span>
+                  <li className="flex items-center justify-between">
+                    <span>عدد المنتجات: 75</span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="text-green-500">✅</span>
+                    <span>تحليل البيانات</span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="text-green-500">✅</span>
+                    <span>إدارة الطلبات</span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="text-green-500">✅</span>
+                    <span>دعم فني</span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="text-green-500">✅</span>
+                    <span>عدد الأصناف غير محدود</span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="text-green-500">✅</span>
+                    <span>شهادة حماية SSL</span>
                   </li>
                 </ul>
                 
-                <Button className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90">ابدأ الآن</Button>
+                <Button 
+                  className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate('/signup', { state: { selectedPlan: { id: 'professional', name: 'باقة المحترفين', price: '$35' } } });
+                  }}
+                >
+                  ابدأ الآن
+                </Button>
               </div>
               
               {/* Elite Plan */}
@@ -268,17 +324,44 @@ const Index = () => {
                 </div>
                 
                 <ul className="space-y-4 mb-8">
-                  <li className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span>طلبات غير محدودة</span>
+                  <li className="flex items-center justify-between">
+                    <span>عدد الطلبات: غير محدود</span>
                   </li>
-                  <li className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span>منتجات غير محدودة</span>
+                  <li className="flex items-center justify-between">
+                    <span>عدد المنتجات: غير محدود</span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="text-green-500">✅</span>
+                    <span>تحليل البيانات</span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="text-green-500">✅</span>
+                    <span>إدارة الطلبات</span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="text-green-500">✅</span>
+                    <span>دعم فني</span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="text-green-500">✅</span>
+                    <span>عدد الأصناف غير محدود</span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="text-green-500">✅</span>
+                    <span>شهادة حماية SSL</span>
                   </li>
                 </ul>
                 
-                <Button className="w-full" variant="outline">ابدأ الآن</Button>
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate('/signup', { state: { selectedPlan: { id: 'elite', name: 'باقة النخبة', price: '$49' } } });
+                  }}
+                >
+                  ابدأ الآن
+                </Button>
               </div>
             </div>
           )}
@@ -317,7 +400,14 @@ const Index = () => {
                   </li>
                 </ul>
                 
-                <Button size="lg" className="px-8 py-4 text-lg bg-gradient-to-r from-primary to-secondary">
+                <Button 
+                  size="lg" 
+                  className="px-8 py-4 text-lg bg-gradient-to-r from-primary to-secondary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate('/signup', { state: { selectedPlan: { id: 'annual', name: 'الباقة السنوية', price: '$299' } } });
+                  }}
+                >
                   ابدأ الآن
                 </Button>
               </div>
