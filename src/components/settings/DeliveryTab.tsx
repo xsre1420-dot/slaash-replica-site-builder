@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Truck, Plus, Trash2 } from "lucide-react";
 import { formatPriceInput, convertArabicToEnglish } from "@/utils/numberUtils";
+import React from "react";
 
 interface DeliveryPrice {
   governorate: string;
@@ -26,19 +27,30 @@ const governorates = [
 ];
 
 const DeliveryTab = ({ settings, setSettings }: DeliveryTabProps) => {
-  const addDeliveryPrice = () => {
-    setSettings((prev: any) => ({
-      ...prev,
-      deliveryPrices: [...prev.deliveryPrices, { governorate: "", price: 0 }]
-    }));
+  const initializeDeliveryPrices = () => {
+    const existingGovernorates = settings.deliveryPrices.map((d: DeliveryPrice) => d.governorate);
+    const missingGovernorates = governorates.filter(gov => !existingGovernorates.includes(gov));
+    
+    if (missingGovernorates.length > 0) {
+      const newPrices = missingGovernorates.map(gov => ({ governorate: gov, price: 0 }));
+      setSettings((prev: any) => ({
+        ...prev,
+        deliveryPrices: [...prev.deliveryPrices, ...newPrices]
+      }));
+    }
   };
 
-  const removeDeliveryPrice = (index: number) => {
-    setSettings((prev: any) => ({
-      ...prev,
-      deliveryPrices: prev.deliveryPrices.filter((_: any, i: number) => i !== index)
-    }));
-  };
+  React.useEffect(() => {
+    if (settings.deliveryPrices.length === 0) {
+      const allPrices = governorates.map(gov => ({ governorate: gov, price: 0 }));
+      setSettings((prev: any) => ({
+        ...prev,
+        deliveryPrices: allPrices
+      }));
+    } else {
+      initializeDeliveryPrices();
+    }
+  }, []);
 
   const updateDeliveryPrice = (index: number, field: 'governorate' | 'price', value: string | number) => {
     setSettings((prev: any) => ({
@@ -82,38 +94,23 @@ const DeliveryTab = ({ settings, setSettings }: DeliveryTabProps) => {
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Button
-              onClick={addDeliveryPrice}
-              className="flex items-center gap-2 text-white rounded-2xl"
-              style={{ background: 'linear-gradient(135deg, hsl(var(--accent-primary)), hsl(var(--accent-secondary)))' }}
-            >
-              <Plus className="w-4 h-4" />
-              إضافة محافظة جديدة
-            </Button>
-            <Label className="text-right text-black font-medium text-lg">أسعار التوصيل حسب المحافظة</Label>
+          <div className="flex items-center justify-center mb-6">
+            <Label className="text-center text-black font-medium text-lg">أسعار التوصيل حسب المحافظة</Label>
           </div>
 
           {settings.deliveryPrices.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              لا توجد محافظات مضافة. اضغط على "إضافة محافظة جديدة" للبدء.
+              جاري تحميل المحافظات...
             </div>
           ) : (
             settings.deliveryPrices.map((delivery, index) => (
               <div key={index} className="p-6 bg-white rounded-2xl border border-gray-100">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                   <div className="space-y-2">
                     <Label className="text-right block text-black font-medium">المحافظة</Label>
-                    <select
-                      value={delivery.governorate}
-                      onChange={(e) => updateDeliveryPrice(index, 'governorate', e.target.value)}
-                      className="w-full text-right rounded-2xl border border-gray-200 text-black p-2 bg-white"
-                    >
-                      <option value="">اختر المحافظة</option>
-                      {governorates.map((gov) => (
-                        <option key={gov} value={gov}>{gov}</option>
-                      ))}
-                    </select>
+                    <div className="w-full text-right rounded-2xl border border-gray-200 text-black p-3 bg-gray-50">
+                      {delivery.governorate}
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -128,17 +125,6 @@ const DeliveryTab = ({ settings, setSettings }: DeliveryTabProps) => {
                         placeholder="أدخل السعر"
                       />
                     </div>
-                  </div>
-
-                  <div className="flex justify-start">
-                    <Button
-                      onClick={() => removeDeliveryPrice(index)}
-                      variant="outline"
-                      size="icon"
-                      className="rounded-2xl border-red-200 text-red-600 hover:bg-red-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
                   </div>
                 </div>
               </div>

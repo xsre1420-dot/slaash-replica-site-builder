@@ -16,9 +16,9 @@ const Index = () => {
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <div className="w-4 h-4 bg-white rounded-sm"></div>
+              <span className="text-white font-bold text-lg">ب</span>
             </div>
-            <span className="font-bold text-xl">نومو</span>
+            <span className="font-bold text-xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">بدايته</span>
           </div>
           
           <nav className="hidden md:flex items-center gap-8">
@@ -197,33 +197,14 @@ const Index = () => {
                   <span className="text-gray-600">/ شهرياً</span>
                 </div>
                 
-                <ul className="space-y-4 mb-8">
-                  <li className="flex items-center justify-between">
-                    <span>عدد الطلبات: 50 شهرياً</span>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span>عدد المنتجات: 25</span>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span className="text-red-500">❌</span>
-                    <span>تحليل البيانات</span>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span className="text-green-500">✅</span>
-                    <span>إدارة الطلبات</span>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span className="text-green-500">✅</span>
-                    <span>دعم فني</span>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span className="text-green-500">✅</span>
-                    <span>عدد الأصناف غير محدود</span>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span className="text-green-500">✅</span>
-                    <span>شهادة حماية SSL</span>
-                  </li>
+                 <ul className="space-y-4 mb-8 text-right">
+                  <li className="text-gray-700">عدد الطلبات: 50 شهرياً</li>
+                  <li className="text-gray-700">عدد المنتجات: 25</li>
+                  <li className="text-gray-500">تحليل البيانات</li>
+                  <li className="text-gray-700">إدارة الطلبات</li>
+                  <li className="text-gray-700">دعم فني</li>
+                  <li className="text-gray-700">عدد الأصناف غير محدود</li>
+                  <li className="text-gray-700">شهادة حماية SSL</li>
                 </ul>
                 
                 <Button 
@@ -243,7 +224,7 @@ const Index = () => {
                 onClick={() => setSelectedPlan('professional')}
                 className={`bg-white rounded-2xl p-8 shadow-lg border-2 relative transition-all duration-300 cursor-pointer ${
                   selectedPlan === 'professional' 
-                    ? 'ring-0' 
+                    ? 'border-primary ring-2 ring-primary/20' 
                     : 'border-primary hover:border-primary/80 transform hover:scale-105'
                 }`}
               >
@@ -263,33 +244,14 @@ const Index = () => {
                   <span className="text-gray-600">/ شهرياً</span>
                 </div>
                 
-                <ul className="space-y-4 mb-8">
-                  <li className="flex items-center justify-between">
-                    <span>عدد الطلبات: 150 شهرياً</span>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span>عدد المنتجات: 75</span>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span className="text-green-500">✅</span>
-                    <span>تحليل البيانات</span>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span className="text-green-500">✅</span>
-                    <span>إدارة الطلبات</span>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span className="text-green-500">✅</span>
-                    <span>دعم فني</span>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span className="text-green-500">✅</span>
-                    <span>عدد الأصناف غير محدود</span>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span className="text-green-500">✅</span>
-                    <span>شهادة حماية SSL</span>
-                  </li>
+                <ul className="space-y-4 mb-8 text-right">
+                  <li className="text-gray-700">عدد الطلبات: 150 شهرياً</li>
+                  <li className="text-gray-700">عدد المنتجات: 75</li>
+                  <li className="text-gray-700">تحليل البيانات</li>
+                  <li className="text-gray-700">إدارة الطلبات</li>
+                  <li className="text-gray-700">دعم فني</li>
+                  <li className="text-gray-700">عدد الأصناف غير محدود</li>
+                  <li className="text-gray-700">شهادة حماية SSL</li>
                 </ul>
                 
                 <Button 
@@ -323,33 +285,14 @@ const Index = () => {
                   <span className="text-gray-600">/ شهرياً</span>
                 </div>
                 
-                <ul className="space-y-4 mb-8">
-                  <li className="flex items-center justify-between">
-                    <span>عدد الطلبات: غير محدود</span>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span>عدد المنتجات: غير محدود</span>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span className="text-green-500">✅</span>
-                    <span>تحليل البيانات</span>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span className="text-green-500">✅</span>
-                    <span>إدارة الطلبات</span>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span className="text-green-500">✅</span>
-                    <span>دعم فني</span>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span className="text-green-500">✅</span>
-                    <span>عدد الأصناف غير محدود</span>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span className="text-green-500">✅</span>
-                    <span>شهادة حماية SSL</span>
-                  </li>
+                <ul className="space-y-4 mb-8 text-right">
+                  <li className="text-gray-700">عدد الطلبات: غير محدود</li>
+                  <li className="text-gray-700">عدد المنتجات: غير محدود</li>
+                  <li className="text-gray-700">تحليل البيانات</li>
+                  <li className="text-gray-700">إدارة الطلبات</li>
+                  <li className="text-gray-700">دعم فني</li>
+                  <li className="text-gray-700">عدد الأصناف غير محدود</li>
+                  <li className="text-gray-700">شهادة حماية SSL</li>
                 </ul>
                 
                 <Button 
@@ -389,15 +332,14 @@ const Index = () => {
                   أرخص بنسبة 49% من الدفع الشهري
                 </div>
                 
-                <ul className="space-y-4 mb-8 max-w-md mx-auto">
-                  <li className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span>طلبات غير محدودة</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span>منتجات غير محدودة</span>
-                  </li>
+                <ul className="space-y-4 mb-8 max-w-md mx-auto text-right">
+                  <li className="text-gray-700">عدد الطلبات: غير محدود</li>
+                  <li className="text-gray-700">عدد المنتجات: غير محدود</li>
+                  <li className="text-gray-700">تحليل البيانات</li>
+                  <li className="text-gray-700">إدارة الطلبات</li>
+                  <li className="text-gray-700">دعم فني</li>
+                  <li className="text-gray-700">عدد الأصناف غير محدود</li>
+                  <li className="text-gray-700">شهادة حماية SSL</li>
                 </ul>
                 
                 <Button 
@@ -485,9 +427,9 @@ const Index = () => {
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-6">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <div className="w-4 h-4 bg-white rounded-sm"></div>
+                <span className="text-white font-bold text-lg">ب</span>
               </div>
-              <span className="font-bold text-xl">نومو</span>
+              <span className="font-bold text-xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">بدايته</span>
             </div>
             <p className="text-gray-400 mb-8 max-w-md mx-auto text-lg">
               منصة شاملة لإنشاء وإدارة المتاجر الإلكترونية بكل سهولة واحترافية
