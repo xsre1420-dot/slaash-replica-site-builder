@@ -107,14 +107,7 @@ const DeliveryTab = ({ settings, setSettings }: DeliveryTabProps) => {
               <div key={index} className="p-6 bg-white rounded-2xl border border-gray-100">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                   <div className="space-y-2">
-                    <Label className="text-right block text-black font-medium">المحافظة</Label>
-                    <div className="w-full text-right rounded-2xl border border-gray-200 text-black p-3 bg-gray-50">
-                      {delivery.governorate}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-right block text-black font-medium">سعر التوصيل (د.ع)</Label>
+                    <Label className="text-left block text-black font-medium">سعر التوصيل (د.ع)</Label>
                     <div className="flex items-center gap-3">
                       <span className="text-gray-500">د.ع</span>
                       <Input
@@ -124,6 +117,13 @@ const DeliveryTab = ({ settings, setSettings }: DeliveryTabProps) => {
                         className="text-right rounded-2xl border-gray-200 text-black"
                         placeholder="أدخل السعر"
                       />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-right block text-black font-medium">المحافظة</Label>
+                    <div className="w-full text-right rounded-2xl border border-gray-200 text-black p-3 bg-gray-50">
+                      {delivery.governorate}
                     </div>
                   </div>
                 </div>

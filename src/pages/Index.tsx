@@ -220,15 +220,17 @@ const Index = () => {
               </div>
               
               {/* Professional Plan */}
-              <div 
+               <div 
                 onClick={() => setSelectedPlan('professional')}
                 className={`bg-white rounded-2xl p-8 shadow-lg border-2 relative transition-all duration-300 cursor-pointer ${
                   selectedPlan === 'professional' 
                     ? 'border-primary ring-2 ring-primary/20' 
-                    : 'border-primary hover:border-primary/80 transform hover:scale-105'
+                    : selectedPlan === null 
+                      ? 'border-primary hover:border-primary/80 transform hover:scale-105'
+                      : 'border-gray-200 hover:border-primary/30'
                 }`}
-              >
-                {selectedPlan !== 'professional' && (
+               >
+                {(selectedPlan === null || selectedPlan === 'professional') && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-white px-4 py-2 rounded-full text-sm font-medium">
                     الأكثر شعبية
                   </div>

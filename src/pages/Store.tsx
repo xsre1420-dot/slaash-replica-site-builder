@@ -105,12 +105,12 @@ const Store = () => {
       <div className="bg-white shadow-sm sticky top-0 z-40">
         <div className="px-6 py-4">
           <div className="flex justify-between items-center mb-4">
+            {storeLogo && (
+              <img src={storeLogo} alt="Store Logo" className="w-12 h-12 rounded-full object-cover" />
+            )}
             <div className="text-center flex-1">
               <p className="font-bold text-xl text-gray-800">{storeName}</p>
             </div>
-            {storeLogo && (
-              <img src={storeLogo} alt="Store Logo" className="w-10 h-10 rounded-full object-cover" />
-            )}
           </div>
           
           {/* Search Bar */}
@@ -144,10 +144,7 @@ const Store = () => {
               }`}
               style={{
                 backgroundColor: selectedCategory === category.id ? 'hsl(248, 53%, 58%)' : undefined,
-                borderColor: selectedCategory === category.id ? 'hsl(248, 53%, 58%)' : undefined,
-                boxShadow: selectedCategory === category.id 
-                  ? '0 8px 25px -5px rgba(120, 119, 198, 0.3), 0 4px 15px -3px rgba(120, 119, 198, 0.2)' 
-                  : undefined
+                borderColor: selectedCategory === category.id ? 'hsl(248, 53%, 58%)' : undefined
               }}
               onClick={() => setSelectedCategory(category.id)}
             >
