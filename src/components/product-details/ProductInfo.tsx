@@ -50,17 +50,6 @@ const ProductInfo = ({
           <span className="text-2xl font-bold text-black">
             {price.toLocaleString()} د.ع
           </span>
-          {storeSettings.deliveryPrices && storeSettings.deliveryPrices.length > 0 && (
-            <div className="text-sm text-gray-600 mt-1">
-              <div className="font-medium">أسعار التوصيل:</div>
-              {storeSettings.deliveryPrices.map((delivery, index) => (
-                <div key={index} className="flex justify-between">
-                  <span>{delivery.price.toLocaleString()} د.ع</span>
-                  <span>{delivery.governorate}</span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
         <h2 className="text-2xl font-bold text-right">{name}</h2>
       </div>

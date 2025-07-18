@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStore } from "@/context/StoreContext";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import SettingsActions from "@/components/settings/SettingsActions";
 
 const Settings = () => {
   const { storeName, storeLogo, storeGovernorate, storeSettings, updateStore, updateStoreSettings } = useStore();
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const [settings, setSettings] = useState({
     storeName: storeName,
@@ -40,28 +41,36 @@ const Settings = () => {
   }, [storeName, storeLogo, storeGovernorate, storeSettings]);
 
   const handleSaveSettings = async () => {
-    try {
-      await updateStore(settings.storeLogo, settings.storeName, settings.storeGovernorate);
-      await updateStoreSettings({
-        menuBackgroundColor: settings.menuBackgroundColor,
-        menuTextColor: settings.menuTextColor,
-        menuAccentColor: settings.menuAccentColor,
-        bannerImages: settings.bannerImages,
-        primaryBannerIndex: settings.primaryBannerIndex,
-        deliveryPrices: settings.deliveryPrices
-      });
-      
-      toast.success("تم حفظ الإعدادات بنجاح!", {
-        description: "تم تحديث جميع إعدادات المتجر",
-        duration: 4000,
-      });
-    } catch (error) {
-      console.error('Error saving settings:', error);
-      toast.error("فشل في حفظ الإعدادات", {
-        description: "حدث خطأ أثناء محاولة حفظ الإعدادات",
-        duration: 4000,
-      });
+    // Clear any existing timeout to prevent multiple saves
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
     }
+
+    // Debounce the save operation
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        await updateStore(settings.storeLogo, settings.storeName, settings.storeGovernorate);
+        await updateStoreSettings({
+          menuBackgroundColor: settings.menuBackgroundColor,
+          menuTextColor: settings.menuTextColor,
+          menuAccentColor: settings.menuAccentColor,
+          bannerImages: settings.bannerImages,
+          primaryBannerIndex: settings.primaryBannerIndex,
+          deliveryPrices: settings.deliveryPrices
+        });
+        
+        toast.success("تم حفظ الإعدادات بنجاح!", {
+          description: "تم تحديث جميع إعدادات المتجر",
+          duration: 3000,
+        });
+      } catch (error) {
+        console.error('Error saving settings:', error);
+        toast.error("فشل في حفظ الإعدادات", {
+          description: "حدث خطأ أثناء محاولة حفظ الإعدادات",
+          duration: 3000,
+        });
+      }
+    }, 300); // 300ms debounce
   };
 
   return (
