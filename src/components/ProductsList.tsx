@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Edit, Plus, Trash2, Star, Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { products as initialProducts, reloadProducts } from "@/data/dummyData";
+import { loadProducts, deleteProduct } from "@/data/dummyData";
 import { Product } from "@/types";
 
 
@@ -12,13 +12,19 @@ export const ProductsList = () => {
   const [favorites, setFavorites] = useState<string[]>([]);
 
   useEffect(() => {
-    // Reload products from localStorage to get the latest data
-    reloadProducts();
-    setProducts(initialProducts);
+    // Load products from Supabase
+    const loadProductsData = async () => {
+      const productsData = await loadProducts();
+      setProducts(productsData);
+    };
+    loadProductsData();
   }, []);
 
-  const handleDelete = (id: string) => {
-    setProducts(products.filter(p => p.id !== id));
+  const handleDelete = async (id: string) => {
+    const result = await deleteProduct(id);
+    if (result.success) {
+      setProducts(products.filter(p => p.id !== id));
+    }
   };
 
   const toggleFavorite = (productId: string) => {

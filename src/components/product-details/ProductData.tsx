@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { Product } from "@/types";
-import { getProductById, reloadProducts } from "@/data/dummyData";
+import { loadProducts, getProductById } from "@/data/dummyData";
 
 interface ProductDataProps {
   productId: string | undefined;
@@ -10,17 +10,21 @@ interface ProductDataProps {
 
 const ProductData = ({ productId, onProductLoaded }: ProductDataProps) => {
   useEffect(() => {
-    if (!productId) {
-      onProductLoaded(null);
-      return;
-    }
+    const loadProductData = async () => {
+      if (!productId) {
+        onProductLoaded(null);
+        return;
+      }
 
-    // Reload products from storage to ensure we have the latest data
-    reloadProducts();
-    
-    // Get product from the main data source
-    const foundProduct = getProductById(productId);
-    onProductLoaded(foundProduct || null);
+      // Load products from Supabase to ensure we have the latest data
+      await loadProducts();
+      
+      // Get product from the main data source
+      const foundProduct = getProductById(productId);
+      onProductLoaded(foundProduct || null);
+    };
+
+    loadProductData();
   }, [productId, onProductLoaded]);
 
   // This is a data-fetching component only, it doesn't render anything

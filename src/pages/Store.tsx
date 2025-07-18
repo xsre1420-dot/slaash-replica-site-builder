@@ -1,7 +1,7 @@
 import { X, ShoppingCart, Plus, Search, Heart, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { getProductsByCategory } from "@/data/dummyData";
+import { getProductsByCategory, getCategories, loadProducts } from "@/data/dummyData";
 import { Product, Category } from "@/types";
 import { useCart } from "@/context/CartContext";
 import { useStore } from "@/context/StoreContext";
@@ -20,25 +20,23 @@ const Store = () => {
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
-  // Load categories from localStorage
+  // Load categories from Supabase
   useEffect(() => {
-    const savedCategories = localStorage.getItem('categories');
-    if (savedCategories) {
+    const loadCategoriesData = async () => {
       try {
-        const parsedCategories = JSON.parse(savedCategories);
+        const categoriesData = await getCategories();
         // Add "الكل" category at the beginning
         const allCategories = [
           { id: "all", name: "الكل", order: -1 },
-          ...parsedCategories
+          ...categoriesData
         ];
         setCategories(allCategories);
       } catch (error) {
         console.error('Error loading categories:', error);
         setCategories([{ id: "all", name: "الكل", order: -1 }]);
       }
-    } else {
-      setCategories([{ id: "all", name: "الكل", order: -1 }]);
-    }
+    };
+    loadCategoriesData();
   }, []);
 
   // Only use banner images from settings
@@ -46,7 +44,11 @@ const Store = () => {
 
   // Load products based on selected category
   useEffect(() => {
-    setProducts(getProductsByCategory(selectedCategory));
+    const loadProductsData = async () => {
+      await loadProducts(); // Ensure products are loaded from Supabase
+      setProducts(getProductsByCategory(selectedCategory));
+    };
+    loadProductsData();
   }, [selectedCategory]);
 
   // Handle adding a product to the cart

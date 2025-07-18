@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { X } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { getCategories, getProductById, updateProduct } from "@/data/dummyData";
+import { getCategories, getProductById, updateProduct, getCategoriesSync } from "@/data/dummyData";
 import { useToast } from "@/hooks/use-toast";
 import { Product, Category, ColorOption } from "@/types";
 import ProductImagesManager from "@/components/ProductImagesManager";
@@ -31,7 +31,11 @@ const EditProduct = () => {
 
   // Load categories on mount
   useEffect(() => {
-    setCategories(getCategories());
+    const loadCategories = async () => {
+      const cats = await getCategories();
+      setCategories(cats);
+    };
+    loadCategories();
   }, []);
 
   useEffect(() => {
@@ -75,7 +79,7 @@ const EditProduct = () => {
     return numericValue.toLocaleString('en-US');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validate form
@@ -130,16 +134,23 @@ const EditProduct = () => {
       };
 
       // Update the product using the updateProduct function
-      updateProduct(productId, updatedProduct);
+      const result = await updateProduct(productId, updatedProduct);
 
-      // Show success toast
-      toast({
-        title: "تم بنجاح",
-        description: "تم تحديث بيانات المنتج",
-      });
-
-      // Navigate back to builder
-      navigate('/builder');
+      if (result.success) {
+        // Show success toast
+        toast({
+          title: "تم بنجاح",
+          description: "تم تحديث بيانات المنتج",
+        });
+        // Navigate back to builder
+        navigate('/builder');
+      } else {
+        toast({
+          title: "خطأ",
+          description: result.error || "فشل في تحديث المنتج",
+          variant: "destructive"
+        });
+      }
     }
   };
 
