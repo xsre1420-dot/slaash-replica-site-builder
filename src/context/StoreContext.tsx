@@ -25,7 +25,7 @@ interface StoreContextType {
   updateStoreSettings: (settings: StoreSettings) => Promise<void>;
 }
 
-const StoreContext = createContext<StoreContextType | undefined>(undefined);
+const StoreContext = createContext<StoreContextType | null>(null);
 
 export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
@@ -210,7 +210,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
 
 export const useStore = () => {
   const context = useContext(StoreContext);
-  if (context === undefined) {
+  if (context === null) {
     throw new Error("useStore must be used within a StoreProvider");
   }
   return context;
