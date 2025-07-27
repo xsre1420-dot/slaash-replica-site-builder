@@ -8,7 +8,7 @@ import StoreInfoTab from "@/components/settings/StoreInfoTab";
 import DeliveryTab from "@/components/settings/DeliveryTab";
 import ImagesTab from "@/components/settings/ImagesTab";
 import DesignTab from "@/components/settings/DesignTab";
-// SettingsActions removed - auto-save is now enabled
+import SettingsActions from "@/components/settings/SettingsActions";
 
 const Settings = () => {
   const { storeName, storeLogo, storeGovernorate, storeSettings, updateStore, updateStoreSettings } = useStore();
@@ -40,12 +40,13 @@ const Settings = () => {
     });
   }, [storeName, storeLogo, storeGovernorate, storeSettings]);
 
-  // Auto-save function with debouncing
-  const autoSave = async () => {
+  const handleSaveSettings = async () => {
+    // Clear any existing timeout to prevent multiple saves
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
 
+    // Debounce the save operation
     saveTimeoutRef.current = setTimeout(async () => {
       try {
         await updateStore(settings.storeLogo, settings.storeName, settings.storeGovernorate);
@@ -57,16 +58,20 @@ const Settings = () => {
           primaryBannerIndex: settings.primaryBannerIndex,
           deliveryPrices: settings.deliveryPrices
         });
+        
+        toast.success("تم حفظ الإعدادات بنجاح!", {
+          description: "تم تحديث جميع إعدادات المتجر",
+          duration: 3000,
+        });
       } catch (error) {
-        console.error('Error auto-saving settings:', error);
+        console.error('Error saving settings:', error);
+        toast.error("فشل في حفظ الإعدادات", {
+          description: "حدث خطأ أثناء محاولة حفظ الإعدادات",
+          duration: 3000,
+        });
       }
-    }, 1000); // 1 second debounce for auto-save
+    }, 300); // 300ms debounce
   };
-
-  // Auto-save when settings change
-  useEffect(() => {
-    autoSave();
-  }, [settings]);
 
   return (
     <div className="min-h-screen bg-gray-50 font-arabic relative">
@@ -99,6 +104,7 @@ const Settings = () => {
             </TabsContent>
           </Tabs>
 
+          <SettingsActions onSave={handleSaveSettings} />
         </div>
       </div>
     </div>

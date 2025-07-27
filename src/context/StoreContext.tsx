@@ -117,17 +117,13 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     setStoreName(name);
     if (governorate !== undefined) setStoreGovernorate(governorate);
     
-    // Save to database immediately
+    // Save to database
     if (user?.id) {
-      try {
-        await saveStoreSettings({
-          store_name: name,
-          store_logo: logo,
-          store_governorate: governorate || storeGovernorate
-        });
-      } catch (error) {
-        console.error('Failed to save store data:', error);
-      }
+      await saveStoreSettings({
+        store_name: name,
+        store_logo: logo,
+        store_governorate: governorate || storeGovernorate
+      });
     }
   };
 
@@ -135,20 +131,16 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     console.log('Updating store settings:', settings);
     setStoreSettings(settings);
     
-    // Save to database immediately
+    // Save to database
     if (user?.id) {
-      try {
-        await saveStoreSettings({
-          menu_background_color: settings.menuBackgroundColor,
-          menu_text_color: settings.menuTextColor,
-          menu_accent_color: settings.menuAccentColor,
-          banner_images: settings.bannerImages,
-          primary_banner_index: settings.primaryBannerIndex,
-          delivery_prices: settings.deliveryPrices as any
-        });
-      } catch (error) {
-        console.error('Failed to save store settings:', error);
-      }
+      await saveStoreSettings({
+        menu_background_color: settings.menuBackgroundColor,
+        menu_text_color: settings.menuTextColor,
+        menu_accent_color: settings.menuAccentColor,
+        banner_images: settings.bannerImages,
+        primary_banner_index: settings.primaryBannerIndex,
+        delivery_prices: settings.deliveryPrices as any
+      });
     }
   };
 
