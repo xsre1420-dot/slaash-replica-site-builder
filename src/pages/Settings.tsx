@@ -8,11 +8,12 @@ import StoreInfoTab from "@/components/settings/StoreInfoTab";
 import DeliveryTab from "@/components/settings/DeliveryTab";
 import ImagesTab from "@/components/settings/ImagesTab";
 import DesignTab from "@/components/settings/DesignTab";
-import SettingsActions from "@/components/settings/SettingsActions";
+// SettingsActions removed - auto-save is now enabled
 
 const Settings = () => {
   const { storeName, storeLogo, storeGovernorate, storeSettings, updateStore, updateStoreSettings } = useStore();
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   
   const [settings, setSettings] = useState({
     storeName: storeName,
@@ -40,13 +41,14 @@ const Settings = () => {
     });
   }, [storeName, storeLogo, storeGovernorate, storeSettings]);
 
-  const handleSaveSettings = async () => {
-    // Clear any existing timeout to prevent multiple saves
+  // Auto-save function with debouncing
+  const autoSave = async () => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
 
-    // Debounce the save operation
+    setAutoSaveStatus('saving');
+
     saveTimeoutRef.current = setTimeout(async () => {
       try {
         await updateStore(settings.storeLogo, settings.storeName, settings.storeGovernorate);
@@ -58,20 +60,20 @@ const Settings = () => {
           primaryBannerIndex: settings.primaryBannerIndex,
           deliveryPrices: settings.deliveryPrices
         });
-        
-        toast.success("تم حفظ الإعدادات بنجاح!", {
-          description: "تم تحديث جميع إعدادات المتجر",
-          duration: 3000,
-        });
+        setAutoSaveStatus('saved');
+        // Reset status after 2 seconds
+        setTimeout(() => setAutoSaveStatus('idle'), 2000);
       } catch (error) {
-        console.error('Error saving settings:', error);
-        toast.error("فشل في حفظ الإعدادات", {
-          description: "حدث خطأ أثناء محاولة حفظ الإعدادات",
-          duration: 3000,
-        });
+        console.error('Error auto-saving settings:', error);
+        setAutoSaveStatus('idle');
       }
-    }, 300); // 300ms debounce
+    }, 1000); // 1 second debounce for auto-save
   };
+
+  // Auto-save when settings change
+  useEffect(() => {
+    autoSave();
+  }, [settings]);
 
   return (
     <div className="min-h-screen bg-gray-50 font-arabic relative">
@@ -104,7 +106,25 @@ const Settings = () => {
             </TabsContent>
           </Tabs>
 
-          <SettingsActions onSave={handleSaveSettings} />
+          {/* Auto-save status indicator */}
+          <div className="flex justify-center mt-8">
+            {autoSaveStatus === 'saving' && (
+              <div className="flex items-center gap-2 text-gray-600">
+                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <span>جاري الحفظ...</span>
+              </div>
+            )}
+            {autoSaveStatus === 'saved' && (
+              <div className="flex items-center gap-2 text-green-600">
+                <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <span>تم الحفظ تلقائياً</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
