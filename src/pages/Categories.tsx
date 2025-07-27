@@ -15,6 +15,7 @@ import {
   DialogFooter 
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
+import { getCategories, addCategory, updateCategory, deleteCategory } from "@/data/dummyData";
 
 const Categories = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -24,27 +25,32 @@ const Categories = () => {
   const [newCategory, setNewCategory] = useState({ name: "", id: "" });
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   
   const { toast } = useToast();
 
   useEffect(() => {
-    // Load categories from localStorage
-    const savedCategories = localStorage.getItem('categories');
-    if (savedCategories) {
-      try {
-        setCategories(JSON.parse(savedCategories));
-      } catch (error) {
-        console.error('Error loading categories:', error);
-      }
-    }
+    loadCategoriesFromSupabase();
   }, []);
 
-  const saveCategories = (newCategories: Category[]) => {
-    setCategories(newCategories);
-    localStorage.setItem('categories', JSON.stringify(newCategories));
+  const loadCategoriesFromSupabase = async () => {
+    setLoading(true);
+    try {
+      const cats = await getCategories();
+      setCategories(cats);
+    } catch (error) {
+      console.error('Error loading categories:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في تحميل الأصناف",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
     if (!newCategory.name.trim()) {
       toast({
         title: "خطأ",
@@ -54,10 +60,13 @@ const Categories = () => {
       return;
     }
     
+    setLoading(true);
+    
     const categoryId = newCategory.name
       .trim()
       .toLowerCase()
-      .replace(/\s+/g, "-");
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
     
     const newCategoryObject: Category = {
       id: categoryId,
@@ -65,18 +74,29 @@ const Categories = () => {
       order: categories.length,
     };
     
-    const updatedCategories = [...categories, newCategoryObject];
-    saveCategories(updatedCategories);
-    setNewCategory({ name: "", id: "" });
-    setIsAddDialogOpen(false);
+    const result = await addCategory(newCategoryObject);
     
-    toast({
-      title: "تم بنجاح",
-      description: "تمت إضافة التصنيف الجديد",
-    });
+    if (result.success) {
+      await loadCategoriesFromSupabase();
+      setNewCategory({ name: "", id: "" });
+      setIsAddDialogOpen(false);
+      
+      toast({
+        title: "تم بنجاح",
+        description: "تمت إضافة التصنيف الجديد",
+      });
+    } else {
+      toast({
+        title: "خطأ",
+        description: result.error || "فشل في إضافة التصنيف",
+        variant: "destructive",
+      });
+    }
+    
+    setLoading(false);
   };
 
-  const handleEditCategory = () => {
+  const handleEditCategory = async () => {
     if (!editingCategory || !editingCategory.name.trim()) {
       toast({
         title: "خطأ",
@@ -86,32 +106,55 @@ const Categories = () => {
       return;
     }
     
-    const updatedCategories = categories.map((cat) =>
-      cat.id === editingCategory.id ? { ...editingCategory } : cat
-    );
+    setLoading(true);
     
-    saveCategories(updatedCategories);
-    setIsEditDialogOpen(false);
-    setEditingCategory(null);
+    const result = await updateCategory(editingCategory.id, editingCategory);
     
-    toast({
-      title: "تم بنجاح",
-      description: "تم تحديث التصنيف",
-    });
+    if (result.success) {
+      await loadCategoriesFromSupabase();
+      setIsEditDialogOpen(false);
+      setEditingCategory(null);
+      
+      toast({
+        title: "تم بنجاح",
+        description: "تم تحديث التصنيف",
+      });
+    } else {
+      toast({
+        title: "خطأ",
+        description: result.error || "فشل في تحديث التصنيف",
+        variant: "destructive",
+      });
+    }
+    
+    setLoading(false);
   };
 
-  const handleDeleteCategory = () => {
+  const handleDeleteCategory = async () => {
     if (!deletingCategoryId) return;
     
-    const updatedCategories = categories.filter((cat) => cat.id !== deletingCategoryId);
-    saveCategories(updatedCategories);
-    setIsDeleteDialogOpen(false);
-    setDeletingCategoryId(null);
+    setLoading(true);
     
-    toast({
-      title: "تم بنجاح",
-      description: "تم حذف التصنيف",
-    });
+    const result = await deleteCategory(deletingCategoryId);
+    
+    if (result.success) {
+      await loadCategoriesFromSupabase();
+      setIsDeleteDialogOpen(false);
+      setDeletingCategoryId(null);
+      
+      toast({
+        title: "تم بنجاح",
+        description: "تم حذف التصنيف",
+      });
+    } else {
+      toast({
+        title: "خطأ",
+        description: result.error || "فشل في حذف التصنيف",
+        variant: "destructive",
+      });
+    }
+    
+    setLoading(false);
   };
 
   return (

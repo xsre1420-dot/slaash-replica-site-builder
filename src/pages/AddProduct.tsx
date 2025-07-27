@@ -28,13 +28,21 @@ const AddProduct = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Load categories on mount
+  // Load categories on mount and when window gains focus
   useEffect(() => {
     const loadCategories = async () => {
       const cats = await getCategories();
       setCategories(cats);
     };
     loadCategories();
+
+    // Refresh categories when window gains focus (user might have added a category in another tab)
+    const handleFocus = () => {
+      loadCategories();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
   const handleImagesChange = (newMainImage: string | null, newAdditionalImages: string[]) => {

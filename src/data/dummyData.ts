@@ -184,6 +184,87 @@ export const getProductsByCategory = (categoryId: string): Product[] => {
   return productsCache.filter(product => product.category === categoryId);
 };
 
+// Add a new category to Supabase
+export const addCategory = async (category: Category): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    const { error } = await supabase
+      .from('categories')
+      .insert({
+        id: category.id,
+        name: category.name,
+        display_order: category.order || 0,
+        owner_id: user.id
+      });
+
+    if (error) {
+      console.error('Error adding category:', error);
+      return { success: false, error: error.message };
+    }
+
+    // Reload categories to update cache
+    await getCategories();
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error adding category:', error);
+    return { success: false, error: 'Failed to add category' };
+  }
+};
+
+// Update an existing category in Supabase
+export const updateCategory = async (categoryId: string, updatedCategory: Category): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const { error } = await supabase
+      .from('categories')
+      .update({
+        name: updatedCategory.name,
+        display_order: updatedCategory.order || 0
+      })
+      .eq('id', categoryId);
+
+    if (error) {
+      console.error('Error updating category:', error);
+      return { success: false, error: error.message };
+    }
+
+    // Reload categories to update cache
+    await getCategories();
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating category:', error);
+    return { success: false, error: 'Failed to update category' };
+  }
+};
+
+// Delete a category from Supabase
+export const deleteCategory = async (categoryId: string): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const { error } = await supabase
+      .from('categories')
+      .delete()
+      .eq('id', categoryId);
+
+    if (error) {
+      console.error('Error deleting category:', error);
+      return { success: false, error: error.message };
+    }
+
+    // Reload categories to update cache
+    await getCategories();
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting category:', error);
+    return { success: false, error: 'Failed to delete category' };
+  }
+};
+
 // Get product by ID
 export const getProductById = (id: string): Product | undefined => {
   return productsCache.find(product => product.id === id);
