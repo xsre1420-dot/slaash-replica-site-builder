@@ -1,8 +1,6 @@
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { Calendar, Eye, List, Plus, Tag, Settings, BarChart3, Users, Copy, Check } from "lucide-react";
-import { ProductsList } from "@/components/ProductsList";
+import { Calendar, Eye, List, Plus, Tag, Settings, BarChart3, Users, Copy, Check, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import StoreHeader from "@/components/StoreHeader";
@@ -125,6 +123,20 @@ export default function Builder() {
             </div>
           </Link>
           
+          <Link to="/products" className="group">
+            <div className="bg-white p-6 rounded-3xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
+                   style={{ 
+                     background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                     boxShadow: '0 4px 15px rgba(245, 158, 11, 0.2)'
+                   }}>
+                <Package className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="font-bold text-gray-800 mb-1">المنتجات</h3>
+              <p className="text-sm text-gray-500">إدارة المنتجات</p>
+            </div>
+          </Link>
+          
           <Link to="/settings" className="group">
             <div className="bg-white p-6 rounded-3xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
               <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
@@ -153,23 +165,6 @@ export default function Builder() {
             </div>
           </Link>
         </div>
-
-        {/* Modern Products Section */}
-        <Card className="border-0 shadow-sm rounded-3xl">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xl font-bold text-gray-800">منتجاتك</CardTitle>
-              <Link to="/add-product" className="text-indigo-500 hover:text-indigo-600 text-sm flex items-center font-medium">
-                <Plus className="w-4 h-4 ml-1" />
-                منتج جديد
-              </Link>
-            </div>
-            <CardDescription className="text-gray-500">إدارة قائمة المنتجات</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ProductsList />
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
