@@ -429,6 +429,26 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_restaurant_owner_profile: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          id: string
+          restaurant_logo: string
+          restaurant_name: string
+          updated_at: string
+          username: string
+        }[]
+      }
+      verify_restaurant_owner_password: {
+        Args: { input_password_hash: string; input_username: string }
+        Returns: {
+          id: string
+          restaurant_logo: string
+          restaurant_name: string
+          username: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
