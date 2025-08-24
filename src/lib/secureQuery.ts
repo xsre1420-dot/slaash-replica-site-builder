@@ -1,28 +1,17 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-// Helper function to ensure owner context is set before making queries
+// Secure query execution now handled automatically by Supabase RLS
+// No need for manual owner context management
 export const executeSecureQuery = async <T>(
   ownerId: string,
   queryFn: () => Promise<T>
 ): Promise<T> => {
   try {
-    // Store owner context for RLS policies
-    localStorage.setItem('current_owner_id', ownerId);
+    // Owner context is now automatically handled by auth.uid() in RLS policies
+    // No need to store in localStorage or verify manually
     
-    // Verify owner exists first
-    const { error } = await supabase
-      .from('restaurant_owners')
-      .select('id')
-      .eq('id', ownerId)
-      .single();
-      
-    if (error) {
-      console.error('Owner verification failed:', error);
-      throw new Error('Invalid owner context');
-    }
-    
-    // Execute the query
+    // Execute the query - RLS policies will automatically filter by authenticated user
     return await queryFn();
   } catch (error) {
     console.error('Secure query execution failed:', error);
@@ -30,12 +19,16 @@ export const executeSecureQuery = async <T>(
   }
 };
 
-// Wrapper for common database operations with security context
+// Wrapper for common database operations with automatic security context
 export class SecureDatabase {
-  constructor(private ownerId: string) {}
+  constructor(private ownerId: string) {
+    // Owner ID is no longer needed - kept for compatibility
+    // RLS policies automatically use auth.uid() for security
+  }
 
   async query<T>(queryFn: () => Promise<T>): Promise<T> {
-    return executeSecureQuery(this.ownerId, queryFn);
+    // No need to pass ownerId - RLS handles security automatically
+    return queryFn();
   }
 
   // Helper method to get products for the current owner

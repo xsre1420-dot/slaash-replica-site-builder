@@ -14,26 +14,8 @@ export interface DatabaseProduct {
   updated_at: string;
 }
 
-// Helper function to set owner context
-const setOwnerContext = async (ownerId: string) => {
-  try {
-    // Store owner context for RLS policies
-    localStorage.setItem('current_owner_id', ownerId);
-    
-    // Verify owner exists
-    const { error } = await supabase
-      .from('restaurant_owners')
-      .select('id')
-      .eq('id', ownerId)
-      .single();
-      
-    if (error) {
-      console.error('Owner verification failed:', error);
-    }
-  } catch (error) {
-    console.error('Error setting owner context:', error);
-  }
-};
+// Owner context is now automatically handled by Supabase RLS policies
+// No manual context setting needed - auth.uid() is used automatically
 
 export const saveProduct = async (productData: {
   name: string;
@@ -45,8 +27,8 @@ export const saveProduct = async (productData: {
   ownerId: string;
 }) => {
   try {
-    // Set owner context for RLS
-    await setOwnerContext(productData.ownerId);
+    // RLS policies automatically handle owner context using auth.uid()
+    // No manual context setting needed
     
     const { data, error } = await supabase
       .from('products')
@@ -57,7 +39,7 @@ export const saveProduct = async (productData: {
         price: productData.price,
         image_url: productData.image,
         additional_images: productData.additionalImages || [],
-        owner_id: productData.ownerId
+        owner_id: productData.ownerId // This must match auth.uid() for RLS to allow
       })
       .select()
       .single();
@@ -76,8 +58,8 @@ export const saveProduct = async (productData: {
 
 export const getProducts = async (ownerId: string) => {
   try {
-    // Set owner context for RLS
-    await setOwnerContext(ownerId);
+    // RLS policies automatically filter by auth.uid()
+    // No manual context setting needed
     
     const { data, error } = await supabase
       .from('products')
@@ -109,8 +91,8 @@ export const updateProduct = async (
   }
 ) => {
   try {
-    // Set owner context for RLS
-    await setOwnerContext(ownerId);
+    // RLS policies automatically ensure only owner can update their products
+    // No manual context setting needed
     
     const { data, error } = await supabase
       .from('products')
@@ -136,8 +118,8 @@ export const updateProduct = async (
 
 export const deleteProduct = async (productId: string, ownerId: string) => {
   try {
-    // Set owner context for RLS
-    await setOwnerContext(ownerId);
+    // RLS policies automatically ensure only owner can delete their products
+    // No manual context setting needed
     
     const { error } = await supabase
       .from('products')
