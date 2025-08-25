@@ -15,10 +15,9 @@ const Index = () => {
       <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">ب</span>
+            <div className="px-4 py-2 bg-primary rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-2xl">بداية</span>
             </div>
-            <span className="font-bold text-xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">بدايته</span>
           </div>
           
           <nav className="hidden md:flex items-center gap-8">
@@ -428,10 +427,9 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-6">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">ب</span>
+              <div className="px-4 py-2 bg-primary rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-2xl">بداية</span>
               </div>
-              <span className="font-bold text-xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">بدايته</span>
             </div>
             <p className="text-gray-400 mb-8 max-w-md mx-auto text-lg">
               منصة شاملة لإنشاء وإدارة المتاجر الإلكترونية بكل سهولة واحترافية
