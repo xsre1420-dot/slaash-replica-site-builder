@@ -15,7 +15,11 @@ const Index = () => {
       <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-3xl bg-gradient-to-br from-blue-500 via-blue-600 to-purple-600 bg-clip-text text-transparent transform -rotate-2 hover:rotate-0 transition-transform duration-300">بداية</span>
+            <span className="font-bold text-3xl text-[#6366f1] drop-shadow-lg" style={{ 
+              fontFamily: 'Arial Black, sans-serif',
+              textShadow: '2px 2px 4px rgba(99, 102, 241, 0.3)',
+              letterSpacing: '1px'
+            }}>بداية</span>
           </div>
           
           <nav className="hidden md:flex items-center gap-8">
@@ -425,7 +429,11 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-6">
-              <span className="font-bold text-4xl bg-gradient-to-br from-blue-500 via-blue-600 to-purple-600 bg-clip-text text-transparent transform -rotate-1 hover:rotate-0 transition-transform duration-300">بداية</span>
+              <span className="font-bold text-4xl text-[#6366f1] drop-shadow-lg" style={{ 
+                fontFamily: 'Arial Black, sans-serif',
+                textShadow: '3px 3px 6px rgba(99, 102, 241, 0.3)',
+                letterSpacing: '2px'
+              }}>بداية</span>
             </div>
             <p className="text-gray-400 mb-8 max-w-md mx-auto text-lg">
               منصة شاملة لإنشاء وإدارة المتاجر الإلكترونية بكل سهولة واحترافية
