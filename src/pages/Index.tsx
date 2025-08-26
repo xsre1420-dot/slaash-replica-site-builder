@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Check, Star, Shield, Zap, Globe, BarChart3, Settings, Package, TrendingUp, Lock, Palette, Headphones, Users, ChevronDown } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import bidayaLogo from "@/assets/bidaya-logo.png";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -15,11 +16,7 @@ const Index = () => {
       <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-3xl text-[#6366f1] drop-shadow-lg" style={{ 
-              fontFamily: 'Arial Black, sans-serif',
-              textShadow: '2px 2px 4px rgba(99, 102, 241, 0.3)',
-              letterSpacing: '1px'
-            }}>بداية</span>
+            <img src={bidayaLogo} alt="بداية" className="h-10 w-auto" />
           </div>
           
           <nav className="hidden md:flex items-center gap-8">
@@ -429,11 +426,7 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-6">
-              <span className="font-bold text-4xl text-[#6366f1] drop-shadow-lg" style={{ 
-                fontFamily: 'Arial Black, sans-serif',
-                textShadow: '3px 3px 6px rgba(99, 102, 241, 0.3)',
-                letterSpacing: '2px'
-              }}>بداية</span>
+              <img src={bidayaLogo} alt="بداية" className="h-16 w-auto" />
             </div>
             <p className="text-gray-400 mb-8 max-w-md mx-auto text-lg">
               منصة شاملة لإنشاء وإدارة المتاجر الإلكترونية بكل سهولة واحترافية
