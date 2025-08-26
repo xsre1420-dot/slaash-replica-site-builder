@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Check, Star, Shield, Zap, Globe, BarChart3, Settings, Package, TrendingUp, Lock, Palette, Headphones, Users, ChevronDown } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import bidayaLogo from "@/assets/bidaya-logo.png";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -16,7 +15,7 @@ const Index = () => {
       <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src={bidayaLogo} alt="بداية" className="h-10 w-auto" />
+            <img src="/lovable-uploads/f51ae0c5-1208-4965-a0c7-85a6d908ceb1.png" alt="بداية" className="h-10 w-auto" />
           </div>
           
           <nav className="hidden md:flex items-center gap-8">
@@ -426,7 +425,7 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-6">
-              <img src={bidayaLogo} alt="بداية" className="h-16 w-auto" />
+              <img src="/lovable-uploads/f51ae0c5-1208-4965-a0c7-85a6d908ceb1.png" alt="بداية" className="h-16 w-auto" />
             </div>
             <p className="text-gray-400 mb-8 max-w-md mx-auto text-lg">
               منصة شاملة لإنشاء وإدارة المتاجر الإلكترونية بكل سهولة واحترافية
