@@ -20,6 +20,7 @@ import Orders from "./pages/Orders";
 import OrderDetails from "./pages/OrderDetails";
 import Settings from "./pages/Settings";
 import Statistics from "./pages/Statistics";
+import Inventory from "./pages/Inventory";
 import { CartProvider } from "./context/CartContext";
 import { StoreProvider } from "./context/StoreContext";
 import { AuthProvider } from "./context/AuthContext";
@@ -43,6 +44,7 @@ const App = () => (
                 <Route path="/builder" element={<ProtectedRoute><Builder /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
+                <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
                 <Route path="/add-product" element={<ProtectedRoute><AddProduct /></ProtectedRoute>} />
                 <Route path="/edit-product/:productId" element={<ProtectedRoute><EditProduct /></ProtectedRoute>} />
                 <Route path="/categories" element={<ProtectedRoute><Categories /></ProtectedRoute>} />
