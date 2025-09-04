@@ -446,6 +446,10 @@ export type Database = {
           username: string
         }[]
       }
+      is_valid_store_visit: {
+        Args: { p_owner_id: string; p_visitor_ip: string }
+        Returns: boolean
+      }
       verify_restaurant_owner_password: {
         Args: { input_password_hash: string; input_username: string }
         Returns: {
