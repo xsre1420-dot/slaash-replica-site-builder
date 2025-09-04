@@ -223,9 +223,11 @@ export type Database = {
           description: string | null
           id: string
           image_url: string | null
+          min_stock_level: number | null
           name: string
           owner_id: string
           price: number
+          stock_quantity: number | null
           updated_at: string
         }
         Insert: {
@@ -235,9 +237,11 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          min_stock_level?: number | null
           name: string
           owner_id: string
           price: number
+          stock_quantity?: number | null
           updated_at?: string
         }
         Update: {
@@ -247,9 +251,11 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          min_stock_level?: number | null
           name?: string
           owner_id?: string
           price?: number
+          stock_quantity?: number | null
           updated_at?: string
         }
         Relationships: [
