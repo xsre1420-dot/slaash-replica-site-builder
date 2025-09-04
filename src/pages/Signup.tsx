@@ -1,192 +1,301 @@
-import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { ArrowLeft, User, Lock, Mail, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowRight } from "lucide-react";
-
-const governorates = [
-  "بغداد", "نينوى (الموصل)", "البصرة", "الأنبار", "ذي قار (الناصرية)",
-  "السليمانية", "أربيل", "دهوك", "كركوك", "ديالى", "صلاح الدين",
-  "واسط (الكوت)", "بابل (الحلة)", "النجف", "كربلاء", "المثنى (السماوة)",
-  "ميسان (العمارة)", "القادسية (الديوانية)"
-];
+import { useNavigate, Link } from "react-router-dom";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const Signup = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const selectedPlan = location.state?.selectedPlan;
-  
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    governorate: "",
-    whatsapp: "",
-    verificationCode: ""
-  });
-  
-  const [step, setStep] = useState(1); // 1: form, 2: verification
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [username, setUsername] = useState("");
+  const [storeName, setStoreName] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  
+  const { register, user } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate("/builder");
+    }
+  }, [user, navigate]);
 
-  const sendVerificationCode = async () => {
-    setIsLoading(true);
-    // Simulate sending WhatsApp message
-    setTimeout(() => {
-      setIsLoading(false);
-      setStep(2);
-      // In real implementation, send WhatsApp message with verification code
-      console.log(`Sending WhatsApp to ${formData.whatsapp}: Your verification code is: 1234`);
-    }, 2000);
-  };
-
-  const verifyCode = async () => {
-    setIsLoading(true);
-    // Simulate verification
-    setTimeout(() => {
-      setIsLoading(false);
-      // Redirect to dashboard or success page
-      navigate('/builder');
-    }, 1500);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (step === 1) {
-      sendVerificationCode();
-    } else {
-      verifyCode();
+    
+    // Validation
+    if (!email.trim() || !password.trim() || !username.trim()) {
+      setError("يرجى ملء جميع الحقول المطلوبة");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("كلمات المرور غير متطابقة");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("كلمة المرور يجب أن تكون 6 أحرف على الأقل");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("يرجى إدخال بريد إلكتروني صحيح");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await register(email, password, username, storeName || 'متجري');
+
+      if (result.error) {
+        if (result.error.includes('already registered')) {
+          setError("هذا البريد الإلكتروني مسجل بالفعل");
+        } else if (result.error.includes('Password should be at least')) {
+          setError("كلمة المرور ضعيفة جداً");
+        } else {
+          setError(result.error);
+        }
+      } else {
+        setSuccess(true);
+        toast({
+          title: "تم إنشاء الحساب بنجاح",
+          description: "يرجى التحقق من بريدك الإلكتروني لتأكيد الحساب"
+        });
+      }
+    } catch (error) {
+      console.error('Signup error:', error);
+      setError("حدث خطأ غير متوقع");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <Card className="border-0 shadow-2xl rounded-3xl overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-center py-8">
-            <CardTitle className="text-2xl font-bold">
-              {step === 1 ? "إنشاء حساب جديد" : "تأكيد رقم الواتساب"}
-            </CardTitle>
-            {selectedPlan && (
-              <div className="mt-4 bg-white/20 rounded-full px-4 py-2 inline-block">
-                <span className="text-sm">الباقة المختارة: {selectedPlan.name}</span>
+  if (success) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex flex-col font-arabic">
+        <header className="bg-white/80 backdrop-blur-md text-gray-800 py-6 px-6 text-center border-b border-gray-100/50">
+          <div className="flex items-center justify-center gap-3">
+            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-5 h-5 bg-white rounded-sm"></div>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-800">نومو</h1>
+          </div>
+        </header>
+
+        <div className="flex-1 flex flex-col items-center justify-center p-6">
+          <div className="w-full max-w-md text-center">
+            <div className="bg-white rounded-3xl shadow-2xl p-8 border border-gray-100/50">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Mail className="w-8 h-8 text-green-600" />
               </div>
-            )}
-          </CardHeader>
-          
-          <CardContent className="p-8">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {step === 1 ? (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-right text-gray-700 font-medium">الاسم الأول</Label>
-                      <Input
-                        value={formData.firstName}
-                        onChange={(e) => handleInputChange('firstName', e.target.value)}
-                        className="text-right rounded-xl border-gray-200"
-                        placeholder="أدخل الاسم الأول"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-right text-gray-700 font-medium">الاسم الثاني</Label>
-                      <Input
-                        value={formData.lastName}
-                        onChange={(e) => handleInputChange('lastName', e.target.value)}
-                        className="text-right rounded-xl border-gray-200"
-                        placeholder="أدخل الاسم الثاني"
-                        required
-                      />
-                    </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">تحقق من بريدك الإلكتروني</h2>
+              <p className="text-gray-600 mb-6">
+                تم إرسال رابط التأكيد إلى بريدك الإلكتروني. يرجى النقر على الرابط لتأكيد حسابك.
+              </p>
+              <Link 
+                to="/login"
+                className="inline-block bg-primary text-white px-6 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-colors"
+              >
+                العودة إلى تسجيل الدخول
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex flex-col font-arabic">
+      {/* Header */}
+      <header className="bg-white/80 backdrop-blur-md text-gray-800 py-6 px-6 text-center border-b border-gray-100/50">
+        <div className="flex items-center justify-center gap-3">
+          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg">
+            <div className="w-5 h-5 bg-white rounded-sm"></div>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-800">نومو</h1>
+        </div>
+        <p className="text-sm text-gray-600 mt-2">منصة إدارة المتاجر الإلكترونية</p>
+      </header>
+
+      <div className="flex-1 flex flex-col items-center justify-center p-6">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100/50 backdrop-blur-lg">
+            {/* Signup Header */}
+            <div className="text-center p-8 bg-gradient-to-br from-primary to-secondary relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 backdrop-blur-sm"></div>
+              <div className="relative z-10">
+                <h2 className="text-3xl font-bold mb-3 text-white">
+                  إنشاء حساب جديد
+                </h2>
+                <p className="text-white/90">
+                  أنشئ متجرك الإلكتروني في دقائق
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-8">
+              {/* Error Alert */}
+              {error && (
+                <Alert className="mb-6 bg-red-50 border-red-200 text-right rounded-xl">
+                  <div className="flex items-center">
+                    <AlertDescription className="flex-1 text-red-800">⚠️ {error}</AlertDescription>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label className="text-right text-gray-700 font-medium">المحافظة</Label>
-                    <Select onValueChange={(value) => handleInputChange('governorate', value)} required>
-                      <SelectTrigger className="text-right rounded-xl border-gray-200">
-                        <SelectValue placeholder="اختر المحافظة" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {governorates.map((gov) => (
-                          <SelectItem key={gov} value={gov}>{gov}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label className="text-right text-gray-700 font-medium">رقم الواتساب</Label>
-                    <Input
-                      value={formData.whatsapp}
-                      onChange={(e) => handleInputChange('whatsapp', e.target.value)}
-                      className="text-right rounded-xl border-gray-200"
-                      placeholder="مثال: 07XX-XXX-XXXX"
-                      type="tel"
-                      required
-                    />
-                  </div>
-                </>
-              ) : (
-                <div className="space-y-6 text-center">
-                  <div className="text-gray-600">
-                    تم إرسال كود التأكيد إلى رقم الواتساب
-                    <div className="font-bold text-purple-600 mt-2">{formData.whatsapp}</div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label className="text-gray-700 font-medium">كود التأكيد</Label>
-                    <Input
-                      value={formData.verificationCode}
-                      onChange={(e) => handleInputChange('verificationCode', e.target.value)}
-                      className="text-center rounded-xl border-gray-200 text-2xl tracking-widest"
-                      placeholder="0000"
-                      maxLength={4}
-                      required
-                    />
-                  </div>
-                  
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setStep(1)}
-                    className="w-full rounded-xl"
-                  >
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                    العودة لتعديل البيانات
-                  </Button>
-                </div>
+                </Alert>
               )}
-              
-              <Button
-                type="submit"
-                className="w-full rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-3 text-lg font-medium"
+
+              {/* Email Input */}
+              <div className="mb-4">
+                <label htmlFor="email" className="block text-right text-gray-700 mb-2 font-semibold text-sm">
+                  البريد الإلكتروني *
+                </label>
+                <div className="relative">
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="أدخل البريد الإلكتروني"
+                    className="pl-10 pr-4 py-3 text-right text-gray-800 border-gray-200 rounded-xl focus:border-primary focus:ring-primary bg-gray-50/50"
+                    dir="rtl"
+                    disabled={isLoading}
+                    required
+                  />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary h-4 w-4" />
+                </div>
+              </div>
+
+              {/* Username Input */}
+              <div className="mb-4">
+                <label htmlFor="username" className="block text-right text-gray-700 mb-2 font-semibold text-sm">
+                  اسم المستخدم *
+                </label>
+                <div className="relative">
+                  <Input
+                    id="username"
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="اختر اسم المستخدم"
+                    className="pl-10 pr-4 py-3 text-right text-gray-800 border-gray-200 rounded-xl focus:border-primary focus:ring-primary bg-gray-50/50"
+                    dir="rtl"
+                    disabled={isLoading}
+                    required
+                  />
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary h-4 w-4" />
+                </div>
+              </div>
+
+              {/* Store Name Input */}
+              <div className="mb-4">
+                <label htmlFor="storeName" className="block text-right text-gray-700 mb-2 font-semibold text-sm">
+                  اسم المتجر (اختياري)
+                </label>
+                <div className="relative">
+                  <Input
+                    id="storeName"
+                    type="text"
+                    value={storeName}
+                    onChange={(e) => setStoreName(e.target.value)}
+                    placeholder="اسم متجرك (افتراضي: متجري)"
+                    className="pl-10 pr-4 py-3 text-right text-gray-800 border-gray-200 rounded-xl focus:border-primary focus:ring-primary bg-gray-50/50"
+                    dir="rtl"
+                    disabled={isLoading}
+                  />
+                  <Store className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary h-4 w-4" />
+                </div>
+              </div>
+
+              {/* Password Input */}
+              <div className="mb-4">
+                <label htmlFor="password" className="block text-right text-gray-700 mb-2 font-semibold text-sm">
+                  كلمة المرور *
+                </label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="أدخل كلمة المرور (6 أحرف على الأقل)"
+                    className="pl-10 pr-4 py-3 text-right text-gray-800 border-gray-200 rounded-xl focus:border-primary focus:ring-primary bg-gray-50/50"
+                    dir="rtl"
+                    disabled={isLoading}
+                    required
+                    minLength={6}
+                  />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary h-4 w-4" />
+                </div>
+              </div>
+
+              {/* Confirm Password Input */}
+              <div className="mb-6">
+                <label htmlFor="confirmPassword" className="block text-right text-gray-700 mb-2 font-semibold text-sm">
+                  تأكيد كلمة المرور *
+                </label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="أعد إدخال كلمة المرور"
+                    className="pl-10 pr-4 py-3 text-right text-gray-800 border-gray-200 rounded-xl focus:border-primary focus:ring-primary bg-gray-50/50"
+                    dir="rtl"
+                    disabled={isLoading}
+                    required
+                  />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary h-4 w-4" />
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <Button 
+                type="submit" 
+                className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
                 disabled={isLoading}
               >
-                {isLoading ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    {step === 1 ? "جاري الإرسال..." : "جاري التحقق..."}
-                  </div>
-                ) : (
-                  step === 1 ? "إرسال كود التأكيد" : "تأكيد الرقم"
-                )}
+                <span className="ml-2">
+                  {isLoading 
+                    ? "جارٍ إنشاء الحساب..." 
+                    : "إنشاء حساب جديد"
+                  }
+                </span>
+                <ArrowLeft className="h-5 w-5" />
               </Button>
-            </form>
-            
-            {step === 1 && (
-              <div className="text-center mt-6 text-sm text-gray-500">
-                بالمتابعة، أنت توافق على شروط الخدمة وسياسة الخصوصية
+
+              {/* Login Link */}
+              <div className="text-center mt-6">
+                <p className="text-gray-600 text-sm">
+                  لديك حساب بالفعل؟{" "}
+                  <Link 
+                    to="/login" 
+                    className="text-primary hover:text-primary/80 font-semibold transition-colors"
+                  >
+                    سجل الدخول من هنا
+                  </Link>
+                </p>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </form>
+          </div>
+        </div>
       </div>
+
+      {/* Footer */}
+      <footer className="bg-white/80 backdrop-blur-md text-center py-6 text-gray-600 text-sm border-t border-gray-200/50">
+        <p>جميع الحقوق محفوظة © 2025 نومو - منصة المتاجر الإلكترونية</p>
+      </footer>
     </div>
   );
 };

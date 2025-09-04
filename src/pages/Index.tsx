@@ -30,7 +30,7 @@ const Index = () => {
                 تسجيل الدخول
               </Button>
             </Link>
-            <Link to="/builder">
+            <Link to="/signup">
               <Button size="sm" className="bg-primary hover:bg-primary/90">
                 ابدأ مجاناً
               </Button>

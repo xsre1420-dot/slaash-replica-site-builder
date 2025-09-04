@@ -3,7 +3,7 @@ import { ArrowLeft, User, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -164,6 +164,19 @@ const Login = () => {
                 </span>
                 <ArrowLeft className="h-5 w-5" />
               </Button>
+
+              {/* Signup Link */}
+              <div className="text-center mt-6">
+                <p className="text-gray-600 text-sm">
+                  لا تملك حساب؟{" "}
+                  <Link 
+                    to="/signup" 
+                    className="text-primary hover:text-primary/80 font-semibold transition-colors"
+                  >
+                    أنشئ حساب جديد
+                  </Link>
+                </p>
+              </div>
             </form>
           </div>
         </div>
