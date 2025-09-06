@@ -1,5 +1,5 @@
 
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { ImagePlus, X, CheckCircle } from "lucide-react";
 import { Label } from "@/components/ui/label";
@@ -18,10 +18,10 @@ const ProductImagesManager = ({
 }: ProductImagesManagerProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const allImages = [
+  const allImages = useMemo(() => [
     ...(mainImage ? [mainImage] : []),
     ...additionalImages,
-  ];
+  ], [mainImage, additionalImages]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;

@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getCategories, addProduct, getCategoriesSync } from "@/data/dummyData";
 import { useToast } from "@/hooks/use-toast";
 import { Product, Category, ColorOption } from "@/types";
@@ -29,6 +29,11 @@ const AddProduct = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const loadCategories = useCallback(async () => {
+    const cats = await getCategories();
+    setCategories(cats);
+  }, []);
+
   // Load categories on mount and when window gains focus
   useEffect(() => {
     loadCategories();
@@ -40,12 +45,7 @@ const AddProduct = () => {
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, []);
-
-  const loadCategories = async () => {
-    const cats = await getCategories();
-    setCategories(cats);
-  };
+  }, [loadCategories]);
 
   const handleImagesChange = (newMainImage: string | null, newAdditionalImages: string[]) => {
     setMainImage(newMainImage);
