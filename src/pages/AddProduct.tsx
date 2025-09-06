@@ -23,6 +23,7 @@ const AddProduct = () => {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [price, setPrice] = useState("");
+  const [cost, setCost] = useState("");
   const [sizes, setSizes] = useState<string[]>([]);
   const [colors, setColors] = useState<ColorOption[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -56,6 +57,12 @@ const AddProduct = () => {
     // Convert Arabic numerics to English and format
     const formattedValue = formatPriceInput(inputValue);
     setPrice(formattedValue);
+  };
+
+  const handleCostChange = (inputValue: string) => {
+    // Convert Arabic numerics to English and format
+    const formattedValue = formatPriceInput(inputValue);
+    setCost(formattedValue);
   };
 
   const formatDisplayPrice = (priceValue: string): string => {
@@ -110,6 +117,7 @@ const AddProduct = () => {
       description,
       category,
       price: Number(formatPriceInput(price)),
+      cost: cost ? Number(formatPriceInput(cost)) : undefined,
       image: mainImage,
       additionalImages: additionalImages,
       sizes: sizes.length > 0 ? sizes : undefined,
@@ -209,17 +217,33 @@ const AddProduct = () => {
             />
           </div>
 
-          {/* Price */}
-          <div className="space-y-3">
-            <Label htmlFor="price" className="block text-black font-medium text-right">السعر (دينار عراقي)</Label>
+          {/* Price and Cost */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Selling Price */}
+            <div className="space-y-3">
+              <Label htmlFor="price" className="block text-black font-medium text-right">سعر البيع (دينار عراقي)</Label>
               <Input 
                 id="price" 
                 type="text" 
                 className="text-right text-black rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500" 
                 value={formatDisplayPrice(price)}
                 onChange={(e) => handlePriceChange(e.target.value)}
-                placeholder="أدخل السعر"
+                placeholder="أدخل سعر البيع"
               />
+            </div>
+
+            {/* Cost Price */}
+            <div className="space-y-3">
+              <Label htmlFor="cost" className="block text-black font-medium text-right">التكلفة (دينار عراقي) - اختياري</Label>
+              <Input 
+                id="cost" 
+                type="text" 
+                className="text-right text-black rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500" 
+                value={formatDisplayPrice(cost)}
+                onChange={(e) => handleCostChange(e.target.value)}
+                placeholder="أدخل تكلفة المنتج"
+              />
+            </div>
           </div>
 
           {/* Sizes and Colors */}

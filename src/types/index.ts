@@ -1,6 +1,7 @@
 export interface ColorOption {
   name: string;
   value: string; // hex color code
+  image?: string; // صورة خاصة باللون
 }
 
 export interface Product {
@@ -9,6 +10,7 @@ export interface Product {
   description: string;
   category: string;
   price: number;
+  cost?: number; // تكلفة المنتج لحساب الأرباح
   image: string; // صورة رئيسية
   additionalImages?: string[]; // صور إضافية
   sizes?: string[]; // قياسات اختيارية
