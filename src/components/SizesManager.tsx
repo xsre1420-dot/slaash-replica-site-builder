@@ -54,7 +54,6 @@ const SizesManager = ({ sizes, onSizesChange }: SizesManagerProps) => {
           >
             <Checkbox 
               checked={sizes.includes(size)}
-              onChange={() => toggleSize(size)}
               className="pointer-events-none"
             />
             <span className="font-medium text-black">{size}</span>
