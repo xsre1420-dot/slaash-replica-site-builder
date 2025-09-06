@@ -13,6 +13,7 @@ import { Product, Category, ColorOption } from "@/types";
 import ProductImagesManager from "@/components/ProductImagesManager";
 import SizesManager from "@/components/SizesManager";
 import ColorSwatchPicker from "@/components/ColorSwatchPicker";
+import CategoryDialog from "@/components/CategoryDialog";
 import { formatPriceInput, isValidPrice } from "@/utils/numberUtils";
 
 const AddProduct = () => {
@@ -30,10 +31,6 @@ const AddProduct = () => {
 
   // Load categories on mount and when window gains focus
   useEffect(() => {
-    const loadCategories = async () => {
-      const cats = await getCategories();
-      setCategories(cats);
-    };
     loadCategories();
 
     // Refresh categories when window gains focus (user might have added a category in another tab)
@@ -44,6 +41,11 @@ const AddProduct = () => {
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
+
+  const loadCategories = async () => {
+    const cats = await getCategories();
+    setCategories(cats);
+  };
 
   const handleImagesChange = (newMainImage: string | null, newAdditionalImages: string[]) => {
     setMainImage(newMainImage);
@@ -177,18 +179,21 @@ const AddProduct = () => {
             {/* Category */}
             <div className="space-y-3">
               <Label htmlFor="category" className="block text-black font-medium text-right">الفئة</Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger className="w-full text-right text-black rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500">
-                  <SelectValue placeholder="اختر فئة" />
-                </SelectTrigger>
-                <SelectContent className="rounded-2xl">
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id} className="text-right">
-                      {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="space-y-2">
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger className="w-full text-right text-black rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500">
+                    <SelectValue placeholder="اختر فئة" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl">
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id} className="text-right">
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <CategoryDialog onCategoryAdded={loadCategories} />
+              </div>
             </div>
           </div>
 
