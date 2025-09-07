@@ -9,7 +9,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
 import { getCategories, addProduct, getCategoriesSync } from "@/data/dummyData";
 import { useToast } from "@/hooks/use-toast";
-import { Product, Category, ColorOption } from "@/types";
+import { Product, Category, ColorOption, ProductVariant } from "@/types";
 import ProductImagesManager from "@/components/ProductImagesManager";
 import SizesManager from "@/components/SizesManager";
 import ColorSwatchPicker from "@/components/ColorSwatchPicker";
@@ -26,9 +26,65 @@ const AddProduct = () => {
   const [cost, setCost] = useState("");
   const [sizes, setSizes] = useState<string[]>([]);
   const [colors, setColors] = useState<ColorOption[]>([]);
+  const [stockQuantity, setStockQuantity] = useState("");
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // حساب المتغيرات عند تغيير الألوان أو القياسات
+  const updateVariants = useCallback(() => {
+    if (colors.length === 0 && sizes.length === 0) {
+      setVariants([]);
+      return;
+    }
+
+    const newVariants: ProductVariant[] = [];
+    
+    if (colors.length > 0 && sizes.length > 0) {
+      // إذا كان هناك ألوان وقياسات
+      colors.forEach(color => {
+        sizes.forEach(size => {
+          const existingVariant = variants.find(v => v.color === color.value && v.size === size);
+          newVariants.push({
+            color: color.value,
+            size: size,
+            quantity: existingVariant?.quantity || 0
+          });
+        });
+      });
+    } else if (colors.length > 0) {
+      // إذا كان هناك ألوان فقط
+      colors.forEach(color => {
+        const existingVariant = variants.find(v => v.color === color.value && !v.size);
+        newVariants.push({
+          color: color.value,
+          quantity: existingVariant?.quantity || 0
+        });
+      });
+    } else if (sizes.length > 0) {
+      // إذا كان هناك قياسات فقط
+      sizes.forEach(size => {
+        const existingVariant = variants.find(v => v.size === size && !v.color);
+        newVariants.push({
+          size: size,
+          quantity: existingVariant?.quantity || 0
+        });
+      });
+    }
+    
+    setVariants(newVariants);
+  }, [colors, sizes, variants]);
+
+  useEffect(() => {
+    updateVariants();
+  }, [colors, sizes]);
+
+  const handleVariantQuantityChange = (index: number, quantity: number) => {
+    const updatedVariants = [...variants];
+    updatedVariants[index].quantity = quantity;
+    setVariants(updatedVariants);
+  };
 
   const loadCategories = useCallback(async () => {
     const cats = await getCategories();
@@ -122,6 +178,8 @@ const AddProduct = () => {
       additionalImages: additionalImages,
       sizes: sizes.length > 0 ? sizes : undefined,
       colors: colors.length > 0 ? colors : undefined,
+      stockQuantity: stockQuantity ? parseInt(stockQuantity) : undefined,
+      variants: variants.length > 0 ? variants : undefined,
     };
 
     const result = await addProduct(newProduct);
@@ -246,6 +304,20 @@ const AddProduct = () => {
             </div>
           </div>
 
+          {/* Stock Quantity */}
+          <div className="space-y-3">
+            <Label htmlFor="stockQuantity" className="block text-black font-medium text-right">الكمية الإجمالية</Label>
+            <Input
+              id="stockQuantity"
+              type="number"
+              placeholder="أدخل الكمية المتاحة"
+              value={stockQuantity}
+              onChange={(e) => setStockQuantity(e.target.value)}
+              className="text-right text-black rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+              min="0"
+            />
+          </div>
+
           {/* Sizes and Colors */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="bg-gray-50 rounded-2xl p-6">
@@ -256,6 +328,40 @@ const AddProduct = () => {
               <ColorSwatchPicker colors={colors} onColorsChange={setColors} />
             </div>
           </div>
+
+          {/* Variants Quantities */}
+          {variants.length > 0 && (
+            <div className="space-y-4 bg-gray-50 rounded-2xl p-6">
+              <Label className="text-right block text-black font-medium">كميات المتغيرات</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {variants.map((variant, index) => (
+                  <div key={index} className="p-3 border rounded-lg bg-white">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        {variant.color && (
+                          <div 
+                            className="w-6 h-6 rounded-full border"
+                            style={{ backgroundColor: variant.color }}
+                          />
+                        )}
+                        <span className="text-sm">
+                          {variant.color && variant.size ? `${variant.size}` : variant.color ? 'لون' : variant.size}
+                        </span>
+                      </div>
+                    </div>
+                    <Input
+                      type="number"
+                      placeholder="الكمية"
+                      value={variant.quantity}
+                      onChange={(e) => handleVariantQuantityChange(index, parseInt(e.target.value) || 0)}
+                      className="text-right text-black rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                      min="0"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Submit Button */}
           <div className="flex justify-center pt-8">

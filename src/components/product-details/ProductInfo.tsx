@@ -35,7 +35,7 @@ const ProductInfo = ({
   };
 
   const handleColorSelect = (color: ColorOption) => {
-    onColorSelect?.(color.name);
+    onColorSelect?.(color.value);
   };
 
   // Function to get color background from ColorOption
@@ -95,22 +95,30 @@ const ProductInfo = ({
                 key={index}
                 onClick={() => handleColorSelect(color)}
                 className={`w-16 h-16 rounded-xl border-2 transition-all relative overflow-hidden ${
-                  externalSelectedColor === color.name
+                  externalSelectedColor === color.value
                     ? 'shadow-md ring-2'
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
                 style={{ 
                   backgroundColor: getColorBackground(color),
-                  borderColor: externalSelectedColor === color.name ? '#6366f1' : undefined,
+                  borderColor: externalSelectedColor === color.value ? '#6366f1' : undefined,
                   '--tw-ring-color': '#6366f1'
                 } as React.CSSProperties}
               >
-                <span 
-                  className="absolute bottom-0 left-0 right-0 text-xs font-medium px-1 py-0.5 bg-white/90 backdrop-blur-sm"
-                  style={{ color: '#000000' }}
-                >
-                  {color.name}
-                </span>
+                {color.image ? (
+                  <img 
+                    src={color.image} 
+                    alt="لون المنتج"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span 
+                    className="absolute bottom-0 left-0 right-0 text-xs font-medium px-1 py-0.5 bg-white/90 backdrop-blur-sm"
+                    style={{ color: '#000000' }}
+                  >
+                    لون
+                  </span>
+                )}
               </button>
             ))}
           </div>

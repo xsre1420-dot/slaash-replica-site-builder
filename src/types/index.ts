@@ -1,5 +1,5 @@
 export interface ColorOption {
-  name: string;
+  name?: string; // اسم اللون (اختياري)
   value: string; // hex color code
   image?: string; // صورة خاصة باللون
 }
@@ -15,6 +15,14 @@ export interface Product {
   additionalImages?: string[]; // صور إضافية
   sizes?: string[]; // قياسات اختيارية
   colors?: ColorOption[]; // ألوان اختيارية مع أكواد الألوان
+  stockQuantity?: number; // الكمية الإجمالية
+  variants?: ProductVariant[]; // تفاصيل الكمية لكل تركيبة
+}
+
+export interface ProductVariant {
+  color?: string; // لون المنتج
+  size?: string; // قياس المنتج
+  quantity: number; // الكمية المتاحة
 }
 
 export interface CartItem {
