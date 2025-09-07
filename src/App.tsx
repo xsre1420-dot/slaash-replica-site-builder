@@ -15,6 +15,7 @@ import PreviewStore from "./pages/PreviewStore";
 import Store from "./pages/Store";
 import ProductDetails from "./pages/ProductDetails";
 import Categories from "./pages/Categories";
+import Products from "./pages/Products";
 import Checkout from "./pages/Checkout";
 import Orders from "./pages/Orders";
 import OrderDetails from "./pages/OrderDetails";
@@ -47,6 +48,7 @@ const App = () => (
                 <Route path="/add-product" element={<ProtectedRoute><AddProduct /></ProtectedRoute>} />
                 <Route path="/edit-product/:productId" element={<ProtectedRoute><EditProduct /></ProtectedRoute>} />
                 <Route path="/categories" element={<ProtectedRoute><Categories /></ProtectedRoute>} />
+                <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
                 <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
                 <Route path="/orders/:orderId" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
                 <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />

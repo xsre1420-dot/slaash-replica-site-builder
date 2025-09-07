@@ -112,7 +112,15 @@ export const ProductsList = () => {
             <p className="text-sm text-gray-500 mb-4 text-right line-clamp-2">{product.description}</p>
             
             <div className="flex items-center justify-between">
-              <span className="text-xl font-bold text-gray-800">{product.price.toLocaleString()} د.ع</span>
+              <div className="flex flex-col items-start">
+                <span className="text-xl font-bold text-gray-800">{product.price.toLocaleString()} د.ع</span>
+                {product.stockQuantity !== undefined && (
+                  <span className="text-sm text-gray-500 mt-1">الكمية: {product.stockQuantity}</span>
+                )}
+                {product.cost && (
+                  <span className="text-xs text-gray-400 mt-1">التكلفة: {product.cost.toLocaleString()} د.ع</span>
+                )}
+              </div>
               <div className="flex gap-2">
                 <Link to={`/edit-product/${product.id}`}>
                   <Button size="sm" variant="outline" className="rounded-full">
@@ -121,6 +129,44 @@ export const ProductsList = () => {
                 </Link>
               </div>
             </div>
+
+            {/* Colors and Sizes Info */}
+            {(product.colors || product.sizes) && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                {product.colors && product.colors.length > 0 && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm text-gray-600">الألوان:</span>
+                    <div className="flex gap-1">
+                      {product.colors.slice(0, 3).map((color, index) => (
+                        <div
+                          key={index}
+                          className="w-4 h-4 rounded-full border border-gray-300"
+                          style={{ backgroundColor: color.value }}
+                        />
+                      ))}
+                      {product.colors.length > 3 && (
+                        <span className="text-xs text-gray-500">+{product.colors.length - 3}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {product.sizes && product.sizes.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">القياسات:</span>
+                    <div className="flex gap-1">
+                      {product.sizes.slice(0, 3).map((size, index) => (
+                        <span key={index} className="text-xs bg-gray-100 px-2 py-1 rounded">
+                          {size}
+                        </span>
+                      ))}
+                      {product.sizes.length > 3 && (
+                        <span className="text-xs text-gray-500">+{product.sizes.length - 3}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       ))}

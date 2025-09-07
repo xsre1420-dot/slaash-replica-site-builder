@@ -219,6 +219,7 @@ export type Database = {
         Row: {
           additional_images: string[] | null
           category: string
+          colors: Json | null
           cost: number | null
           created_at: string
           description: string | null
@@ -228,12 +229,15 @@ export type Database = {
           name: string
           owner_id: string
           price: number
+          sizes: Json | null
           stock_quantity: number | null
           updated_at: string
+          variants: Json | null
         }
         Insert: {
           additional_images?: string[] | null
           category: string
+          colors?: Json | null
           cost?: number | null
           created_at?: string
           description?: string | null
@@ -243,12 +247,15 @@ export type Database = {
           name: string
           owner_id: string
           price: number
+          sizes?: Json | null
           stock_quantity?: number | null
           updated_at?: string
+          variants?: Json | null
         }
         Update: {
           additional_images?: string[] | null
           category?: string
+          colors?: Json | null
           cost?: number | null
           created_at?: string
           description?: string | null
@@ -258,8 +265,10 @@ export type Database = {
           name?: string
           owner_id?: string
           price?: number
+          sizes?: Json | null
           stock_quantity?: number | null
           updated_at?: string
+          variants?: Json | null
         }
         Relationships: [
           {

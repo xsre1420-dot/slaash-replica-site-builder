@@ -1,5 +1,5 @@
 
-import { Product, Category } from "@/types";
+import { Product, Category, ColorOption, ProductVariant } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
 // Cache for in-memory storage
@@ -57,11 +57,13 @@ export const loadProducts = async (): Promise<Product[]> => {
       description: product.description || '',
       category: product.category,
       price: Number(product.price),
-      cost: Number(product.cost) || 0,
+      cost: Number(product.cost) || undefined,
       image: product.image_url || '',
       additionalImages: product.additional_images || [],
-      sizes: undefined, // Not implemented in Supabase schema yet
-      colors: undefined // Not implemented in Supabase schema yet
+      stockQuantity: product.stock_quantity || undefined,
+      sizes: Array.isArray(product.sizes) ? product.sizes as string[] : undefined,
+      colors: Array.isArray(product.colors) ? (product.colors as unknown as ColorOption[]) : undefined,
+      variants: Array.isArray(product.variants) ? (product.variants as unknown as ProductVariant[]) : undefined
     })) || [];
     
     productsCache = formattedProducts;
@@ -104,6 +106,10 @@ export const addProduct = async (product: Product): Promise<{ success: boolean; 
         cost: product.cost || null,
         image_url: product.image,
         additional_images: product.additionalImages || [],
+        stock_quantity: product.stockQuantity || null,
+        colors: product.colors ? JSON.parse(JSON.stringify(product.colors)) : null,
+        sizes: product.sizes || null,
+        variants: product.variants ? JSON.parse(JSON.stringify(product.variants)) : null,
         owner_id: user.id
       });
 
@@ -135,7 +141,11 @@ export const updateProduct = async (productId: string, updatedProduct: Product):
         price: updatedProduct.price,
         cost: updatedProduct.cost || null,
         image_url: updatedProduct.image,
-        additional_images: updatedProduct.additionalImages || []
+        additional_images: updatedProduct.additionalImages || [],
+        stock_quantity: updatedProduct.stockQuantity || null,
+        colors: updatedProduct.colors ? JSON.parse(JSON.stringify(updatedProduct.colors)) : null,
+        sizes: updatedProduct.sizes || null,
+        variants: updatedProduct.variants ? JSON.parse(JSON.stringify(updatedProduct.variants)) : null
       })
       .eq('id', productId);
 
