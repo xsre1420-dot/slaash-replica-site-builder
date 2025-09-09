@@ -14,24 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      "‏Bidaya": {
-        Row: {
-          id: number
-          name: string | null
-          password: string | null
-        }
-        Insert: {
-          id?: number
-          name?: string | null
-          password?: string | null
-        }
-        Update: {
-          id?: number
-          name?: string | null
-          password?: string | null
-        }
-        Relationships: []
-      }
       categories: {
         Row: {
           created_at: string
@@ -54,15 +36,7 @@ export type Database = {
           name?: string
           owner_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "categories_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "restaurant_owners"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       customers: {
         Row: {
@@ -104,15 +78,7 @@ export type Database = {
           total_spent?: number | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "customers_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "restaurant_owners"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       order_items: {
         Row: {
@@ -205,15 +171,7 @@ export type Database = {
           total_amount?: number
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "orders_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "restaurant_owners"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       products: {
         Row: {
@@ -270,15 +228,7 @@ export type Database = {
           updated_at?: string
           variants?: Json | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "products_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "restaurant_owners"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -300,36 +250,6 @@ export type Database = {
           id?: string
           store_name?: string | null
           updated_at?: string | null
-          username?: string
-        }
-        Relationships: []
-      }
-      restaurant_owners: {
-        Row: {
-          created_at: string
-          id: string
-          password_hash: string
-          restaurant_logo: string | null
-          restaurant_name: string | null
-          updated_at: string
-          username: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          password_hash: string
-          restaurant_logo?: string | null
-          restaurant_name?: string | null
-          updated_at?: string
-          username: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          password_hash?: string
-          restaurant_logo?: string | null
-          restaurant_name?: string | null
-          updated_at?: string
           username?: string
         }
         Relationships: []
@@ -407,15 +327,7 @@ export type Database = {
           user_agent?: string | null
           visitor_ip?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "store_visits_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "restaurant_owners"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       user_access: {
         Row: {
@@ -443,33 +355,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_current_restaurant_owner_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_restaurant_owner_profile: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          created_at: string
-          id: string
-          restaurant_logo: string
-          restaurant_name: string
-          updated_at: string
-          username: string
-        }[]
-      }
       is_valid_store_visit: {
         Args: { p_owner_id: string; p_visitor_ip: string }
         Returns: boolean
-      }
-      verify_restaurant_owner_password: {
-        Args: { input_password_hash: string; input_username: string }
-        Returns: {
-          id: string
-          restaurant_logo: string
-          restaurant_name: string
-          username: string
-        }[]
       }
     }
     Enums: {
