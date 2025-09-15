@@ -14,10 +14,21 @@ export const ProductsList = () => {
   useEffect(() => {
     // Load products from Supabase
     const loadProductsData = async () => {
+      console.log('تحميل المنتجات من Supabase...');
       const productsData = await loadProducts();
+      console.log('تم تحميل المنتجات:', productsData.length, 'منتج');
       setProducts(productsData);
     };
     loadProductsData();
+
+    // Refresh products when window gains focus
+    const handleFocus = () => {
+      console.log('إعادة تحميل المنتجات عند التركيز على النافذة');
+      loadProductsData();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
   const handleDelete = async (id: string) => {

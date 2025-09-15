@@ -61,6 +61,7 @@ const CategoryDialog = ({ onCategoryAdded }: CategoryDialogProps) => {
         throw error;
       }
 
+      console.log('CategoryDialog: تم إضافة الفئة بنجاح');
       toast({
         title: "تم بنجاح",
         description: "تمت إضافة الفئة بنجاح",
@@ -68,7 +69,10 @@ const CategoryDialog = ({ onCategoryAdded }: CategoryDialogProps) => {
 
       setCategoryName("");
       setIsOpen(false);
-      onCategoryAdded();
+      // إضافة تأخير قصير للتأكد من حفظ البيانات
+      setTimeout(() => {
+        onCategoryAdded();
+      }, 100);
     } catch (error: any) {
       console.error('Error adding category:', error);
       toast({

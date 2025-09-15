@@ -9,15 +9,18 @@ let productsCache: Product[] = [];
 // Get categories from Supabase
 export const getCategories = async (): Promise<Category[]> => {
   try {
+    console.log('getCategories: تحميل الفئات من Supabase...');
     const { data, error } = await supabase
       .from('categories')
       .select('*')
       .order('display_order', { ascending: true });
     
     if (error) {
-      console.error('Error loading categories:', error);
+      console.error('getCategories: خطأ في تحميل الفئات:', error);
       return categoriesCache;
     }
+    
+    console.log('getCategories: تم تحميل الفئات:', data?.length || 0, 'فئة');
     
     const formattedCategories = data?.map(cat => ({
       id: cat.id,
@@ -28,7 +31,7 @@ export const getCategories = async (): Promise<Category[]> => {
     categoriesCache = formattedCategories;
     return formattedCategories;
   } catch (error) {
-    console.error('Error loading categories:', error);
+    console.error('getCategories: خطأ عام:', error);
     return categoriesCache;
   }
 };
@@ -91,12 +94,17 @@ export const reloadProducts = async (): Promise<void> => {
 // Function to add a new product to Supabase
 export const addProduct = async (product: Product): Promise<{ success: boolean; error?: string }> => {
   try {
+    console.log('addProduct: البدء في إضافة المنتج');
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
+      console.error('addProduct: المستخدم غير مصادق عليه');
       return { success: false, error: 'User not authenticated' };
     }
 
-    const { error } = await supabase
+    console.log('addProduct: المستخدم مصادق عليه:', user.id);
+    console.log('addProduct: بيانات المنتج:', product);
+
+    const { data, error } = await supabase
       .from('products')
       .insert({
         name: product.name,
@@ -111,12 +119,15 @@ export const addProduct = async (product: Product): Promise<{ success: boolean; 
         sizes: product.sizes || null,
         variants: product.variants ? JSON.parse(JSON.stringify(product.variants)) : null,
         owner_id: user.id
-      });
+      })
+      .select();
 
     if (error) {
-      console.error('Error adding product:', error);
+      console.error('addProduct: خطأ في إضافة المنتج:', error);
       return { success: false, error: error.message };
     }
+
+    console.log('addProduct: تم إضافة المنتج بنجاح:', data);
 
     // Reload products to update cache
     await loadProducts();
@@ -124,7 +135,7 @@ export const addProduct = async (product: Product): Promise<{ success: boolean; 
     
     return { success: true };
   } catch (error) {
-    console.error('Error adding product:', error);
+    console.error('addProduct: خطأ عام:', error);
     return { success: false, error: 'Failed to add product' };
   }
 };
