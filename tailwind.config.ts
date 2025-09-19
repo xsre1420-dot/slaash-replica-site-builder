@@ -33,11 +33,6 @@ export default {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
         },
-        gradient: {
-          start: "hsl(var(--gradient-start))",
-          middle: "hsl(var(--gradient-middle))",
-          end: "hsl(var(--gradient-end))",
-        },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",

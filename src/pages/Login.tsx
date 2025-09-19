@@ -58,21 +58,24 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-hero flex flex-col font-arabic">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex flex-col font-arabic">
       {/* Header */}
-      <header className="py-6 px-6">
+      <header className="bg-white/80 backdrop-blur-md text-gray-800 py-6 px-6 text-center border-b border-gray-100/50">
         <div className="flex items-center justify-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-lg"></div>
-          <h1 className="text-2xl font-bold text-gray-900 font-english">slaash</h1>
+          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg">
+            <div className="w-5 h-5 bg-white rounded-sm"></div>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-800">نومو</h1>
         </div>
-        <p className="text-center text-gray-600 mt-2 font-arabic">منصة إدارة المتاجر الإلكترونية</p>
+        <p className="text-sm text-gray-600 mt-2">منصة إدارة المتاجر الإلكترونية</p>
       </header>
 
       <div className="flex-1 flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-md">
-          <div className="bg-white/90 backdrop-blur-lg rounded-3xl shadow-2xl overflow-hidden border border-white/20">
+          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100/50 backdrop-blur-lg">
             {/* Login Header */}
-            <div className="text-center p-8 bg-gradient-to-br from-gray-900 to-gray-800 relative overflow-hidden">
+            <div className="text-center p-8 bg-gradient-to-br from-primary to-secondary relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 backdrop-blur-sm"></div>
               <div className="relative z-10">
                 <h2 className="text-3xl font-bold mb-3 text-white">
                   تسجيل الدخول
@@ -150,7 +153,7 @@ const Login = () => {
               {/* Submit Button */}
               <Button 
                 type="submit" 
-                className="btn-dark w-full py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+                className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
                 disabled={isLoading}
               >
                 <span className="ml-2">
@@ -180,8 +183,8 @@ const Login = () => {
       </div>
 
       {/* Footer */}
-      <footer className="text-center py-6 text-gray-600 text-sm">
-        <p>جميع الحقوق محفوظة © 2025 slaash - منصة المتاجر الإلكترونية</p>
+      <footer className="bg-white/80 backdrop-blur-md text-center py-6 text-gray-600 text-sm border-t border-gray-200/50">
+        <p>جميع الحقوق محفوظة © 2025 نومو - منصة المتاجر الإلكترونية</p>
       </footer>
     </div>
   );

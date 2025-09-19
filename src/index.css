@@ -13,9 +13,9 @@
     --card-foreground: 0 0% 0%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 0%;
-    --primary: 220 70% 50%;
+    --primary: 248 53% 58%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 280 100% 70%;
+    --secondary: 248 53% 68%;
     --secondary-foreground: 0 0% 100%;
     --muted: 161 29% 85%;
     --muted-foreground: 185 30% 53%;
@@ -25,23 +25,16 @@
     --destructive-foreground: 210 40% 98%;
     --border: 161 35% 91%;
     --input: 161 35% 91%;
-    --ring: 220 70% 50%;
+    --ring: 248 53% 58%;
     --radius: 1rem;
     
-    /* Beautiful gradient colors inspired by the image */
-    --gradient-start: 45 100% 70%;  /* Yellow/Orange */
-    --gradient-middle: 320 100% 75%; /* Pink/Purple */  
-    --gradient-end: 200 100% 70%;   /* Blue/Teal */
-    --gradient-main: linear-gradient(135deg, hsl(var(--gradient-start)), hsl(var(--gradient-middle)), hsl(var(--gradient-end)));
-    --gradient-hero: linear-gradient(135deg, hsl(45 100% 85%) 0%, hsl(320 100% 85%) 50%, hsl(200 100% 85%) 100%);
-    
-    /* Modern color scheme */
-    --bg-primary: 0 0% 100%;
-    --bg-secondary: 240 8% 98%;
+    /* Modern color scheme inspired by the image */
+    --bg-primary: 250 10% 97%;
+    --bg-secondary: 240 8% 95%;
     --text-primary: 0 0% 0%;
-    --text-secondary: 0 0% 40%;
-    --accent-primary: 220 70% 50%;
-    --accent-secondary: 280 100% 70%;
+    --text-secondary: 0 0% 30%;
+    --accent-primary: 248 53% 58%;
+    --accent-secondary: 248 53% 68%;
     --card-bg: 0 0% 100%;
     --input-text: 0 0% 0%;
   }
@@ -83,21 +76,6 @@
     @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary;
   }
   
-  .gradient-main {
-    background: var(--gradient-main);
-  }
-  
-  .gradient-hero {
-    background: var(--gradient-hero);
-  }
-  
-  .gradient-text {
-    background: linear-gradient(135deg, hsl(var(--gradient-start)), hsl(var(--gradient-middle)), hsl(var(--gradient-end)));
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  
   .card-modern {
     @apply bg-white rounded-2xl shadow-sm border-0;
   }
@@ -114,29 +92,6 @@
   /* RTL table headers */
   .rtl th {
     text-align: right;
-  }
-  
-  /* Beautiful gradient backgrounds */
-  .bg-gradient-main {
-    background: linear-gradient(135deg, hsl(45 100% 70%) 0%, hsl(320 100% 75%) 50%, hsl(200 100% 70%) 100%);
-  }
-  
-  .bg-gradient-soft {
-    background: linear-gradient(135deg, hsl(45 100% 95%) 0%, hsl(320 100% 95%) 50%, hsl(200 100% 95%) 100%);
-  }
-  
-  .bg-gradient-hero {
-    background: linear-gradient(135deg, hsl(45 100% 85%) 0%, hsl(320 100% 85%) 50%, hsl(200 100% 85%) 100%);
-  }
-  
-  /* Modern button styles */
-  .btn-dark {
-    @apply bg-gray-900 hover:bg-gray-800 text-white rounded-full px-6 py-3 font-medium transition-all duration-300;
-  }
-  
-  .btn-gradient {
-    background: linear-gradient(135deg, hsl(220 70% 50%), hsl(280 100% 70%));
-    @apply text-white rounded-full px-6 py-3 font-medium transition-all duration-300 hover:shadow-lg;
   }
   
   /* Custom modern utilities */
@@ -158,6 +113,10 @@
   
   .bg-card-modern {
     background-color: hsl(var(--card-bg));
+  }
+  
+  .accent-gradient {
+    background: linear-gradient(135deg, hsl(var(--accent-primary)), hsl(var(--accent-secondary)));
   }
   
   /* Modern shadows */

@@ -39,45 +39,22 @@ const Index = () => {
         </div>
       </header>
 
-      {/* Hero Section with Modern Gradient */}
-      <section className="bg-gradient-hero min-h-screen flex flex-col">
-        {/* Hero Content */}
-        <div className="flex-1 flex flex-col items-center justify-center text-center px-6 lg:px-12 pb-20">
-          <div className="max-w-4xl mx-auto">
-            <p className="text-lg md:text-xl text-gray-600 mb-4 font-arabic">
-              حسّن من
-            </p>
-            
-            <h1 className="text-6xl md:text-8xl lg:text-9xl font-bold text-gray-900 mb-8 leading-tight font-english">
-              Productivity
-            </h1>
-            
-            <p className="text-lg md:text-xl text-gray-600 mb-12 font-english">
-              with AI
-            </p>
-            
-            <p className="text-lg md:text-xl text-gray-600 mb-12 max-w-2xl mx-auto font-arabic">
-              حلول رقمية مخصصة للصناعات عالية التخصص
-              التي تساعد في تعزيز عملياتك
-            </p>
-            
-            <Link to="/signup">
-              <Button className="btn-dark">
-                تواصل معنا
-              </Button>
-            </Link>
+      {/* Hero Section */}
+      <section className="container mx-auto px-4 py-20 lg:py-32">
+        <div className="text-center max-w-4xl mx-auto">
+          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-8 animate-fade-in">
+            <Zap className="w-4 h-4" />
+            إطلاق ميزات جديدة للتجارة الإلكترونية
           </div>
-        </div>
-
-        {/* Company Logos */}
-        <div className="pb-12">
-          <div className="flex items-center justify-center gap-8 md:gap-16 opacity-60">
-            <div className="text-2xl font-bold text-gray-700">EBK</div>
-            <div className="text-2xl font-bold text-gray-700">ERHARD</div>
-            <div className="text-2xl font-bold text-gray-700">PRINTEKK</div>
-            <div className="text-2xl font-bold text-gray-700">hkr</div>
-            <div className="text-2xl font-bold text-gray-700">siteco</div>
-          </div>
+          
+          <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-tight animate-fade-in">
+            أنشئ متجرك الإلكتروني خلال دقائق،
+            <span className="text-gradient block bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"> وابدأ البيع اليوم</span>
+          </h1>
+          
+          <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed animate-fade-in">
+            منصة متكاملة تساعدك على بناء، إدارة، وتطوير متجرك بكل سهولة — بدون أي خبرة تقنية.
+          </p>
         </div>
       </section>
 
