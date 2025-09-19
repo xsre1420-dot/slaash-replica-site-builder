@@ -206,14 +206,14 @@ const Store = () => {
             {products.map((product) => (
               <div 
                 key={product.id} 
-                className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:scale-105"
+                className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer"
                 onClick={() => handleViewProduct(product.id)}
               >
-                <div className="relative">
+                <div className="relative overflow-hidden">
                   <img
                     src={product.image}
                     alt={product.name}
-                    className="w-full h-40 object-contain bg-gray-50 transition-transform duration-300 hover:scale-105"
+                    className="w-full h-48 object-cover"
                     loading="lazy"
                   />
                   <button
