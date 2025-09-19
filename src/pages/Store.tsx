@@ -27,7 +27,9 @@ const Store = () => {
   useEffect(() => {
     const loadCategoriesData = async () => {
       try {
+        console.log('Store: تحميل الفئات من Supabase...');
         const categoriesData = await getCategories();
+        console.log('Store: تم تحميل', categoriesData.length, 'فئة');
         // Add "الكل" category at the beginning
         const allCategories = [
           { id: "all", name: "الكل", order: -1 },
@@ -40,6 +42,15 @@ const Store = () => {
       }
     };
     loadCategoriesData();
+
+    // Reload categories when window gains focus (user might have added categories in another tab)
+    const handleFocus = () => {
+      console.log('Store: إعادة تحميل الفئات عند التركيز على النافذة');
+      loadCategoriesData();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
   // Only use banner images from settings

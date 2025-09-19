@@ -1,7 +1,7 @@
 import { X, ShoppingCart, Plus, Trash2, Search, Heart, Star } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { getProductsByCategory } from "@/data/dummyData";
+import { getProductsByCategory, getCategories, loadProducts } from "@/data/dummyData";
 import { Product, Category } from "@/types";
 import { useCart } from "@/context/CartContext";
 import { useStore } from "@/context/StoreContext";
@@ -23,33 +23,46 @@ const PreviewStore = () => {
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
-  // Load categories from localStorage
+  // Load categories from Supabase
   useEffect(() => {
-    const savedCategories = localStorage.getItem('categories');
-    if (savedCategories) {
+    const loadCategoriesData = async () => {
       try {
-        const parsedCategories = JSON.parse(savedCategories);
+        console.log('PreviewStore: تحميل الفئات من Supabase...');
+        const categoriesData = await getCategories();
+        console.log('PreviewStore: تم تحميل', categoriesData.length, 'فئة');
         // Add "الكل" category at the beginning
         const allCategories = [
           { id: "all", name: "الكل", order: -1 },
-          ...parsedCategories
+          ...categoriesData
         ];
         setCategories(allCategories);
       } catch (error) {
         console.error('Error loading categories:', error);
         setCategories([{ id: "all", name: "الكل", order: -1 }]);
       }
-    } else {
-      setCategories([{ id: "all", name: "الكل", order: -1 }]);
-    }
+    };
+    loadCategoriesData();
+
+    // Reload categories when window gains focus (user might have added categories in another tab)
+    const handleFocus = () => {
+      console.log('PreviewStore: إعادة تحميل الفئات عند التركيز على النافذة');
+      loadCategoriesData();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
   // Only use banner images from settings (no automatic promotional banner)
   const bannerImages = storeSettings.bannerImages || [];
 
-  // This effect will run every time the component renders, ensuring we have the latest products
+  // Load products from Supabase and update when categories change
   useEffect(() => {
-    setProducts(getProductsByCategory(selectedCategory));
+    const loadProductsData = async () => {
+      await loadProducts();
+      setProducts(getProductsByCategory(selectedCategory));
+    };
+    loadProductsData();
   }, [selectedCategory]);
 
   // Handle adding a product to the cart

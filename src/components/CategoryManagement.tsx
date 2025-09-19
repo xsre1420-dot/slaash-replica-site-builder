@@ -66,6 +66,11 @@ const CategoryManagement = ({ categories, onCategoryChange }: CategoryManagement
         title: "تم بنجاح",
         description: "تمت إضافة الفئة الجديدة",
       });
+      
+      // Force reload categories after a short delay
+      setTimeout(() => {
+        onCategoryChange();
+      }, 500);
     } else {
       toast({
         title: "خطأ",

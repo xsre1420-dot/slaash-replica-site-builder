@@ -88,7 +88,9 @@ const AddProduct = () => {
   };
 
   const loadCategories = useCallback(async () => {
+    console.log('تحميل الفئات من Supabase...');
     const cats = await getCategories();
+    console.log('تم تحميل', cats.length, 'فئة');
     setCategories(cats);
   }, []);
 
@@ -349,7 +351,10 @@ const AddProduct = () => {
             <Label className="text-right block text-black font-medium mb-4">إدارة الفئات</Label>
             <CategoryManagement 
               categories={categories} 
-              onCategoryChange={loadCategories} 
+              onCategoryChange={() => {
+                console.log('تحديث الفئات من CategoryManagement...');
+                loadCategories();
+              }} 
             />
           </div>
 
