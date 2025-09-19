@@ -13,7 +13,7 @@ import { Product, Category, ColorOption, ProductVariant } from "@/types";
 import ProductImagesManager from "@/components/ProductImagesManager";
 import SizesManager from "@/components/SizesManager";
 import ColorSwatchPicker from "@/components/ColorSwatchPicker";
-import CategoryDialog from "@/components/CategoryDialog";
+import CategoryManagement from "@/components/CategoryManagement";
 import { formatPriceInput, isValidPrice } from "@/utils/numberUtils";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -261,7 +261,7 @@ const AddProduct = () => {
             {/* Category */}
             <div className="space-y-3">
               <Label htmlFor="category" className="block text-black font-medium text-right">الفئة</Label>
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger className="w-full text-right text-black rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500">
                     <SelectValue placeholder="اختر فئة" />
@@ -274,7 +274,6 @@ const AddProduct = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                <CategoryDialog onCategoryAdded={loadCategories} />
               </div>
             </div>
           </div>
@@ -343,6 +342,15 @@ const AddProduct = () => {
             <div className="bg-gray-50 rounded-2xl p-6">
               <ColorSwatchPicker colors={colors} onColorsChange={setColors} />
             </div>
+          </div>
+
+          {/* Category Management */}
+          <div className="bg-gray-50 rounded-2xl p-6">
+            <Label className="text-right block text-black font-medium mb-4">إدارة الفئات</Label>
+            <CategoryManagement 
+              categories={categories} 
+              onCategoryChange={loadCategories} 
+            />
           </div>
 
           {/* Variants Quantities */}

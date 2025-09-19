@@ -126,19 +126,6 @@ export default function Builder() {
               </div>
             </Link>
             
-            <Link to="/categories" className="group">
-              <div className="bg-white p-6 rounded-3xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-                     style={{ 
-                       background: 'linear-gradient(135deg, #8b5cf6, #d946ef)',
-                       boxShadow: '0 4px 15px rgba(139, 92, 246, 0.2)'
-                     }}>
-                  <Tag className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="font-bold text-gray-800 mb-1">الأصناف</h3>
-                <p className="text-sm text-gray-500">تنظيم الأصناف</p>
-              </div>
-            </Link>
             
             <Link to="/products" className="group">
               <div className="bg-white p-6 rounded-3xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
