@@ -21,6 +21,7 @@ import Orders from "./pages/Orders";
 import OrderDetails from "./pages/OrderDetails";
 import Settings from "./pages/Settings";
 import Statistics from "./pages/Statistics";
+import Marketing from "./pages/Marketing";
 import Inventory from "./pages/Inventory";
 import { CartProvider } from "./context/CartContext";
 import { StoreProvider } from "./context/StoreContext";
@@ -51,6 +52,7 @@ const App = () => (
                 <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
                 <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
                 <Route path="/orders/:orderId" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
+                <Route path="/marketing" element={<ProtectedRoute><Marketing /></ProtectedRoute>} />
                 <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
                 <Route path="/store/:username" element={<Store />} />
                 <Route path="/store/:username/product/:productId" element={<ProductDetails />} />

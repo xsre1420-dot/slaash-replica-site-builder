@@ -5,6 +5,8 @@ import { getProductsByCategory, getCategories, loadProducts } from "@/data/dummy
 import { Product, Category } from "@/types";
 import { useCart } from "@/context/CartContext";
 import { useStore } from "@/context/StoreContext";
+import MetaPixel from "@/components/MetaPixel";
+import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { Button } from "@/components/ui/button";
 
 const Store = () => {
@@ -16,6 +18,7 @@ const Store = () => {
   const [favorites, setFavorites] = useState<string[]>([]);
   const { addToCart, cartItems } = useCart();
   const { storeName, storeLogo, storeSettings } = useStore();
+  const { trackAddToCart, trackViewContent } = useMetaPixel();
   const navigate = useNavigate();
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -54,10 +57,16 @@ const Store = () => {
   // Handle adding a product to the cart
   const handleAddToCart = (product: Product) => {
     addToCart(product);
+    // Track Meta Pixel event
+    trackAddToCart(product.id, product.name, product.price);
   };
 
   // Navigate to product details
   const handleViewProduct = (productId: string) => {
+    const product = products.find(p => p.id === productId);
+    if (product) {
+      trackViewContent(product.id, product.name, product.price);
+    }
     navigate(`/product-details/${productId}`);
   };
 
@@ -103,6 +112,8 @@ const Store = () => {
         color: storeSettings.menuTextColor 
       }}
     >
+      {/* Meta Pixel Integration */}
+      <MetaPixel />
       {/* Customer Header - No admin links */}
       <div className="bg-white shadow-sm sticky top-0 z-40">
         <div className="px-6 py-4">

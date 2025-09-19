@@ -80,6 +80,96 @@ export type Database = {
         }
         Relationships: []
       }
+      marketing_coupons: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          discount_type: string
+          discount_value: number
+          end_date: string | null
+          id: string
+          is_active: boolean | null
+          minimum_order_amount: number | null
+          owner_id: string
+          start_date: string | null
+          updated_at: string
+          usage_limit: number | null
+          used_count: number | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          discount_type: string
+          discount_value: number
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          minimum_order_amount?: number | null
+          owner_id: string
+          start_date?: string | null
+          updated_at?: string
+          usage_limit?: number | null
+          used_count?: number | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          minimum_order_amount?: number | null
+          owner_id?: string
+          start_date?: string | null
+          updated_at?: string
+          usage_limit?: number | null
+          used_count?: number | null
+        }
+        Relationships: []
+      }
+      marketing_settings: {
+        Row: {
+          created_at: string
+          email_marketing_enabled: boolean | null
+          facebook_access_token: string | null
+          google_analytics_id: string | null
+          id: string
+          marketing_enabled: boolean | null
+          meta_pixel_id: string | null
+          owner_id: string
+          sms_marketing_enabled: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email_marketing_enabled?: boolean | null
+          facebook_access_token?: string | null
+          google_analytics_id?: string | null
+          id?: string
+          marketing_enabled?: boolean | null
+          meta_pixel_id?: string | null
+          owner_id: string
+          sms_marketing_enabled?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email_marketing_enabled?: boolean | null
+          facebook_access_token?: string | null
+          google_analytics_id?: string | null
+          id?: string
+          marketing_enabled?: boolean | null
+          meta_pixel_id?: string | null
+          owner_id?: string
+          sms_marketing_enabled?: boolean | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string
