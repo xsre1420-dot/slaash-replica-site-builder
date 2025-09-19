@@ -73,12 +73,13 @@ export const ProductsList = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {products.map((product) => (
-        <div key={product.id} className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-          <div className="relative">
+        <div key={product.id} className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
+          <div className="relative overflow-hidden">
             <img
               src={product.image}
               alt={product.name}
-              className="w-full h-48 object-cover"
+              className="w-full h-56 object-cover"
+              loading="lazy"
             />
             <button
               className={`absolute top-4 left-4 w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
