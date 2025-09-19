@@ -22,7 +22,7 @@ interface Product {
   created_at: string;
 }
 
-export default function Inventory() {
+function Inventory() {
   const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -326,3 +326,6 @@ export default function Inventory() {
     </div>
   );
 }
+
+// Export the component as default
+export default Inventory;
