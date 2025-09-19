@@ -129,24 +129,20 @@ const Store = () => {
 
       {/* Categories */}
       <div className="px-6 py-4">
-        <div className="flex justify-center items-center mb-4">
-          <h2 className="text-xl font-bold" style={{ color: storeSettings.menuTextColor }}>
-            الأصناف
-          </h2>
-        </div>
-        
-        <div className="flex gap-2 overflow-x-auto pb-2 justify-center">
+        <div className="flex gap-3 overflow-x-auto pb-2 justify-start">
           {categories.map((category) => (
             <button 
               key={category.id}
-              className={`px-4 py-2 rounded-full transition-all duration-200 whitespace-nowrap border text-sm font-medium ${
+              className={`px-6 py-3 rounded-2xl transition-all duration-200 whitespace-nowrap text-sm font-medium min-w-fit flex items-center justify-center ${
                 selectedCategory === category.id 
-                  ? "text-white" 
-                  : "bg-white hover:bg-gray-50 border-gray-200 text-gray-700 hover:border-gray-300"
+                  ? "text-white shadow-lg" 
+                  : "bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 hover:border-gray-300 shadow-sm"
               }`}
               style={{
                 backgroundColor: selectedCategory === category.id ? 'hsl(248, 53%, 58%)' : undefined,
-                borderColor: selectedCategory === category.id ? 'hsl(248, 53%, 58%)' : undefined
+                boxShadow: selectedCategory === category.id 
+                  ? '0 8px 25px rgba(120, 119, 198, 0.4)' 
+                  : undefined
               }}
               onClick={() => setSelectedCategory(category.id)}
             >
@@ -217,7 +213,7 @@ const Store = () => {
                   <img
                     src={product.image}
                     alt={product.name}
-                    className="w-full h-32 object-cover transition-transform duration-300 hover:scale-110"
+                    className="w-full h-40 object-contain bg-gray-50 transition-transform duration-300 hover:scale-105"
                     loading="lazy"
                   />
                   <button

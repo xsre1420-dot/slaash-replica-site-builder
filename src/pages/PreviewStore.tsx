@@ -139,32 +139,22 @@ const PreviewStore = () => {
         </div>
       </div>
 
-      {/* Updated Categories with improved shadow */}
+      {/* Categories */}
       <div className="px-6 py-4">
-        <div className="flex justify-between items-center mb-4">
-          <button 
-            className="text-sm font-medium text-gray-600 hover:text-gray-800"
-          >
-            عرض الكل
-          </button>
-          <h2 className="text-xl font-bold" style={{ color: storeSettings.menuTextColor }}>
-            الأصناف
-          </h2>
-        </div>
-        
-        <div className="flex gap-2 overflow-x-auto pb-2">
+        <div className="flex gap-3 overflow-x-auto pb-2 justify-start">
           {categories.map((category) => (
             <button 
               key={category.id}
-              className={`px-4 py-2 rounded-full transition-all duration-200 whitespace-nowrap border text-sm font-medium ${
+              className={`px-6 py-3 rounded-2xl transition-all duration-200 whitespace-nowrap text-sm font-medium min-w-fit flex items-center justify-center ${
                 selectedCategory === category.id 
-                  ? "bg-indigo-500 border-indigo-500 text-white" 
-                  : "bg-white hover:bg-gray-50 border-gray-200 text-gray-700 hover:border-gray-300"
+                  ? "text-white shadow-lg" 
+                  : "bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 hover:border-gray-300 shadow-sm"
               }`}
               style={{
+                backgroundColor: selectedCategory === category.id ? '#6366f1' : undefined,
                 boxShadow: selectedCategory === category.id 
-                  ? '0 8px 25px -5px rgba(99, 102, 241, 0.3), 0 4px 15px -3px rgba(99, 102, 241, 0.2)' 
-                  : '0 2px 8px -2px rgba(0, 0, 0, 0.1), 0 1px 3px -1px rgba(0, 0, 0, 0.06)'
+                  ? '0 8px 25px rgba(99, 102, 241, 0.4)' 
+                  : undefined
               }}
               onClick={() => setSelectedCategory(category.id)}
             >
@@ -253,7 +243,7 @@ const PreviewStore = () => {
                   <img
                     src={product.image}
                     alt={product.name}
-                    className="w-full h-32 object-cover transition-transform duration-300 hover:scale-110"
+                    className="w-full h-40 object-contain bg-gray-50 transition-transform duration-300 hover:scale-105"
                     loading="lazy"
                   />
                   <button
