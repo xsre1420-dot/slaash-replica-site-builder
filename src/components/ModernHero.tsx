@@ -1,9 +1,8 @@
-
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 
-export const Hero = () => {
+export const ModernHero = () => {
   return (
     <div className="min-h-screen bg-gradient-hero flex flex-col">
       {/* Navigation */}
