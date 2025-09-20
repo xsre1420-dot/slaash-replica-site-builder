@@ -1,10 +1,9 @@
 
 import { Link } from "react-router-dom";
-import { Calendar, Eye, List, Plus, Tag, Settings, BarChart3, Users, Copy, Check, Package, Menu, Archive, TrendingUp } from "lucide-react";
+import { Calendar, Eye, List, Plus, Tag, Settings, BarChart3, Users, Copy, Check, Package, Archive, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import StoreHeader from "@/components/StoreHeader";
-import RightSidebar from "@/components/RightSidebar";
 import { useStore } from "@/context/StoreContext";
 import { useAuth } from "@/context/AuthContext";
 import { useState } from "react";
@@ -14,7 +13,6 @@ export default function Builder() {
   const { storeName, storeLogo, updateStore } = useStore();
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gray-50 font-arabic">
@@ -26,23 +24,11 @@ export default function Builder() {
             storeLogo={storeLogo} 
             onUpdateStore={updateStore} 
           />
-          
-          {/* Mobile Menu Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSidebarOpen(true)}
-            className="md:hidden"
-          >
-            <Menu className="w-5 h-5" />
-          </Button>
         </div>
       </div>
       
-      {/* Main Content with Right Sidebar Layout */}
-      <div className="flex">
-        {/* Main Content Area */}
-        <div className="flex-1 md:pr-24 p-6 max-w-6xl mx-auto">
+      {/* Main Content */}
+      <div className="p-6 max-w-6xl mx-auto">
           {/* Modern URL Sharing Card - White Background */}
           <div className="bg-white rounded-3xl p-6 mb-8 border border-gray-200 shadow-sm">
             <div className="text-center mb-6">
@@ -198,13 +184,6 @@ export default function Builder() {
             </Link>
           </div>
         </div>
-        
-        {/* Right Sidebar */}
-        <RightSidebar 
-          isOpen={sidebarOpen} 
-          onClose={() => setSidebarOpen(false)} 
-        />
-      </div>
     </div>
   );
 }
