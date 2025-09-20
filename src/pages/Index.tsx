@@ -232,12 +232,12 @@ const Index = () => {
                     : 'border-primary/20 hover:border-primary/40'
                 }`}
               >
-                <h3 className="text-3xl font-bold mb-4">الباقة السنوية</h3>
+                <h3 className="text-3xl font-bold mb-4">باقة 6 أشهر</h3>
                 <div className="flex items-center justify-center gap-4 mb-6">
                   <span className="text-5xl font-bold">125</span>
                   <div className="text-right">
-                    <div className="text-gray-500 line-through">600 ألف د.ع</div>
-                    <div className="text-primary font-medium">ألف د.ع / سنوياً</div>
+                    <div className="text-gray-500 line-through">300 ألف د.ع</div>
+                    <div className="text-primary font-medium">ألف د.ع / لـ 6 أشهر</div>
                   </div>
                 </div>
                 <div className="bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-6 inline-block">
@@ -259,7 +259,7 @@ const Index = () => {
                   className="px-8 py-4 text-lg bg-gradient-to-r from-primary to-secondary"
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigate('/signup', { state: { selectedPlan: { id: 'annual', name: 'الباقة السنوية', price: '125 ألف د.ع' } } });
+                    navigate('/signup', { state: { selectedPlan: { id: 'annual', name: 'باقة 6 أشهر', price: '125 ألف د.ع' } } });
                   }}
                 >
                   ابدأ الآن
