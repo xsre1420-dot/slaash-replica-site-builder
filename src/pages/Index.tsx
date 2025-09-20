@@ -173,130 +173,43 @@ const Index = () => {
           
           {/* Monthly Plans */}
           {billingType === 'monthly' && (
-            <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-              {/* Beginner Plan */}
-              <div 
-                onClick={() => setSelectedPlan('beginner')}
-                className={`bg-white rounded-2xl p-8 shadow-sm border-2 hover:shadow-lg transition-all duration-300 cursor-pointer ${
-                  selectedPlan === 'beginner' 
-                    ? 'border-primary ring-2 ring-primary/20' 
-                    : 'border-gray-200 hover:border-primary/30'
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <div className="w-4 h-4 bg-blue-500 rounded-sm"></div>
-                  </div>
-                  <h3 className="text-2xl font-bold">باقة المبتدئين</h3>
-                </div>
-                <div className="flex items-baseline gap-1 mb-4">
-                  <span className="text-4xl font-bold">$19</span>
-                  <span className="text-gray-600">/ شهرياً</span>
-                </div>
-                
-                 <ul className="space-y-4 mb-8 text-right">
-                  <li className="text-gray-700">عدد الطلبات: 50 شهرياً</li>
-                  <li className="text-gray-700">عدد المنتجات: 25</li>
-                  <li className="text-gray-500">تحليل البيانات</li>
-                  <li className="text-gray-700">إدارة الطلبات</li>
-                  <li className="text-gray-700">دعم فني</li>
-                  <li className="text-gray-700">عدد الأصناف غير محدود</li>
-                  <li className="text-gray-700">شهادة حماية SSL</li>
-                </ul>
-                
-                <Button 
-                  className="w-full" 
-                  variant="outline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate('/signup', { state: { selectedPlan: { id: 'beginner', name: 'باقة المبتدئين', price: '$19' } } });
-                  }}
-                >
-                  ابدأ الآن
-                </Button>
-              </div>
-              
-              {/* Professional Plan */}
-               <div 
-                onClick={() => setSelectedPlan('professional')}
-                className={`bg-white rounded-2xl p-8 shadow-lg border-2 relative transition-all duration-300 cursor-pointer ${
-                  selectedPlan === 'professional' 
-                    ? 'border-primary ring-2 ring-primary/20' 
-                    : selectedPlan === null 
-                      ? 'border-primary hover:border-primary/80 transform hover:scale-105'
-                      : 'border-gray-200 hover:border-primary/30'
-                }`}
-               >
-                {(selectedPlan === null || selectedPlan === 'professional') && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-white px-4 py-2 rounded-full text-sm font-medium">
-                    الأكثر شعبية
-                  </div>
-                )}
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <div className="w-4 h-4 bg-primary rounded-sm"></div>
-                  </div>
-                  <h3 className="text-2xl font-bold">باقة المحترفين</h3>
-                </div>
-                <div className="flex items-baseline gap-1 mb-4">
-                  <span className="text-4xl font-bold">$35</span>
-                  <span className="text-gray-600">/ شهرياً</span>
-                </div>
-                
-                <ul className="space-y-4 mb-8 text-right">
-                  <li className="text-gray-700">عدد الطلبات: 150 شهرياً</li>
-                  <li className="text-gray-700">عدد المنتجات: 75</li>
-                  <li className="text-gray-700">تحليل البيانات</li>
-                  <li className="text-gray-700">إدارة الطلبات</li>
-                  <li className="text-gray-700">دعم فني</li>
-                  <li className="text-gray-700">عدد الأصناف غير محدود</li>
-                  <li className="text-gray-700">شهادة حماية SSL</li>
-                </ul>
-                
-                <Button 
-                  className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate('/signup', { state: { selectedPlan: { id: 'professional', name: 'باقة المحترفين', price: '$35' } } });
-                  }}
-                >
-                  ابدأ الآن
-                </Button>
-              </div>
-              
+            <div className="max-w-md mx-auto">
               {/* Elite Plan */}
               <div 
                 onClick={() => setSelectedPlan('elite')}
-                className={`bg-white rounded-2xl p-8 shadow-sm border-2 hover:shadow-lg transition-all duration-300 cursor-pointer ${
+                className={`bg-white rounded-2xl p-8 shadow-lg border-2 relative hover:shadow-xl transition-all duration-300 cursor-pointer ${
                   selectedPlan === 'elite' 
-                    ? 'border-primary ring-2 ring-primary/20' 
-                    : 'border-gray-200 hover:border-primary/30'
+                    ? 'border-primary ring-2 ring-primary/20 transform scale-105' 
+                    : 'border-primary/20 hover:border-primary/40'
                 }`}
               >
-                <div className="flex items-center gap-2 mb-4">
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-white px-4 py-2 rounded-full text-sm font-medium">
+                  الباقة المميزة
+                </div>
+                <div className="flex items-center gap-2 mb-4 justify-center">
                   <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
                     <div className="w-4 h-4 bg-amber-500 rounded-sm"></div>
                   </div>
                   <h3 className="text-2xl font-bold">باقة النخبة</h3>
                 </div>
-                <div className="flex items-baseline gap-1 mb-4">
-                  <span className="text-4xl font-bold">$49</span>
+                <div className="flex items-baseline gap-1 mb-6 justify-center">
+                  <span className="text-5xl font-bold">$49</span>
                   <span className="text-gray-600">/ شهرياً</span>
                 </div>
                 
                 <ul className="space-y-4 mb-8 text-right">
                   <li className="text-gray-700">عدد الطلبات: غير محدود</li>
                   <li className="text-gray-700">عدد المنتجات: غير محدود</li>
-                  <li className="text-gray-700">تحليل البيانات</li>
-                  <li className="text-gray-700">إدارة الطلبات</li>
-                  <li className="text-gray-700">دعم فني</li>
+                  <li className="text-gray-700">تحليل البيانات المتقدم</li>
+                  <li className="text-gray-700">إدارة الطلبات المتكاملة</li>
+                  <li className="text-gray-700">دعم فني أولوية عالية</li>
                   <li className="text-gray-700">عدد الأصناف غير محدود</li>
-                  <li className="text-gray-700">شهادة حماية SSL</li>
+                  <li className="text-gray-700">شهادة حماية SSL متقدمة</li>
+                  <li className="text-gray-700">تخصيص كامل للمتجر</li>
                 </ul>
                 
                 <Button 
-                  className="w-full" 
-                  variant="outline"
+                  className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
                   onClick={(e) => {
                     e.stopPropagation();
                     navigate('/signup', { state: { selectedPlan: { id: 'elite', name: 'باقة النخبة', price: '$49' } } });
