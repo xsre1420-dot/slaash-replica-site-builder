@@ -219,7 +219,6 @@ export const addCategory = async (category: Category): Promise<{ success: boolea
     const { error } = await supabase
       .from('categories')
       .insert({
-        id: category.id,
         name: category.name,
         display_order: category.order || 0,
         owner_id: user.id
