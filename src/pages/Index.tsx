@@ -166,7 +166,7 @@ const Index = () => {
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                سنوي
+                6 أشهر
               </button>
             </div>
           </div>
