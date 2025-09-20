@@ -193,8 +193,8 @@ const Index = () => {
                   <h3 className="text-2xl font-bold">باقة النخبة</h3>
                 </div>
                 <div className="flex items-baseline gap-1 mb-6 justify-center">
-                  <span className="text-5xl font-bold">$49</span>
-                  <span className="text-gray-600">/ شهرياً</span>
+                  <span className="text-4xl font-bold">50,000</span>
+                  <span className="text-gray-600">د.ع / شهرياً</span>
                 </div>
                 
                 <ul className="space-y-4 mb-8 text-right">
@@ -212,7 +212,7 @@ const Index = () => {
                   className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigate('/signup', { state: { selectedPlan: { id: 'elite', name: 'باقة النخبة', price: '$49' } } });
+                    navigate('/signup', { state: { selectedPlan: { id: 'elite', name: 'باقة النخبة', price: '50,000 د.ع' } } });
                   }}
                 >
                   ابدأ الآن
@@ -234,10 +234,10 @@ const Index = () => {
               >
                 <h3 className="text-3xl font-bold mb-4">الباقة السنوية</h3>
                 <div className="flex items-center justify-center gap-4 mb-6">
-                  <span className="text-5xl font-bold">$299</span>
+                  <span className="text-5xl font-bold">125,000</span>
                   <div className="text-right">
-                    <div className="text-gray-500 line-through">$588</div>
-                    <div className="text-primary font-medium">/ سنوياً</div>
+                    <div className="text-gray-500 line-through">600,000</div>
+                    <div className="text-primary font-medium">د.ع / سنوياً</div>
                   </div>
                 </div>
                 <div className="bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-6 inline-block">
@@ -259,7 +259,7 @@ const Index = () => {
                   className="px-8 py-4 text-lg bg-gradient-to-r from-primary to-secondary"
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigate('/signup', { state: { selectedPlan: { id: 'annual', name: 'الباقة السنوية', price: '$299' } } });
+                    navigate('/signup', { state: { selectedPlan: { id: 'annual', name: 'الباقة السنوية', price: '125,000 د.ع' } } });
                   }}
                 >
                   ابدأ الآن
