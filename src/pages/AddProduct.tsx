@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, CalendarIcon, InfoIcon } from "lucide-react";
+import { X, CalendarIcon, InfoIcon, Plus } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
 import { getCategories, addProduct, getCategoriesSync } from "@/data/dummyData";
@@ -16,7 +16,7 @@ import { Product, Category, ColorOption, ProductVariant } from "@/types";
 import ProductImagesManager from "@/components/ProductImagesManager";
 import SizesManager from "@/components/SizesManager";
 import ColorSwatchPicker from "@/components/ColorSwatchPicker";
-import CategoryManagement from "@/components/CategoryManagement";
+import CategoryDialog from "@/components/CategoryDialog";
 import { formatPriceInput, isValidPrice } from "@/utils/numberUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -50,6 +50,7 @@ const AddProduct = () => {
   const [additionalProducts, setAdditionalProducts] = useState<string[]>([]);
   
   const [categories, setCategories] = useState<Category[]>([]);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -304,18 +305,29 @@ const AddProduct = () => {
 
                 <div className="space-y-3">
                   <Label htmlFor="category" className="block text-black font-medium text-right">الفئة *</Label>
-                  <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger className="w-full text-right text-black rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500">
-                      <SelectValue placeholder="اختر فئة" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-2xl">
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.name} className="text-right">
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setIsCategoryDialogOpen(true)}
+                      className="rounded-2xl border-gray-200 hover:bg-blue-50 hover:border-blue-300 flex-shrink-0"
+                    >
+                      <Plus className="w-4 h-4 text-blue-600" />
+                    </Button>
+                    <Select value={category} onValueChange={setCategory}>
+                      <SelectTrigger className="w-full text-right text-black rounded-2xl border-gray-200 focus:border-blue-500 focus:ring-blue-500">
+                        <SelectValue placeholder="اختر فئة" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-2xl">
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.name} className="text-right">
+                            {cat.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 
@@ -383,14 +395,6 @@ const AddProduct = () => {
                 </div>
               </div>
 
-              {/* Category Management */}
-              <div className="bg-gray-50 rounded-2xl p-6">
-                <Label className="text-right block text-black font-medium mb-4">إدارة الفئات</Label>
-                <CategoryManagement 
-                  categories={categories} 
-                  onCategoryChange={loadCategories} 
-                />
-              </div>
 
               {/* Variants Quantities */}
               {variants.length > 0 && (
@@ -623,6 +627,14 @@ const AddProduct = () => {
             </Button>
           </div>
         </form>
+
+        {/* Category Management Dialog */}
+        <CategoryDialog
+          categories={categories}
+          onCategoryChange={loadCategories}
+          open={isCategoryDialogOpen}
+          onOpenChange={setIsCategoryDialogOpen}
+        />
       </div>
     </div>
   );
