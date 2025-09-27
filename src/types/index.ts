@@ -17,6 +17,17 @@ export interface Product {
   colors?: ColorOption[]; // ألوان اختيارية مع أكواد الألوان
   stockQuantity?: number; // الكمية الإجمالية
   variants?: ProductVariant[]; // تفاصيل الكمية لكل تركيبة
+  // Discount fields
+  discountType?: 'none' | 'percentage' | 'amount';
+  discountValue?: number;
+  discountStartDate?: string;
+  discountEndDate?: string;
+  // Advanced features
+  brand?: string;
+  productClassification?: string;
+  sku?: string;
+  freeShipping?: boolean;
+  additionalProducts?: string[];
 }
 
 export interface ProductVariant {
