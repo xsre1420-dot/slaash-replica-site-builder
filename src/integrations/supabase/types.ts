@@ -517,8 +517,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_orphaned_reviews: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      cleanup_orphaned_suggestions: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       is_valid_store_visit: {
         Args: { p_owner_id: string; p_visitor_ip: string }
+        Returns: boolean
+      }
+      validate_product_ownership: {
+        Args: { p_owner_id: string; p_product_id: string }
         Returns: boolean
       }
     }
