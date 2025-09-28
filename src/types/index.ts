@@ -28,6 +28,10 @@ export interface Product {
   sku?: string;
   freeShipping?: boolean;
   additionalProducts?: string[];
+  // Rating and review features
+  rating?: number;
+  reviewCount?: number;
+  originalPrice?: number;
 }
 
 export interface ProductVariant {
