@@ -263,6 +263,51 @@ export type Database = {
         }
         Relationships: []
       }
+      product_reviews: {
+        Row: {
+          comment: string
+          created_at: string
+          helpful_count: number
+          id: string
+          is_approved: boolean
+          is_featured: boolean
+          owner_id: string
+          product_id: string
+          rating: number
+          reviewer_email: string | null
+          reviewer_name: string
+          updated_at: string
+        }
+        Insert: {
+          comment: string
+          created_at?: string
+          helpful_count?: number
+          id?: string
+          is_approved?: boolean
+          is_featured?: boolean
+          owner_id: string
+          product_id: string
+          rating: number
+          reviewer_email?: string | null
+          reviewer_name: string
+          updated_at?: string
+        }
+        Update: {
+          comment?: string
+          created_at?: string
+          helpful_count?: number
+          id?: string
+          is_approved?: boolean
+          is_featured?: boolean
+          owner_id?: string
+          product_id?: string
+          rating?: number
+          reviewer_email?: string | null
+          reviewer_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           additional_images: string[] | null
@@ -416,6 +461,33 @@ export type Database = {
           page_path?: string | null
           user_agent?: string | null
           visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      suggested_products: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          owner_id: string
+          product_id: string
+          suggested_product_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          owner_id: string
+          product_id: string
+          suggested_product_id: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          owner_id?: string
+          product_id?: string
+          suggested_product_id?: string
         }
         Relationships: []
       }

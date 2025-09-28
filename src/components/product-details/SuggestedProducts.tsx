@@ -1,8 +1,19 @@
 import { useState, useEffect } from "react";
-import { Product } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
 import { Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+
+interface SuggestedProduct {
+  id: string;
+  name: string;
+  price: number;
+  image_url?: string;
+  category: string;
+  rating?: number;
+  reviewCount?: number;
+  originalPrice?: number;
+}
 
 interface SuggestedProductsProps {
   currentProductId: string;
@@ -10,60 +21,67 @@ interface SuggestedProductsProps {
 }
 
 const SuggestedProducts = ({ currentProductId, category }: SuggestedProductsProps) => {
-  const [suggestedProducts, setSuggestedProducts] = useState<Product[]>([]);
+  const [suggestedProducts, setSuggestedProducts] = useState<SuggestedProduct[]>([]);
 
   // Mock suggested products data - in real app, this would come from API
   useEffect(() => {
-    const mockProducts: Product[] = [
-      {
-        id: "1",
-        name: "تيشيرت بولو مع تفاصيل متباينة",
-        price: 212,
-        image: "/lovable-uploads/3482b4a1-01de-4784-b929-e9e4d755830f.png",
-        description: "تيشيرت عالي الجودة",
-        category: "ملابس",
-        rating: 4.2,
-        reviewCount: 142,
-        originalPrice: 242
-      },
-      {
-        id: "2", 
-        name: "تيشيرت جرافيك متدرج",
-        price: 145,
-        image: "/lovable-uploads/59c215d6-809e-4764-90cd-41fd1213f286.png",
-        description: "تيشيرت بتصميم عصري",
-        category: "ملابس",
-        rating: 4.5,
-        reviewCount: 324,
-        originalPrice: 165
-      },
-      {
-        id: "3",
-        name: "بولو بتفاصيل الطرف",
-        price: 180,
-        image: "/lovable-uploads/6fd4999f-4557-46fe-922a-3af4fd437caf.png", 
-        description: "بولو أنيق ومريح",
-        category: "ملابس",
-        rating: 4.4,
-        reviewCount: 256,
-        originalPrice: 200
-      },
-      {
-        id: "4",
-        name: "جاكيت مخطط",
-        price: 120,
-        image: "/lovable-uploads/c85f9015-cfa6-476e-9165-72dfbfb5c4b0.png",
-        description: "جاكيت عصري وأنيق",
-        category: "ملابس", 
-        rating: 4.6,
-        reviewCount: 189,
-        originalPrice: 140
+    const fetchSuggestedProducts = async () => {
+      if (!currentProductId) return;
+
+      try {
+        // First get the suggested products for this product
+        const { data: suggestedData, error: suggestedError } = await supabase
+          .from('suggested_products')
+          .select('suggested_product_id, display_order')
+          .eq('product_id', currentProductId)
+          .order('display_order', { ascending: true });
+
+        if (suggestedError) {
+          console.error('Error fetching suggested products:', suggestedError);
+          return;
+        }
+
+        if (suggestedData && suggestedData.length > 0) {
+          // Get the actual product details for suggested products
+          const productIds = suggestedData.map(sp => sp.suggested_product_id);
+          const { data: productsData, error: productsError } = await supabase
+            .from('products')
+            .select('id, name, price, image_url, category')
+            .in('id', productIds);
+
+          if (productsError) {
+            console.error('Error fetching product details:', productsError);
+            return;
+          }
+
+          // Combine and sort the data based on display_order
+          const combinedProducts = suggestedData
+            .map(sp => {
+              const product = productsData?.find(p => p.id === sp.suggested_product_id);
+              if (!product) return null;
+              
+              return {
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                image_url: product.image_url,
+                category: product.category,
+                rating: 4.0 + Math.random(),
+                reviewCount: Math.floor(Math.random() * 500) + 50,
+                originalPrice: Math.random() > 0.5 ? product.price + Math.floor(Math.random() * 50) + 20 : undefined
+              } as SuggestedProduct;
+            })
+            .filter((product): product is SuggestedProduct => product !== null)
+            .slice(0, 4);
+
+          setSuggestedProducts(combinedProducts);
+        }
+      } catch (error) {
+        console.error('Error in fetchSuggestedProducts:', error);
       }
-    ];
-    
-    // Filter out current product and limit to 4
-    const filtered = mockProducts.filter(p => p.id !== currentProductId).slice(0, 4);
-    setSuggestedProducts(filtered);
+    };
+
+    fetchSuggestedProducts();
   }, [currentProductId]);
 
   const renderStars = (rating: number) => {
@@ -98,7 +116,7 @@ const SuggestedProducts = ({ currentProductId, category }: SuggestedProductsProp
                   <div className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow">
                     <div className="aspect-square bg-gray-100">
                       <img
-                        src={product.image}
+                        src={product.image_url || '/placeholder-product.jpg'}
                         alt={product.name}
                         className="w-full h-full object-cover"
                       />

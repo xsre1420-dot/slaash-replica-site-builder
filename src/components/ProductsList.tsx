@@ -7,7 +7,11 @@ import { loadProducts, deleteProduct } from "@/data/dummyData";
 import { Product } from "@/types";
 
 
-export const ProductsList = () => {
+interface ProductsListProps {
+  onProductSelect?: (product: {id: string, name: string}) => void;
+}
+
+export const ProductsList = ({ onProductSelect }: ProductsListProps = {}) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
 
@@ -73,7 +77,13 @@ export const ProductsList = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {products.map((product) => (
-        <div key={product.id} className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
+        <div 
+          key={product.id} 
+          className={`bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 ${
+            onProductSelect ? 'cursor-pointer' : ''
+          }`}
+          onClick={onProductSelect ? () => onProductSelect({id: product.id, name: product.name}) : undefined}
+        >
           <div className="relative overflow-hidden">
             <img
               src={product.image}
@@ -93,7 +103,7 @@ export const ProductsList = () => {
             </button>
             
             {/* Action buttons */}
-            <div className="absolute top-4 right-4 flex gap-2">
+            <div className="absolute top-4 right-4 flex gap-2" onClick={(e) => e.stopPropagation()}>
               <Link to={`/edit-product/${product.id}`}>
                 <Button 
                   size="sm"
@@ -113,6 +123,11 @@ export const ProductsList = () => {
           </div>
           
           <div className="p-6">
+            {onProductSelect && (
+              <div className="mb-4 p-3 bg-blue-50 rounded-lg text-center">
+                <span className="text-sm text-blue-700">اضغط للوصول إلى إدارة التعليقات والمنتجات المقترحة</span>
+              </div>
+            )}
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-1">
                 <Star className="w-4 h-4 text-yellow-400 fill-current" />
@@ -133,7 +148,17 @@ export const ProductsList = () => {
                   <span className="text-xs text-gray-400 mt-1">التكلفة: {product.cost.toLocaleString()} د.ع</span>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                {onProductSelect && (
+                  <Button 
+                    size="sm" 
+                    variant="secondary" 
+                    className="rounded-full"
+                    onClick={() => onProductSelect({id: product.id, name: product.name})}
+                  >
+                    إدارة
+                  </Button>
+                )}
                 <Link to={`/edit-product/${product.id}`}>
                   <Button size="sm" variant="outline" className="rounded-full">
                     تعديل

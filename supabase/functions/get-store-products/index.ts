@@ -83,7 +83,8 @@ Deno.serve(async (req) => {
     try {
       requestBody = await req.json();
     } catch (e) {
-      console.warn(`Invalid JSON from IP: ${clientIP}, error: ${e.message}`);
+      const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+      console.warn(`Invalid JSON from IP: ${clientIP}, error: ${errorMessage}`);
       return new Response(
         JSON.stringify({ error: 'Invalid JSON in request body' }),
         { 
