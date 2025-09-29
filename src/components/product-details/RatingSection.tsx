@@ -223,6 +223,7 @@ const RatingSection = ({ productId, reviews = [] }: RatingSectionProps) => {
               ({allReviews.length === 0 ? "لا توجد مراجعات" : 
                 allReviews.length === 1 ? "مراجعة واحدة" :
                 allReviews.length === 2 ? "مراجعتان" :
+                allReviews.length >= 3 && allReviews.length <= 10 ? `${allReviews.length} مراجعات` :
                 `${allReviews.length} مراجعة`})
             </div>
           </div>
