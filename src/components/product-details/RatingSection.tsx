@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { Star, ThumbsUp } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface Review {
   id: string;
@@ -22,6 +25,15 @@ interface RatingSectionProps {
 const RatingSection = ({ productId, reviews = [] }: RatingSectionProps) => {
   const [dbReviews, setDbReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [newReview, setNewReview] = useState({
+    name: "",
+    email: "",
+    rating: 0,
+    comment: ""
+  });
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchReviews = async () => {
@@ -64,7 +76,78 @@ const RatingSection = ({ productId, reviews = [] }: RatingSectionProps) => {
     return { rating, count, percentage };
   });
 
-  // Review submission removed to ensure only real customer reviews are shown
+  const handleSubmitReview = async () => {
+    if (!newReview.name.trim() || !newReview.comment.trim() || newReview.rating === 0) {
+      toast({
+        title: "خطأ",
+        description: "يرجى ملء جميع الحقول المطلوبة",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // First get the product owner to associate the review with
+      const { data: productData, error: productError } = await supabase
+        .from('products')
+        .select('owner_id')
+        .eq('id', productId)
+        .single();
+
+      if (productError || !productData) {
+        throw new Error('لم يتم العثور على المنتج');
+      }
+
+      const { error } = await supabase
+        .from('product_reviews')
+        .insert({
+          product_id: productId,
+          owner_id: productData.owner_id,
+          reviewer_name: newReview.name.trim(),
+          reviewer_email: newReview.email.trim() || null,
+          rating: newReview.rating,
+          comment: newReview.comment.trim(),
+          is_approved: false // Requires admin approval
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "تم إرسال التقييم",
+        description: "سيتم مراجعة تقييمك ونشره قريباً"
+      });
+
+      setNewReview({ name: "", email: "", rating: 0, comment: "" });
+      setShowReviewForm(false);
+
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في إرسال التقييم. يرجى المحاولة مرة أخرى",
+        variant: "destructive"
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const renderInteractiveStars = (rating: number, size = "w-8 h-8") => {
+    return (
+      <div className="flex items-center gap-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Star
+            key={star}
+            className={`${size} cursor-pointer transition-colors ${
+              star <= rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300 hover:text-yellow-200"
+            }`}
+            onClick={() => setNewReview({...newReview, rating: star})}
+          />
+        ))}
+      </div>
+    );
+  };
 
   const renderStars = (rating: number, size = "w-4 h-4") => {
     return (
@@ -83,7 +166,16 @@ const RatingSection = ({ productId, reviews = [] }: RatingSectionProps) => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-right">التقييمات والمراجعات</h2>
+      <div className="flex items-center justify-between">
+        <Button
+          variant="outline"
+          onClick={() => setShowReviewForm(!showReviewForm)}
+          className="text-sm"
+        >
+          أضف تقييم
+        </Button>
+        <h2 className="text-2xl font-bold text-right">التقييمات والمراجعات</h2>
+      </div>
 
       {/* Overall Rating */}
       <div className="bg-gray-50 rounded-2xl p-6">
@@ -121,36 +213,117 @@ const RatingSection = ({ productId, reviews = [] }: RatingSectionProps) => {
         </div>
       </div>
 
+      {/* Review Form */}
+      {showReviewForm && (
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
+          <h3 className="text-lg font-semibold text-right">أضف تقييمك</h3>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 text-right mb-2">
+                الاسم *
+              </label>
+              <Input
+                value={newReview.name}
+                onChange={(e) => setNewReview({...newReview, name: e.target.value})}
+                placeholder="اكتب اسمك"
+                className="text-right"
+                disabled={submitting}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 text-right mb-2">
+                البريد الإلكتروني (اختياري)
+              </label>
+              <Input
+                type="email"
+                value={newReview.email}
+                onChange={(e) => setNewReview({...newReview, email: e.target.value})}
+                placeholder="البريد الإلكتروني"
+                className="text-right"
+                disabled={submitting}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 text-right mb-2">
+                التقييم *
+              </label>
+              <div className="flex justify-end">
+                {renderInteractiveStars(newReview.rating)}
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 text-right mb-2">
+                التعليق *
+              </label>
+              <Textarea
+                value={newReview.comment}
+                onChange={(e) => setNewReview({...newReview, comment: e.target.value})}
+                placeholder="اكتب تعليقك هنا..."
+                className="text-right"
+                rows={3}
+                disabled={submitting}
+              />
+            </div>
+            
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setShowReviewForm(false)}
+                disabled={submitting}
+              >
+                إلغاء
+              </Button>
+              <Button 
+                onClick={handleSubmitReview}
+                disabled={submitting}
+              >
+                {submitting ? "جاري الإرسال..." : "إرسال التقييم"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/** Review form removed to keep only real customer reviews */}
 
       {/* Reviews List */}
       <div className="space-y-4">
-        {reviews.map((review) => (
-          <div key={review.id} className="bg-white border border-gray-200 rounded-2xl p-6">
-            <div className="flex items-start gap-4">
-              <div className="flex-1 text-right">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" className="text-gray-500">
-                      <ThumbsUp className="w-4 h-4 ml-1" />
-                      {review.helpful}
-                    </Button>
-                    <span className="text-sm text-gray-500">{review.date}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {renderStars(review.rating)}
-                    <h4 className="font-semibold text-gray-900">{review.name}</h4>
-                  </div>
-                </div>
-                <p className="text-gray-700 leading-relaxed">{review.comment}</p>
-              </div>
-              <Avatar className="w-12 h-12">
-                <AvatarImage src={review.avatar} />
-                <AvatarFallback>{review.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-            </div>
+        {allReviews.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            لا توجد تقييمات لهذا المنتج حتى الآن
           </div>
-        ))}
+        ) : (
+          allReviews.map((review) => (
+            <div key={review.id} className="bg-white border border-gray-200 rounded-2xl p-6">
+              <div className="flex items-start gap-4">
+                <div className="flex-1 text-right">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="sm" className="text-gray-500">
+                        <ThumbsUp className="w-4 h-4 ml-1" />
+                        {review.helpful}
+                      </Button>
+                      <span className="text-sm text-gray-500">{review.date}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {renderStars(review.rating)}
+                      <h4 className="font-semibold text-gray-900">{review.name}</h4>
+                    </div>
+                  </div>
+                  <p className="text-gray-700 leading-relaxed">{review.comment}</p>
+                </div>
+                <Avatar className="w-12 h-12">
+                  <AvatarImage src={review.avatar} />
+                  <AvatarFallback>{review.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
