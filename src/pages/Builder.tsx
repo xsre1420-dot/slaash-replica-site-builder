@@ -43,10 +43,11 @@ export default function Builder() {
                 className="text-left bg-gray-50 border-gray-200 text-gray-700 rounded-2xl font-mono text-sm"
               />
               <Button 
-                className={`transition-all duration-200 rounded-2xl min-w-[80px] ${
+                size="icon"
+                className={`transition-all duration-300 rounded-xl w-12 h-12 shadow-sm ${
                   copied 
-                    ? 'bg-green-100 hover:bg-green-200 text-green-700 border-green-200' 
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200'
+                    ? 'bg-green-500 hover:bg-green-600 text-white border-green-500 scale-105' 
+                    : 'bg-white hover:bg-gray-50 text-gray-600 border border-gray-200 hover:border-gray-300 hover:shadow-md'
                 }`}
                 onClick={async () => {
                   if (user) {
@@ -62,15 +63,9 @@ export default function Builder() {
                 }}
               >
                 {copied ? (
-                  <>
-                    <Check className="w-4 h-4 ml-2" />
-                    تم النسخ
-                  </>
+                  <Check className="w-5 h-5" />
                 ) : (
-                  <>
-                    <Copy className="w-4 h-4 ml-2" />
-                    نسخ
-                  </>
+                  <Copy className="w-5 h-5" />
                 )}
               </Button>
             </div>
