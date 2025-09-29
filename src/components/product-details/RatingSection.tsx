@@ -220,7 +220,10 @@ const RatingSection = ({ productId, reviews = [] }: RatingSectionProps) => {
               {renderStars(averageRating, "w-5 h-5")}
             </div>
             <div className="text-sm text-gray-600">
-              ({reviews.length} مراجعة)
+              ({allReviews.length === 0 ? "لا توجد مراجعات" : 
+                allReviews.length === 1 ? "مراجعة واحدة" :
+                allReviews.length === 2 ? "مراجعتان" :
+                `${allReviews.length} مراجعة${allReviews.length > 10 ? "" : "ات"}`})
             </div>
           </div>
         </div>
