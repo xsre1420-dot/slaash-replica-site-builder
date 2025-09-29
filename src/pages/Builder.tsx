@@ -29,25 +29,23 @@ export default function Builder() {
       
       {/* Main Content */}
       <div className="p-6 max-w-6xl mx-auto">
-          {/* Modern URL Sharing Card - White Background */}
-          <div className="bg-white rounded-3xl p-6 mb-8 border border-gray-200 shadow-sm">
-            <div className="text-center mb-6">
+          {/* Modern Store Link Card */}
+          <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-3xl p-8 mb-8 border border-primary/20 shadow-sm">
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Copy className="w-8 h-8 text-primary" />
+              </div>
               <h2 className="text-2xl font-bold mb-2 text-gray-800">رابط المتجر</h2>
-              <p className="text-gray-600">شارك المتجر مع عملائك</p>
+              <p className="text-gray-600">شارك متجرك مع عملائك بنقرة واحدة</p>
             </div>
             
-            <div className="flex items-center gap-3 mb-6">
-              <Input 
-                value={user ? `${window.location.origin}/store/${user.username}` : 'جاري التحميل...'}
-                readOnly 
-                className="text-left bg-gray-50 border-gray-200 text-gray-700 rounded-2xl font-mono text-sm"
-              />
+            <div className="flex justify-center">
               <Button 
-                size="icon"
-                className={`transition-all duration-300 rounded-xl w-12 h-12 shadow-sm ${
+                size="lg"
+                className={`transition-all duration-300 rounded-2xl px-8 py-4 shadow-lg ${
                   copied 
-                    ? 'bg-green-500 hover:bg-green-600 text-white border-green-500 scale-105' 
-                    : 'bg-white hover:bg-gray-50 text-gray-600 border border-gray-200 hover:border-gray-300 hover:shadow-md'
+                    ? 'bg-green-500 hover:bg-green-600 text-white scale-105 shadow-green-200' 
+                    : 'bg-white hover:bg-gray-50 text-gray-700 border-2 border-primary/20 hover:border-primary/40 hover:shadow-xl'
                 }`}
                 onClick={async () => {
                   if (user) {
@@ -63,32 +61,38 @@ export default function Builder() {
                 }}
               >
                 {copied ? (
-                  <Check className="w-5 h-5" />
+                  <>
+                    <Check className="w-5 h-5 ml-2" />
+                    تم النسخ بنجاح
+                  </>
                 ) : (
-                  <Copy className="w-5 h-5" />
+                  <>
+                    <Copy className="w-5 h-5 ml-2" />
+                    نسخ رابط المتجر
+                  </>
                 )}
               </Button>
             </div>
+          </div>
             
-            {/* Modern Action Grid */}
-            <div className="grid grid-cols-2 gap-4">
-              <Link to="/preview">
-                <Button variant="ghost" className="w-full h-14 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-2xl">
-                  <Eye className="w-5 h-5 ml-2" />
-                  معاينة المتجر
-                </Button>
-              </Link>
-              <Link to="/add-product">
-                <Button className="w-full h-14 text-white rounded-2xl shadow-lg border-0"
-                        style={{ 
-                          background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                          boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
-                        }}>
-                  <Plus className="w-5 h-5 ml-2" />
-                  إضافة منتج
-                </Button>
-              </Link>
-            </div>
+          {/* Modern Action Grid */}
+          <div className="grid grid-cols-2 gap-4 mb-8">
+            <Link to="/preview">
+              <Button variant="ghost" className="w-full h-14 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-2xl">
+                <Eye className="w-5 h-5 ml-2" />
+                معاينة المتجر
+              </Button>
+            </Link>
+            <Link to="/add-product">
+              <Button className="w-full h-14 text-white rounded-2xl shadow-lg border-0"
+                      style={{ 
+                        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                        boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
+                      }}>
+                <Plus className="w-5 h-5 ml-2" />
+                إضافة منتج
+              </Button>
+            </Link>
           </div>
 
           {/* Modern Dashboard Cards */}
