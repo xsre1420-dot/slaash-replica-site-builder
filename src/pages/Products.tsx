@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Plus, Settings, MessageSquare, Lightbulb } from "lucide-react";
+import { X, Plus, MessageSquare, Lightbulb } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ProductsList } from "@/components/ProductsList";
@@ -113,19 +113,6 @@ const Products = () => {
                   </Button>
                 </Link>
                 <h2 className="text-2xl font-bold text-black">قائمة المنتجات</h2>
-              </div>
-
-              <div className="mb-6 p-4 bg-blue-50 rounded-xl border-l-4 border-blue-400">
-                <div className="flex items-start gap-3">
-                  <Settings className="w-5 h-5 text-blue-600 mt-0.5" />
-                  <div className="text-right">
-                    <h3 className="font-semibold text-blue-900 mb-1">إدارة متقدمة للمنتجات</h3>
-                    <p className="text-blue-700 text-sm">
-                      يمكنك الآن إدارة تعليقات العملاء والمنتجات المقترحة لكل منتج بشكل منفصل. 
-                      اضغط على أي منتج لبدء الإدارة المتقدمة.
-                    </p>
-                  </div>
-                </div>
               </div>
 
               <ProductsList onProductSelect={handleProductSelect} />

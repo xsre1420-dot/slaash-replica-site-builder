@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Edit, Plus, Trash2, Star, Heart } from "lucide-react";
+import { Edit, Plus, Trash2, Star, Heart, MessageSquare } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { loadProducts, deleteProduct } from "@/data/dummyData";
@@ -92,14 +92,17 @@ export const ProductsList = ({ onProductSelect }: ProductsListProps = {}) => {
               loading="lazy"
             />
             <button
-              className={`absolute top-4 left-4 w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+              className={`absolute top-4 left-4 w-12 h-12 rounded-xl shadow-md flex items-center justify-center transition-all duration-300 ${
                 favorites.includes(product.id) 
-                  ? 'bg-red-500 text-white' 
-                  : 'bg-white/80 text-gray-400 hover:text-red-500'
+                  ? 'bg-red-500 text-white scale-105' 
+                  : 'bg-white/90 backdrop-blur-sm text-gray-400 hover:text-red-500 hover:scale-105'
               }`}
-              onClick={() => toggleFavorite(product.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleFavorite(product.id);
+              }}
             >
-              <Heart className={`w-5 h-5 ${favorites.includes(product.id) ? 'fill-current' : ''}`} />
+              <Heart className={`w-6 h-6 ${favorites.includes(product.id) ? 'fill-current' : ''}`} />
             </button>
             
             {/* Action buttons */}
@@ -107,63 +110,56 @@ export const ProductsList = ({ onProductSelect }: ProductsListProps = {}) => {
               <Link to={`/edit-product/${product.id}`}>
                 <Button 
                   size="sm"
-                  className="w-10 h-10 p-0 bg-white/80 hover:bg-white text-gray-600 hover:text-blue-600 rounded-full"
+                  className="w-12 h-12 p-0 bg-white/90 backdrop-blur-sm hover:bg-white text-gray-700 hover:text-blue-600 rounded-xl shadow-md hover:scale-105 transition-all duration-300"
                 >
-                  <Edit className="w-4 h-4" />
+                  <Edit className="w-5 h-5" />
                 </Button>
               </Link>
               <Button 
                 size="sm"
-                className="w-10 h-10 p-0 bg-white/80 hover:bg-white text-gray-600 hover:text-red-600 rounded-full"
-                onClick={() => handleDelete(product.id)}
+                className="w-12 h-12 p-0 bg-white/90 backdrop-blur-sm hover:bg-white text-gray-700 hover:text-red-600 rounded-xl shadow-md hover:scale-105 transition-all duration-300"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(product.id);
+                }}
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-5 h-5" />
               </Button>
             </div>
           </div>
           
           <div className="p-6">
-            {onProductSelect && (
-              <div className="mb-4 p-3 bg-blue-50 rounded-lg text-center">
-                <span className="text-sm text-blue-700">اضغط للوصول إلى إدارة التعليقات والمنتجات المقترحة</span>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Star className="w-5 h-5 text-yellow-400 fill-current" />
+                <span className="text-base font-semibold text-gray-700">4.5</span>
               </div>
-            )}
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-1">
-                <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                <span className="text-sm text-gray-600">4.5</span>
-              </div>
-              <h3 className="text-lg font-bold text-gray-800 text-right">{product.name}</h3>
+              <h3 className="text-xl font-bold text-gray-800 text-right">{product.name}</h3>
             </div>
             
             <p className="text-sm text-gray-500 mb-4 text-right line-clamp-2">{product.description}</p>
             
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mt-4">
               <div className="flex flex-col items-start">
-                <span className="text-xl font-bold text-gray-800">{product.price.toLocaleString()} د.ع</span>
+                <span className="text-2xl font-bold text-gray-800">{product.price.toLocaleString()} د.ع</span>
                 {product.stockQuantity !== undefined && (
-                  <span className="text-sm text-gray-500 mt-1">الكمية: {product.stockQuantity}</span>
+                  <span className="text-sm text-gray-600 mt-1.5 font-medium">الكمية: {product.stockQuantity}</span>
                 )}
                 {product.cost && (
-                  <span className="text-xs text-gray-400 mt-1">التكلفة: {product.cost.toLocaleString()} د.ع</span>
+                  <span className="text-xs text-gray-500 mt-1">التكلفة: {product.cost.toLocaleString()} د.ع</span>
                 )}
               </div>
-              <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+              <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
                 {onProductSelect && (
                   <Button 
-                    size="sm" 
-                    variant="secondary" 
-                    className="rounded-full"
+                    size="lg" 
+                    className="rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-0 px-5 py-2.5"
                     onClick={() => onProductSelect({id: product.id, name: product.name})}
                   >
-                    إدارة
+                    <MessageSquare className="w-5 h-5 ml-2" />
+                    <span className="font-semibold">التعليقات</span>
                   </Button>
                 )}
-                <Link to={`/edit-product/${product.id}`}>
-                  <Button size="sm" variant="outline" className="rounded-full">
-                    تعديل
-                  </Button>
-                </Link>
               </div>
             </div>
 
