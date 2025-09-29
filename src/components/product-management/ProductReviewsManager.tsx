@@ -133,7 +133,7 @@ const ProductReviewsManager = ({ productId, productName }: ProductReviewsManager
     <Card>
       <CardHeader className="pb-6">
         <div className="flex flex-col items-center gap-4">
-          <CardTitle className="text-2xl font-bold text-center">إدارة تعليقات</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">إدارة التعليقات</CardTitle>
           
           <div className="flex flex-col items-center gap-2">
             <div className="flex items-center gap-2">
