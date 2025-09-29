@@ -29,36 +29,36 @@ const RatingSection = ({ productId, reviews = [] }: RatingSectionProps) => {
   const [submitting, setSubmitting] = useState(false);
   const [newReview, setNewReview] = useState({
     name: "",
-    email: "",
     rating: 0,
     comment: ""
   });
   const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchReviews = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('product_reviews')
-        .select('id, reviewer_name, rating, comment, created_at, helpful_count')
-        .eq('product_id', productId)
-        .eq('is_approved', true)
-        .order('created_at', { ascending: false });
+  const fetchReviews = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('product_reviews')
+      .select('id, reviewer_name, rating, comment, created_at, helpful_count')
+      .eq('product_id', productId)
+      .eq('is_approved', true)
+      .order('created_at', { ascending: false });
 
-      if (!error && data) {
-        const mapped = data.map((r: any) => ({
-          id: r.id,
-          name: r.reviewer_name,
-          rating: r.rating,
-          comment: r.comment,
-          date: new Date(r.created_at).toLocaleDateString('ar-EG'),
-          helpful: r.helpful_count ?? 0,
-          avatar: "",
-        }));
-        setDbReviews(mapped);
-      }
-      setLoading(false);
-    };
+    if (!error && data) {
+      const mapped = data.map((r: any) => ({
+        id: r.id,
+        name: r.reviewer_name,
+        rating: r.rating,
+        comment: r.comment,
+        date: new Date(r.created_at).toLocaleDateString('ar-EG'),
+        helpful: r.helpful_count ?? 0,
+        avatar: "",
+      }));
+      setDbReviews(mapped);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
     fetchReviews();
   }, [productId]);
 
@@ -105,20 +105,24 @@ const RatingSection = ({ productId, reviews = [] }: RatingSectionProps) => {
           product_id: productId,
           owner_id: productData.owner_id,
           reviewer_name: newReview.name.trim(),
-          reviewer_email: newReview.email.trim() || null,
+          reviewer_email: null,
           rating: newReview.rating,
           comment: newReview.comment.trim(),
-          is_approved: false // Requires admin approval
+          is_approved: true // Add directly to product
         });
 
       if (error) throw error;
 
       toast({
-        title: "تم إرسال التقييم",
-        description: "سيتم مراجعة تقييمك ونشره قريباً"
+        title: "تم إضافة التقييم",
+        description: "شكراً لك على تقييمك!"
       });
 
-      setNewReview({ name: "", email: "", rating: 0, comment: "" });
+      setNewReview({ name: "", rating: 0, comment: "" });
+      setShowReviewForm(false);
+      
+      // Refresh reviews to show the new one
+      fetchReviews();
       setShowReviewForm(false);
 
     } catch (error) {
@@ -227,20 +231,6 @@ const RatingSection = ({ productId, reviews = [] }: RatingSectionProps) => {
                 value={newReview.name}
                 onChange={(e) => setNewReview({...newReview, name: e.target.value})}
                 placeholder="اكتب اسمك"
-                className="text-right"
-                disabled={submitting}
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 text-right mb-2">
-                البريد الإلكتروني (اختياري)
-              </label>
-              <Input
-                type="email"
-                value={newReview.email}
-                onChange={(e) => setNewReview({...newReview, email: e.target.value})}
-                placeholder="البريد الإلكتروني"
                 className="text-right"
                 disabled={submitting}
               />
