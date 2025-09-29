@@ -4,16 +4,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X } from "lucide-react";
+import { X, Trash2 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { getCategories, getProductById, updateProduct, getCategoriesSync } from "@/data/dummyData";
+import { getCategories, getProductById, updateProduct, getCategoriesSync, deleteProduct } from "@/data/dummyData";
 import { useToast } from "@/hooks/use-toast";
 import { Product, Category, ColorOption } from "@/types";
 import ProductImagesManager from "@/components/ProductImagesManager";
 import SizesManager from "@/components/SizesManager";
 import ColorSwatchPicker from "@/components/ColorSwatchPicker";
 import { formatPriceInput, isValidPrice } from "@/utils/numberUtils";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const EditProduct = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -154,6 +155,25 @@ const EditProduct = () => {
     }
   };
 
+  const handleDeleteProduct = async () => {
+    if (!productId) return;
+    
+    const result = await deleteProduct(productId);
+    if (result.success) {
+      toast({
+        title: "تم الحذف",
+        description: "تم حذف المنتج بنجاح",
+      });
+      navigate('/products');
+    } else {
+      toast({
+        title: "خطأ",
+        description: "فشل في حذف المنتج",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -186,23 +206,6 @@ const EditProduct = () => {
             />
           </div>
 
-          {/* Category */}
-          <div className="space-y-2 text-right">
-            <Label htmlFor="category" className="block text-black">الفئة</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="w-full text-right text-black focus:border-blue-500 focus:ring-blue-500">
-                <SelectValue placeholder="اختر فئة" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Description */}
           <div className="space-y-2 text-right">
             <Label htmlFor="description" className="block text-black">الوصف</Label>
@@ -233,17 +236,49 @@ const EditProduct = () => {
           {/* Colors Manager */}
           <ColorSwatchPicker colors={colors} onColorsChange={setColors} />
 
-          {/* Submit Button */}
-          <Button 
-            type="submit" 
-            className="w-full text-white shadow-lg"
-            style={{ 
-              background: 'linear-gradient(135deg, #5b47f5, #4c3ef7)',
-              boxShadow: '0 4px 15px rgba(91, 71, 245, 0.3)'
-            }}
-          >
-            حفظ التغييرات
-          </Button>
+          {/* Action Buttons */}
+          <div className="space-y-3">
+            <Button 
+              type="submit" 
+              className="w-full text-white shadow-lg"
+              style={{ 
+                background: 'linear-gradient(135deg, #5b47f5, #4c3ef7)',
+                boxShadow: '0 4px 15px rgba(91, 71, 245, 0.3)'
+              }}
+            >
+              حفظ التغييرات
+            </Button>
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  type="button"
+                  variant="destructive"
+                  className="w-full flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  حذف المنتج
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-right">هل أنت متأكد من حذف هذا المنتج؟</AlertDialogTitle>
+                  <AlertDialogDescription className="text-right">
+                    هذا الإجراء لا يمكن التراجع عنه. سيتم حذف المنتج نهائياً من قاعدة البيانات.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="gap-2">
+                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={handleDeleteProduct}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    نعم، احذف المنتج
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </form>
       </div>
     </div>

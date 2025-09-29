@@ -290,17 +290,39 @@ const ReviewCard = ({
   onToggleFeatured, 
   renderStars 
 }: ReviewCardProps) => {
+  const { toast } = useToast();
+
+  const handleToggleApproval = async () => {
+    await onToggleApproval(review.id, review.is_approved);
+    toast({
+      title: "تم التحديث بنجاح",
+      description: review.is_approved ? "تم إخفاء التعليق" : "تم نشر التعليق",
+    });
+  };
+
+  const handleToggleFeatured = async () => {
+    await onToggleFeatured(review.id, review.is_featured);
+    toast({
+      title: "تم التحديث بنجاح", 
+      description: review.is_featured ? "تم إلغاء التمييز" : "تم تمييز التعليق",
+    });
+  };
+
   return (
-    <div className={`border rounded-lg p-4 ${
-      !review.is_approved ? 'bg-orange-50 border-orange-200' : 'bg-white'
+    <div className={`border rounded-xl p-6 transition-all duration-300 ${
+      !review.is_approved ? 'bg-orange-50 border-orange-200 shadow-sm' : 'bg-white border-gray-200 shadow-sm hover:shadow-md'
     }`}>
-      <div className="flex justify-between items-start mb-3">
-        <div className="flex gap-2">
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex gap-3">
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onToggleApproval(review.id, review.is_approved)}
-            className={review.is_approved ? "text-green-600" : "text-orange-600"}
+            onClick={handleToggleApproval}
+            className={`rounded-lg px-3 py-2 transition-all duration-300 ${
+              review.is_approved 
+                ? "text-green-700 bg-green-100 hover:bg-green-200" 
+                : "text-orange-700 bg-orange-100 hover:bg-orange-200"
+            }`}
           >
             {review.is_approved ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
           </Button>
@@ -308,15 +330,23 @@ const ReviewCard = ({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onToggleFeatured(review.id, review.is_featured)}
-            className={review.is_featured ? "text-yellow-600" : "text-gray-400"}
+            onClick={handleToggleFeatured}
+            className={`rounded-lg px-3 py-2 transition-all duration-300 ${
+              review.is_featured 
+                ? "text-yellow-700 bg-yellow-100 hover:bg-yellow-200" 
+                : "text-gray-500 bg-gray-100 hover:bg-gray-200"
+            }`}
           >
             <Award className="w-4 h-4" />
           </Button>
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-red-600">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-red-600 bg-red-50 hover:bg-red-100 rounded-lg px-3 py-2 transition-all duration-300"
+              >
                 <Trash2 className="w-4 h-4" />
               </Button>
             </AlertDialogTrigger>
@@ -340,33 +370,41 @@ const ReviewCard = ({
           </AlertDialog>
         </div>
 
-        <div className="text-right space-y-2">
-          <div className="flex items-center gap-2 justify-end">
-            <div className="flex gap-1">
+        <div className="text-right space-y-3">
+          <div className="flex items-center gap-3 justify-end">
+            <div className="flex gap-2">
               {review.is_featured && (
-                <Badge variant="secondary" className="text-yellow-700 bg-yellow-100">
+                <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 rounded-full px-3 py-1">
                   مميز
                 </Badge>
               )}
-              <Badge variant={review.is_approved ? "default" : "secondary"}>
+              <Badge 
+                className={`rounded-full px-3 py-1 ${
+                  review.is_approved 
+                    ? "bg-green-100 text-green-800 border-green-300" 
+                    : "bg-orange-100 text-orange-800 border-orange-300"
+                }`}
+              >
                 {review.is_approved ? "منشور" : "في انتظار المراجعة"}
               </Badge>
             </div>
-            {renderStars(review.rating)}
+            <div className="flex items-center gap-1">
+              {renderStars(review.rating)}
+            </div>
           </div>
-          <div className="font-semibold">{review.reviewer_name}</div>
+          <div className="font-bold text-lg text-gray-800">{review.reviewer_name}</div>
           <div className="text-sm text-gray-500">
             {new Date(review.created_at).toLocaleDateString('ar-EG')}
           </div>
         </div>
       </div>
 
-      <div className="text-right text-gray-700 leading-relaxed">
+      <div className="text-right text-gray-700 leading-relaxed text-base">
         {review.comment}
       </div>
 
       {review.helpful_count > 0 && (
-        <div className="text-sm text-gray-500 mt-2 text-right">
+        <div className="text-sm text-gray-500 mt-3 text-right">
           {review.helpful_count} شخص وجد هذا التعليق مفيداً
         </div>
       )}
