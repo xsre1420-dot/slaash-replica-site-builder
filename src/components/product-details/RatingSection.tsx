@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Star, ThumbsUp } from "lucide-react";
+import { Star } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -299,20 +299,16 @@ const RatingSection = ({ productId, reviews = [] }: RatingSectionProps) => {
           allReviews.map((review) => (
             <div key={review.id} className="bg-white border border-gray-200 rounded-2xl p-6">
               <div className="flex items-start gap-4">
-                <div className="flex-1 text-right">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" className="text-gray-500">
-                        <ThumbsUp className="w-4 h-4 ml-1" />
-                        {review.helpful}
-                      </Button>
-                      <span className="text-sm text-gray-500">{review.date}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {renderStars(review.rating)}
-                      <h4 className="font-semibold text-gray-900">{review.name}</h4>
-                    </div>
+              <div className="flex-1 text-right">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500">{review.date}</span>
                   </div>
+                  <div className="flex items-center gap-2">
+                    {renderStars(review.rating)}
+                    <h4 className="font-semibold text-gray-900">{review.name}</h4>
+                  </div>
+                </div>
                   <p className="text-gray-700 leading-relaxed">{review.comment}</p>
                 </div>
                 <Avatar className="w-12 h-12">
