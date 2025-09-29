@@ -106,8 +106,28 @@ const AddProduct = () => {
   };
 
   const loadCategories = useCallback(async () => {
-    const cats = await getCategories();
-    setCategories(cats);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('owner_id', user.id)
+        .order('display_order', { ascending: true });
+
+      if (error) throw error;
+      
+      const mappedCategories: Category[] = data.map(cat => ({
+        id: cat.id,
+        name: cat.name,
+        order: cat.display_order
+      }));
+      
+      setCategories(mappedCategories);
+    } catch (error) {
+      console.error('Error loading categories:', error);
+    }
   }, []);
 
   useEffect(() => {
@@ -209,44 +229,36 @@ const AddProduct = () => {
       return;
     }
 
-    const newProduct: Product = {
-      id: '',
-      name,
-      description,
-      category,
-      price: Number(formatPriceInput(price)),
-      cost: cost ? Number(formatPriceInput(cost)) : undefined,
-      image: mainImage,
-      additionalImages: additionalImages,
-      sizes: sizes.length > 0 ? sizes : undefined,
-      colors: colors.length > 0 ? colors : undefined,
-      stockQuantity: stockQuantity ? parseInt(stockQuantity) : undefined,
-      variants: variants.length > 0 ? variants : undefined,
-      // Discount data
-      discountType: discountType !== 'none' ? discountType : undefined,
-      discountValue: discountValue && discountType !== 'none' ? Number(formatPriceInput(discountValue)) : undefined,
-      discountStartDate: discountStartDate ? discountStartDate.toISOString() : undefined,
-      discountEndDate: discountEndDate ? discountEndDate.toISOString() : undefined,
-      // Advanced features
-      brand: brand || undefined,
-      productClassification: productClassification || undefined,
-      sku: sku || undefined,
-      freeShipping,
-      additionalProducts: additionalProducts.filter(p => p.trim().length > 0)
-    };
+    try {
+      const { error } = await supabase
+        .from('products')
+        .insert([{
+          owner_id: user.id,
+          name: name.trim(),
+          description: description.trim(),
+          category: category,
+          price: Number(formatPriceInput(price)),
+          cost: cost ? Number(formatPriceInput(cost)) : null,
+          image_url: mainImage,
+          additional_images: additionalImages.length > 0 ? additionalImages : null,
+          sizes: sizes.length > 0 ? sizes : null,
+          colors: colors.length > 0 ? JSON.stringify(colors) : null,
+          stock_quantity: stockQuantity ? parseInt(stockQuantity) : 0,
+          variants: variants.length > 0 ? JSON.stringify(variants) : null
+        }]);
 
-    const result = await addProduct(newProduct);
-    
-    if (result.success) {
+      if (error) throw error;
+
       toast({
         title: "تم بنجاح",
         description: "تمت إضافة منتج جديد",
       });
       navigate('/products');
-    } else {
+    } catch (error) {
+      console.error('Error adding product:', error);
       toast({
         title: "خطأ",
-        description: result.error || "فشل في إضافة المنتج",
+        description: "فشل في إضافة المنتج",
         variant: "destructive"
       });
     }

@@ -86,6 +86,15 @@ const RatingSection = ({ productId, reviews = [] }: RatingSectionProps) => {
       return;
     }
 
+    if (newReview.comment.trim().length < 2) {
+      toast({
+        title: "خطأ",
+        description: "يجب أن يحتوي التعليق على حرفين على الأقل",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setSubmitting(true);
     try {
       // First get the product owner to associate the review with
