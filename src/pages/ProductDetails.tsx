@@ -67,27 +67,7 @@ const ProductDetails = () => {
   // Get all available images (main image + any additional images)
   const allImages = product.additionalImages ? [product.image, ...product.additionalImages] : [product.image];
 
-  // Mock reviews data
-  const mockReviews = [
-    {
-      id: "1",
-      name: "أحمد محمد",
-      avatar: "",
-      rating: 5,
-      comment: "منتج ممتاز وجودة عالية جداً، أنصح بشرائه",
-      date: "13 أكتوبر 2024",
-      helpful: 12
-    },
-    {
-      id: "2", 
-      name: "فاطمة علي",
-      avatar: "",
-      rating: 4,
-      comment: "المنتج جيد جداً ولكن التوصيل استغرق وقت أطول من المتوقع",
-      date: "10 أكتوبر 2024",
-      helpful: 8
-    }
-  ];
+  // Reviews are loaded from Supabase inside RatingSection to ensure authenticity
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -236,7 +216,7 @@ const ProductDetails = () => {
           </div>
 
           {/* Rating Section */}
-          <RatingSection productId={productId || ""} reviews={mockReviews} />
+          <RatingSection productId={productId || ""} />
 
           {/* Suggested Products */}
           <SuggestedProducts currentProductId={productId || ""} category={product.category} />

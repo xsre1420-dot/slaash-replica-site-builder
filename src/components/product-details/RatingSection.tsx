@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Star, ThumbsUp } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Review {
   id: string;
@@ -21,35 +20,53 @@ interface RatingSectionProps {
 }
 
 const RatingSection = ({ productId, reviews = [] }: RatingSectionProps) => {
-  const [showReviewForm, setShowReviewForm] = useState(false);
-  const [newReview, setNewReview] = useState({
-    name: "",
-    rating: 0,
-    comment: ""
-  });
+  const [dbReviews, setDbReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('product_reviews')
+        .select('id, reviewer_name, rating, comment, created_at, helpful_count')
+        .eq('product_id', productId)
+        .eq('is_approved', true)
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        const mapped = data.map((r: any) => ({
+          id: r.id,
+          name: r.reviewer_name,
+          rating: r.rating,
+          comment: r.comment,
+          date: new Date(r.created_at).toLocaleDateString('ar-EG'),
+          helpful: r.helpful_count ?? 0,
+          avatar: "",
+        }));
+        setDbReviews(mapped);
+      }
+      setLoading(false);
+    };
+    fetchReviews();
+  }, [productId]);
+
+  const allReviews = reviews.length > 0 ? reviews : dbReviews;
 
   // Calculate average rating
-  const averageRating = reviews.length > 0 
-    ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length 
+  const averageRating = allReviews.length > 0 
+    ? allReviews.reduce((sum, review) => sum + review.rating, 0) / allReviews.length 
     : 0;
 
   // Calculate rating distribution
-  const ratingDistribution = [5, 4, 3, 2, 1].map(rating => {
-    const count = reviews.filter(review => review.rating === rating).length;
-    const percentage = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
+  const ratingDistribution = [5, 4, 3, 2, 1].map((rating) => {
+    const count = allReviews.filter(review => review.rating === rating).length;
+    const percentage = allReviews.length > 0 ? (count / allReviews.length) * 100 : 0;
     return { rating, count, percentage };
   });
 
-  const handleSubmitReview = () => {
-    if (newReview.name && newReview.comment && newReview.rating > 0) {
-      // Here you would typically save to database
-      console.log("New review:", newReview);
-      setNewReview({ name: "", rating: 0, comment: "" });
-      setShowReviewForm(false);
-    }
-  };
+  // Review submission removed to ensure only real customer reviews are shown
 
-  const renderStars = (rating: number, interactive = false, size = "w-4 h-4") => {
+  const renderStars = (rating: number, size = "w-4 h-4") => {
     return (
       <div className="flex items-center gap-1">
         {[1, 2, 3, 4, 5].map((star) => (
@@ -57,8 +74,7 @@ const RatingSection = ({ productId, reviews = [] }: RatingSectionProps) => {
             key={star}
             className={`${size} ${
               star <= rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"
-            } ${interactive ? "cursor-pointer hover:text-yellow-400" : ""}`}
-            onClick={interactive ? () => setNewReview({...newReview, rating: star}) : undefined}
+            }`}
           />
         ))}
       </div>
@@ -67,16 +83,7 @@ const RatingSection = ({ productId, reviews = [] }: RatingSectionProps) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Button
-          variant="outline"
-          onClick={() => setShowReviewForm(!showReviewForm)}
-          className="text-sm"
-        >
-          أضف تقييم
-        </Button>
-        <h2 className="text-2xl font-bold text-right">التقييمات والمراجعات</h2>
-      </div>
+      <h2 className="text-2xl font-bold text-right">التقييمات والمراجعات</h2>
 
       {/* Overall Rating */}
       <div className="bg-gray-50 rounded-2xl p-6">
@@ -105,7 +112,7 @@ const RatingSection = ({ productId, reviews = [] }: RatingSectionProps) => {
               {averageRating.toFixed(1)}
             </div>
             <div className="flex justify-center mb-2">
-              {renderStars(averageRating, false, "w-5 h-5")}
+              {renderStars(averageRating, "w-5 h-5")}
             </div>
             <div className="text-sm text-gray-600">
               ({reviews.length} مراجعة)
@@ -114,60 +121,7 @@ const RatingSection = ({ productId, reviews = [] }: RatingSectionProps) => {
         </div>
       </div>
 
-      {/* Review Form */}
-      {showReviewForm && (
-        <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
-          <h3 className="text-lg font-semibold text-right">أضف تقييمك</h3>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 text-right mb-2">
-                الاسم
-              </label>
-              <Input
-                value={newReview.name}
-                onChange={(e) => setNewReview({...newReview, name: e.target.value})}
-                placeholder="اكتب اسمك"
-                className="text-right"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 text-right mb-2">
-                التقييم
-              </label>
-              <div className="flex justify-end">
-                {renderStars(newReview.rating, true, "w-8 h-8")}
-              </div>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 text-right mb-2">
-                التعليق
-              </label>
-              <Textarea
-                value={newReview.comment}
-                onChange={(e) => setNewReview({...newReview, comment: e.target.value})}
-                placeholder="اكتب تعليقك هنا..."
-                className="text-right"
-                rows={3}
-              />
-            </div>
-            
-            <div className="flex gap-2 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setShowReviewForm(false)}
-              >
-                إلغاء
-              </Button>
-              <Button onClick={handleSubmitReview}>
-                إرسال التقييم
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/** Review form removed to keep only real customer reviews */}
 
       {/* Reviews List */}
       <div className="space-y-4">
