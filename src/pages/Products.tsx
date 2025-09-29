@@ -1,14 +1,18 @@
 import { useState, useEffect } from "react";
-import { X, Plus, MessageSquare, Lightbulb } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { X, MessageSquare, Lightbulb, Trash2 } from "lucide-react";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ProductsList } from "@/components/ProductsList";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProductReviewsManager from "@/components/product-management/ProductReviewsManager";
 import SuggestedProductsManager from "@/components/product-management/SuggestedProductsManager";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { deleteProduct } from "@/data/dummyData";
+import { toast } from "sonner";
 
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [selectedProduct, setSelectedProduct] = useState<{id: string, name: string} | null>(null);
   
   // Get product ID from URL params for deep linking
@@ -29,6 +33,19 @@ const Products = () => {
   const handleBackToList = () => {
     setSelectedProduct(null);
     setSearchParams({});
+  };
+
+  const handleDeleteProduct = async () => {
+    if (!selectedProduct) return;
+    
+    const result = await deleteProduct(selectedProduct.id);
+    if (result.success) {
+      toast.success("تم حذف المنتج بنجاح");
+      handleBackToList();
+      navigate('/products');
+    } else {
+      toast.error("فشل حذف المنتج");
+    }
   };
 
   return (
@@ -57,15 +74,47 @@ const Products = () => {
             // Product Management View
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <Button 
-                  variant="outline" 
-                  onClick={handleBackToList}
-                  className="flex items-center gap-2"
-                >
-                  ← العودة إلى قائمة المنتجات
-                </Button>
-                <h2 className="text-xl font-bold text-black text-right">
-                  إدارة منتج: {selectedProduct.name}
+                <div className="flex items-center gap-3">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleBackToList}
+                    className="flex items-center gap-2 hover:bg-gray-50"
+                  >
+                    ← العودة
+                  </Button>
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="destructive"
+                        className="flex items-center gap-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        حذف المنتج
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-right">هل أنت متأكد من حذف هذا المنتج؟</AlertDialogTitle>
+                        <AlertDialogDescription className="text-right">
+                          هذا الإجراء لا يمكن التراجع عنه. سيتم حذف المنتج "{selectedProduct.name}" نهائياً من قاعدة البيانات.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter className="gap-2">
+                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={handleDeleteProduct}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          نعم، احذف المنتج
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+                
+                <h2 className="text-xl font-bold text-gray-800 text-right">
+                  إدارة: {selectedProduct.name}
                 </h2>
               </div>
 
@@ -99,19 +148,7 @@ const Products = () => {
           ) : (
             // Products List View
             <>
-              <div className="flex justify-between items-center mb-8">
-                <Link to="/add-product">
-                  <Button 
-                    className="text-white rounded-2xl px-8 py-3 border-0 shadow-lg"
-                    style={{ 
-                      background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                      boxShadow: '0 8px 25px rgba(99, 102, 241, 0.3)'
-                    }}
-                  >
-                    <Plus className="w-5 h-5 ml-2" />
-                    إضافة منتج جديد
-                  </Button>
-                </Link>
+              <div className="flex justify-end items-center mb-8">
                 <h2 className="text-2xl font-bold text-black">قائمة المنتجات</h2>
               </div>
 

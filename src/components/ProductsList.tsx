@@ -1,9 +1,9 @@
 
 import { Button } from "@/components/ui/button";
-import { Edit, Plus, Trash2, Star, Heart, MessageSquare } from "lucide-react";
+import { Edit, Plus, Star, MessageSquare } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { loadProducts, deleteProduct } from "@/data/dummyData";
+import { loadProducts } from "@/data/dummyData";
 import { Product } from "@/types";
 
 
@@ -13,7 +13,6 @@ interface ProductsListProps {
 
 export const ProductsList = ({ onProductSelect }: ProductsListProps = {}) => {
   const [products, setProducts] = useState<Product[]>([]);
-  const [favorites, setFavorites] = useState<string[]>([]);
 
   useEffect(() => {
     // Load products from Supabase
@@ -35,20 +34,6 @@ export const ProductsList = ({ onProductSelect }: ProductsListProps = {}) => {
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
-  const handleDelete = async (id: string) => {
-    const result = await deleteProduct(id);
-    if (result.success) {
-      setProducts(products.filter(p => p.id !== id));
-    }
-  };
-
-  const toggleFavorite = (productId: string) => {
-    setFavorites(prev => 
-      prev.includes(productId) 
-        ? prev.filter(id => id !== productId)
-        : [...prev, productId]
-    );
-  };
 
   if (products.length === 0) {
     return (
@@ -91,20 +76,6 @@ export const ProductsList = ({ onProductSelect }: ProductsListProps = {}) => {
               className="w-full h-56 object-cover"
               loading="lazy"
             />
-            <button
-              className={`absolute top-4 left-4 w-12 h-12 rounded-xl shadow-md flex items-center justify-center transition-all duration-300 ${
-                favorites.includes(product.id) 
-                  ? 'bg-red-500 text-white scale-105' 
-                  : 'bg-white/90 backdrop-blur-sm text-gray-400 hover:text-red-500 hover:scale-105'
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleFavorite(product.id);
-              }}
-            >
-              <Heart className={`w-6 h-6 ${favorites.includes(product.id) ? 'fill-current' : ''}`} />
-            </button>
-            
             {/* Action buttons */}
             <div className="absolute top-4 right-4 flex gap-2" onClick={(e) => e.stopPropagation()}>
               <Link to={`/edit-product/${product.id}`}>
@@ -115,16 +86,6 @@ export const ProductsList = ({ onProductSelect }: ProductsListProps = {}) => {
                   <Edit className="w-5 h-5" />
                 </Button>
               </Link>
-              <Button 
-                size="sm"
-                className="w-12 h-12 p-0 bg-white/90 backdrop-blur-sm hover:bg-white text-gray-700 hover:text-red-600 rounded-xl shadow-md hover:scale-105 transition-all duration-300"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete(product.id);
-                }}
-              >
-                <Trash2 className="w-5 h-5" />
-              </Button>
             </div>
           </div>
           
