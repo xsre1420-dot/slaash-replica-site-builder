@@ -30,7 +30,7 @@ const CartButton = ({ cartCount, totalAmount }: CartButtonProps) => {
               </div>
             </div>
             
-            <div className="flex items-center gap-2 text-yellow-400 font-bold text-base">
+            <div className="flex items-center gap-2 text-white font-bold text-base">
               <span style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>عرض السلة</span>
               <svg className="w-5 h-5 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
