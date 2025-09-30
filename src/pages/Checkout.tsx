@@ -82,12 +82,9 @@ const Checkout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 relative">
+    <div className="min-h-screen bg-gray-50 relative" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       {/* Header */}
-      <div className="text-white p-4" style={{ 
-        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-        boxShadow: '0 8px 25px rgba(99, 102, 241, 0.3)'
-      }}>
+      <div className="text-white p-4 bg-black">
         <div className="flex justify-between items-center">
           <Link to="/preview">
             <ArrowRight className="w-6 h-6" />
@@ -110,11 +107,7 @@ const Checkout = () => {
             <p className="text-black">قم بإضافة بعض المنتجات للاستمرار بالطلب</p>
             <Link to="/preview">
               <Button 
-                className="mt-6 text-white shadow-lg"
-                style={{ 
-                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                  boxShadow: '0 8px 25px rgba(99, 102, 241, 0.3)'
-                }}
+                className="mt-6 bg-black text-white hover:bg-gray-900 shadow-lg"
               >
                 العودة للمتجر
               </Button>
@@ -161,7 +154,7 @@ const Checkout = () => {
                         )}
                         
                         {/* Price */}
-                        <p className="font-bold text-lg mb-3" style={{ color: '#6366f1' }}>
+                        <p className="font-bold text-lg mb-3 text-black">
                           {(item.product.price * item.quantity).toLocaleString()} د.ع
                         </p>
                         
@@ -177,10 +170,7 @@ const Checkout = () => {
                           <div className="flex items-center gap-2 bg-gray-100 rounded-full px-3 py-1">
                             <button
                               onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedSize, item.selectedColor)}
-                              className="rounded-full w-7 h-7 flex items-center justify-center text-white shadow-sm hover:shadow-md transition-shadow"
-                              style={{ 
-                                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)'
-                              }}
+                              className="rounded-full w-7 h-7 flex items-center justify-center text-white bg-black hover:bg-gray-900 shadow-sm hover:shadow-md transition-shadow"
                             >
                               <Minus className="w-4 h-4" />
                             </button>
@@ -189,10 +179,7 @@ const Checkout = () => {
                             
                             <button
                               onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedSize, item.selectedColor)}
-                              className="rounded-full w-7 h-7 flex items-center justify-center text-white shadow-sm hover:shadow-md transition-shadow"
-                              style={{ 
-                                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)'
-                              }}
+                              className="rounded-full w-7 h-7 flex items-center justify-center text-white bg-black hover:bg-gray-900 shadow-sm hover:shadow-md transition-shadow"
                             >
                               <Plus className="w-4 h-4" />
                             </button>
@@ -204,7 +191,7 @@ const Checkout = () => {
                 ))}
               </div>
               <div className="flex justify-between mt-4 pt-4 border-t">
-                <span className="font-bold text-lg" style={{ color: '#6366f1' }}>{cartTotal.toLocaleString()} د.ع</span>
+                <span className="font-bold text-lg text-black">{cartTotal.toLocaleString()} د.ع</span>
                 <span className="font-bold text-black">المجموع:</span>
               </div>
             </div>
@@ -280,45 +267,41 @@ const Checkout = () => {
                    />
                  </div>
 
-                 {/* Delivery Price Display */}
-                 {selectedGovernorate && selectedDeliveryPrice > 0 && (
-                   <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                     <div className="flex justify-between items-center">
-                       <span className="font-bold text-lg" style={{ color: '#6366f1' }}>
-                         {selectedDeliveryPrice.toLocaleString()} د.ع
-                       </span>
-                       <span className="text-black font-medium">
-                         رسوم التوصيل إلى {selectedGovernorate}:
-                       </span>
-                     </div>
-                   </div>
-                 )}
+                  {/* Delivery Price Display */}
+                  {selectedGovernorate && selectedDeliveryPrice > 0 && (
+                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-lg text-black">
+                          {selectedDeliveryPrice.toLocaleString()} د.ع
+                        </span>
+                        <span className="text-black font-medium">
+                          رسوم التوصيل إلى {selectedGovernorate}:
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
-                 {/* Total with Delivery */}
-                 {selectedDeliveryPrice > 0 && (
-                   <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                     <div className="flex justify-between items-center">
-                       <span className="font-bold text-xl" style={{ color: '#6366f1' }}>
-                         {totalWithDelivery.toLocaleString()} د.ع
-                       </span>
-                       <span className="text-black font-bold text-lg">
-                         المجموع النهائي:
-                       </span>
-                     </div>
-                   </div>
-                 )}
+                  {/* Total with Delivery */}
+                  {selectedDeliveryPrice > 0 && (
+                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-xl text-black">
+                          {totalWithDelivery.toLocaleString()} د.ع
+                        </span>
+                        <span className="text-black font-bold text-lg">
+                          المجموع النهائي:
+                        </span>
+                      </div>
+                    </div>
+                  )}
                </div>
                
                <Button 
-                 type="submit" 
-                 className="w-full mt-6 text-white shadow-lg"
-                 style={{ 
-                   background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                   boxShadow: '0 8px 25px rgba(99, 102, 241, 0.3)'
-                 }}
-               >
-                 تأكيد الطلب
-               </Button>
+                  type="submit" 
+                  className="w-full mt-6 bg-black text-white hover:bg-gray-900 shadow-lg"
+                >
+                  تأكيد الطلب
+                </Button>
             </form>
           </>
         )}
