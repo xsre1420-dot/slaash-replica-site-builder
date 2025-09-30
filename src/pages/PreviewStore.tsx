@@ -125,58 +125,46 @@ const PreviewStore = () => {
 
   return (
     <div 
-      className="min-h-screen"
-      style={{ 
-        backgroundColor: storeSettings.menuBackgroundColor,
-        color: storeSettings.menuTextColor 
-      }}
+      className="min-h-screen bg-gray-50"
     >
       {/* Meta Pixel Integration */}
       <MetaPixel />
-      {/* Modern Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-40">
-        <div className="px-6 py-4">
-          <div className="flex justify-between items-center mb-4">
-            <Link to="/builder" className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-              <X className="w-6 h-6 text-gray-600" />
+      
+      {/* Clean Header */}
+      <div className="bg-white sticky top-0 z-40 border-b border-gray-200">
+        <div className="px-4 py-3">
+          <div className="flex justify-between items-center">
+            <Link to="/builder" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <X className="w-5 h-5 text-gray-700" />
             </Link>
             
-            <div className="flex items-center gap-3">
-              <div className="text-center">
-                <p className="text-xs text-gray-500">المتجر</p>
-                <p className="font-semibold text-gray-800">{storeName}</p>
-              </div>
+            <div className="flex items-center gap-2">
+              {storeLogo && (
+                <img src={storeLogo} alt={storeName} className="w-8 h-8 rounded-full object-cover" />
+              )}
+              <span className="font-semibold text-gray-900 text-sm">{storeName}</span>
             </div>
             
-            <div className="w-10" />
-          </div>
-          
-          {/* Modern Search Bar */}
-          <div className="relative">
-            <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="search"
-              placeholder="ابحث عن منتج..."
-              className="w-full h-12 pr-12 pl-4 rounded-2xl bg-gray-100 border-0 text-right placeholder-gray-500 focus:ring-2 focus:ring-orange-500 focus:bg-white transition-all"
-            />
+            <div className="flex items-center gap-2">
+              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <Search className="w-5 h-5 text-gray-700" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Categories */}
-      <div className="px-6 py-4">
-        <div className="flex gap-3 overflow-x-auto pb-2 justify-start">
+      {/* Minimal Categories */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="flex gap-4 overflow-x-auto px-4 py-3 scrollbar-hide">
           {categories.map((category) => (
             <button 
               key={category.id}
-              className={`px-6 py-3 rounded-2xl transition-all duration-200 whitespace-nowrap text-sm font-medium min-w-fit flex items-center justify-center ${
+              className={`whitespace-nowrap text-sm font-medium pb-2 transition-all duration-200 ${
                 selectedCategory === category.id 
-                  ? "text-white" 
-                  : "bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 hover:border-gray-300"
+                  ? "text-gray-900 border-b-2 border-gray-900" 
+                  : "text-gray-500 hover:text-gray-700"
               }`}
-              style={{
-                backgroundColor: selectedCategory === category.id ? '#6366f1' : undefined
-              }}
               onClick={() => setSelectedCategory(category.id)}
             >
               {category.name}
@@ -185,40 +173,30 @@ const PreviewStore = () => {
         </div>
       </div>
 
-      {/* Enhanced Banner with Smoother Transitions */}
+      {/* Banner */}
       {bannerImages.length > 0 && (
-        <div className="px-6 mb-6">
+        <div className="px-4 py-4">
           <div 
-            className="relative h-48 overflow-hidden rounded-3xl cursor-pointer"
+            className="relative h-56 overflow-hidden rounded-2xl cursor-pointer"
             onMouseEnter={handleImageHover}
           >
-            <div 
-              className={`w-full h-full transition-all duration-150 ease-in-out transform ${
-                isTransitioning ? 'opacity-95 scale-105' : 'opacity-100 scale-100'
-              }`}
-            >
-              <img
-                src={bannerImages[currentImageIndex]}
-                alt="Store Banner"
-                className="w-full h-full object-cover transition-transform duration-150 hover:scale-110"
-                loading="lazy"
-              />
-            </div>
+            <img
+              src={bannerImages[currentImageIndex]}
+              alt="Store Banner"
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
             
-            {/* Reduced gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/2 to-transparent" />
-            
-            {/* Enhanced Image Navigation Dots */}
             {bannerImages.length > 1 && (
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-3">
+              <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex gap-2">
                 {bannerImages.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => handleImageNavigation(index)}
-                    className={`transition-all duration-150 ease-in-out rounded-full ${
+                    className={`transition-all duration-200 rounded-full ${
                       currentImageIndex === index 
-                        ? "bg-white w-8 h-3 shadow-lg" 
-                        : "bg-white/70 w-3 h-3 hover:bg-white/90 hover:scale-110"
+                        ? "bg-white w-6 h-2" 
+                        : "bg-white/60 w-2 h-2"
                     }`}
                   />
                 ))}
@@ -228,89 +206,59 @@ const PreviewStore = () => {
         </div>
       )}
 
-      {/* Modern Products Grid */}
-      <div className="px-6 pb-24">
+      {/* Products Count and Sort */}
+      <div className="flex justify-between items-center px-4 py-3">
+        <span className="text-sm text-gray-600">{products.length} منتجات</span>
+        <button className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900">
+          <span>الافتراضي</span>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Clean Products Grid */}
+      <div className="px-4 pb-28">
         {products.length === 0 ? (
           <div className="text-center py-16">
             <div className="w-20 h-20 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
-              <div className="text-4xl">🍽️</div>
+              <div className="text-4xl">🛍️</div>
             </div>
-            <h3 className="text-xl font-bold mb-2" style={{ color: storeSettings.menuTextColor }}>
+            <h3 className="text-xl font-bold mb-2 text-gray-900">
               لا توجد منتجات بعد
             </h3>
-            <p className="text-gray-500 mb-6">ابدأ بإضافة وجباتك من قسم البناء</p>
+            <p className="text-gray-500 mb-6">ابدأ بإضافة منتجاتك من قسم البناء</p>
             <Link to="/add-product">
-              <Button 
-                className="text-white rounded-full px-8 border-0 shadow-lg"
-                style={{ 
-                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                  boxShadow: '0 8px 25px rgba(99, 102, 241, 0.3)'
-                }}
-              >
+              <Button className="rounded-full px-8">
                 <Plus className="w-4 h-4 ml-2" />
                 إضافة أول منتج
               </Button>
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             {products.map((product) => (
               <div 
                 key={product.id} 
-                className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer"
+                className="bg-white rounded-xl overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
                 onClick={() => handleViewProduct(product.id)}
               >
-                <div className="relative overflow-hidden">
+                <div className="relative bg-gray-100 aspect-square">
                   <img
                     src={product.image}
                     alt={product.name}
-                    className="w-full h-48 object-cover"
+                    className="w-full h-full object-contain p-4"
                     loading="lazy"
                   />
-                  <button
-                    className={`absolute top-3 left-3 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
-                      favorites.includes(product.id) 
-                        ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white scale-110' 
-                        : 'bg-white text-gray-400 hover:text-red-500 hover:scale-110'
-                    }`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleFavorite(product.id);
-                    }}
-                  >
-                    <Heart className={`w-4 h-4 ${favorites.includes(product.id) ? 'fill-current' : ''}`} />
-                  </button>
                 </div>
                 
-                <div className="p-4">
-                  <h3 className="font-bold mb-1 text-right line-clamp-1" style={{ color: storeSettings.menuTextColor }}>
+                <div className="p-3">
+                  <div className="text-sm font-medium text-gray-900 mb-1 text-right line-clamp-2">
                     {product.name}
-                  </h3>
-                  
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-1">
-                      <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                      <span className="text-sm text-gray-600">4.5</span>
-                    </div>
-                    <span className="font-bold" style={{ color: storeSettings.menuTextColor }}>
-                      {product.price.toLocaleString()} د.ع
-                    </span>
                   </div>
-                  
-                  <Button 
-                    size="sm"
-                    className="w-full h-9 text-white rounded-full border-0 transition-all duration-200 hover:scale-105 shadow-lg"
-                    style={{ 
-                      background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                      boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAddToCart(product);
-                    }}
-                  >
-                    أضف للسلة
-                  </Button>
+                  <div className="text-sm font-bold text-gray-900 text-right">
+                    IQD {product.price.toLocaleString()}
+                  </div>
                 </div>
               </div>
             ))}
@@ -318,27 +266,38 @@ const PreviewStore = () => {
         )}
       </div>
 
-      {/* Updated Cart Button with Blue Design */}
-      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
-        <Link to="/checkout">
-          <div className="relative">
-            <div 
-              className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
-              style={{ 
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                boxShadow: '0 8px 25px rgba(99, 102, 241, 0.3)'
-              }}
-            >
-              <ShoppingCart className="w-6 h-6 text-white" />
-              {cartCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-white text-indigo-600 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold animate-pulse">
-                  {cartCount}
-                </span>
-              )}
+      {/* Horizontal Cart Bar */}
+      {cartCount > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4">
+          <Link to="/checkout">
+            <div className="bg-gray-900 rounded-2xl shadow-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <ShoppingCart className="w-6 h-6 text-white" />
+                    <span className="absolute -top-2 -right-2 bg-yellow-400 text-gray-900 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                      {cartCount}
+                    </span>
+                  </div>
+                  <div className="text-left">
+                    <div className="text-xs text-gray-400">المبلغ الكلي</div>
+                    <div className="text-lg font-bold text-white">
+                      IQD {cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 text-white font-medium">
+                  <span>عرض السلة</span>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
             </div>
-          </div>
-        </Link>
-      </div>
+          </Link>
+        </div>
+      )}
     </div>
   );
 };
