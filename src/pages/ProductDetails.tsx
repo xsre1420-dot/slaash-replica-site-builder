@@ -23,11 +23,13 @@ const ProductDetails = () => {
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [selectedColor, setSelectedColor] = useState<string>("");
+  const [isAdding, setIsAdding] = useState(false);
   const { addToCart, cartCount } = useCart();
   const { storeSettings } = useStore();
 
   const handleAddToCart = () => {
-    if (product) {
+    if (product && !isAdding) {
+      setIsAdding(true);
       // Add with selected options
       addToCart(product, selectedSize, selectedColor);
       setQuantity(1);
@@ -35,6 +37,11 @@ const ProductDetails = () => {
       setSelectedSize("");
       setSelectedColor("");
       console.log('Selected options:', { size: selectedSize, color: selectedColor });
+      
+      // Re-enable button after 500ms to prevent accidental multiple clicks
+      setTimeout(() => {
+        setIsAdding(false);
+      }, 500);
     }
   };
 
@@ -153,7 +160,7 @@ const ProductDetails = () => {
           )}
 
           {/* Add to Cart Button */}
-          <AddToCartButton onClick={handleAddToCart} />
+          <AddToCartButton onClick={handleAddToCart} disabled={isAdding} />
 
           {/* Expandable Sections */}
           <div className="space-y-1 border-t border-gray-100 pt-6">
