@@ -16,7 +16,7 @@ const CartButton = ({ cartCount, totalAmount }: CartButtonProps) => {
         <div className="bg-black rounded-full shadow-2xl overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center gap-3">
-              <div className="relative bg-gray-800 rounded-full p-3">
+              <div className="relative bg-black rounded-full p-3">
                 <ShoppingCart className="w-6 h-6 text-white" />
                 <span className="absolute -top-1 -right-1 bg-white text-black rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shadow-md">
                   {cartCount}
