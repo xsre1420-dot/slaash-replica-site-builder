@@ -1,5 +1,5 @@
 
-/* Using system fonts for better performance and consistency */
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -7,48 +7,52 @@
 
 @layer base {
   :root {
-    /* Black & White Theme */
     --background: 0 0% 100%;
     --foreground: 0 0% 0%;
     --card: 0 0% 100%;
     --card-foreground: 0 0% 0%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 0%;
-    --primary: 0 0% 0%;
+    --primary: 248 53% 58%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 20%;
+    --secondary: 248 53% 68%;
     --secondary-foreground: 0 0% 100%;
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 40%;
-    --accent: 0 0% 96%;
+    --muted: 161 29% 85%;
+    --muted-foreground: 185 30% 53%;
+    --accent: 161 35% 91%;
     --accent-foreground: 0 0% 0%;
     --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 0 0% 0%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 161 35% 91%;
+    --input: 161 35% 91%;
+    --ring: 248 53% 58%;
     --radius: 1rem;
     
-    /* Custom variables */
-    --bg-primary: 0 0% 100%;
-    --bg-secondary: 0 0% 98%;
+    /* Modern color scheme inspired by the image */
+    --bg-primary: 250 10% 97%;
+    --bg-secondary: 240 8% 95%;
     --text-primary: 0 0% 0%;
     --text-secondary: 0 0% 30%;
-    --accent-primary: 0 0% 0%;
-    --accent-secondary: 0 0% 20%;
+    --accent-primary: 248 53% 58%;
+    --accent-secondary: 248 53% 68%;
     --card-bg: 0 0% 100%;
     --input-text: 0 0% 0%;
   }
 
   body {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Tajawal', 'Inter', sans-serif;
     color: #000000;
-    background-color: #ffffff;
+    background-color: hsl(var(--bg-primary));
   }
   
-  /* Apply system font for all text */
-  * {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* Apply Inter font for English text */
+  .font-english {
+    font-family: 'Inter', sans-serif;
+  }
+  
+  /* Apply Tajawal for Arabic text */
+  .font-arabic {
+    font-family: 'Tajawal', sans-serif;
   }
 
   /* Global input text color override - ensure black text */
@@ -112,7 +116,7 @@
   }
   
   .accent-gradient {
-    background: linear-gradient(135deg, #000000, #2a2a2a);
+    background: linear-gradient(135deg, hsl(var(--accent-primary)), hsl(var(--accent-secondary)));
   }
   
   /* Modern shadows */
@@ -146,7 +150,7 @@
 
 /* Custom toast styles with close button */
 .toaster [data-sonner-toast] {
-  font-family: system-ui, -apple-system, sans-serif !important;
+  font-family: 'Tajawal', sans-serif !important;
   direction: rtl;
 }
 
