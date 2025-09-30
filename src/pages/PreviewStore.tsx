@@ -125,45 +125,50 @@ const PreviewStore = () => {
 
   return (
     <div 
-      className="min-h-screen bg-gray-50"
+      className="min-h-screen bg-white"
     >
       {/* Meta Pixel Integration */}
       <MetaPixel />
       
-      {/* Clean Header */}
-      <div className="bg-white sticky top-0 z-40 border-b border-gray-200">
+      {/* Header with Logo and Store Name */}
+      <div className="bg-white sticky top-0 z-40 border-b border-gray-100">
         <div className="px-4 py-3">
           <div className="flex justify-between items-center">
-            <Link to="/builder" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <X className="w-5 h-5 text-gray-700" />
-            </Link>
-            
+            {/* Left: Store Logo + Name */}
             <div className="flex items-center gap-2">
               {storeLogo && (
-                <img src={storeLogo} alt={storeName} className="w-8 h-8 rounded-full object-cover" />
+                <img src={storeLogo} alt={storeName} className="w-10 h-10 rounded-full object-cover" />
               )}
-              <span className="font-semibold text-gray-900 text-sm">{storeName}</span>
+              <div className="flex items-center gap-1">
+                <span className="font-bold text-gray-900 text-base">{storeName}</span>
+                <svg className="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                </svg>
+              </div>
             </div>
             
-            <div className="flex items-center gap-2">
-              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <Search className="w-5 h-5 text-gray-700" />
+            {/* Right: Currency and Search */}
+            <div className="flex items-center gap-3">
+              <button className="flex items-center gap-1 text-sm font-medium text-gray-700">
+                <span>IQD</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </button>
+              <Search className="w-5 h-5 text-gray-700" />
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Minimal Categories */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="flex gap-4 overflow-x-auto px-4 py-3 scrollbar-hide">
+        
+        {/* Categories Row */}
+        <div className="flex gap-6 overflow-x-auto px-4 pb-3 scrollbar-hide">
           {categories.map((category) => (
             <button 
               key={category.id}
-              className={`whitespace-nowrap text-sm font-medium pb-2 transition-all duration-200 ${
+              className={`whitespace-nowrap text-sm font-medium transition-all duration-200 ${
                 selectedCategory === category.id 
-                  ? "text-gray-900 border-b-2 border-gray-900" 
-                  : "text-gray-500 hover:text-gray-700"
+                  ? "text-gray-900" 
+                  : "text-gray-400"
               }`}
               onClick={() => setSelectedCategory(category.id)}
             >
@@ -175,9 +180,9 @@ const PreviewStore = () => {
 
       {/* Banner */}
       {bannerImages.length > 0 && (
-        <div className="px-4 py-4">
+        <div className="px-4 pt-4 pb-2">
           <div 
-            className="relative h-56 overflow-hidden rounded-2xl cursor-pointer"
+            className="relative h-44 overflow-hidden rounded-3xl cursor-pointer"
             onMouseEnter={handleImageHover}
           >
             <img
@@ -207,12 +212,12 @@ const PreviewStore = () => {
       )}
 
       {/* Products Count and Sort */}
-      <div className="flex justify-between items-center px-4 py-3">
-        <span className="text-sm text-gray-600">{products.length} منتجات</span>
-        <button className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900">
+      <div className="flex justify-between items-center px-4 py-4 border-b border-gray-100">
+        <span className="text-sm font-medium text-gray-900">{products.length} منتجات</span>
+        <button className="flex items-center gap-1 text-sm text-gray-600">
           <span>الافتراضي</span>
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4 4 4-4" />
           </svg>
         </button>
       </div>
@@ -268,26 +273,26 @@ const PreviewStore = () => {
 
       {/* Horizontal Cart Bar */}
       {cartCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4">
+        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-6 pt-2 bg-gradient-to-t from-white via-white to-transparent">
           <Link to="/checkout">
-            <div className="bg-gray-900 rounded-2xl shadow-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4">
-                <div className="flex items-center gap-3">
+            <div className="bg-black rounded-3xl shadow-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-4">
+                <div className="flex items-center gap-4">
                   <div className="relative">
                     <ShoppingCart className="w-6 h-6 text-white" />
-                    <span className="absolute -top-2 -right-2 bg-yellow-400 text-gray-900 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                    <span className="absolute -top-2 -right-2 bg-yellow-400 text-black rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
                       {cartCount}
                     </span>
                   </div>
                   <div className="text-left">
                     <div className="text-xs text-gray-400">المبلغ الكلي</div>
-                    <div className="text-lg font-bold text-white">
+                    <div className="text-base font-bold text-white">
                       IQD {cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0).toLocaleString()}
                     </div>
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-2 text-white font-medium">
+                <div className="flex items-center gap-2 text-yellow-400 font-bold text-base">
                   <span>عرض السلة</span>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
