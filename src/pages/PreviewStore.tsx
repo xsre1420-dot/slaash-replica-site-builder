@@ -171,14 +171,11 @@ const PreviewStore = () => {
               key={category.id}
               className={`px-6 py-3 rounded-2xl transition-all duration-200 whitespace-nowrap text-sm font-medium min-w-fit flex items-center justify-center ${
                 selectedCategory === category.id 
-                  ? "text-white shadow-lg" 
-                  : "bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 hover:border-gray-300 shadow-sm"
+                  ? "text-white" 
+                  : "bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 hover:border-gray-300"
               }`}
               style={{
-                backgroundColor: selectedCategory === category.id ? '#6366f1' : undefined,
-                boxShadow: selectedCategory === category.id 
-                  ? '0 8px 25px rgba(99, 102, 241, 0.4)' 
-                  : undefined
+                backgroundColor: selectedCategory === category.id ? '#6366f1' : undefined
               }}
               onClick={() => setSelectedCategory(category.id)}
             >
