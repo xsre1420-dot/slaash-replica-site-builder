@@ -92,8 +92,7 @@ const ProductDetails = () => {
                 </span>
               </div>
               <div className="text-right">
-                <h1 className="text-xl font-bold text-gray-900 mb-1">{product.name}</h1>
-                <div className="text-sm text-gray-500">{product.category}</div>
+                <h1 className="text-xl font-bold text-gray-900">{product.name}</h1>
               </div>
             </div>
 

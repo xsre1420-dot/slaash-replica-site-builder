@@ -139,7 +139,6 @@ const Checkout = () => {
                       {/* Product Info */}
                       <div className="flex-1 text-right">
                         <h3 className="font-bold text-black text-lg mb-1">{item.product.name}</h3>
-                        <p className="text-gray-600 text-sm mb-2">{item.product.category}</p>
                         
                         {/* Display selected options */}
                         {(item.selectedSize || item.selectedColor) && (
