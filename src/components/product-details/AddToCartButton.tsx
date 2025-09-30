@@ -12,11 +12,9 @@ const AddToCartButton = ({ onClick, disabled = false }: AddToCartButtonProps) =>
     <Button 
       onClick={onClick}
       disabled={disabled}
-      className="w-full flex items-center justify-center gap-3 h-14 text-lg font-semibold text-white border-0 rounded-full shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+      className="w-full flex items-center justify-center gap-3 h-14 text-lg font-semibold text-white border-0 rounded-full shadow-lg disabled:opacity-50 disabled:cursor-not-allowed bg-black hover:bg-gray-900"
       style={{ 
-        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-        boxShadow: '0 8px 25px rgba(99, 102, 241, 0.3)',
-        color: '#ffffff'
+        fontFamily: 'system-ui, -apple-system, sans-serif'
       }}
     >
       <ShoppingCart className="h-4 w-4 -mt-1" />

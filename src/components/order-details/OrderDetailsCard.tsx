@@ -17,10 +17,9 @@ const OrderDetailsCard = ({ order }: OrderDetailsCardProps) => {
   return (
     <Card className="mb-6 border-0 shadow-lg bg-white rounded-3xl overflow-visible">
       <CardHeader 
-        className="rounded-t-3xl overflow-hidden"
+        className="rounded-t-3xl overflow-hidden bg-black text-white"
         style={{ 
-          background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-          color: 'white'
+          fontFamily: 'system-ui, -apple-system, sans-serif'
         }}
       >
         <OrderHeader 
@@ -30,17 +29,17 @@ const OrderDetailsCard = ({ order }: OrderDetailsCardProps) => {
           governorate={order.customerInfo.governorate}
         />
       </CardHeader>
-      <CardContent className="bg-white rounded-b-3xl p-8">
+      <CardContent className="bg-white rounded-b-3xl p-8" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
         <div className="space-y-8">
           {/* Customer Info */}
           <div className="bg-gray-50 rounded-2xl p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 text-right">معلومات العميل</h3>
+            <h3 className="text-lg font-semibold text-black mb-4 text-right">معلومات العميل</h3>
             <CustomerInfo customerInfo={order.customerInfo} />
           </div>
 
           {/* Order Items */}
           <div className="bg-gray-50 rounded-2xl p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 text-right">تفاصيل الطلب</h3>
+            <h3 className="text-lg font-semibold text-black mb-4 text-right">تفاصيل الطلب</h3>
             <OrderItems items={order.items} />
           </div>
 
