@@ -127,63 +127,79 @@ const Checkout = () => {
               <h2 className="text-xl font-bold mb-4 text-right text-black">طلبك</h2>
               <div className="space-y-4">
                 {cartItems.map((item, index) => (
-                  <div key={`${item.product.id}-${item.selectedSize || 'no-size'}-${item.selectedColor || 'no-color'}-${index}`} className="flex items-start justify-between border-b pb-4">
-                    <div className="flex items-center">
-                      <button
-                        onClick={() => removeFromCart(item.product.id, item.selectedSize, item.selectedColor)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                      <div className="flex items-center mx-2">
-                        <button
-                          onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedSize, item.selectedColor)}
-                          className="rounded-full w-6 h-6 flex items-center justify-center text-white shadow-lg"
-                          style={{ 
-                            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                            boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
-                          }}
-                        >
-                          <Plus className="w-4 h-4" />
-                        </button>
-                        <span className="mx-2 w-6 text-center text-black">{item.quantity}</span>
-                        <button
-                          onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedSize, item.selectedColor)}
-                          className="rounded-full w-6 h-6 flex items-center justify-center text-white shadow-lg"
-                          style={{ 
-                            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                            boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
-                          }}
-                        >
-                          <Minus className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex items-center">
-                      <div className="text-right">
-                        <span className="block font-bold text-black">{item.product.name}</span>
-                        <span className="text-black text-sm">{item.product.price.toLocaleString()} x {item.quantity}</span>
+                  <div key={`${item.product.id}-${item.selectedSize || 'no-size'}-${item.selectedColor || 'no-color'}-${index}`} className="border-b pb-4 last:border-b-0">
+                    <div className="flex gap-4">
+                      {/* Product Image */}
+                      <img
+                        src={item.product.image}
+                        alt={item.product.name}
+                        className="w-24 h-24 rounded-lg object-cover shadow-sm"
+                      />
+                      
+                      {/* Product Info */}
+                      <div className="flex-1 text-right">
+                        <h3 className="font-bold text-black text-lg mb-1">{item.product.name}</h3>
+                        <p className="text-gray-600 text-sm mb-2">{item.product.category}</p>
+                        
                         {/* Display selected options */}
                         {(item.selectedSize || item.selectedColor) && (
-                          <div className="flex gap-2 mt-1 justify-end">
+                          <div className="flex gap-2 mb-2 justify-end flex-wrap">
                             {item.selectedSize && (
-                              <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">
-                                القياس: {item.selectedSize}
+                              <span className="text-xs bg-gray-100 px-3 py-1 rounded-full text-gray-700">
+                                المقاس: {item.selectedSize}
                               </span>
                             )}
                             {item.selectedColor && (
-                              <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">
-                                اللون: {item.selectedColor}
+                              <span className="text-xs bg-gray-100 px-3 py-1 rounded-full text-gray-700 flex items-center gap-1">
+                                <span 
+                                  className="w-3 h-3 rounded-full border border-gray-300" 
+                                  style={{ backgroundColor: item.selectedColor }}
+                                />
+                                اللون
                               </span>
                             )}
                           </div>
                         )}
+                        
+                        {/* Price */}
+                        <p className="font-bold text-lg mb-3" style={{ color: '#6366f1' }}>
+                          {(item.product.price * item.quantity).toLocaleString()} د.ع
+                        </p>
+                        
+                        {/* Quantity Controls */}
+                        <div className="flex items-center justify-end gap-3">
+                          <button
+                            onClick={() => removeFromCart(item.product.id, item.selectedSize, item.selectedColor)}
+                            className="text-red-500 hover:text-red-700 transition-colors"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                          
+                          <div className="flex items-center gap-2 bg-gray-100 rounded-full px-3 py-1">
+                            <button
+                              onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedSize, item.selectedColor)}
+                              className="rounded-full w-7 h-7 flex items-center justify-center text-white shadow-sm hover:shadow-md transition-shadow"
+                              style={{ 
+                                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)'
+                              }}
+                            >
+                              <Minus className="w-4 h-4" />
+                            </button>
+                            
+                            <span className="w-8 text-center text-black font-semibold">{item.quantity}</span>
+                            
+                            <button
+                              onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedSize, item.selectedColor)}
+                              className="rounded-full w-7 h-7 flex items-center justify-center text-white shadow-sm hover:shadow-md transition-shadow"
+                              style={{ 
+                                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)'
+                              }}
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <img
-                        src={item.product.image}
-                        alt={item.product.name}
-                        className="w-12 h-12 rounded-md object-cover mr-2"
-                      />
                     </div>
                   </div>
                 ))}
