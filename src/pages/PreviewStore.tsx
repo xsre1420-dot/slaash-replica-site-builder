@@ -22,6 +22,7 @@ const PreviewStore = () => {
   const navigate = useNavigate();
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Load categories from Supabase
   useEffect(() => {
@@ -60,10 +61,20 @@ const PreviewStore = () => {
   useEffect(() => {
     const loadProductsData = async () => {
       await loadProducts();
-      setProducts(getProductsByCategory(selectedCategory));
+      const allProducts = getProductsByCategory(selectedCategory);
+      
+      // Filter by search query
+      if (searchQuery.trim()) {
+        const filtered = allProducts.filter(product => 
+          product.name.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+        setProducts(filtered);
+      } else {
+        setProducts(allProducts);
+      }
     };
     loadProductsData();
-  }, [selectedCategory]);
+  }, [selectedCategory, searchQuery]);
 
   // Handle adding a product to the cart
   const handleAddToCart = (product: Product) => {
@@ -147,25 +158,26 @@ const PreviewStore = () => {
               </div>
             </div>
             
-            {/* Right: Currency and Search */}
-            <div className="flex items-center gap-3">
-              <button className="flex items-center gap-1 text-sm font-medium text-gray-700">
-                <span>IQD</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              <Search className="w-5 h-5 text-gray-700" />
+            {/* Right: Search */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="ابحث..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-32 h-8 pl-3 pr-8 rounded-lg bg-gray-100 border-0 text-sm text-right placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300"
+              />
+              <Search className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             </div>
           </div>
         </div>
         
         {/* Categories Row */}
-        <div className="flex gap-6 overflow-x-auto px-4 pb-3 scrollbar-hide">
+        <div className="flex gap-8 overflow-x-auto px-4 pb-3 scrollbar-hide">
           {categories.map((category) => (
             <button 
               key={category.id}
-              className={`whitespace-nowrap text-sm font-medium transition-all duration-200 ${
+              className={`relative whitespace-nowrap text-sm font-medium transition-all duration-200 pb-1 ${
                 selectedCategory === category.id 
                   ? "text-gray-900" 
                   : "text-gray-400"
@@ -173,6 +185,9 @@ const PreviewStore = () => {
               onClick={() => setSelectedCategory(category.id)}
             >
               {category.name}
+              {selectedCategory === category.id && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900"></div>
+              )}
             </button>
           ))}
         </div>
@@ -211,15 +226,9 @@ const PreviewStore = () => {
         </div>
       )}
 
-      {/* Products Count and Sort */}
-      <div className="flex justify-between items-center px-4 py-4 border-b border-gray-100">
+      {/* Product Count */}
+      <div className="px-4 py-4">
         <span className="text-sm font-medium text-gray-900">{products.length} منتجات</span>
-        <button className="flex items-center gap-1 text-sm text-gray-600">
-          <span>الافتراضي</span>
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4 4 4-4" />
-          </svg>
-        </button>
       </div>
 
       {/* Clean Products Grid */}

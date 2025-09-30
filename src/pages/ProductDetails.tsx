@@ -24,8 +24,10 @@ const ProductDetails = () => {
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [selectedColor, setSelectedColor] = useState<string>("");
   const [isAdding, setIsAdding] = useState(false);
-  const { addToCart, cartCount } = useCart();
+  const { addToCart, cartCount, cartItems } = useCart();
   const { storeSettings } = useStore();
+
+  const totalAmount = cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
 
   const handleAddToCart = () => {
     if (product && !isAdding) {
@@ -177,7 +179,7 @@ const ProductDetails = () => {
         </div>
       </div>
 
-      <CartButton cartCount={cartCount} />
+      <CartButton cartCount={cartCount} totalAmount={totalAmount} />
     </div>
   );
 };
