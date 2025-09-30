@@ -285,9 +285,9 @@ const PreviewStore = () => {
             <div className="bg-black rounded-full shadow-2xl overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4">
                 <div className="flex items-center gap-3">
-                  <div className="relative bg-gray-800 rounded-full p-3">
-                    <ShoppingCart className="w-6 h-6 text-white" />
-                    <span className="absolute -top-1 -right-1 bg-yellow-400 text-black rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                  <div className="relative bg-white rounded-full p-4">
+                    <ShoppingCart className="w-7 h-7 text-black" strokeWidth={2.5} />
+                    <span className="absolute -top-1 -right-1 bg-yellow-400 text-black rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shadow-lg">
                       {cartCount}
                     </span>
                   </div>
