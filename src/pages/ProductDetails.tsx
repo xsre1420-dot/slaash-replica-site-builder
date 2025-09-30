@@ -97,11 +97,6 @@ const ProductDetails = () => {
               </div>
             </div>
 
-            {/* Delivery Info */}
-            <div className="flex items-center gap-4 text-sm text-gray-600 justify-end">
-              <span>شحن مجاني للطلبات فوق 300 د.ع</span>
-              <Truck className="w-4 h-4" />
-            </div>
           </div>
 
           {/* Size & Color Selection */}
@@ -158,60 +153,13 @@ const ProductDetails = () => {
             </div>
           )}
 
-          {/* Quantity Selector */}
-          <div className="flex justify-center">
-            <ProductQuantity 
-              quantity={quantity}
-              onIncrement={handleIncrement}
-              onDecrement={handleDecrement}
-            />
-          </div>
-
           {/* Add to Cart Button */}
           <AddToCartButton onClick={handleAddToCart} />
 
           {/* Expandable Sections */}
           <div className="space-y-1 border-t border-gray-100 pt-6">
-            <ExpandableSection title="الوصف والمقاس" defaultOpen>
-              <div className="space-y-4">
-                <p className="text-gray-700 leading-relaxed">{product.description}</p>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="text-right">
-                    <div className="font-medium text-gray-900 mb-1">دليل المقاسات</div>
-                    <div className="text-gray-600">راجع دليل المقاسات للحصول على أفضل مقاس</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-medium text-gray-900 mb-1">المواد</div>
-                    <div className="text-gray-600">قطن 100% عالي الجودة</div>
-                  </div>
-                </div>
-              </div>
-            </ExpandableSection>
-
-            <ExpandableSection title="الشحن والإرجاع">
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <Truck className="w-5 h-5 text-gray-600 mt-0.5" />
-                  <div className="text-right">
-                    <div className="font-medium text-gray-900">شحن مجاني</div>
-                    <div className="text-sm text-gray-600">للطلبات فوق 300 د.ع • التسليم خلال 2-4 أيام عمل</div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <RotateCcw className="w-5 h-5 text-gray-600 mt-0.5" />
-                  <div className="text-right">
-                    <div className="font-medium text-gray-900">إرجاع مجاني</div>
-                    <div className="text-sm text-gray-600">خلال 30 يوم من تاريخ الاستلام</div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Shield className="w-5 h-5 text-gray-600 mt-0.5" />
-                  <div className="text-right">
-                    <div className="font-medium text-gray-900">ضمان الجودة</div>
-                    <div className="text-sm text-gray-600">ضمان على جودة المنتج لمدة سنة</div>
-                  </div>
-                </div>
-              </div>
+            <ExpandableSection title="الوصف" defaultOpen>
+              <p className="text-gray-700 leading-relaxed">{product.description}</p>
             </ExpandableSection>
           </div>
 
