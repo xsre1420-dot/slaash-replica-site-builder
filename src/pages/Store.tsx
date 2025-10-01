@@ -235,6 +235,16 @@ const Store = () => {
                     className="w-full h-48 object-cover"
                     loading="lazy"
                   />
+                  
+                  {/* Discount Badge */}
+                  {product.discountType && product.discountType !== 'none' && (
+                    <div className="absolute top-3 right-3 bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-1.5 rounded-full shadow-lg">
+                      <span className="text-xs font-bold">
+                        خصم {product.discountType === 'percentage' ? `${product.discountValue}%` : `${product.discountValue?.toLocaleString()} د.ع`}
+                      </span>
+                    </div>
+                  )}
+                  
                   <button
                     className={`absolute top-3 left-3 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
                       favorites.includes(product.id) 
@@ -260,9 +270,22 @@ const Store = () => {
                       <Star className="w-4 h-4 text-yellow-400 fill-current" />
                       <span className="text-sm text-gray-600">4.5</span>
                     </div>
-                    <span className="font-bold" style={{ color: storeSettings.menuTextColor }}>
-                      {product.price.toLocaleString()} د.ع
-                    </span>
+                    <div className="flex flex-col items-end gap-1">
+                      {product.discountType && product.discountType !== 'none' && product.originalPrice ? (
+                        <>
+                          <span className="text-xs text-gray-400 line-through">
+                            {product.originalPrice.toLocaleString()} د.ع
+                          </span>
+                          <span className="font-bold text-red-600">
+                            {product.price.toLocaleString()} د.ع
+                          </span>
+                        </>
+                      ) : (
+                        <span className="font-bold" style={{ color: storeSettings.menuTextColor }}>
+                          {product.price.toLocaleString()} د.ع
+                        </span>
+                      )}
+                    </div>
                   </div>
                   
                   <Button 

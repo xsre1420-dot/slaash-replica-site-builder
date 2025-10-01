@@ -922,6 +922,34 @@ const Marketing = () => {
 
             {selectedProduct && (
               <>
+                {/* Selected Product Info */}
+                <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-2xl p-4 border border-primary/20">
+                  <div className="flex items-center gap-4">
+                    <div className="w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden bg-white shadow-sm">
+                      {selectedProduct.image_url ? (
+                        <img 
+                          src={selectedProduct.image_url} 
+                          alt={selectedProduct.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                          <Tag className="w-8 h-8 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 text-right">
+                      <h3 className="font-bold text-lg mb-1">{selectedProduct.name}</h3>
+                      <p className="text-sm text-gray-600 mb-2">{selectedProduct.category}</p>
+                      <div className="flex items-center justify-end gap-2">
+                        <Badge variant="secondary" className="text-xs">
+                          السعر: {(selectedProduct.original_price || selectedProduct.price).toLocaleString()} د.ع
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label>نوع الخصم</Label>
                   <Select 

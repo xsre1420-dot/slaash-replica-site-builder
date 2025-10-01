@@ -66,7 +66,13 @@ export const loadProducts = async (): Promise<Product[]> => {
       stockQuantity: product.stock_quantity || undefined,
       sizes: Array.isArray(product.sizes) ? product.sizes as string[] : undefined,
       colors: Array.isArray(product.colors) ? (product.colors as unknown as ColorOption[]) : undefined,
-      variants: Array.isArray(product.variants) ? (product.variants as unknown as ProductVariant[]) : undefined
+      variants: Array.isArray(product.variants) ? (product.variants as unknown as ProductVariant[]) : undefined,
+      // Discount fields
+      discountType: product.discount_type as 'none' | 'percentage' | 'amount' | undefined,
+      discountValue: product.discount_value ? Number(product.discount_value) : undefined,
+      discountStartDate: product.discount_start_date || undefined,
+      discountEndDate: product.discount_end_date || undefined,
+      originalPrice: product.original_price ? Number(product.original_price) : undefined,
     })) || [];
     
     productsCache = formattedProducts;

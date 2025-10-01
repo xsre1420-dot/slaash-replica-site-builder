@@ -262,14 +262,36 @@ const PreviewStore = () => {
                     className="w-full h-full object-contain p-4"
                     loading="lazy"
                   />
+                  
+                  {/* Discount Badge */}
+                  {product.discountType && product.discountType !== 'none' && (
+                    <div className="absolute top-2 right-2 bg-gradient-to-r from-red-500 to-red-600 text-white px-2 py-1 rounded-full shadow-lg">
+                      <span className="text-[10px] font-bold">
+                        -{product.discountType === 'percentage' ? `${product.discountValue}%` : `${product.discountValue?.toLocaleString()}`}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="p-3">
                   <div className="text-sm font-medium text-gray-900 mb-1 text-right line-clamp-2">
                     {product.name}
                   </div>
-                  <div className="text-sm font-bold text-gray-900 text-right">
-                    IQD {product.price.toLocaleString()}
+                  <div className="text-right">
+                    {product.discountType && product.discountType !== 'none' && product.originalPrice ? (
+                      <div className="flex flex-col items-end gap-0.5">
+                        <span className="text-xs text-gray-400 line-through">
+                          IQD {product.originalPrice.toLocaleString()}
+                        </span>
+                        <span className="text-sm font-bold text-red-600">
+                          IQD {product.price.toLocaleString()}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="text-sm font-bold text-gray-900">
+                        IQD {product.price.toLocaleString()}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
