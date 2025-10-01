@@ -623,23 +623,23 @@ const Marketing = () => {
 
                                 {/* Pricing Info */}
                                 <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4">
-                                  <div className="grid grid-cols-2 gap-4 mb-4">
+                                  <div className="space-y-3 mb-4">
                                     {/* Original Price */}
-                                    <div className="text-right">
-                                      <p className="text-xs text-gray-500 mb-1.5 font-medium">السعر الأصلي</p>
+                                    <div className="text-right flex items-center justify-end gap-2">
                                       <p className="text-lg font-semibold line-through text-gray-400">
                                         {(product.original_price || product.price).toLocaleString()}
                                         <span className="text-xs mr-1">د.ع</span>
                                       </p>
+                                      <span className="text-sm text-gray-600">السعر الأصلي:</span>
                                     </div>
                                     
                                     {/* Discounted Price */}
-                                    <div className="text-right">
-                                      <p className="text-xs text-gray-700 mb-1.5 font-semibold">السعر بعد الخصم</p>
+                                    <div className="text-right flex items-center justify-end gap-2">
                                       <p className="text-lg font-bold text-gray-900">
                                         {product.price.toLocaleString()}
                                         <span className="text-xs mr-1">د.ع</span>
                                       </p>
+                                      <span className="text-sm text-gray-700 font-semibold">السعر بعد الخصم:</span>
                                     </div>
                                   </div>
                                   
