@@ -549,83 +549,110 @@ const Marketing = () => {
                     {products
                       .filter(product => product.discount_type && product.discount_type !== 'none')
                       .map((product) => (
-                        <div key={product.id} className="border rounded-xl p-4 bg-white">
-                          <div className="flex justify-between items-start mb-3">
-                            <div className="flex items-center gap-3">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedProduct(product);
-                                  setDiscountForm({
-                                    discount_type: 'none',
-                                    discount_value: 0,
-                                    discount_start_date: new Date(),
-                                    discount_end_date: null,
-                                  });
-                                  saveProductDiscount();
-                                }}
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openDiscountDialog(product)}
-                                className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                            </div>
-                            
-                            <div className="text-right flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                {product.image_url && (
-                                  <img 
-                                    src={product.image_url} 
-                                    alt={product.name}
-                                    className="w-16 h-16 object-cover rounded-lg"
-                                  />
-                                )}
-                                <div>
-                                  <h3 className="font-semibold text-lg">{product.name}</h3>
-                                  <p className="text-sm text-gray-500">{product.category}</p>
+                        <div 
+                          key={product.id} 
+                          className="border rounded-2xl bg-white overflow-hidden hover:shadow-lg transition-shadow"
+                        >
+                          <div className="flex flex-row-reverse items-stretch">
+                            {/* Product Image Section */}
+                            <div className="relative w-48 flex-shrink-0">
+                              {product.image_url ? (
+                                <img 
+                                  src={product.image_url} 
+                                  alt={product.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                                  <Tag className="w-12 h-12 text-gray-400" />
                                 </div>
+                              )}
+                              
+                              {/* Discount Badge */}
+                              <div className="absolute top-3 left-3">
+                                <Badge className="bg-red-500 text-white px-3 py-1 text-sm font-bold rounded-full shadow-lg">
+                                  {product.discount_type === 'percentage' 
+                                    ? `خصم ${product.discount_value}%`
+                                    : `خصم ${product.discount_value?.toLocaleString()} د.ع`
+                                  }
+                                </Badge>
                               </div>
                             </div>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                            <div className="text-right">
-                              <span className="text-gray-500 block">قيمة الخصم</span>
-                              <span className="font-medium text-red-600">
-                                {product.discount_type === 'percentage' 
-                                  ? `${product.discount_value}%`
-                                  : `${product.discount_value?.toLocaleString()} د.ع`
-                                }
-                              </span>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-gray-500 block">السعر الأصلي</span>
-                              <span className="font-medium line-through text-gray-500">
-                                {(product.original_price || product.price).toLocaleString()} د.ع
-                              </span>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-gray-500 block">السعر بعد الخصم</span>
-                              <span className="font-bold text-green-600">
-                                {product.price.toLocaleString()} د.ع
-                              </span>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-gray-500 block">صالح حتى</span>
-                              <span className="font-medium">
-                                {product.discount_end_date 
-                                  ? new Date(product.discount_end_date).toLocaleDateString('ar-SA')
-                                  : 'غير محدد'
-                                }
-                              </span>
+
+                            {/* Product Info Section */}
+                            <div className="flex-1 p-5 flex flex-col justify-between">
+                              <div className="text-right">
+                                {/* Header */}
+                                <div className="flex justify-between items-start mb-3">
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedProduct(product);
+                                        setDiscountForm({
+                                          discount_type: 'none',
+                                          discount_value: 0,
+                                          discount_start_date: new Date(),
+                                          discount_end_date: null,
+                                        });
+                                        saveProductDiscount();
+                                      }}
+                                      className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full h-8 w-8 p-0"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => openDiscountDialog(product)}
+                                      className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-full h-8 w-8 p-0"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                  
+                                  <div>
+                                    <h3 className="font-bold text-xl mb-1">{product.name}</h3>
+                                    <p className="text-sm text-gray-500 flex items-center gap-1">
+                                      <Tag className="w-3 h-3" />
+                                      {product.category}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Pricing Info */}
+                                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 mb-3">
+                                  <div className="flex justify-between items-center mb-2">
+                                    <div className="text-right">
+                                      <p className="text-xs text-gray-500 mb-1">السعر بعد الخصم</p>
+                                      <p className="text-2xl font-bold text-green-600">
+                                        {product.price.toLocaleString()} <span className="text-sm">د.ع</span>
+                                      </p>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-xs text-gray-500 mb-1">السعر الأصلي</p>
+                                      <p className="text-lg font-medium line-through text-gray-400">
+                                        {(product.original_price || product.price).toLocaleString()} <span className="text-xs">د.ع</span>
+                                      </p>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="flex justify-between items-center text-xs text-gray-600">
+                                    <span>وفّر {((product.original_price || product.price) - product.price).toLocaleString()} د.ع</span>
+                                    <span className="flex items-center gap-1">
+                                      <CalendarIcon className="w-3 h-3" />
+                                      صالح حتى: {product.discount_end_date 
+                                        ? new Date(product.discount_end_date).toLocaleDateString('ar-SA', { 
+                                            day: 'numeric',
+                                            month: 'short'
+                                          })
+                                        : 'غير محدد'
+                                      }
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
