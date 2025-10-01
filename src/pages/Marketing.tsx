@@ -864,46 +864,59 @@ const Marketing = () => {
           
           <div className="space-y-4 py-4">
             {!selectedProduct && (
-              <div className="space-y-2">
-                <Label>اختر المنتج</Label>
-                <Select 
-                  value={selectedProduct?.id || ''} 
-                  onValueChange={(productId) => {
-                    const product = products.find(p => p.id === productId);
-                    if (product) {
-                      setSelectedProduct(product);
-                      // Load existing discount if any
-                      if (product.discount_type && product.discount_type !== 'none') {
-                        setDiscountForm({
-                          discount_type: product.discount_type as 'none' | 'percentage' | 'amount',
-                          discount_value: product.discount_value || 0,
-                          discount_start_date: product.discount_start_date ? new Date(product.discount_start_date) : new Date(),
-                          discount_end_date: product.discount_end_date ? new Date(product.discount_end_date) : null,
-                        });
-                      }
-                    }
-                  }}
-                >
-                  <SelectTrigger className="rounded-2xl text-right">
-                    <SelectValue placeholder="اختر منتج..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {products.map((product) => (
-                      <SelectItem key={product.id} value={product.id} className="text-right">
-                        <div className="flex items-center gap-2">
-                          {product.image_url && (
-                            <img 
-                              src={product.image_url} 
-                              alt={product.name}
-                              className="w-8 h-8 object-cover rounded"
-                            />
+              <div className="space-y-3">
+                <Label className="text-lg font-semibold">اختر المنتج</Label>
+                <div className="max-h-[400px] overflow-y-auto space-y-2 pr-1">
+                  {products.map((product) => (
+                    <div
+                      key={product.id}
+                      onClick={() => {
+                        setSelectedProduct(product);
+                        // Load existing discount if any
+                        if (product.discount_type && product.discount_type !== 'none') {
+                          setDiscountForm({
+                            discount_type: product.discount_type as 'none' | 'percentage' | 'amount',
+                            discount_value: product.discount_value || 0,
+                            discount_start_date: product.discount_start_date ? new Date(product.discount_start_date) : new Date(),
+                            discount_end_date: product.discount_end_date ? new Date(product.discount_end_date) : null,
+                          });
+                        }
+                      }}
+                      className="flex items-center gap-4 p-3 border-2 rounded-xl cursor-pointer transition-all hover:border-primary hover:bg-primary/5 hover:shadow-md"
+                    >
+                      {/* Product Image */}
+                      <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                        {product.image_url ? (
+                          <img 
+                            src={product.image_url} 
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                            <Tag className="w-8 h-8 text-gray-400" />
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Product Info */}
+                      <div className="flex-1 text-right">
+                        <h4 className="font-semibold text-base mb-1">{product.name}</h4>
+                        <p className="text-sm text-gray-500 mb-1">{product.category}</p>
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-lg font-bold text-primary">
+                            {product.price.toLocaleString()} د.ع
+                          </span>
+                          {product.discount_type && product.discount_type !== 'none' && (
+                            <Badge className="bg-red-500 text-white text-xs">
+                              يوجد خصم
+                            </Badge>
                           )}
-                          <span>{product.name} - {product.price.toLocaleString()} د.ع</span>
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
