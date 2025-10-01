@@ -240,7 +240,10 @@ const Store = () => {
                   {product.discountType && product.discountType !== 'none' && (
                     <div className="absolute top-3 right-3 bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-1.5 rounded-full shadow-lg">
                       <span className="text-xs font-bold">
-                        خصم {product.discountType === 'percentage' ? `${product.discountValue}%` : `${product.discountValue?.toLocaleString()} د.ع`}
+                        {product.discountType === 'percentage' 
+                          ? `خصم ${product.discountValue}%` 
+                          : `خصم ${product.discountValue?.toLocaleString()} د.ع`
+                        }
                       </span>
                     </div>
                   )}
