@@ -626,20 +626,20 @@ const Marketing = () => {
                                   <div className="space-y-3 mb-4">
                                     {/* Original Price */}
                                     <div className="text-right flex items-center justify-end gap-2">
-                                      <span className="text-sm text-gray-600">: السعر الأصلي</span>
                                       <p className="text-lg font-semibold line-through text-gray-400">
                                         {(product.original_price || product.price).toLocaleString()}
                                         <span className="text-xs mr-1">د.ع</span>
                                       </p>
+                                      <span className="text-sm text-gray-600">السعر الأصلي:</span>
                                     </div>
                                     
                                     {/* Discounted Price */}
                                     <div className="text-right flex items-center justify-end gap-2">
-                                      <span className="text-sm text-gray-700 font-semibold">: السعر بعد الخصم</span>
                                       <p className="text-lg font-bold text-gray-900">
                                         {product.price.toLocaleString()}
                                         <span className="text-xs mr-1">د.ع</span>
                                       </p>
+                                      <span className="text-sm text-gray-700 font-semibold">السعر بعد الخصم:</span>
                                     </div>
                                   </div>
                                   
