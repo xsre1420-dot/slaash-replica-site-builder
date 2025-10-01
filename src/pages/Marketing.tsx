@@ -622,39 +622,41 @@ const Marketing = () => {
                                 </div>
 
                                 {/* Pricing Info */}
-                                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-5">
-                                  <div className="grid grid-cols-2 gap-6 mb-4">
+                                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4">
+                                  <div className="grid grid-cols-2 gap-4 mb-4">
                                     {/* Original Price */}
                                     <div className="text-right">
-                                      <p className="text-sm text-gray-500 mb-2 font-medium">السعر الأصلي</p>
-                                      <p className="text-2xl font-semibold line-through text-gray-400">
+                                      <p className="text-xs text-gray-500 mb-1.5 font-medium">السعر الأصلي</p>
+                                      <p className="text-lg font-semibold line-through text-gray-400">
                                         {(product.original_price || product.price).toLocaleString()}
-                                        <span className="text-sm mr-1">د.ع</span>
+                                        <span className="text-xs mr-1">د.ع</span>
                                       </p>
                                     </div>
                                     
                                     {/* Discounted Price */}
                                     <div className="text-right">
-                                      <p className="text-sm text-gray-700 mb-2 font-semibold">السعر بعد الخصم</p>
-                                      <p className="text-2xl font-bold text-gray-900">
+                                      <p className="text-xs text-gray-700 mb-1.5 font-semibold">السعر بعد الخصم</p>
+                                      <p className="text-lg font-bold text-gray-900">
                                         {product.price.toLocaleString()}
-                                        <span className="text-sm mr-1">د.ع</span>
+                                        <span className="text-xs mr-1">د.ع</span>
                                       </p>
                                     </div>
                                   </div>
                                   
                                   {/* Savings and Validity */}
-                                  <div className="pt-4 border-t border-gray-200">
-                                    <div className="flex justify-between items-center text-sm text-gray-600">
-                                      <div className="flex items-center gap-1.5">
-                                        <CalendarIcon className="w-4 h-4" />
+                                  <div className="pt-3 border-t border-gray-200">
+                                    <div className="flex justify-between items-center text-xs text-gray-600">
+                                      <div className="flex items-center gap-1">
+                                        <CalendarIcon className="w-3.5 h-3.5" />
                                         <span>
                                           صالح حتى: {product.discount_end_date 
-                                            ? new Date(product.discount_end_date).toLocaleDateString('en-GB', { 
-                                                day: '2-digit',
-                                                month: '2-digit',
-                                                year: 'numeric'
-                                              }).replace(/\//g, '.')
+                                            ? (() => {
+                                                const date = new Date(product.discount_end_date);
+                                                const day = String(date.getDate()).padStart(2, '0');
+                                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                const year = date.getFullYear();
+                                                return `${day}/${month}/${year}`;
+                                              })()
                                             : 'غير محدد'
                                           }
                                         </span>
