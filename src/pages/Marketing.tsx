@@ -175,21 +175,36 @@ const Marketing = () => {
 
     setLoading(true);
 
+    // Calculate new price based on discount
+    let newPrice = selectedProduct.price;
+    const originalPrice = selectedProduct.original_price || selectedProduct.price;
+    
+    if (discountForm.discount_type !== 'none') {
+      if (discountForm.discount_type === 'percentage') {
+        newPrice = originalPrice * (1 - discountForm.discount_value / 100);
+      } else {
+        newPrice = originalPrice - discountForm.discount_value;
+      }
+    } else {
+      // Removing discount, restore original price
+      newPrice = originalPrice;
+    }
+
     const updateData: any = {
       discount_type: discountForm.discount_type,
       discount_value: discountForm.discount_value,
       discount_start_date: discountForm.discount_start_date.toISOString(),
       discount_end_date: discountForm.discount_end_date ? discountForm.discount_end_date.toISOString() : null,
+      price: newPrice,
     };
 
     // If adding discount for first time, save original price
     if (discountForm.discount_type !== 'none' && !selectedProduct.original_price) {
-      updateData.original_price = selectedProduct.price;
+      updateData.original_price = originalPrice;
     }
 
-    // If removing discount, restore original price
+    // If removing discount, clear original price
     if (discountForm.discount_type === 'none' && selectedProduct.original_price) {
-      updateData.price = selectedProduct.original_price;
       updateData.original_price = null;
     }
 
@@ -211,6 +226,7 @@ const Marketing = () => {
       });
       loadProducts();
       setIsDiscountDialogOpen(false);
+      setSelectedProduct(null);
     }
 
     setLoading(false);
@@ -480,73 +496,140 @@ const Marketing = () => {
           <TabsContent value="product-discounts" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-right">خصومات المنتجات</CardTitle>
+                <div className="flex justify-between items-center">
+                  <Button
+                    onClick={() => {
+                      setSelectedProduct(null);
+                      setDiscountForm({
+                        discount_type: 'percentage',
+                        discount_value: 0,
+                        discount_start_date: new Date(),
+                        discount_end_date: null,
+                      });
+                      setIsDiscountDialogOpen(true);
+                    }}
+                    className="text-white rounded-2xl px-6"
+                    style={{ 
+                      background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                      boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
+                    }}
+                  >
+                    <Plus className="w-4 h-4 ml-2" />
+                    إضافة خصم على منتج
+                  </Button>
+                  <CardTitle className="text-right">خصومات المنتجات</CardTitle>
+                </div>
               </CardHeader>
               <CardContent>
-                {products.length === 0 ? (
+                {products.filter(p => p.discount_type && p.discount_type !== 'none').length === 0 ? (
                   <div className="text-center py-12">
                     <Tag className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                    <h3 className="text-lg font-medium text-gray-500 mb-2">لا توجد منتجات بعد</h3>
-                    <p className="text-gray-400">قم بإضافة منتجات أولاً لتتمكن من إضافة خصومات عليها</p>
+                    <h3 className="text-lg font-medium text-gray-500 mb-2">لا توجد خصومات على المنتجات</h3>
+                    <p className="text-gray-400 mb-6">ابدأ بإضافة خصم على منتج معين</p>
+                    <Button
+                      onClick={() => {
+                        setSelectedProduct(null);
+                        setDiscountForm({
+                          discount_type: 'percentage',
+                          discount_value: 0,
+                          discount_start_date: new Date(),
+                          discount_end_date: null,
+                        });
+                        setIsDiscountDialogOpen(true);
+                      }}
+                      variant="outline"
+                      className="rounded-2xl"
+                    >
+                      <Plus className="w-4 h-4 ml-2" />
+                      إضافة خصم
+                    </Button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {products.map((product) => (
-                      <div key={product.id} className="border rounded-xl overflow-hidden bg-white">
-                        {product.image_url && (
-                          <div className="relative h-48">
-                            <img 
-                              src={product.image_url} 
-                              alt={product.name}
-                              className="w-full h-full object-cover"
-                            />
-                            {product.discount_type && product.discount_type !== 'none' && (
-                              <Badge className="absolute top-2 right-2 bg-red-500 text-white">
-                                خصم {product.discount_type === 'percentage' ? `${product.discount_value}%` : `${product.discount_value} د.ع`}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-                        <div className="p-4">
-                          <h3 className="font-semibold text-right mb-1">{product.name}</h3>
-                          <p className="text-sm text-gray-500 text-right mb-2">{product.category}</p>
-                          
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="text-right">
-                              {product.discount_type && product.discount_type !== 'none' && product.original_price ? (
+                  <div className="grid gap-4">
+                    {products
+                      .filter(product => product.discount_type && product.discount_type !== 'none')
+                      .map((product) => (
+                        <div key={product.id} className="border rounded-xl p-4 bg-white">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex items-center gap-3">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedProduct(product);
+                                  setDiscountForm({
+                                    discount_type: 'none',
+                                    discount_value: 0,
+                                    discount_start_date: new Date(),
+                                    discount_end_date: null,
+                                  });
+                                  saveProductDiscount();
+                                }}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openDiscountDialog(product)}
+                                className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            </div>
+                            
+                            <div className="text-right flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                {product.image_url && (
+                                  <img 
+                                    src={product.image_url} 
+                                    alt={product.name}
+                                    className="w-16 h-16 object-cover rounded-lg"
+                                  />
+                                )}
                                 <div>
-                                  <span className="text-lg font-bold text-green-600">{product.price.toLocaleString()} د.ع</span>
-                                  <span className="text-sm text-gray-400 line-through mr-2">{product.original_price.toLocaleString()} د.ع</span>
+                                  <h3 className="font-semibold text-lg">{product.name}</h3>
+                                  <p className="text-sm text-gray-500">{product.category}</p>
                                 </div>
-                              ) : (
-                                <span className="text-lg font-bold">{product.price.toLocaleString()} د.ع</span>
-                              )}
+                              </div>
                             </div>
                           </div>
-
-                          {product.discount_type && product.discount_type !== 'none' && (
-                            <div className="text-xs text-gray-500 text-right mb-3">
-                              {product.discount_start_date && (
-                                <div>من: {new Date(product.discount_start_date).toLocaleDateString('ar-SA')}</div>
-                              )}
-                              {product.discount_end_date && (
-                                <div>إلى: {new Date(product.discount_end_date).toLocaleDateString('ar-SA')}</div>
-                              )}
+                          
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <div className="text-right">
+                              <span className="text-gray-500 block">قيمة الخصم</span>
+                              <span className="font-medium text-red-600">
+                                {product.discount_type === 'percentage' 
+                                  ? `${product.discount_value}%`
+                                  : `${product.discount_value?.toLocaleString()} د.ع`
+                                }
+                              </span>
                             </div>
-                          )}
-
-                          <Button
-                            onClick={() => openDiscountDialog(product)}
-                            variant="outline"
-                            className="w-full rounded-2xl"
-                            size="sm"
-                          >
-                            <Edit className="w-4 h-4 ml-2" />
-                            {product.discount_type && product.discount_type !== 'none' ? 'تعديل الخصم' : 'إضافة خصم'}
-                          </Button>
+                            <div className="text-right">
+                              <span className="text-gray-500 block">السعر الأصلي</span>
+                              <span className="font-medium line-through text-gray-500">
+                                {(product.original_price || product.price).toLocaleString()} د.ع
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-gray-500 block">السعر بعد الخصم</span>
+                              <span className="font-bold text-green-600">
+                                {product.price.toLocaleString()} د.ع
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-gray-500 block">صالح حتى</span>
+                              <span className="font-medium">
+                                {product.discount_end_date 
+                                  ? new Date(product.discount_end_date).toLocaleDateString('ar-SA')
+                                  : 'غير محدد'
+                                }
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 )}
               </CardContent>
@@ -748,42 +831,88 @@ const Marketing = () => {
         <DialogContent className="sm:max-w-[500px] text-right rounded-3xl">
           <DialogHeader>
             <DialogTitle className="text-right text-xl">
-              {selectedProduct?.name} - إدارة الخصم
+              {selectedProduct ? `${selectedProduct.name} - إدارة الخصم` : 'إضافة خصم على منتج'}
             </DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>نوع الخصم</Label>
-              <Select 
-                value={discountForm.discount_type} 
-                onValueChange={(value: 'none' | 'percentage' | 'amount') => 
-                  setDiscountForm(prev => ({ ...prev, discount_type: value }))
-                }
-              >
-                <SelectTrigger className="rounded-2xl text-right">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">بدون خصم</SelectItem>
-                  <SelectItem value="percentage">نسبة مئوية (%)</SelectItem>
-                  <SelectItem value="amount">مبلغ ثابت (د.ع)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {!selectedProduct && (
+              <div className="space-y-2">
+                <Label>اختر المنتج</Label>
+                <Select 
+                  value={selectedProduct?.id || ''} 
+                  onValueChange={(productId) => {
+                    const product = products.find(p => p.id === productId);
+                    if (product) {
+                      setSelectedProduct(product);
+                      // Load existing discount if any
+                      if (product.discount_type && product.discount_type !== 'none') {
+                        setDiscountForm({
+                          discount_type: product.discount_type as 'none' | 'percentage' | 'amount',
+                          discount_value: product.discount_value || 0,
+                          discount_start_date: product.discount_start_date ? new Date(product.discount_start_date) : new Date(),
+                          discount_end_date: product.discount_end_date ? new Date(product.discount_end_date) : null,
+                        });
+                      }
+                    }
+                  }}
+                >
+                  <SelectTrigger className="rounded-2xl text-right">
+                    <SelectValue placeholder="اختر منتج..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.map((product) => (
+                      <SelectItem key={product.id} value={product.id} className="text-right">
+                        <div className="flex items-center gap-2">
+                          {product.image_url && (
+                            <img 
+                              src={product.image_url} 
+                              alt={product.name}
+                              className="w-8 h-8 object-cover rounded"
+                            />
+                          )}
+                          <span>{product.name} - {product.price.toLocaleString()} د.ع</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
-            {discountForm.discount_type !== 'none' && (
+            {selectedProduct && (
               <>
                 <div className="space-y-2">
-                  <Label>قيمة الخصم</Label>
-                  <Input
-                    type="number"
-                    placeholder={discountForm.discount_type === 'percentage' ? '10' : '5000'}
-                    value={discountForm.discount_value || ''}
-                    onChange={(e) => setDiscountForm(prev => ({ ...prev, discount_value: Number(e.target.value) }))}
-                    className="text-right rounded-2xl"
-                  />
+                  <Label>نوع الخصم</Label>
+                  <Select 
+                    value={discountForm.discount_type} 
+                    onValueChange={(value: 'none' | 'percentage' | 'amount') => 
+                      setDiscountForm(prev => ({ ...prev, discount_type: value }))
+                    }
+                  >
+                    <SelectTrigger className="rounded-2xl text-right">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">بدون خصم</SelectItem>
+                      <SelectItem value="percentage">نسبة مئوية (%)</SelectItem>
+                      <SelectItem value="amount">مبلغ ثابت (د.ع)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                {discountForm.discount_type !== 'none' && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>قيمة الخصم</Label>
+                      <Input
+                        type="number"
+                        placeholder={discountForm.discount_type === 'percentage' ? '10' : '5000'}
+                        value={discountForm.discount_value || ''}
+                        onChange={(e) => setDiscountForm(prev => ({ ...prev, discount_value: Number(e.target.value) }))}
+                        className="text-right rounded-2xl"
+                      />
+                    </div>
 
                 <div className="space-y-2">
                   <Label>تاريخ بدء الخصم</Label>
@@ -860,6 +989,8 @@ const Marketing = () => {
                     </div>
                   </div>
                 )}
+                  </>
+                )}
               </>
             )}
           </div>
@@ -867,22 +998,27 @@ const Marketing = () => {
           <DialogFooter>
             <Button 
               variant="outline" 
-              onClick={() => setIsDiscountDialogOpen(false)}
+              onClick={() => {
+                setIsDiscountDialogOpen(false);
+                setSelectedProduct(null);
+              }}
               className="rounded-2xl"
             >
               إلغاء
             </Button>
-            <Button 
-              onClick={saveProductDiscount}
-              disabled={loading}
-              className="text-white rounded-2xl"
-              style={{ 
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
-              }}
-            >
-              {loading ? "جاري الحفظ..." : discountForm.discount_type === 'none' ? 'إزالة الخصم' : 'حفظ الخصم'}
-            </Button>
+            {selectedProduct && (
+              <Button 
+                onClick={saveProductDiscount}
+                disabled={loading}
+                className="text-white rounded-2xl"
+                style={{ 
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
+                }}
+              >
+                {loading ? "جاري الحفظ..." : discountForm.discount_type === 'none' ? 'إزالة الخصم' : 'حفظ الخصم'}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
