@@ -626,44 +626,42 @@ const Marketing = () => {
                                   <div className="grid grid-cols-2 gap-6 mb-4">
                                     {/* Original Price */}
                                     <div className="text-right">
-                                      <p className="text-xs text-gray-500 mb-2 font-medium">السعر الأصلي</p>
-                                      <p className="text-xl font-semibold line-through text-gray-400">
-                                        {(product.original_price || product.price).toLocaleString()} 
+                                      <p className="text-sm text-gray-500 mb-2 font-medium">السعر الأصلي</p>
+                                      <p className="text-2xl font-semibold line-through text-gray-400">
+                                        {(product.original_price || product.price).toLocaleString()}
                                         <span className="text-sm mr-1">د.ع</span>
                                       </p>
                                     </div>
                                     
                                     {/* Discounted Price */}
                                     <div className="text-right">
-                                      <p className="text-xs text-green-600 mb-2 font-semibold">السعر بعد الخصم</p>
-                                      <p className="text-3xl font-bold text-green-600">
-                                        {product.price.toLocaleString()} 
-                                        <span className="text-base mr-1">د.ع</span>
+                                      <p className="text-sm text-gray-700 mb-2 font-semibold">السعر بعد الخصم</p>
+                                      <p className="text-2xl font-bold text-gray-900">
+                                        {product.price.toLocaleString()}
+                                        <span className="text-sm mr-1">د.ع</span>
                                       </p>
                                     </div>
                                   </div>
                                   
                                   {/* Savings and Validity */}
                                   <div className="pt-4 border-t border-gray-200">
-                                    <div className="flex justify-between items-center">
-                                      <div className="flex items-center gap-1.5 text-gray-600">
+                                    <div className="flex justify-between items-center text-sm text-gray-600">
+                                      <div className="flex items-center gap-1.5">
                                         <CalendarIcon className="w-4 h-4" />
-                                        <span className="text-sm">
+                                        <span>
                                           صالح حتى: {product.discount_end_date 
-                                            ? new Date(product.discount_end_date).toLocaleDateString('ar-SA', { 
-                                                day: 'numeric',
-                                                month: 'short',
+                                            ? new Date(product.discount_end_date).toLocaleDateString('en-GB', { 
+                                                day: '2-digit',
+                                                month: '2-digit',
                                                 year: 'numeric'
-                                              })
+                                              }).replace(/\//g, '.')
                                             : 'غير محدد'
                                           }
                                         </span>
                                       </div>
-                                      <div className="bg-green-100 px-3 py-1.5 rounded-full">
-                                        <span className="text-sm font-bold text-green-700">
-                                          وفّر {((product.original_price || product.price) - product.price).toLocaleString()} د.ع
-                                        </span>
-                                      </div>
+                                      <span className="font-semibold">
+                                        وفّر {((product.original_price || product.price) - product.price).toLocaleString()} د.ع
+                                      </span>
                                     </div>
                                   </div>
                                 </div>
