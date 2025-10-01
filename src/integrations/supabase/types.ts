@@ -316,10 +316,15 @@ export type Database = {
           cost: number | null
           created_at: string
           description: string | null
+          discount_end_date: string | null
+          discount_start_date: string | null
+          discount_type: string | null
+          discount_value: number | null
           id: string
           image_url: string | null
           min_stock_level: number | null
           name: string
+          original_price: number | null
           owner_id: string
           price: number
           sizes: Json | null
@@ -334,10 +339,15 @@ export type Database = {
           cost?: number | null
           created_at?: string
           description?: string | null
+          discount_end_date?: string | null
+          discount_start_date?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
           id?: string
           image_url?: string | null
           min_stock_level?: number | null
           name: string
+          original_price?: number | null
           owner_id: string
           price: number
           sizes?: Json | null
@@ -352,10 +362,15 @@ export type Database = {
           cost?: number | null
           created_at?: string
           description?: string | null
+          discount_end_date?: string | null
+          discount_start_date?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
           id?: string
           image_url?: string | null
           min_stock_level?: number | null
           name?: string
+          original_price?: number | null
           owner_id?: string
           price?: number
           sizes?: Json | null
