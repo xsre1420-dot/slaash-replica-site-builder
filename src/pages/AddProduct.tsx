@@ -17,7 +17,7 @@ import { formatPriceInput, isValidPrice } from "@/utils/numberUtils";
 import { supabase } from "@/integrations/supabase/client";
 
 const AddProduct = () => {
-  // Basic Product Info
+  // Basic Product Info - simplified form without tabs
   const [mainImage, setMainImage] = useState<string | null>(null);
   const [additionalImages, setAdditionalImages] = useState<string[]>([]);
   const [name, setName] = useState("");
