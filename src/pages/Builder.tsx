@@ -39,10 +39,10 @@ export default function Builder() {
               <p className="text-gray-600">شارك متجرك مع عملائك بنقرة واحدة</p>
             </div>
             
-            <div className="flex justify-center">
+            <div className="flex flex-col items-center gap-4 max-w-2xl mx-auto">
               <Button 
                 size="lg"
-                className={`transition-all duration-300 rounded-2xl px-8 py-4 shadow-lg ${
+                className={`w-full transition-all duration-300 rounded-2xl px-8 py-6 shadow-lg ${
                   copied 
                     ? 'bg-green-500 hover:bg-green-600 text-white scale-105 shadow-green-200' 
                     : 'bg-white hover:bg-gray-50 text-gray-700 border-2 border-primary/20 hover:border-primary/40 hover:shadow-xl'
@@ -72,27 +72,23 @@ export default function Builder() {
                   </>
                 )}
               </Button>
+              
+              {/* Quick Action Buttons */}
+              <div className="grid grid-cols-2 gap-4 w-full">
+                <Link to="/preview" className="w-full">
+                  <Button variant="outline" className="w-full h-14 bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-200 hover:border-primary/40 rounded-2xl transition-all">
+                    <Eye className="w-5 h-5 ml-2" />
+                    معاينة المتجر
+                  </Button>
+                </Link>
+                <Link to="/add-product" className="w-full">
+                  <Button className="w-full h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all border-0">
+                    <Plus className="w-5 h-5 ml-2" />
+                    إضافة منتج
+                  </Button>
+                </Link>
+              </div>
             </div>
-          </div>
-            
-          {/* Modern Action Grid */}
-          <div className="grid grid-cols-2 gap-4 mb-8">
-            <Link to="/preview">
-              <Button variant="ghost" className="w-full h-14 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-2xl">
-                <Eye className="w-5 h-5 ml-2" />
-                معاينة المتجر
-              </Button>
-            </Link>
-            <Link to="/add-product">
-              <Button className="w-full h-14 text-white rounded-2xl shadow-lg border-0"
-                      style={{ 
-                        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                        boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
-                      }}>
-                <Plus className="w-5 h-5 ml-2" />
-                إضافة منتج
-              </Button>
-            </Link>
           </div>
 
           {/* Modern Dashboard Cards */}
