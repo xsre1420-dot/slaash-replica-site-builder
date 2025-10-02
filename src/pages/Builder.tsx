@@ -8,6 +8,7 @@ import { useStore } from "@/context/StoreContext";
 import { useAuth } from "@/context/AuthContext";
 import { useState } from "react";
 import { toast } from "sonner";
+import platformLogo from "@/assets/platform-logo.png";
 
 export default function Builder() {
   const { storeName, storeLogo, updateStore } = useStore();
@@ -32,10 +33,9 @@ export default function Builder() {
           {/* Modern Store Link Card */}
           <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-3xl p-8 mb-8 border border-primary/20 shadow-sm">
             <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Copy className="w-8 h-8 text-primary" />
+              <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 p-3">
+                <img src={platformLogo} alt="بيلانة" className="w-full h-full object-contain" />
               </div>
-              <h2 className="text-2xl font-bold mb-2 text-gray-800">رابط المتجر</h2>
               <p className="text-gray-600">شارك متجرك مع عملائك بنقرة واحدة</p>
             </div>
             
