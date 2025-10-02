@@ -31,20 +31,20 @@ export default function Builder() {
       {/* Main Content */}
       <div className="p-6 max-w-6xl mx-auto">
           {/* Modern Store Link Card */}
-          <div className="bg-white rounded-3xl p-12 mb-8">
-            <div className="text-center mb-10">
+          <div className="bg-white rounded-3xl p-8 mb-8 max-w-3xl mx-auto">
+            <div className="text-center mb-8">
               <div className="w-48 h-48 flex items-center justify-center mx-auto">
                 <img src={platformLogo} alt="بيلانة" className="w-full h-full object-contain" />
               </div>
             </div>
             
-            <div className="flex flex-col items-center gap-5 max-w-2xl mx-auto">
+            <div className="flex flex-col items-center gap-4 max-w-xl mx-auto">
               <Button 
                 size="lg"
-                className={`w-full transition-all duration-300 rounded-2xl px-10 py-7 text-lg shadow-lg ${
+                className={`w-full transition-all duration-300 rounded-2xl px-8 py-5 text-base shadow-md ${
                   copied 
                     ? 'bg-green-500 hover:bg-green-600 text-white scale-105 shadow-green-200' 
-                    : 'bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-200 hover:border-primary/40 hover:shadow-xl'
+                    : 'bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-200 hover:border-primary/40 hover:shadow-lg'
                 }`}
                 onClick={async () => {
                   if (user) {
@@ -61,28 +61,28 @@ export default function Builder() {
               >
                 {copied ? (
                   <>
-                    <Check className="w-6 h-6 ml-2" />
+                    <Check className="w-5 h-5 ml-2" />
                     تم النسخ بنجاح
                   </>
                 ) : (
                   <>
-                    <Copy className="w-6 h-6 ml-2" />
+                    <Copy className="w-5 h-5 ml-2" />
                     نسخ رابط المتجر
                   </>
                 )}
               </Button>
               
               {/* Quick Action Buttons */}
-              <div className="grid grid-cols-2 gap-5 w-full">
+              <div className="grid grid-cols-2 gap-4 w-full">
                 <Link to="/preview" className="w-full">
-                  <Button variant="outline" className="w-full h-16 text-lg bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-200 hover:border-primary/40 rounded-2xl transition-all">
-                    <Eye className="w-6 h-6 ml-2" />
+                  <Button variant="outline" className="w-full h-14 text-base bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-200 hover:border-primary/40 rounded-2xl transition-all shadow-sm hover:shadow-md">
+                    <Eye className="w-5 h-5 ml-2" />
                     معاينة المتجر
                   </Button>
                 </Link>
                 <Link to="/add-product" className="w-full">
-                  <Button className="w-full h-16 text-lg bg-primary hover:bg-primary/90 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all border-0">
-                    <Plus className="w-6 h-6 ml-2" />
+                  <Button className="w-full h-14 text-base bg-primary hover:bg-primary/90 text-white rounded-2xl shadow-md hover:shadow-lg transition-all border-0">
+                    <Plus className="w-5 h-5 ml-2" />
                     إضافة منتج
                   </Button>
                 </Link>
