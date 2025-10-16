@@ -40,95 +40,111 @@ const Index = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20 lg:py-32">
-        <div className="text-center max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-8 animate-fade-in">
-            <Zap className="w-4 h-4" />
+      <section className="container mx-auto px-4 py-24 lg:py-40">
+        <div className="text-center max-w-5xl mx-auto">
+          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-primary/10 to-secondary/10 text-primary px-6 py-3 rounded-full text-base font-semibold mb-10 animate-fade-in shadow-sm">
+            <Zap className="w-5 h-5" />
             إطلاق ميزات جديدة للتجارة الإلكترونية
           </div>
           
-          <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-tight animate-fade-in">
-            أنشئ متجرك الإلكتروني خلال دقائق،
-            <span className="text-gradient block bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"> وابدأ البيع اليوم</span>
+          <h1 className="text-6xl md:text-8xl font-bold mb-10 leading-[1.1] animate-fade-in">
+            أنشئ متجرك الإلكتروني
+            <span className="block mt-2">خلال دقائق،</span>
+            <span className="text-gradient block mt-2 bg-gradient-to-r from-primary via-primary to-secondary bg-clip-text text-transparent">وابدأ البيع اليوم</span>
           </h1>
           
-          <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed animate-fade-in">
-            منصة متكاملة تساعدك على بناء، إدارة، وتطوير متجرك بكل سهولة — بدون أي خبرة تقنية.
+          <p className="text-2xl md:text-3xl text-gray-700 mb-16 max-w-4xl mx-auto leading-relaxed animate-fade-in font-medium">
+            منصة متكاملة تساعدك على بناء وإدارة وتطوير متجرك بكل سهولة
+            <span className="block mt-2 text-gray-600">بدون أي خبرة تقنية</span>
           </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Link to="/signup">
+              <Button size="lg" className="text-xl px-10 py-7 rounded-2xl bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 shadow-lg hover:shadow-xl transition-all">
+                ابدأ مجاناً الآن
+                <ArrowLeft className="mr-2 h-6 w-6" />
+              </Button>
+            </Link>
+            <Link to="/login">
+              <Button variant="outline" size="lg" className="text-xl px-10 py-7 rounded-2xl border-2 hover:bg-gray-50">
+                لدي حساب بالفعل
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-gray-50">
+      <section id="features" className="py-28 bg-gradient-to-b from-gray-50 to-white">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">كل ما يحتاجه متجرك في مكان واحد</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              من إدارة الطلبات إلى تحليل بيانات العملاء — كل الأدوات التي تحتاجها لبناء متجرك وتنميته
+          <div className="text-center mb-20">
+            <h2 className="text-5xl md:text-6xl font-bold mb-8 leading-tight">كل ما يحتاجه متجرك<span className="block mt-2">في مكان واحد</span></h2>
+            <p className="text-2xl text-gray-700 max-w-4xl mx-auto leading-relaxed font-medium">
+              من إدارة الطلبات إلى تحليل بيانات العملاء
             </p>
-            <p className="text-lg text-gray-500 mt-4 max-w-4xl mx-auto">
-              حلول متكاملة لإدارة عملياتك، وتحليل أدائك، وتحقيق نموك بثقة
+            <p className="text-xl text-gray-600 mt-4 max-w-4xl mx-auto leading-relaxed">
+              كل الأدوات التي تحتاجها لبناء متجرك وتنميته بثقة
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-            <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 group">
-              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
-                <Package className="w-6 h-6 text-primary" />
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10 max-w-7xl mx-auto">
+            <div className="bg-white p-10 rounded-3xl shadow-md hover:shadow-2xl transition-all duration-300 group border border-gray-100">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                <Package className="w-8 h-8 text-primary" />
               </div>
-              <h3 className="text-xl font-bold mb-4">إدارة منتجات ذكية وسهلة</h3>
-              <p className="text-gray-600 leading-relaxed">
+              <h3 className="text-2xl font-bold mb-5 text-gray-900">إدارة منتجات ذكية وسهلة</h3>
+              <p className="text-gray-600 leading-relaxed text-lg">
                 نظّم مخزونك وتابع منتجاتك بخطوات بسيطة. قل وداعًا للأخطاء اليدوية، ومرحبًا بالكفاءة.
               </p>
             </div>
             
-            <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 group">
-              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
-                <BarChart3 className="w-6 h-6 text-primary" />
+            <div className="bg-white p-10 rounded-3xl shadow-md hover:shadow-2xl transition-all duration-300 group border border-gray-100">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                <BarChart3 className="w-8 h-8 text-primary" />
               </div>
-              <h3 className="text-xl font-bold mb-4">تحليلات لحظية تقود قراراتك</h3>
-              <p className="text-gray-600 leading-relaxed">
-                لوحات بيانات تفاعلية تُمكِّنك من تتبع الأداء المالي والتشغيلي في الوقت الفعلي، لتصنع قرارات مدروسة بثقة.
+              <h3 className="text-2xl font-bold mb-5 text-gray-900">تحليلات لحظية تقود قراراتك</h3>
+              <p className="text-gray-600 leading-relaxed text-lg">
+                لوحات بيانات تفاعلية تُمكِّنك من تتبع الأداء المالي والتشغيلي في الوقت الفعلي.
               </p>
             </div>
             
-            <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 group">
-              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
-                <Lock className="w-6 h-6 text-primary" />
+            <div className="bg-white p-10 rounded-3xl shadow-md hover:shadow-2xl transition-all duration-300 group border border-gray-100">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                <Lock className="w-8 h-8 text-primary" />
               </div>
-              <h3 className="text-xl font-bold mb-4">راحة بالك تبدأ من هنا</h3>
-              <p className="text-gray-600 leading-relaxed">
-                بياناتك وبيانات عملائك في أيدٍ أمينة – مع نظام حماية متكامل
+              <h3 className="text-2xl font-bold mb-5 text-gray-900">راحة بالك تبدأ من هنا</h3>
+              <p className="text-gray-600 leading-relaxed text-lg">
+                بياناتك وبيانات عملائك في أيدٍ أمينة مع نظام حماية متكامل.
               </p>
             </div>
             
-            <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 group">
-              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
-                <Palette className="w-6 h-6 text-primary" />
+            <div className="bg-white p-10 rounded-3xl shadow-md hover:shadow-2xl transition-all duration-300 group border border-gray-100">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                <Palette className="w-8 h-8 text-primary" />
               </div>
-              <h3 className="text-xl font-bold mb-4">تصميم متجرك في دقائق بدون برمجة أو تعقيد</h3>
-              <p className="text-gray-600 leading-relaxed">
-                صمّم متجرك بنفسك دون أي خبرة تقنية واجهة سهلة وبسيطة يمنحك تحكمًا كاملاً بتصميم متجرك
+              <h3 className="text-2xl font-bold mb-5 text-gray-900">تصميم بدون برمجة</h3>
+              <p className="text-gray-600 leading-relaxed text-lg">
+                صمّم متجرك بنفسك دون أي خبرة تقنية. واجهة سهلة تمنحك تحكماً كاملاً.
               </p>
             </div>
             
-            <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 group">
-              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
-                <Headphones className="w-6 h-6 text-primary" />
+            <div className="bg-white p-10 rounded-3xl shadow-md hover:shadow-2xl transition-all duration-300 group border border-gray-100">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                <Headphones className="w-8 h-8 text-primary" />
               </div>
-              <h3 className="text-xl font-bold mb-4">دعم فني حقيقي وشخصي</h3>
-              <p className="text-gray-600 leading-relaxed">
-                فريق دعم متجاوب وسريع يساعدك خطوة بخطوة في رحلتك التجارية
+              <h3 className="text-2xl font-bold mb-5 text-gray-900">دعم فني حقيقي</h3>
+              <p className="text-gray-600 leading-relaxed text-lg">
+                فريق دعم متجاوب وسريع يساعدك خطوة بخطوة في رحلتك التجارية.
               </p>
             </div>
             
-            <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 group">
-              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
-                <TrendingUp className="w-6 h-6 text-primary" />
+            <div className="bg-white p-10 rounded-3xl shadow-md hover:shadow-2xl transition-all duration-300 group border border-gray-100">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                <TrendingUp className="w-8 h-8 text-primary" />
               </div>
-              <h3 className="text-xl font-bold mb-4">تابع أداء متجرك لحظة بلحظة</h3>
-              <p className="text-gray-600 leading-relaxed">
-                تحليلات حيّة ولوحات بيانات تساعدك على اتخاذ قرارات ذكية بثقة
+              <h3 className="text-2xl font-bold mb-5 text-gray-900">تابع أداء متجرك لحظياً</h3>
+              <p className="text-gray-600 leading-relaxed text-lg">
+                تحليلات حيّة ولوحات بيانات تساعدك على اتخاذ قرارات ذكية بثقة.
               </p>
             </div>
           </div>
@@ -136,11 +152,11 @@ const Index = () => {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-20">
+      <section id="pricing" className="py-28 bg-gradient-to-b from-white to-gray-50">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">خطط تسعير واضحة، تناسب كل مرحلة من نموك</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+          <div className="text-center mb-20">
+            <h2 className="text-5xl md:text-6xl font-bold mb-8 leading-tight">خطط تسعير واضحة<span className="block mt-2">تناسب كل مرحلة من نموك</span></h2>
+            <p className="text-2xl text-gray-700 max-w-4xl mx-auto leading-relaxed font-medium">
               اختر الخطة التي تناسب حجم أعمالك واحتياجاتك، وابدأ بثقة
             </p>
           </div>
@@ -280,70 +296,17 @@ const Index = () => {
         </div>
       </section>
 
-      {/* FAQ Section */}
-      <section className="py-20 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">الأسئلة الشائعة</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              كل ما تحتاج معرفته عن باقاتنا ومنصتنا
-            </p>
-          </div>
-          
-          <div className="max-w-4xl mx-auto space-y-8">
-            {/* FAQ Item 1 */}
-            <div className="bg-white rounded-2xl p-8 shadow-sm">
-              <h3 className="text-2xl font-bold mb-4 text-primary">❓ ما المقصود بـ عدد الطلبات؟</h3>
-              <p className="text-gray-700 mb-4 leading-relaxed">
-                هو الحد الأقصى المسموح به للطلبات التي يمكن لمتجرك استقبالها شهرياً ضمن الباقة الحالية.
-              </p>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                <p className="text-green-800 font-medium">
-                  ✅ إذا تجاوزت هذا الحد، سيستمر متجرك باستقبال الطلبات بشكل طبيعي، لكن لا يمكن تجديد الاشتراك أو الاستمرار في نفس الباقة بعد انتهائها، إلا من خلال الترقية إلى باقة أعلى تناسب حجم مبيعاتك المتزايد.
-                </p>
-              </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-blue-800">
-                  💡 هدفنا أن لا نعيق نمو متجرك، بل نمنحك المرونة لتتوسع أولاً، ثم تقرر الترقية لاحقاً بكل سهولة.
-                </p>
-              </div>
-            </div>
-            
-            {/* FAQ Item 2 */}
-            <div className="bg-white rounded-2xl p-8 shadow-sm">
-              <h3 className="text-2xl font-bold mb-4 text-primary">❓ ما معنى عدد المنتجات؟</h3>
-              <p className="text-gray-700 mb-4 leading-relaxed">
-                هو الحد الأقصى لعدد المنتجات المختلفة التي يمكنك عرضها في متجرك.
-              </p>
-              <p className="text-gray-700 mb-4 leading-relaxed">
-                مثلاً، إذا كانت الباقة تدعم 75 منتجاً، فيمكنك عرض 75 صنفاً مختلفاً.
-              </p>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                <p className="text-green-800 font-medium">
-                  ✅ بإمكانك داخل كل منتج إضافة خيارات متعددة (مثل القياسات، الألوان، الأحجام) دون أن يُحسب كمنتج إضافي – يظل منتجاً واحداً مهما اختلفت نسخه.
-                </p>
-              </div>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-red-800">
-                  🚫 عند الوصول للحد الأقصى، لن تتمكن من إضافة منتجات جديدة إلا بعد حذف منتج قديم أو ترقية الباقة لعدد أكبر من المنتجات.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-16">
+      <footer className="bg-gradient-to-br from-gray-900 to-gray-800 text-white py-20">
         <div className="container mx-auto px-4">
           <div className="text-center">
-            <div className="flex items-center justify-center gap-2 mb-6">
-              <img src="/lovable-uploads/f51ae0c5-1208-4965-a0c7-85a6d908ceb1.png" alt="بداية" className="h-16 w-auto" />
+            <div className="flex items-center justify-center gap-2 mb-8">
+              <img src="/lovable-uploads/f51ae0c5-1208-4965-a0c7-85a6d908ceb1.png" alt="بداية" className="h-20 w-auto" />
             </div>
-            <p className="text-gray-400 mb-8 max-w-md mx-auto text-lg">
+            <p className="text-gray-300 mb-10 max-w-lg mx-auto text-xl leading-relaxed">
               منصة شاملة لإنشاء وإدارة المتاجر الإلكترونية بكل سهولة واحترافية
             </p>
-            <div className="text-sm text-gray-500">
+            <div className="text-base text-gray-400">
               جميع الحقوق محفوظة © 2025 نومو. منصة المتاجر الإلكترونية
             </div>
           </div>
