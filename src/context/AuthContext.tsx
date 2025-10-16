@@ -34,60 +34,64 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Initialize auth state from Supabase
+  // Initialize auth state from Supabase (listener first, then session)
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          // Get user profile
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .maybeSingle();
+    // 1) Listen for auth changes (sync updates only)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        const meta: any = session.user.user_metadata ?? {};
+        // Set a minimal user immediately so the app doesn't depend on profiles
+        setUser({
+          id: session.user.id,
+          username: meta.username || session.user.email?.split('@')[0] || 'مستخدم',
+          store_name: meta.store_name
+        });
 
-          if (profile) {
-            setUser({
-              id: profile.id,
-              username: profile.username,
-              store_name: profile.store_name
-            });
+        // Defer fetching profile to avoid deadlocks in the callback
+        setTimeout(async () => {
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .maybeSingle();
+
+            if (profile) {
+              setUser({ id: profile.id, username: profile.username, store_name: profile.store_name });
+            }
+          } catch (e) {
+            // Silent fail – profile table may not exist yet
+            console.warn('Profile fetch skipped/failed:', e);
           }
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initializeAuth();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .maybeSingle();
-
-        if (profile) {
-          setUser({
-            id: profile.id,
-            username: profile.username,
-            store_name: profile.store_name
-          });
-        }
+        }, 0);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
       }
     });
 
+    // 2) Then check for existing session
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        if (session?.user) {
+          const meta: any = session.user.user_metadata ?? {};
+          setUser({
+            id: session.user.id,
+            username: meta.username || session.user.email?.split('@')[0] || 'مستخدم',
+            store_name: meta.store_name
+          });
+        } else {
+          setUser(null);
+        }
+      })
+      .catch((error) => {
+        console.error('Error initializing auth:', error);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+
     return () => subscription.unsubscribe();
   }, []);
-
   const login = async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
