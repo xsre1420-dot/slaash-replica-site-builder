@@ -94,26 +94,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
   const login = async (email: string, password: string) => {
     try {
-      // Try Supabase auth first
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
       
       if (error) {
-        // If auth fails, allow entry with a local user
-        console.warn('Supabase auth failed, using local session:', error.message);
-        setUser({
-          id: crypto.randomUUID(),
-          username: email.split('@')[0] || 'مستخدم',
-          store_name: 'متجري'
-        });
-        return {};
+        // If Supabase is unreachable, allow local fallback
+        if (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('Failed')) {
+          console.warn('Supabase unreachable, using local session');
+          setUser({
+            id: crypto.randomUUID(),
+            username: email.split('@')[0] || 'مستخدم',
+            store_name: 'متجري'
+          });
+          return {};
+        }
+        return { error: error.message };
       }
       
       return {};
     } catch (error) {
-      // On any error, still allow entry
+      // Network error fallback
       setUser({
         id: crypto.randomUUID(),
         username: email.split('@')[0] || 'مستخدم',

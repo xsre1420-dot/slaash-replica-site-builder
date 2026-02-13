@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, User, Lock } from "lucide-react";
+import { ArrowLeft, Mail, Lock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -7,6 +7,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -19,7 +20,6 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Redirect if already logged in
   useEffect(() => {
     if (user) {
       navigate("/builder");
@@ -58,116 +58,113 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex flex-col font-arabic">
+    <div className="min-h-screen bg-background flex flex-col font-arabic relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-secondary/5 rounded-full blur-3xl" />
+      </div>
+
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md text-gray-800 py-6 px-6 text-center border-b border-gray-100/50">
-        <div className="flex items-center justify-center gap-3">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg">
-            <div className="w-5 h-5 bg-white rounded-sm"></div>
+      <header className="relative z-10 py-6 px-6">
+        <div className="flex items-center justify-between max-w-md mx-auto">
+          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-foreground">نومو</h1>
+            <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-primary-foreground" />
+            </div>
           </div>
-          <h1 className="text-2xl font-bold text-gray-800">نومو</h1>
         </div>
-        <p className="text-sm text-gray-600 mt-2">منصة إدارة المتاجر الإلكترونية</p>
       </header>
 
-      <div className="flex-1 flex flex-col items-center justify-center p-6">
-        <div className="w-full max-w-md">
-          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100/50 backdrop-blur-lg">
-            {/* Login Header */}
-            <div className="text-center p-8 bg-gradient-to-br from-primary to-secondary relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 backdrop-blur-sm"></div>
-              <div className="relative z-10">
-                <h2 className="text-3xl font-bold mb-3 text-white">
-                  تسجيل الدخول
-                </h2>
-                <p className="text-white/90">
-                  أدخل بيانات الدخول لإدارة متجرك الإلكتروني
-                </p>
-              </div>
-            </div>
+      <div className="flex-1 flex flex-col items-center justify-center p-6 relative z-10">
+        <div className="w-full max-w-md animate-fade-in">
+          {/* Welcome text */}
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-foreground mb-2">مرحباً بعودتك 👋</h2>
+            <p className="text-muted-foreground text-lg">سجّل دخولك لإدارة متجرك</p>
+          </div>
 
+          <div className="bg-card rounded-3xl shadow-lg border border-border/50 overflow-hidden">
             <form onSubmit={handleSubmit} className="p-8">
-              {/* Error Alert */}
               {error && (
-                <Alert className="mb-6 bg-red-50 border-red-200 text-right rounded-xl">
-                  <div className="flex items-center">
-                    <AlertDescription className="flex-1 text-red-800">⚠️ {error}</AlertDescription>
-                  </div>
+                <Alert className="mb-6 bg-destructive/10 border-destructive/20 text-right rounded-xl">
+                  <AlertDescription className="text-destructive">⚠️ {error}</AlertDescription>
                 </Alert>
               )}
 
-              {/* Email Input */}
-              <div className="mb-6">
-                <label htmlFor="email" className="block text-right text-gray-700 mb-3 font-semibold">
-                  البريد الإلكتروني
-                </label>
-                <div className="relative">
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="أدخل البريد الإلكتروني"
-                    className="pl-12 pr-4 py-4 text-right text-gray-800 border-gray-200 rounded-xl focus:border-primary focus:ring-primary bg-gray-50/50 text-lg"
-                    dir="rtl"
+              <div className="space-y-5">
+                {/* Email */}
+                <div>
+                  <label htmlFor="email" className="block text-right text-foreground mb-2 font-medium text-sm">
+                    البريد الإلكتروني
+                  </label>
+                  <div className="relative">
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="أدخل البريد الإلكتروني"
+                      className="pl-12 pr-4 py-3 text-right bg-muted/50 border-border rounded-xl focus:border-primary focus:ring-primary text-foreground"
+                      dir="rtl"
+                      disabled={isLoading}
+                    />
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  </div>
+                </div>
+
+                {/* Password */}
+                <div>
+                  <label htmlFor="password" className="block text-right text-foreground mb-2 font-medium text-sm">
+                    كلمة المرور
+                  </label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="أدخل كلمة المرور"
+                      className="pl-12 pr-4 py-3 text-right bg-muted/50 border-border rounded-xl focus:border-primary focus:ring-primary text-foreground"
+                      dir="rtl"
+                      disabled={isLoading}
+                    />
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  </div>
+                </div>
+
+                {/* Remember Me */}
+                <div className="flex items-center justify-end gap-2">
+                  <label htmlFor="remember-me" className="text-sm text-muted-foreground cursor-pointer">
+                    تذكر تسجيل الدخول
+                  </label>
+                  <Checkbox 
+                    id="remember-me" 
+                    checked={rememberMe}
+                    onCheckedChange={(checked) => setRememberMe(checked === true)}
                     disabled={isLoading}
+                    className="border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                   />
-                  <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-primary h-5 w-5" />
                 </div>
               </div>
 
-              {/* Password Input */}
-              <div className="mb-6">
-                <label htmlFor="password" className="block text-right text-gray-700 mb-3 font-semibold">
-                  كلمة المرور
-                </label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="أدخل كلمة المرور"
-                    className="pl-12 pr-4 py-4 text-right text-gray-800 border-gray-200 rounded-xl focus:border-primary focus:ring-primary bg-gray-50/50 text-lg"
-                    dir="rtl"
-                    disabled={isLoading}
-                  />
-                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-primary h-5 w-5" />
-                </div>
-              </div>
-
-              {/* Remember Me Checkbox */}
-              <div className="flex items-center justify-end mb-8">
-                <label htmlFor="remember-me" className="ml-3 text-sm text-gray-600 font-medium">
-                  تذكر تسجيل الدخول
-                </label>
-                <Checkbox 
-                  id="remember-me" 
-                  checked={rememberMe}
-                  onCheckedChange={(checked) => setRememberMe(checked === true)}
-                  disabled={isLoading}
-                  className="border-primary data-[state=checked]:bg-primary"
-                />
-              </div>
-
-              {/* Submit Button */}
+              {/* Submit */}
               <Button 
                 type="submit" 
-                className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+                className="w-full mt-8 bg-primary hover:bg-primary/90 text-primary-foreground py-3 text-base font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-300"
                 disabled={isLoading}
               >
                 <span className="ml-2">
-                  {isLoading 
-                    ? "جارٍ المعالجة..." 
-                    : "تسجيل الدخول"
-                  }
+                  {isLoading ? "جارٍ المعالجة..." : "تسجيل الدخول"}
                 </span>
-                <ArrowLeft className="h-5 w-5" />
+                <ArrowLeft className="h-4 w-4" />
               </Button>
 
               {/* Signup Link */}
               <div className="text-center mt-6">
-                <p className="text-gray-600 text-sm">
+                <p className="text-muted-foreground text-sm">
                   لا تملك حساب؟{" "}
                   <Link 
                     to="/signup" 
@@ -183,8 +180,8 @@ const Login = () => {
       </div>
 
       {/* Footer */}
-      <footer className="bg-white/80 backdrop-blur-md text-center py-6 text-gray-600 text-sm border-t border-gray-200/50">
-        <p>جميع الحقوق محفوظة © 2025 نومو - منصة المتاجر الإلكترونية</p>
+      <footer className="relative z-10 text-center py-6 text-muted-foreground text-sm">
+        <p>جميع الحقوق محفوظة © 2025 نومو</p>
       </footer>
     </div>
   );
