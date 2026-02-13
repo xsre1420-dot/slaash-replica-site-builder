@@ -18,11 +18,12 @@ import { addCategory, updateCategory, deleteCategory } from "@/data/dummyData";
 interface CategoryDialogProps {
   categories: Category[];
   onCategoryChange: () => void;
+  onAddLocalCategory?: (category: Category) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const CategoryDialog = ({ categories, onCategoryChange, open, onOpenChange }: CategoryDialogProps) => {
+const CategoryDialog = ({ categories, onCategoryChange, onAddLocalCategory, open, onOpenChange }: CategoryDialogProps) => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -45,40 +46,29 @@ const CategoryDialog = ({ categories, onCategoryChange, open, onOpenChange }: Ca
     
     setLoading(true);
     
-    const categoryId = newCategory.name
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "");
-    
     const newCategoryObject: Category = {
-      id: categoryId,
+      id: crypto.randomUUID(),
       name: newCategory.name.trim(),
       order: categories.length,
     };
     
+    // Try Supabase first, fallback to local
     const result = await addCategory(newCategoryObject);
     
     if (result.success) {
       onCategoryChange();
       setNewCategory({ name: "" });
       setIsAddDialogOpen(false);
-      
-      toast({
-        title: "تم بنجاح",
-        description: "تمت إضافة الفئة الجديدة",
-      });
-      
-      // Force reload categories after a short delay
-      setTimeout(() => {
-        onCategoryChange();
-      }, 500);
+      toast({ title: "تم بنجاح", description: "تمت إضافة الفئة الجديدة" });
+      setTimeout(() => onCategoryChange(), 500);
+    } else if (onAddLocalCategory) {
+      // Fallback: add locally
+      onAddLocalCategory(newCategoryObject);
+      setNewCategory({ name: "" });
+      setIsAddDialogOpen(false);
+      toast({ title: "تم بنجاح", description: "تمت إضافة الفئة الجديدة" });
     } else {
-      toast({
-        title: "خطأ",
-        description: result.error || "فشل في إضافة الفئة",
-        variant: "destructive",
-      });
+      toast({ title: "خطأ", description: "فشل في إضافة الفئة", variant: "destructive" });
     }
     
     setLoading(false);
