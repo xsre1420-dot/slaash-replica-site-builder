@@ -1,14 +1,23 @@
 
 import { Link } from "react-router-dom";
-import { Calendar, Eye, List, Plus, Tag, Settings, BarChart3, Users, Copy, Check, Package, Archive, TrendingUp } from "lucide-react";
+import { Eye, List, Plus, Settings, BarChart3, Copy, Check, Package, Archive, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import StoreHeader from "@/components/StoreHeader";
 import { useStore } from "@/context/StoreContext";
 import { useAuth } from "@/context/AuthContext";
 import { useState } from "react";
 import { toast } from "sonner";
 import platformLogo from "@/assets/platform-logo.png";
+import { ThemeToggle } from "@/components/ThemeToggle";
+
+const dashboardCards = [
+  { to: "/orders", icon: List, label: "الطلبات", desc: "إدارة الطلبات", gradient: "from-primary to-secondary" },
+  { to: "/products", icon: Package, label: "المنتجات", desc: "إدارة المنتجات", gradient: "from-amber-500 to-orange-500" },
+  { to: "/settings", icon: Settings, label: "الإعدادات", desc: "إعدادات المتجر", gradient: "from-cyan-500 to-teal-500" },
+  { to: "/statistics", icon: BarChart3, label: "الإحصائيات", desc: "تقارير وإحصاءات", gradient: "from-blue-500 to-indigo-600" },
+  { to: "/marketing", icon: TrendingUp, label: "التسويق", desc: "كوبونات وإعلانات", gradient: "from-pink-500 to-rose-500" },
+  { to: "/inventory", icon: Archive, label: "المخزون", desc: "إدارة المخزون", gradient: "from-emerald-500 to-green-600" },
+];
 
 export default function Builder() {
   const { storeName, storeLogo, updateStore } = useStore();
@@ -16,10 +25,11 @@ export default function Builder() {
   const [copied, setCopied] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-50 font-arabic">
-      {/* Modern Store Header - White Background */}
-      <div className="bg-white shadow-sm">
+    <div className="min-h-screen bg-background font-arabic">
+      {/* Header */}
+      <div className="bg-card border-b border-border">
         <div className="flex items-center justify-between px-4 py-2">
+          <ThemeToggle />
           <StoreHeader 
             storeName={storeName} 
             storeLogo={storeLogo} 
@@ -29,155 +39,78 @@ export default function Builder() {
       </div>
       
       {/* Main Content */}
-      <div className="p-6 max-w-6xl mx-auto">
-          {/* Modern Store Link Card */}
-          <div className="bg-white rounded-3xl p-8 mb-8 max-w-3xl mx-auto">
-            <div className="text-center mb-8">
-              <div className="w-48 h-48 flex items-center justify-center mx-auto">
-                <img src={platformLogo} alt="بيلانة" className="w-full h-full object-contain" />
-              </div>
-            </div>
-            
-            <div className="flex flex-col items-center gap-4 max-w-xl mx-auto">
-              <Button 
-                size="lg"
-                className={`w-full transition-all duration-300 rounded-2xl px-8 py-5 text-base shadow-md ${
-                  copied 
-                    ? 'bg-green-500 hover:bg-green-600 text-white scale-105 shadow-green-200' 
-                    : 'bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-200 hover:border-primary/40 hover:shadow-lg'
-                }`}
-                onClick={async () => {
-                  if (user) {
-                    try {
-                      await navigator.clipboard.writeText(`${window.location.origin}/store/${user.username}`);
-                      setCopied(true);
-                      toast.success("تم نسخ الرابط بنجاح!");
-                      setTimeout(() => setCopied(false), 2000);
-                    } catch (error) {
-                      toast.error("فشل في نسخ الرابط");
-                    }
-                  }
-                }}
-              >
-                {copied ? (
-                  <>
-                    <Check className="w-5 h-5 ml-2" />
-                    تم النسخ بنجاح
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-5 h-5 ml-2" />
-                    نسخ رابط المتجر
-                  </>
-                )}
-              </Button>
-              
-              {/* Quick Action Buttons */}
-              <div className="grid grid-cols-2 gap-4 w-full">
-                <Link to="/preview" className="w-full">
-                  <Button variant="outline" className="w-full h-14 text-base bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-200 hover:border-primary/40 rounded-2xl transition-all shadow-sm hover:shadow-md">
-                    <Eye className="w-5 h-5 ml-2" />
-                    معاينة المتجر
-                  </Button>
-                </Link>
-                <Link to="/add-product" className="w-full">
-                  <Button className="w-full h-14 text-base bg-primary hover:bg-primary/90 text-white rounded-2xl shadow-md hover:shadow-lg transition-all border-0">
-                    <Plus className="w-5 h-5 ml-2" />
-                    إضافة منتج
-                  </Button>
-                </Link>
-              </div>
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+        {/* Store Link Card */}
+        <div className="bg-card rounded-3xl p-6 sm:p-8 mb-6 max-w-3xl mx-auto border border-border/50 shadow-sm animate-fade-in">
+          <div className="text-center mb-6">
+            <div className="w-32 h-32 sm:w-40 sm:h-40 flex items-center justify-center mx-auto">
+              <img src={platformLogo} alt="بيلانة" className="w-full h-full object-contain" />
             </div>
           </div>
-
-          {/* Modern Dashboard Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <Link to="/orders" className="group">
-              <div className="bg-white p-6 rounded-3xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-                     style={{ 
-                       background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                       boxShadow: '0 4px 15px rgba(99, 102, 241, 0.2)'
-                     }}>
-                  <List className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="font-bold text-gray-800 mb-1">الطلبات</h3>
-                <p className="text-sm text-gray-500">إدارة الطلبات</p>
-              </div>
-            </Link>
+          
+          <div className="flex flex-col items-center gap-3 max-w-xl mx-auto">
+            <Button 
+              size="lg"
+              className={`w-full transition-all duration-300 rounded-2xl px-6 py-5 text-sm sm:text-base shadow-sm ${
+                copied 
+                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white' 
+                  : 'bg-card hover:bg-muted text-foreground border border-border hover:border-primary/40'
+              }`}
+              onClick={async () => {
+                if (user) {
+                  try {
+                    await navigator.clipboard.writeText(`${window.location.origin}/store/${user.username}`);
+                    setCopied(true);
+                    toast.success("تم نسخ الرابط بنجاح!");
+                    setTimeout(() => setCopied(false), 2000);
+                  } catch (error) {
+                    toast.error("فشل في نسخ الرابط");
+                  }
+                }
+              }}
+            >
+              {copied ? (
+                <><Check className="w-4 h-4 ml-2" />تم النسخ بنجاح</>
+              ) : (
+                <><Copy className="w-4 h-4 ml-2" />نسخ رابط المتجر</>
+              )}
+            </Button>
             
-            
-            <Link to="/products" className="group">
-              <div className="bg-white p-6 rounded-3xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-                     style={{ 
-                       background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                       boxShadow: '0 4px 15px rgba(245, 158, 11, 0.2)'
-                     }}>
-                  <Package className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="font-bold text-gray-800 mb-1">المنتجات</h3>
-                <p className="text-sm text-gray-500">إدارة المنتجات</p>
-              </div>
-            </Link>
-            
-            <Link to="/settings" className="group">
-              <div className="bg-white p-6 rounded-3xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-                     style={{ 
-                       background: 'linear-gradient(135deg, #06b6d4, #0891b2)',
-                       boxShadow: '0 4px 15px rgba(6, 182, 212, 0.2)'
-                     }}>
-                  <Settings className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="font-bold text-gray-800 mb-1">الإعدادات</h3>
-                <p className="text-sm text-gray-500">إعدادات المتجر</p>
-              </div>
-            </Link>
-            
-            <Link to="/statistics" className="group">
-              <div className="bg-white p-6 rounded-3xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1 cursor-pointer">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-                     style={{ 
-                       background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                       boxShadow: '0 4px 15px rgba(59, 130, 246, 0.2)'
-                     }}>
-                  <BarChart3 className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="font-bold text-gray-800 mb-1">الإحصائيات</h3>
-                <p className="text-sm text-gray-500">تقارير وإحصاءات</p>
-              </div>
-            </Link>
-            
-            <Link to="/marketing" className="group">
-              <div className="bg-white p-6 rounded-3xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-                     style={{ 
-                       background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                       boxShadow: '0 4px 15px rgba(245, 158, 11, 0.2)'
-                     }}>
-                  <TrendingUp className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="font-bold text-gray-800 mb-1">التسويق</h3>
-                <p className="text-sm text-gray-500">كوبونات وإعلانات</p>
-              </div>
-            </Link>
-            
-            <Link to="/inventory" className="group">
-              <div className="bg-white p-6 rounded-3xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1 cursor-pointer">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-                     style={{ 
-                       background: 'linear-gradient(135deg, #10b981, #059669)',
-                       boxShadow: '0 4px 15px rgba(16, 185, 129, 0.2)'
-                     }}>
-                  <Archive className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="font-bold text-gray-800 mb-1">المخزون</h3>
-                <p className="text-sm text-gray-500">إدارة المخزون</p>
-              </div>
-            </Link>
+            <div className="grid grid-cols-2 gap-3 w-full">
+              <Link to="/preview" className="w-full">
+                <Button variant="outline" className="w-full h-12 text-sm bg-card hover:bg-muted text-foreground border-border hover:border-primary/40 rounded-2xl transition-all">
+                  <Eye className="w-4 h-4 ml-2" />
+                  معاينة المتجر
+                </Button>
+              </Link>
+              <Link to="/add-product" className="w-full">
+                <Button className="w-full h-12 text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl shadow-md transition-all">
+                  <Plus className="w-4 h-4 ml-2" />
+                  إضافة منتج
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
+
+        {/* Dashboard Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-8">
+          {dashboardCards.map((card, i) => (
+            <Link key={card.to} to={card.to} className="group">
+              <div 
+                className="bg-card p-5 sm:p-6 rounded-2xl border border-border/50 shadow-sm hover:shadow-md transition-all duration-300 group-hover:-translate-y-1 animate-fade-in"
+                style={{ animationDelay: `${i * 80}ms` }}
+              >
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${card.gradient} flex items-center justify-center mb-3 sm:mb-4 shadow-sm`}>
+                  <card.icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                </div>
+                <h3 className="font-bold text-foreground text-sm sm:text-base mb-0.5">{card.label}</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground">{card.desc}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
