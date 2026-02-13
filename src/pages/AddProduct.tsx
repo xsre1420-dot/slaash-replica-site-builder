@@ -89,7 +89,10 @@ const AddProduct = () => {
   const loadCategories = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        // No Supabase user - keep local categories
+        return;
+      }
 
       const { data, error } = await supabase
         .from('categories')
@@ -107,7 +110,7 @@ const AddProduct = () => {
       
       setCategories(mappedCategories);
     } catch (error) {
-      console.error('Error loading categories:', error);
+      console.warn('Using local categories fallback');
     }
   }, []);
 
@@ -413,6 +416,7 @@ const AddProduct = () => {
         <CategoryDialog
           categories={categories}
           onCategoryChange={loadCategories}
+          onAddLocalCategory={(cat) => setCategories(prev => [...prev, cat])}
           open={isCategoryDialogOpen}
           onOpenChange={setIsCategoryDialogOpen}
         />
