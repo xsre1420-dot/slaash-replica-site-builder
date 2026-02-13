@@ -1,6 +1,6 @@
-import { X, ShoppingCart, Plus, Search, Heart, Star } from "lucide-react";
+import { X, ShoppingCart, Plus, Search, Heart, Star, SlidersHorizontal, ArrowUpDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getProductsByCategory, getCategories, loadProducts } from "@/data/dummyData";
 import { Product, Category } from "@/types";
 import { useCart } from "@/context/CartContext";
@@ -8,6 +8,8 @@ import { useStore } from "@/context/StoreContext";
 import MetaPixel from "@/components/MetaPixel";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { Button } from "@/components/ui/button";
+import CartDrawer from "@/components/CartDrawer";
+import WhatsAppButton from "@/components/WhatsAppButton";
 
 const Store = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -16,81 +18,65 @@ const Store = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const { addToCart, cartItems } = useCart();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"default" | "price-asc" | "price-desc">("default");
+  const { addToCart, cartItems, cartCount } = useCart();
   const { storeName, storeLogo, storeSettings } = useStore();
   const { trackAddToCart, trackViewContent } = useMetaPixel();
   const navigate = useNavigate();
 
-  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-
-  // Load categories from Supabase
   useEffect(() => {
     const loadCategoriesData = async () => {
       try {
-        console.log('Store: تحميل الفئات من Supabase...');
         const categoriesData = await getCategories();
-        console.log('Store: تم تحميل', categoriesData.length, 'فئة');
-        // Add "الكل" category at the beginning
-        const allCategories = [
-          { id: "all", name: "الكل", order: -1 },
-          ...categoriesData
-        ];
-        setCategories(allCategories);
-      } catch (error) {
-        console.error('Error loading categories:', error);
+        setCategories([{ id: "all", name: "الكل", order: -1 }, ...categoriesData]);
+      } catch {
         setCategories([{ id: "all", name: "الكل", order: -1 }]);
       }
     };
     loadCategoriesData();
-
-    // Reload categories when window gains focus (user might have added categories in another tab)
-    const handleFocus = () => {
-      console.log('Store: إعادة تحميل الفئات عند التركيز على النافذة');
-      loadCategoriesData();
-    };
-
+    const handleFocus = () => loadCategoriesData();
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
-  // Only use banner images from settings
   const bannerImages = storeSettings.bannerImages || [];
 
-  // Load products based on selected category
   useEffect(() => {
     const loadProductsData = async () => {
-      await loadProducts(); // Ensure products are loaded from Supabase
+      await loadProducts();
       setProducts(getProductsByCategory(selectedCategory));
     };
     loadProductsData();
   }, [selectedCategory]);
 
-  // Handle adding a product to the cart
+  // Filtered & sorted products
+  const displayProducts = useMemo(() => {
+    let filtered = products;
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      filtered = filtered.filter(p => p.name.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q));
+    }
+    if (sortBy === "price-asc") filtered = [...filtered].sort((a, b) => a.price - b.price);
+    if (sortBy === "price-desc") filtered = [...filtered].sort((a, b) => b.price - a.price);
+    return filtered;
+  }, [products, searchQuery, sortBy]);
+
   const handleAddToCart = (product: Product) => {
     addToCart(product);
-    // Track Meta Pixel event
     trackAddToCart(product.id, product.name, product.price);
   };
 
-  // Navigate to product details
   const handleViewProduct = (productId: string) => {
     const product = products.find(p => p.id === productId);
-    if (product) {
-      trackViewContent(product.id, product.name, product.price);
-    }
+    if (product) trackViewContent(product.id, product.name, product.price);
     navigate(`/product-details/${productId}`);
   };
 
-  // Toggle favorite
   const toggleFavorite = (productId: string) => {
-    setFavorites(prev => 
-      prev.includes(productId) 
-        ? prev.filter(id => id !== productId)
-        : [...prev, productId]
-    );
+    setFavorites(prev => prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]);
   };
 
-  // Auto-rotate banner images
   useEffect(() => {
     if (bannerImages.length > 1) {
       const interval = setInterval(() => {
@@ -104,103 +90,102 @@ const Store = () => {
     }
   }, [bannerImages.length]);
 
-  // Handle manual image navigation
   const handleImageNavigation = (index: number) => {
     if (index !== currentImageIndex) {
       setIsTransitioning(true);
-      setTimeout(() => {
-        setCurrentImageIndex(index);
-        setIsTransitioning(false);
-      }, 150);
+      setTimeout(() => { setCurrentImageIndex(index); setIsTransitioning(false); }, 150);
     }
   };
 
+  const cycleSortBy = () => {
+    setSortBy(prev => prev === "default" ? "price-asc" : prev === "price-asc" ? "price-desc" : "default");
+  };
+
+  const sortLabel = sortBy === "price-asc" ? "الأقل سعراً" : sortBy === "price-desc" ? "الأعلى سعراً" : "ترتيب";
+
   return (
-    <div 
-      className="min-h-screen"
-      style={{ 
-        backgroundColor: storeSettings.menuBackgroundColor,
-        color: storeSettings.menuTextColor 
-      }}
-    >
-      {/* Meta Pixel Integration */}
+    <div className="min-h-screen" style={{ backgroundColor: storeSettings.menuBackgroundColor, color: storeSettings.menuTextColor }}>
       <MetaPixel />
-      {/* Customer Header - No admin links */}
+
+      {/* Header */}
       <div className="bg-white shadow-sm sticky top-0 z-40">
-        <div className="px-6 py-4">
-          <div className="flex justify-between items-center mb-4">
-            {storeLogo && (
-              <img src={storeLogo} alt="Store Logo" className="w-12 h-12 rounded-full object-cover" />
-            )}
-            <div className="text-center flex-1">
-              <p className="font-bold text-xl text-gray-800">{storeName}</p>
+        <div className="px-4 py-3">
+          <div className="flex justify-between items-center mb-3">
+            <CartDrawer>
+              <button className="relative p-2 rounded-full hover:bg-gray-100 transition-colors">
+                <ShoppingCart className="w-5 h-5 text-gray-700" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 bg-primary text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
+            </CartDrawer>
+            <div className="text-center flex-1 flex items-center justify-center gap-2">
+              {storeLogo && <img src={storeLogo} alt="" className="w-8 h-8 rounded-full object-cover" />}
+              <p className="font-bold text-lg text-gray-800">{storeName}</p>
             </div>
+            <div className="w-10" />
           </div>
           
-          {/* Search Bar */}
+          {/* Search */}
           <div className="relative">
-            <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="search"
               placeholder="ابحث عن منتج..."
-              className="w-full h-12 pr-12 pl-4 rounded-2xl bg-gray-100 border-0 text-right placeholder-gray-500 focus:ring-2 focus:ring-orange-500 focus:bg-white transition-all"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-10 pr-10 pl-4 rounded-xl bg-gray-100 border-0 text-right text-sm placeholder-gray-400 focus:ring-2 focus:ring-primary/30 focus:bg-white transition-all"
             />
           </div>
         </div>
       </div>
 
       {/* Categories */}
-      <div className="px-6 py-4">
-        <div className="flex gap-3 overflow-x-auto pb-2 justify-start">
-          {categories.map((category) => (
+      <div className="px-4 pt-3 pb-1">
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          {categories.map((cat) => (
             <button 
-              key={category.id}
-              className={`px-6 py-3 rounded-2xl transition-all duration-200 whitespace-nowrap text-sm font-medium min-w-fit flex items-center justify-center ${
-                selectedCategory === category.id 
-                  ? "text-white" 
-                  : "bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 hover:border-gray-300"
+              key={cat.id}
+              className={`px-4 py-2 rounded-xl transition-all duration-200 whitespace-nowrap text-xs font-medium ${
+                selectedCategory === cat.id 
+                  ? "bg-primary text-white shadow-sm" 
+                  : "bg-white hover:bg-gray-50 border border-gray-200 text-gray-600"
               }`}
-              style={{
-                backgroundColor: selectedCategory === category.id ? 'hsl(248, 53%, 58%)' : undefined
-              }}
-              onClick={() => setSelectedCategory(category.id)}
+              onClick={() => setSelectedCategory(cat.id)}
             >
-              {category.name}
+              {cat.name}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Banner Images */}
+      {/* Sort bar */}
+      <div className="px-4 pb-2">
+        <button
+          onClick={cycleSortBy}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            sortBy !== "default" ? "bg-primary/10 text-primary" : "bg-gray-100 text-gray-500"
+          }`}
+        >
+          <ArrowUpDown className="w-3 h-3" />
+          {sortLabel}
+        </button>
+      </div>
+
+      {/* Banner */}
       {bannerImages.length > 0 && (
-        <div className="px-6 mb-6">
-          <div className="relative h-48 overflow-hidden rounded-3xl">
-            <div 
-              className={`w-full h-full transition-all duration-150 ease-in-out transform ${
-                isTransitioning ? 'opacity-95 scale-105' : 'opacity-100 scale-100'
-              }`}
-            >
-              <img
-                src={bannerImages[currentImageIndex]}
-                alt="Store Banner"
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
+        <div className="px-4 mb-4">
+          <div className="relative h-40 sm:h-48 overflow-hidden rounded-2xl">
+            <div className={`w-full h-full transition-all duration-150 ${isTransitioning ? 'opacity-95 scale-105' : 'opacity-100 scale-100'}`}>
+              <img src={bannerImages[currentImageIndex]} alt="Banner" className="w-full h-full object-cover" loading="lazy" />
             </div>
-            
-            {/* Image Navigation Dots */}
             {bannerImages.length > 1 && (
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-3">
-                {bannerImages.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleImageNavigation(index)}
-                    className={`transition-all duration-150 ease-in-out rounded-full ${
-                      currentImageIndex === index 
-                        ? "bg-white w-8 h-3 shadow-lg" 
-                        : "bg-white/70 w-3 h-3 hover:bg-white/90 hover:scale-110"
-                    }`}
-                  />
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
+                {bannerImages.map((_, i) => (
+                  <button key={i} onClick={() => handleImageNavigation(i)}
+                    className={`transition-all rounded-full ${currentImageIndex === i ? "bg-white w-6 h-2" : "bg-white/60 w-2 h-2"}`} />
                 ))}
               </div>
             )}
@@ -208,83 +193,64 @@ const Store = () => {
         </div>
       )}
 
-      {/* Products Grid */}
-      <div className="px-6 pb-24">
-        {products.length === 0 ? (
+      {/* Products */}
+      <div className="px-4 pb-24">
+        {displayProducts.length === 0 ? (
           <div className="text-center py-16">
-            <div className="w-20 h-20 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
-              <div className="text-4xl">🍽️</div>
-            </div>
-            <h3 className="text-xl font-bold mb-2" style={{ color: storeSettings.menuTextColor }}>
-              لا توجد منتجات في هذا القسم
+            <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center text-3xl">🛍️</div>
+            <h3 className="text-lg font-bold mb-1" style={{ color: storeSettings.menuTextColor }}>
+              {searchQuery ? "لا توجد نتائج" : "لا توجد منتجات"}
             </h3>
-            <p className="text-gray-500">تصفح الأقسام الأخرى لمشاهدة المنتجات المتوفرة</p>
+            <p className="text-gray-500 text-sm">
+              {searchQuery ? "جرب كلمات بحث مختلفة" : "تصفح الأقسام الأخرى"}
+            </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4">
-            {products.map((product) => (
+          <div className="grid grid-cols-2 gap-3">
+            {displayProducts.map((product, i) => (
               <div 
                 key={product.id} 
-                className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer"
+                className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer animate-fade-in"
+                style={{ animationDelay: `${i * 50}ms` }}
                 onClick={() => handleViewProduct(product.id)}
               >
-                <div className="relative overflow-hidden">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-48 object-cover"
-                    loading="lazy"
-                  />
+                <div className="relative aspect-square overflow-hidden">
+                  <img src={product.image} alt={product.name} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" loading="lazy" />
                   
-                  {/* Discount Badge */}
                   {product.discountType && product.discountType !== 'none' && (
-                    <div className="absolute top-3 right-3 bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-1.5 rounded-full shadow-lg">
-                      <span className="text-xs font-bold">
-                        {product.discountType === 'percentage' 
-                          ? `خصم ${product.discountValue}%` 
-                          : `خصم ${product.discountValue?.toLocaleString()} د.ع`
-                        }
-                      </span>
+                    <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-0.5 rounded-lg shadow text-[10px] font-bold">
+                      {product.discountType === 'percentage' ? `${product.discountValue}%-` : `${product.discountValue?.toLocaleString()}-`}
                     </div>
                   )}
                   
                   <button
-                    className={`absolute top-3 left-3 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
-                      favorites.includes(product.id) 
-                        ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white scale-110' 
-                        : 'bg-white text-gray-400 hover:text-red-500 hover:scale-110'
+                    className={`absolute top-2 left-2 w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+                      favorites.includes(product.id) ? 'bg-red-500 text-white' : 'bg-white/80 text-gray-400 hover:text-red-500'
                     }`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleFavorite(product.id);
-                    }}
+                    onClick={(e) => { e.stopPropagation(); toggleFavorite(product.id); }}
                   >
-                    <Heart className={`w-4 h-4 ${favorites.includes(product.id) ? 'fill-current' : ''}`} />
+                    <Heart className={`w-3.5 h-3.5 ${favorites.includes(product.id) ? 'fill-current' : ''}`} />
                   </button>
                 </div>
                 
-                <div className="p-4">
-                  <h3 className="font-bold mb-1 text-right line-clamp-1" style={{ color: storeSettings.menuTextColor }}>
+                <div className="p-3">
+                  <h3 className="font-semibold text-sm mb-1 text-right line-clamp-1" style={{ color: storeSettings.menuTextColor }}>
                     {product.name}
                   </h3>
                   
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-1">
-                      <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                      <span className="text-sm text-gray-600">4.5</span>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-0.5">
+                      <Star className="w-3 h-3 text-amber-400 fill-current" />
+                      <span className="text-[10px] text-gray-500">4.5</span>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
+                    <div className="text-right">
                       {product.discountType && product.discountType !== 'none' && product.originalPrice ? (
-                        <>
-                          <span className="text-xs text-gray-400 line-through">
-                            {product.originalPrice.toLocaleString()} د.ع
-                          </span>
-                          <span className="font-bold text-red-600">
-                            {product.price.toLocaleString()} د.ع
-                          </span>
-                        </>
+                        <div className="flex flex-col items-end">
+                          <span className="text-[10px] text-gray-400 line-through">{product.originalPrice.toLocaleString()}</span>
+                          <span className="text-sm font-bold text-red-600">{product.price.toLocaleString()} د.ع</span>
+                        </div>
                       ) : (
-                        <span className="font-bold" style={{ color: storeSettings.menuTextColor }}>
+                        <span className="text-sm font-bold" style={{ color: storeSettings.menuTextColor }}>
                           {product.price.toLocaleString()} د.ع
                         </span>
                       )}
@@ -293,16 +259,10 @@ const Store = () => {
                   
                   <Button 
                     size="sm"
-                    className="w-full h-9 text-white rounded-full border-0 transition-all duration-200 hover:scale-105 shadow-lg"
-                    style={{ 
-                      background: 'linear-gradient(135deg, hsl(248, 53%, 58%), hsl(248, 53%, 68%))',
-                      boxShadow: '0 4px 15px rgba(120, 119, 198, 0.3)'
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAddToCart(product);
-                    }}
+                    className="w-full h-8 text-xs text-white rounded-xl border-0 bg-primary hover:bg-primary/90 transition-all shadow-sm"
+                    onClick={(e) => { e.stopPropagation(); handleAddToCart(product); }}
                   >
+                    <Plus className="w-3 h-3 ml-1" />
                     أضف للسلة
                   </Button>
                 </div>
@@ -312,33 +272,27 @@ const Store = () => {
         )}
       </div>
 
-      {/* Cart Button */}
+      {/* WhatsApp Button */}
+      <WhatsAppButton phoneNumber={(storeSettings as any).whatsappNumber || ""} />
+
+      {/* Fixed Cart Bar */}
       {cartCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-6 pt-2 bg-gradient-to-t from-white via-white to-transparent">
+        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-2 bg-gradient-to-t from-white via-white to-transparent">
           <button onClick={() => navigate('/checkout')} className="w-full">
-            <div className="bg-black rounded-full shadow-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4">
+            <div className="bg-foreground rounded-2xl shadow-xl">
+              <div className="flex items-center justify-between px-5 py-3.5">
                 <div className="flex items-center gap-3">
-                  <div className="relative bg-black rounded-full p-3">
-                    <ShoppingCart className="w-6 h-6 text-white" />
-                    <span className="absolute -top-1 -right-1 bg-white text-black rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shadow-md">
+                  <div className="relative">
+                    <ShoppingCart className="w-5 h-5 text-background" />
+                    <span className="absolute -top-1.5 -right-1.5 bg-primary text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold">
                       {cartCount}
                     </span>
                   </div>
-                  <div className="text-left">
-                    <div className="text-xs text-gray-400">المبلغ الكلي</div>
-                    <div className="text-lg font-bold text-white" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-                      IQD {cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0).toLocaleString()}
-                    </div>
-                  </div>
+                  <span className="text-sm font-bold text-background">
+                    {cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0).toLocaleString()} د.ع
+                  </span>
                 </div>
-                
-                <div className="flex items-center gap-2 text-white font-bold text-base">
-                  <span style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>عرض السلة</span>
-                  <svg className="w-5 h-5 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </div>
+                <span className="text-sm font-bold text-background">إتمام الطلب ←</span>
               </div>
             </div>
           </button>

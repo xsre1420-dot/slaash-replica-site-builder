@@ -75,7 +75,18 @@
     --accent-secondary: 248 40% 55%;
     --card-bg: 224 18% 14%;
     --input-text: 210 20% 95%;
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
 
   body {
     font-family: 'Tajawal', 'Inter', sans-serif;
