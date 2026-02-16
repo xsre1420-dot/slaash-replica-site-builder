@@ -17,11 +17,11 @@ export const StatCard = ({ title, value, growth, icon: Icon, gradient, suffix = 
     className="border border-border shadow-sm rounded-2xl overflow-hidden hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 animate-fade-in bg-card"
     style={{ animationDelay: `${delay}ms` }}
   >
-    <CardContent className="p-5">
-      <div className="flex items-center justify-between">
-        <div className="text-right flex-1">
-          <p className="text-sm text-muted-foreground mb-1">{title}</p>
-          <p className="text-2xl font-bold text-foreground">{value}{suffix}</p>
+    <CardContent className="p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-right flex-1 min-w-0">
+          <p className="text-xs sm:text-sm text-muted-foreground mb-1 truncate">{title}</p>
+          <p className="text-lg sm:text-2xl font-bold text-foreground truncate">{value}{suffix}</p>
           {growth !== undefined && growth !== 0 && (
             <div className={`flex items-center gap-1 mt-2 justify-end ${growth >= 0 ? 'text-green-600' : 'text-red-500'}`}>
               {growth >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
