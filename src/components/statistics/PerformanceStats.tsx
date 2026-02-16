@@ -14,34 +14,32 @@ interface PerformanceStatsProps {
 export const PerformanceStats = ({ stats }: PerformanceStatsProps) => {
   return (
     <div className="mb-8">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#6D63F2' }}>
-          <TrendingUp className="w-6 h-6 text-white" />
+      <div className="flex items-center gap-3 mb-5">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10">
+          <TrendingUp className="w-5 h-5 text-primary" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-800">📈 إحصائيات الأداء</h2>
+        <h2 className="text-xl font-bold text-foreground">إحصائيات الأداء</h2>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard
           title="معدل التحويل"
-          value={`${stats.conversionRate}%`}
-          growth={0}
+          value={`${stats.conversionRate.toFixed(1)}%`}
           icon={TrendingUp}
-          gradient="bg-gradient-to-br from-[#6D63F2] to-[#5B52E8]"
+          delay={0}
         />
         <StatCard
           title="زوار المتجر"
           value={stats.totalVisitors.toLocaleString()}
-          growth={0}
+          growth={stats.visitorsGrowth}
           icon={Eye}
-          gradient="bg-gradient-to-br from-blue-500 to-blue-600"
+          delay={50}
         />
         <StatCard
           title="معدل هجر السلة"
-          value={`${stats.cartAbandonmentRate}%`}
-          growth={0}
+          value={`${stats.cartAbandonmentRate.toFixed(1)}%`}
           icon={ShoppingCart}
-          gradient="bg-gradient-to-br from-orange-500 to-orange-600"
+          delay={100}
         />
       </div>
     </div>

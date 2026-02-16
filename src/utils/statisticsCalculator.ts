@@ -20,32 +20,55 @@ export const getDefaultStatistics = (): RealStatistics => {
     cancelledOrdersRate: 0,
     topProducts: [],
     paymentMethods: [
-      { name: "الدفع عند الاستلام", value: 0, color: "#6D63F2" },
-      { name: "بطاقة ائتمان", value: 0, color: "#8B5CF6" },
-      { name: "محفظة رقمية", value: 0, color: "#A855F7" }
+      { name: "الدفع عند الاستلام", value: 0, color: "hsl(248, 53%, 58%)" },
+      { name: "بطاقة ائتمان", value: 0, color: "hsl(248, 53%, 68%)" },
+      { name: "محفظة رقمية", value: 0, color: "hsl(220, 9%, 46%)" }
     ],
     peakTimes: []
   };
 };
 
-export const calculateStatistics = (data: DatabaseData): RealStatistics => {
-  const { orders, orderItems, customers, products, visits } = data;
+// Calculate growth by comparing current period with previous period
+const calculateGrowthRate = (orders: any[], visits: any[], dateRange: string) => {
+  const days = parseInt(dateRange);
+  const now = new Date();
+  const currentStart = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+  const previousStart = new Date(currentStart.getTime() - days * 24 * 60 * 60 * 1000);
 
-  console.log('Calculating statistics with data:', {
-    ordersCount: orders.length,
-    orderItemsCount: orderItems.length,
-    customersCount: customers.length,
-    productsCount: products.length,
-    visitsCount: visits.length
+  const currentOrders = orders.filter(o => new Date(o.created_at) >= currentStart);
+  const previousOrders = orders.filter(o => {
+    const d = new Date(o.created_at);
+    return d >= previousStart && d < currentStart;
   });
 
-  // If no data exists, return default statistics
+  const currentRevenue = currentOrders.reduce((s, o) => s + parseFloat(o.total_amount || 0), 0);
+  const previousRevenue = previousOrders.reduce((s, o) => s + parseFloat(o.total_amount || 0), 0);
+
+  const currentVisits = visits.filter(v => new Date(v.created_at) >= currentStart).length;
+  const previousVisits = visits.filter(v => {
+    const d = new Date(v.created_at);
+    return d >= previousStart && d < currentStart;
+  }).length;
+
+  const growthCalc = (current: number, previous: number) => {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return ((current - previous) / previous) * 100;
+  };
+
+  return {
+    revenueGrowth: growthCalc(currentRevenue, previousRevenue),
+    ordersGrowth: growthCalc(currentOrders.length, previousOrders.length),
+    visitorsGrowth: growthCalc(currentVisits, previousVisits),
+  };
+};
+
+export const calculateStatistics = (data: DatabaseData, dateRange: string = "7"): RealStatistics => {
+  const { orders, orderItems, customers, products, visits } = data;
+
   if (orders.length === 0 && orderItems.length === 0 && customers.length === 0 && products.length === 0) {
-    console.log('No data found, returning default statistics');
     return getDefaultStatistics();
   }
 
-  // Basic calculations
   const totalOrders = orders.length;
   const totalRevenue = orders.reduce((sum, order) => sum + parseFloat(order.total_amount || 0), 0);
   const totalVisitors = visits.length;
@@ -53,22 +76,21 @@ export const calculateStatistics = (data: DatabaseData): RealStatistics => {
   const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
   const conversionRate = totalVisitors > 0 ? (totalOrders / totalVisitors) * 100 : 0;
 
-  // Customer calculations
-  const newCustomers = customers.filter(customer => customer.total_orders === 1).length;
-  const returningCustomers = customers.filter(customer => customer.total_orders > 1).length;
+  const newCustomers = customers.filter(c => c.total_orders === 1).length;
+  const returningCustomers = customers.filter(c => c.total_orders > 1).length;
 
-  // Order status calculations
-  const cancelledOrders = orders.filter(order => order.status === 'cancelled').length;
+  const cancelledOrders = orders.filter(o => o.status === 'cancelled').length;
   const cancelledOrdersRate = totalOrders > 0 ? (cancelledOrders / totalOrders) * 100 : 0;
 
-  // Average delivery time
-  const deliveryTimes = orders.filter(order => order.delivery_time).map(order => order.delivery_time);
+  const deliveryTimes = orders.filter(o => o.delivery_time).map(o => o.delivery_time);
   const averageDeliveryTime = deliveryTimes.length > 0 ? 
-    deliveryTimes.reduce((sum, time) => sum + time, 0) / deliveryTimes.length : 0;
+    deliveryTimes.reduce((sum: number, time: number) => sum + time, 0) / deliveryTimes.length : 0;
 
-  // Top products calculation
+  // Real growth calculations
+  const growth = calculateGrowthRate(orders, visits, dateRange);
+
+  // Top products
   const productSales: { [key: string]: { name: string; orders: number; revenue: number } } = {};
-  
   orderItems.forEach(item => {
     const productName = item.product_name || 'منتج غير معروف';
     if (!productSales[productName]) {
@@ -78,7 +100,7 @@ export const calculateStatistics = (data: DatabaseData): RealStatistics => {
     productSales[productName].revenue += parseFloat(item.subtotal || 0);
   });
 
-  let topProducts = Object.values(productSales)
+  const topProducts = Object.values(productSales)
     .sort((a, b) => b.orders - a.orders)
     .slice(0, 6)
     .map(product => ({
@@ -86,12 +108,7 @@ export const calculateStatistics = (data: DatabaseData): RealStatistics => {
       percentage: totalOrders > 0 ? (product.orders / totalOrders) * 100 : 0
     }));
 
-  // Add default products if none exist
-  if (topProducts.length === 0) {
-    topProducts = [];
-  }
-
-  // Payment methods calculation
+  // Payment methods
   const paymentMethodCounts: { [key: string]: number } = {};
   orders.forEach(order => {
     const method = order.payment_method || 'cash_on_delivery';
@@ -99,65 +116,45 @@ export const calculateStatistics = (data: DatabaseData): RealStatistics => {
   });
 
   const paymentMethods = [
-    { 
-      name: "الدفع عند الاستلام", 
-      value: totalOrders > 0 ? Math.round(((paymentMethodCounts.cash_on_delivery || 0) / totalOrders) * 100) : 0,
-      color: "#6D63F2" 
-    },
-    { 
-      name: "بطاقة ائتمان", 
-      value: totalOrders > 0 ? Math.round(((paymentMethodCounts.credit_card || 0) / totalOrders) * 100) : 0,
-      color: "#8B5CF6" 
-    },
-    { 
-      name: "محفظة رقمية", 
-      value: totalOrders > 0 ? Math.round(((paymentMethodCounts.digital_wallet || 0) / totalOrders) * 100) : 0,
-      color: "#A855F7" 
-    },
+    { name: "الدفع عند الاستلام", value: totalOrders > 0 ? Math.round(((paymentMethodCounts.cash_on_delivery || 0) / totalOrders) * 100) : 0, color: "hsl(248, 53%, 58%)" },
+    { name: "بطاقة ائتمان", value: totalOrders > 0 ? Math.round(((paymentMethodCounts.credit_card || 0) / totalOrders) * 100) : 0, color: "hsl(248, 53%, 68%)" },
+    { name: "محفظة رقمية", value: totalOrders > 0 ? Math.round(((paymentMethodCounts.digital_wallet || 0) / totalOrders) * 100) : 0, color: "hsl(220, 9%, 46%)" },
   ];
 
-  // Peak times calculation - show only the top one
+  // Peak times
   const hourCounts: { [key: number]: number } = {};
   orders.forEach(order => {
     const hour = new Date(order.created_at).getHours();
     hourCounts[hour] = (hourCounts[hour] || 0) + 1;
   });
 
-  let peakTimes = Object.entries(hourCounts)
+  const peakTimes = Object.entries(hourCounts)
     .map(([hour, count]) => ({
       time: `${hour}:00 - ${parseInt(hour) + 1}:00`,
       orders: count,
       percentage: totalOrders > 0 ? (count / totalOrders) * 100 : 0
     }))
     .sort((a, b) => b.orders - a.orders)
-    .slice(0, 1); // Only show the top peak time
+    .slice(0, 1);
 
-  // Add default peak time if none exist
-  if (peakTimes.length === 0) {
-    peakTimes = [];
-  }
-
-  const finalStats = {
-    totalRevenue: totalRevenue,
-    totalOrders: totalOrders,
-    totalVisitors: totalVisitors,
-    totalProducts: totalProducts,
-    averageOrderValue: averageOrderValue,
-    conversionRate: conversionRate,
-    visitorsGrowth: 0,
-    ordersGrowth: 0,
-    revenueGrowth: 0,
+  return {
+    totalRevenue,
+    totalOrders,
+    totalVisitors,
+    totalProducts,
+    averageOrderValue,
+    conversionRate,
+    visitorsGrowth: growth.visitorsGrowth,
+    ordersGrowth: growth.ordersGrowth,
+    revenueGrowth: growth.revenueGrowth,
     productsGrowth: 0,
-    newCustomers: newCustomers,
-    returningCustomers: returningCustomers,
+    newCustomers,
+    returningCustomers,
     cartAbandonmentRate: 0,
-    averageDeliveryTime: averageDeliveryTime,
-    cancelledOrdersRate: cancelledOrdersRate,
+    averageDeliveryTime,
+    cancelledOrdersRate,
     topProducts,
     paymentMethods,
     peakTimes
   };
-
-  console.log('Final calculated stats:', finalStats);
-  return finalStats;
 };

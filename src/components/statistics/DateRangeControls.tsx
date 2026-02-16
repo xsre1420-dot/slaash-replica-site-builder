@@ -26,15 +26,15 @@ export const DateRangeControls = ({
   setSelectedMetric
 }: DateRangeControlsProps) => {
   return (
-    <div className="bg-white rounded-3xl shadow-sm p-6 mb-8">
-      <div className="flex flex-col md:flex-row gap-6 items-end">
+    <div className="bg-card rounded-2xl shadow-sm border border-border p-5 mb-8 animate-fade-in">
+      <div className="flex flex-col md:flex-row gap-4 items-end">
         <div className="flex-1">
-          <Label className="block text-gray-700 font-medium mb-2 text-right">الفترة الزمنية</Label>
+          <Label className="block text-foreground font-medium mb-2 text-right text-sm">الفترة الزمنية</Label>
           <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="rounded-2xl border-gray-200">
+            <SelectTrigger className="rounded-xl border-border">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="rounded-2xl">
+            <SelectContent className="rounded-xl">
               <SelectItem value="1">اليوم</SelectItem>
               <SelectItem value="7">آخر 7 أيام</SelectItem>
               <SelectItem value="30">آخر 30 يوم</SelectItem>
@@ -47,33 +47,33 @@ export const DateRangeControls = ({
         {dateRange === "custom" && (
           <>
             <div className="flex-1">
-              <Label className="block text-gray-700 font-medium mb-2 text-right">من تاريخ</Label>
+              <Label className="block text-foreground font-medium mb-2 text-right text-sm">من تاريخ</Label>
               <Input 
                 type="date" 
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="rounded-2xl border-gray-200"
+                className="rounded-xl border-border"
               />
             </div>
             <div className="flex-1">
-              <Label className="block text-gray-700 font-medium mb-2 text-right">إلى تاريخ</Label>
+              <Label className="block text-foreground font-medium mb-2 text-right text-sm">إلى تاريخ</Label>
               <Input 
                 type="date" 
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="rounded-2xl border-gray-200"
+                className="rounded-xl border-border"
               />
             </div>
           </>
         )}
 
         <div className="flex-1">
-          <Label className="block text-gray-700 font-medium mb-2 text-right">المقياس</Label>
+          <Label className="block text-foreground font-medium mb-2 text-right text-sm">المقياس</Label>
           <Select value={selectedMetric} onValueChange={setSelectedMetric}>
-            <SelectTrigger className="rounded-2xl border-gray-200">
+            <SelectTrigger className="rounded-xl border-border">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="rounded-2xl">
+            <SelectContent className="rounded-xl">
               <SelectItem value="visitors">الزوار</SelectItem>
               <SelectItem value="orders">الطلبات</SelectItem>
               <SelectItem value="revenue">الإيرادات</SelectItem>
@@ -82,13 +82,7 @@ export const DateRangeControls = ({
           </Select>
         </div>
 
-        <Button 
-          className="rounded-2xl px-8 text-white shadow-lg"
-          style={{ 
-            background: 'linear-gradient(135deg, #6D63F2, #5B52E8)',
-            boxShadow: '0 4px 15px rgba(109, 99, 242, 0.3)'
-          }}
-        >
+        <Button className="rounded-xl px-6 bg-primary text-primary-foreground hover:bg-primary/90">
           تطبيق
         </Button>
       </div>
