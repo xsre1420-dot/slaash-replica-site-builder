@@ -1,9 +1,9 @@
 
 import { Button } from "@/components/ui/button";
-import { Edit, Plus, Star, MessageSquare, GripVertical, Download } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Edit, Plus, Star, MessageSquare, GripVertical, Copy } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
-import { loadProducts } from "@/data/dummyData";
+import { loadProducts, addProduct } from "@/data/dummyData";
 import { Product } from "@/types";
 import { toast } from "sonner";
 import React from "react";
@@ -16,16 +16,17 @@ type DropResult = import("@hello-pangea/dnd").DropResult;
 interface ProductsListProps {
   onProductSelect?: (product: {id: string, name: string}) => void;
   onProductsLoaded?: (products: Product[]) => void;
+  filteredProducts?: Product[];
 }
 
-export const ProductsList = ({ onProductSelect, onProductsLoaded }: ProductsListProps = {}) => {
-  const [products, setProducts] = useState<Product[]>([]);
+export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProducts }: ProductsListProps = {}) => {
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [isDragEnabled, setIsDragEnabled] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadProductsData = async () => {
       const productsData = await loadProducts();
-      // Apply saved order
       const savedOrder = localStorage.getItem('products_display_order');
       if (savedOrder) {
         try {
@@ -33,7 +34,7 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded }: ProductsList
           productsData.sort((a, b) => (orderMap[a.id] ?? 999) - (orderMap[b.id] ?? 999));
         } catch {}
       }
-      setProducts(productsData);
+      setAllProducts(productsData);
       onProductsLoaded?.(productsData);
     };
     loadProductsData();
@@ -43,21 +44,42 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded }: ProductsList
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
+  // Use filteredProducts if provided, otherwise use all
+  const products = filteredProducts ?? allProducts;
+
   const handleDragEnd = useCallback((result: DropResult) => {
     if (!result.destination) return;
-    const items = Array.from(products);
+    const items = Array.from(allProducts);
     const [reordered] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reordered);
-    setProducts(items);
+    setAllProducts(items);
+    onProductsLoaded?.(items);
 
-    // Save order to localStorage
     const orderMap: Record<string, number> = {};
     items.forEach((item, index) => { orderMap[item.id] = index; });
     localStorage.setItem('products_display_order', JSON.stringify(orderMap));
     toast.success("تم حفظ ترتيب المنتجات", { duration: 1500 });
-  }, [products]);
+  }, [allProducts, onProductsLoaded]);
 
-  if (products.length === 0) {
+  const handleDuplicate = async (product: Product) => {
+    const duplicated: Product = {
+      ...product,
+      id: crypto.randomUUID(),
+      name: `${product.name} (نسخة)`,
+    };
+    const result = await addProduct(duplicated);
+    if (result.success) {
+      toast.success("تم تكرار المنتج بنجاح");
+      // Reload products
+      const productsData = await loadProducts();
+      setAllProducts(productsData);
+      onProductsLoaded?.(productsData);
+    } else {
+      toast.error("فشل في تكرار المنتج");
+    }
+  };
+
+  if (allProducts.length === 0) {
     return (
       <div className="text-center py-16">
         <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
@@ -71,6 +93,14 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded }: ProductsList
             إضافة منتج جديد
           </Button>
         </Link>
+      </div>
+    );
+  }
+
+  if (products.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">لا توجد منتجات تطابق معايير البحث</p>
       </div>
     );
   }
@@ -95,48 +125,66 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded }: ProductsList
         <img
           src={product.image}
           alt={product.name}
-          className="w-full h-52 object-cover"
+          className="w-full h-48 object-cover"
           loading="lazy"
         />
-        <div className="absolute top-4 right-4 flex gap-2" onClick={(e) => e.stopPropagation()}>
+        <div className="absolute top-4 right-4 flex gap-1.5" onClick={(e) => e.stopPropagation()}>
           <Link to={`/edit-product/${product.id}`}>
             <Button 
               size="sm"
-              className="w-10 h-10 p-0 bg-background/90 backdrop-blur-sm hover:bg-background text-foreground rounded-xl shadow-md hover:scale-105 transition-all duration-300"
+              className="w-9 h-9 p-0 bg-background/90 backdrop-blur-sm hover:bg-background text-foreground rounded-lg shadow-md"
             >
               <Edit className="w-4 h-4" />
             </Button>
           </Link>
+          <Button 
+            size="sm"
+            className="w-9 h-9 p-0 bg-background/90 backdrop-blur-sm hover:bg-background text-foreground rounded-lg shadow-md"
+            onClick={() => handleDuplicate(product)}
+          >
+            <Copy className="w-4 h-4" />
+          </Button>
         </div>
+        {/* Stock badge */}
+        {product.stockQuantity !== undefined && product.stockQuantity === 0 && (
+          <div className="absolute bottom-3 right-3 bg-red-500 text-white text-xs px-2 py-1 rounded-lg">
+            نفد المخزون
+          </div>
+        )}
+        {product.stockQuantity !== undefined && product.stockQuantity > 0 && product.stockQuantity <= 5 && (
+          <div className="absolute bottom-3 right-3 bg-yellow-500 text-white text-xs px-2 py-1 rounded-lg">
+            كمية منخفضة
+          </div>
+        )}
       </div>
       
-      <div className="p-5">
-        <div className="flex items-center justify-between mb-2">
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-1">
-            <Star className="w-4 h-4 text-yellow-400 fill-current" />
-            <span className="text-sm font-medium text-muted-foreground">4.5</span>
+            <Star className="w-3.5 h-3.5 text-yellow-400 fill-current" />
+            <span className="text-xs font-medium text-muted-foreground">{product.rating ?? 4.5}</span>
           </div>
-          <h3 className="text-base font-bold text-foreground text-right truncate flex-1 mr-2">{product.name}</h3>
+          <h3 className="text-sm font-bold text-foreground text-right truncate flex-1 mr-2">{product.name}</h3>
         </div>
         
-        <p className="text-xs text-muted-foreground mb-3 text-right line-clamp-2">{product.description}</p>
+        <p className="text-xs text-muted-foreground mb-3 text-right line-clamp-1">{product.description}</p>
         
         <div className="flex items-end justify-between">
           <div className="flex flex-col items-start">
-            <span className="text-xl font-bold text-foreground">{product.price.toLocaleString()} <span className="text-xs text-muted-foreground">د.ع</span></span>
+            <span className="text-lg font-bold text-foreground">{product.price.toLocaleString()} <span className="text-xs text-muted-foreground">د.ع</span></span>
             {product.stockQuantity !== undefined && (
-              <span className="text-xs text-muted-foreground mt-1">الكمية: {product.stockQuantity}</span>
+              <span className="text-xs text-muted-foreground">الكمية: {product.stockQuantity}</span>
             )}
           </div>
-          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+          <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
             {onProductSelect && (
               <Button 
                 size="sm"
                 variant="outline"
-                className="rounded-xl border-border text-foreground text-xs px-3"
+                className="rounded-lg border-border text-foreground text-xs px-2 h-8"
                 onClick={() => onProductSelect({id: product.id, name: product.name})}
               >
-                <MessageSquare className="w-3.5 h-3.5 ml-1" />
+                <MessageSquare className="w-3 h-3 ml-1" />
                 التعليقات
               </Button>
             )}
@@ -144,27 +192,21 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded }: ProductsList
         </div>
 
         {(product.colors || product.sizes) && (
-          <div className="mt-3 pt-3 border-t border-border">
+          <div className="mt-2.5 pt-2.5 border-t border-border flex flex-wrap gap-2">
             {product.colors && product.colors.length > 0 && (
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-xs text-muted-foreground">الألوان:</span>
-                <div className="flex gap-1">
-                  {product.colors.slice(0, 4).map((color, i) => (
-                    <div key={i} className="w-4 h-4 rounded-full border border-border" style={{ backgroundColor: color.value }} />
-                  ))}
-                  {product.colors.length > 4 && <span className="text-xs text-muted-foreground">+{product.colors.length - 4}</span>}
-                </div>
+              <div className="flex items-center gap-1">
+                {product.colors.slice(0, 4).map((color, i) => (
+                  <div key={i} className="w-3.5 h-3.5 rounded-full border border-border" style={{ backgroundColor: color.value }} />
+                ))}
+                {product.colors.length > 4 && <span className="text-xs text-muted-foreground">+{product.colors.length - 4}</span>}
               </div>
             )}
             {product.sizes && product.sizes.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">القياسات:</span>
-                <div className="flex gap-1">
-                  {product.sizes.slice(0, 3).map((size, i) => (
-                    <span key={i} className="text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">{size}</span>
-                  ))}
-                  {product.sizes.length > 3 && <span className="text-xs text-muted-foreground">+{product.sizes.length - 3}</span>}
-                </div>
+              <div className="flex items-center gap-1">
+                {product.sizes.slice(0, 3).map((size, i) => (
+                  <span key={i} className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">{size}</span>
+                ))}
+                {product.sizes.length > 3 && <span className="text-xs text-muted-foreground">+{product.sizes.length - 3}</span>}
               </div>
             )}
           </div>
@@ -199,7 +241,7 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded }: ProductsList
                   {...provided.droppableProps}
                   className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
                 >
-                  {products.map((product, index) => (
+                  {allProducts.map((product, index) => (
                     <Draggable key={product.id} draggableId={product.id} index={index}>
                       {(provided, snapshot) => (
                         <div
