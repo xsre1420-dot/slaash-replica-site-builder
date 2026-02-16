@@ -16,40 +16,39 @@ interface SalesStatsProps {
 export const SalesStats = ({ stats, topProducts }: SalesStatsProps) => {
   return (
     <div className="mb-8">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#6D63F2' }}>
-          <ShoppingCart className="w-6 h-6 text-white" />
+      <div className="flex items-center gap-3 mb-5">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10">
+          <ShoppingCart className="w-5 h-5 text-primary" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-800">🛒 إحصائيات المبيعات</h2>
+        <h2 className="text-xl font-bold text-foreground">إحصائيات المبيعات</h2>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="إجمالي المبيعات"
           value={`${stats.totalRevenue.toLocaleString()} د.ع`}
-          growth={0}
+          growth={stats.revenueGrowth}
           icon={DollarSign}
-          gradient="bg-gradient-to-br from-[#6D63F2] to-[#5B52E8]"
+          delay={0}
         />
         <StatCard
           title="إجمالي الطلبات"
           value={stats.totalOrders.toLocaleString()}
-          growth={0}
+          growth={stats.ordersGrowth}
           icon={Package}
-          gradient="bg-gradient-to-br from-purple-500 to-purple-600"
+          delay={50}
         />
         <StatCard
           title="متوسط قيمة الطلب"
           value={`${stats.averageOrderValue.toLocaleString()} د.ع`}
-          growth={0}
           icon={TrendingUp}
-          gradient="bg-gradient-to-br from-blue-500 to-blue-600"
+          delay={100}
         />
         <StatCard
           title="أفضل المنتجات"
           value={topProducts.length > 0 ? topProducts[0].name : "لا توجد منتجات"}
           icon={Eye}
-          gradient="bg-gradient-to-br from-green-500 to-green-600"
+          delay={150}
         />
       </div>
     </div>

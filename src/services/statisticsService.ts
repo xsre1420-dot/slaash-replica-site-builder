@@ -9,83 +9,32 @@ export const getDateFilter = (dateRange: string): string => {
   return startDate.toISOString();
 };
 
+// Fetch with double the date range to support growth comparison
 export const fetchStatisticsData = async (dateRange: string): Promise<DatabaseData> => {
-  const dateFilter = getDateFilter(dateRange);
-  
-  console.log('Fetching statistics for date range:', dateRange);
-  
+  const days = parseInt(dateRange);
+  const extendedDays = days * 2; // Double for growth calculation
+  const now = new Date();
+  const extendedStart = new Date(now.getTime() - extendedDays * 24 * 60 * 60 * 1000);
+  const dateFilter = extendedStart.toISOString();
+
   try {
-    // Fetch orders data with simplified query
-    const { data: orders, error: ordersError } = await supabase
-      .from('orders')
-      .select('*')
-      .gte('created_at', dateFilter);
-
-    if (ordersError) {
-      console.error('Orders error:', ordersError);
-    }
-
-    // Fetch order items data
-    const { data: orderItems, error: itemsError } = await supabase
-      .from('order_items')
-      .select('*');
-
-    if (itemsError) {
-      console.error('Order items error:', itemsError);
-    }
-
-    // Fetch customers data
-    const { data: customers, error: customersError } = await supabase
-      .from('customers')
-      .select('*');
-
-    if (customersError) {
-      console.error('Customers error:', customersError);
-    }
-
-    // Fetch products data with simplified query
-    const { data: products, error: productsError } = await supabase
-      .from('products')
-      .select('*');
-
-    if (productsError) {
-      console.error('Products error:', productsError);
-    }
-
-    // Fetch store visits data
-    const { data: visits, error: visitsError } = await supabase
-      .from('store_visits')
-      .select('*')
-      .gte('created_at', dateFilter);
-
-    if (visitsError) {
-      console.error('Visits error:', visitsError);
-    }
-
-    console.log('Data fetched successfully:', {
-      orders: orders?.length || 0,
-      orderItems: orderItems?.length || 0,
-      customers: customers?.length || 0,
-      products: products?.length || 0,
-      visits: visits?.length || 0
-    });
+    const [ordersRes, itemsRes, customersRes, productsRes, visitsRes] = await Promise.all([
+      supabase.from('orders').select('*').gte('created_at', dateFilter),
+      supabase.from('order_items').select('*'),
+      supabase.from('customers').select('*'),
+      supabase.from('products').select('*'),
+      supabase.from('store_visits').select('*').gte('created_at', dateFilter),
+    ]);
 
     return {
-      orders: orders || [],
-      orderItems: orderItems || [],
-      customers: customers || [],
-      products: products || [],
-      visits: visits || []
+      orders: ordersRes.data || [],
+      orderItems: itemsRes.data || [],
+      customers: customersRes.data || [],
+      products: productsRes.data || [],
+      visits: visitsRes.data || [],
     };
   } catch (error) {
     console.error('Error fetching statistics data:', error);
-    // Return empty data if there's an error
-    return {
-      orders: [],
-      orderItems: [],
-      customers: [],
-      products: [],
-      visits: []
-    };
+    return { orders: [], orderItems: [], customers: [], products: [], visits: [] };
   }
 };

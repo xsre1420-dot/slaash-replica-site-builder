@@ -1,35 +1,40 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { RealStatistics } from "@/types/statistics";
 import { calculateStatistics, getDefaultStatistics } from "@/utils/statisticsCalculator";
 import { fetchStatisticsData } from "@/services/statisticsService";
 
 export const useRealStatistics = (dateRange: string = "7") => {
   const [stats, setStats] = useState<RealStatistics | null>(getDefaultStatistics());
+  const [rawOrders, setRawOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchRealStatistics();
-  }, [dateRange]);
-
-  const fetchRealStatistics = async () => {
+  const fetchRealStatistics = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
       const data = await fetchStatisticsData(dateRange);
-      const calculatedStats = calculateStatistics(data);
+      const calculatedStats = calculateStatistics(data, dateRange);
       setStats(calculatedStats);
+      // Store raw orders for the chart
+      const days = parseInt(dateRange);
+      const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      setRawOrders(data.orders.filter(o => new Date(o.created_at) >= cutoff));
     } catch (err) {
       console.error('Error fetching statistics:', err);
-      // Always show default statistics instead of error
       setStats(getDefaultStatistics());
-      setError(null); // Don't show error to user, just use defaults
+      setRawOrders([]);
+      setError(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange]);
 
-  return { stats, loading, error, refetch: fetchRealStatistics };
+  useEffect(() => {
+    fetchRealStatistics();
+  }, [fetchRealStatistics]);
+
+  return { stats, rawOrders, loading, error, refetch: fetchRealStatistics };
 };
