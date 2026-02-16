@@ -99,11 +99,11 @@ export default function Builder() {
           {dashboardCards.map((card, i) => (
             <Link key={card.to} to={card.to} className="group">
               <div 
-                className="bg-card p-5 sm:p-6 rounded-2xl border border-border/50 shadow-sm hover:shadow-md transition-all duration-300 group-hover:-translate-y-1 animate-fade-in"
+                className="bg-card/80 backdrop-blur-sm p-5 sm:p-6 rounded-2xl border border-border/20 hover:border-border/40 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all duration-300 group-hover:-translate-y-0.5 animate-fade-in"
                 style={{ animationDelay: `${i * 80}ms` }}
               >
-                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${card.gradient} flex items-center justify-center mb-3 sm:mb-4 shadow-sm`}>
-                  <card.icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br ${card.gradient} flex items-center justify-center mb-3 sm:mb-4 shadow-[0_2px_8px_rgba(0,0,0,0.1)]`}>
+                  <card.icon className="w-[22px] h-[22px] sm:w-6 sm:h-6 text-white" strokeWidth={1.8} />
                 </div>
                 <h3 className="font-bold text-foreground text-sm sm:text-base mb-0.5">{card.label}</h3>
                 <p className="text-xs sm:text-sm text-muted-foreground">{card.desc}</p>
