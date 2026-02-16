@@ -1,7 +1,7 @@
 
 import { Link } from "react-router-dom";
 import { Eye, List, Plus, Settings, BarChart3, Copy, Check, Package, Archive, TrendingUp } from "lucide-react";
-import BottomNav from "@/components/BottomNav";
+
 import { Button } from "@/components/ui/button";
 import StoreHeader from "@/components/StoreHeader";
 import { useStore } from "@/context/StoreContext";
@@ -113,8 +113,6 @@ export default function Builder() {
         </div>
       </div>
 
-      {/* Bottom Navigation for Mobile */}
-      <BottomNav />
     </div>
   );
 }
