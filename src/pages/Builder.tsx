@@ -99,7 +99,7 @@ export default function Builder() {
           {dashboardCards.map((card, i) => (
             <Link key={card.to} to={card.to} className="group">
               <div 
-                className="bg-card/80 backdrop-blur-sm p-5 sm:p-6 rounded-2xl border border-border/20 hover:border-border/40 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all duration-300 group-hover:-translate-y-0.5 animate-fade-in"
+                className="bg-card/80 backdrop-blur-sm p-5 sm:p-6 rounded-2xl border border-border/20 hover:border-primary/30 hover:bg-primary/[0.03] shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_6px_16px_hsl(var(--primary)/0.08)] transition-all duration-300 group-hover:-translate-y-1 animate-fade-in"
                 style={{ animationDelay: `${i * 80}ms` }}
               >
                 <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br ${card.gradient} flex items-center justify-center mb-3 sm:mb-4 shadow-[0_2px_8px_rgba(0,0,0,0.1)]`}>
