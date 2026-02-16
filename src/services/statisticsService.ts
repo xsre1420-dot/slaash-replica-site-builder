@@ -4,27 +4,36 @@ import { DatabaseData } from "@/types/statistics";
 
 export const getDateFilter = (dateRange: string): string => {
   const now = new Date();
-  const days = parseInt(dateRange);
+  const days = parseInt(dateRange) || 7;
   const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
   return startDate.toISOString();
 };
 
-// Fetch with double the date range to support growth comparison
+const withTimeout = <T>(promise: Promise<T>, ms: number = 10000): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Request timeout')), ms))
+  ]);
+};
+
 export const fetchStatisticsData = async (dateRange: string): Promise<DatabaseData> => {
-  const days = parseInt(dateRange);
-  const extendedDays = days * 2; // Double for growth calculation
+  const days = parseInt(dateRange) || 7;
+  const extendedDays = days * 2;
   const now = new Date();
   const extendedStart = new Date(now.getTime() - extendedDays * 24 * 60 * 60 * 1000);
   const dateFilter = extendedStart.toISOString();
 
   try {
-    const [ordersRes, itemsRes, customersRes, productsRes, visitsRes] = await Promise.all([
-      supabase.from('orders').select('*').gte('created_at', dateFilter),
-      supabase.from('order_items').select('*'),
-      supabase.from('customers').select('*'),
-      supabase.from('products').select('*'),
-      supabase.from('store_visits').select('*').gte('created_at', dateFilter),
-    ]);
+    const [ordersRes, itemsRes, customersRes, productsRes, visitsRes] = await withTimeout(
+      Promise.all([
+        supabase.from('orders').select('*').gte('created_at', dateFilter),
+        supabase.from('order_items').select('*'),
+        supabase.from('customers').select('*'),
+        supabase.from('products').select('*'),
+        supabase.from('store_visits').select('*').gte('created_at', dateFilter),
+      ]),
+      15000
+    );
 
     return {
       orders: ordersRes.data || [],
