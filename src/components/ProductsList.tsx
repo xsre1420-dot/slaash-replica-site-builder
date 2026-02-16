@@ -5,8 +5,13 @@ import { Link } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
 import { loadProducts } from "@/data/dummyData";
 import { Product } from "@/types";
-import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { toast } from "sonner";
+import React from "react";
+
+const DragDropContext = React.lazy(() => import("@hello-pangea/dnd").then(m => ({ default: m.DragDropContext })));
+const Droppable = React.lazy(() => import("@hello-pangea/dnd").then(m => ({ default: m.Droppable })));
+const Draggable = React.lazy(() => import("@hello-pangea/dnd").then(m => ({ default: m.Draggable })));
+type DropResult = import("@hello-pangea/dnd").DropResult;
 
 interface ProductsListProps {
   onProductSelect?: (product: {id: string, name: string}) => void;
@@ -185,32 +190,34 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded }: ProductsList
       </div>
 
       {isDragEnabled ? (
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="products" direction="vertical">
-            {(provided) => (
-              <div 
-                ref={provided.innerRef} 
-                {...provided.droppableProps}
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-              >
-                {products.map((product, index) => (
-                  <Draggable key={product.id} draggableId={product.id} index={index}>
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        className={snapshot.isDragging ? 'opacity-80 scale-[1.02] z-50' : ''}
-                      >
-                        {renderProductCard(product, index, provided.dragHandleProps)}
-                      </div>
-                    )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
+        <React.Suspense fallback={<div className="text-center py-8 text-muted-foreground">جاري التحميل...</div>}>
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId="products" direction="vertical">
+              {(provided) => (
+                <div 
+                  ref={provided.innerRef} 
+                  {...provided.droppableProps}
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                >
+                  {products.map((product, index) => (
+                    <Draggable key={product.id} draggableId={product.id} index={index}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          className={snapshot.isDragging ? 'opacity-80 scale-[1.02] z-50' : ''}
+                        >
+                          {renderProductCard(product, index, provided.dragHandleProps)}
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
+        </React.Suspense>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {products.map((product, index) => (
