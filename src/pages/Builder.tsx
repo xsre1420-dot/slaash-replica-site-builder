@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { Eye, List, Plus, Settings, BarChart3, Copy, Check, Package, Archive, TrendingUp } from "lucide-react";
+import { Eye, List, Plus, Settings, BarChart3, Copy, Check, Package, Archive, TrendingUp, ChevronLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import StoreHeader from "@/components/StoreHeader";
@@ -105,8 +105,13 @@ export default function Builder() {
                 <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br ${card.gradient} flex items-center justify-center mb-3 sm:mb-4 shadow-[0_2px_8px_rgba(0,0,0,0.1)]`}>
                   <card.icon className="w-[22px] h-[22px] sm:w-6 sm:h-6 text-white" strokeWidth={1.8} />
                 </div>
-                <h3 className="font-bold text-foreground text-sm sm:text-base mb-0.5">{card.label}</h3>
-                <p className="text-xs sm:text-sm text-muted-foreground">{card.desc}</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-bold text-foreground text-sm sm:text-base mb-0.5">{card.label}</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground">{card.desc}</p>
+                  </div>
+                  <ChevronLeft className="w-4 h-4 text-muted-foreground/0 group-hover:text-primary transition-all duration-300 -translate-x-1 group-hover:translate-x-0" />
+                </div>
               </div>
             </Link>
           ))}
