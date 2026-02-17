@@ -13,7 +13,7 @@ import ProductImagesManager from "@/components/ProductImagesManager";
 import SizesManager from "@/components/SizesManager";
 import ColorSwatchPicker from "@/components/ColorSwatchPicker";
 import CategoryDialog from "@/components/CategoryDialog";
-import { formatPriceInput, isValidPrice } from "@/utils/numberUtils";
+import { formatPriceInput, isValidPrice, convertArabicToEnglish } from "@/utils/numberUtils";
 import { supabase } from "@/integrations/supabase/client";
 import ProductFormProgress from "@/components/add-product/ProductFormProgress";
 import ProductPreviewCard from "@/components/add-product/ProductPreviewCard";
@@ -93,11 +93,25 @@ const AddProduct = () => {
     });
   }, [colors, sizes]);
 
-  const handleVariantQuantityChange = (index: number, quantity: number) => {
+  const handleVariantQuantityChange = (index: number, rawValue: string) => {
+    const cleaned = convertArabicToEnglish(rawValue).replace(/[^\d]/g, '');
+    const quantity = parseInt(cleaned) || 0;
     const updated = [...variants];
     updated[index].quantity = quantity;
     setVariants(updated);
   };
+
+  // Auto-calculate total stock from variants
+  const totalVariantStock = useMemo(() => {
+    if (variants.length === 0) return 0;
+    return variants.reduce((sum, v) => sum + (v.quantity || 0), 0);
+  }, [variants]);
+
+  useEffect(() => {
+    if (variants.length > 0) {
+      setStockQuantity(String(totalVariantStock));
+    }
+  }, [totalVariantStock, variants.length]);
 
   // --- Categories ---
   const loadCategories = useCallback(async () => {
@@ -126,6 +140,7 @@ const AddProduct = () => {
 
   const handlePriceChange = (v: string) => { const f = formatPriceInput(v); setPrice(f); validateField("price", f); };
   const handleCostChange = (v: string) => setCost(formatPriceInput(v));
+  const handleStockChange = (v: string) => setStockQuantity(convertArabicToEnglish(v).replace(/[^\d]/g, ''));
 
   const formatDisplayPrice = (p: string): string => {
     if (!p) return '';
@@ -295,13 +310,19 @@ const AddProduct = () => {
                   <Label htmlFor="stockQuantity" className="text-foreground text-right block">الكمية الإجمالية</Label>
                   <Input
                     id="stockQuantity"
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     className="text-right rounded-xl border-border"
                     value={stockQuantity}
-                    onChange={(e) => setStockQuantity(e.target.value)}
+                    onChange={(e) => handleStockChange(e.target.value)}
+                    disabled={variants.length > 0}
                     placeholder="أدخل الكمية المتاحة"
-                    min="0"
                   />
+                  {variants.length > 0 && (
+                    <p className="text-xs text-muted-foreground text-right">
+                      يتم حساب الكمية تلقائياً من مجموع كميات المتغيرات ({totalVariantStock})
+                    </p>
+                  )}
                 </div>
               </FormSection>
 
@@ -318,7 +339,12 @@ const AddProduct = () => {
 
                 {variants.length > 0 && (
                   <div className="space-y-3 mt-4">
-                    <Label className="text-foreground text-right block font-medium">كميات المتغيرات</Label>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-bold text-foreground bg-muted px-3 py-1 rounded-lg">
+                        المجموع: {totalVariantStock}
+                      </span>
+                      <Label className="text-foreground text-right font-medium">كميات المتغيرات</Label>
+                    </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {variants.map((variant, index) => (
                         <div key={index} className="p-3 border border-border rounded-xl bg-card flex flex-col items-center gap-2">
@@ -331,12 +357,12 @@ const AddProduct = () => {
                             </span>
                           </div>
                           <Input
-                            type="number"
+                            type="text"
+                            inputMode="numeric"
                             placeholder="0"
                             value={variant.quantity || ''}
-                            onChange={(e) => handleVariantQuantityChange(index, parseInt(e.target.value) || 0)}
+                            onChange={(e) => handleVariantQuantityChange(index, e.target.value)}
                             className="text-center rounded-xl border-border h-9 text-sm"
-                            min="0"
                           />
                         </div>
                       ))}
