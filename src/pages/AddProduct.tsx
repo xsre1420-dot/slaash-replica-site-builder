@@ -69,29 +69,29 @@ const AddProduct = () => {
   }, [progressSteps]);
 
   // --- Variants ---
-  const updateVariants = useCallback(() => {
+  useEffect(() => {
     if (colors.length === 0 && sizes.length === 0) { setVariants([]); return; }
-    const newVariants: ProductVariant[] = [];
-    if (colors.length > 0 && sizes.length > 0) {
-      colors.forEach(color => sizes.forEach(size => {
-        const ex = variants.find(v => v.color === color.value && v.size === size);
-        newVariants.push({ color: color.value, size, quantity: ex?.quantity || 0 });
-      }));
-    } else if (colors.length > 0) {
-      colors.forEach(color => {
-        const ex = variants.find(v => v.color === color.value && !v.size);
-        newVariants.push({ color: color.value, quantity: ex?.quantity || 0 });
-      });
-    } else {
-      sizes.forEach(size => {
-        const ex = variants.find(v => v.size === size && !v.color);
-        newVariants.push({ size, quantity: ex?.quantity || 0 });
-      });
-    }
-    setVariants(newVariants);
-  }, [colors, sizes, variants]);
-
-  useEffect(() => { updateVariants(); }, [colors, sizes]);
+    setVariants(prev => {
+      const newVariants: ProductVariant[] = [];
+      if (colors.length > 0 && sizes.length > 0) {
+        colors.forEach(color => sizes.forEach(size => {
+          const ex = prev.find(v => v.color === color.value && v.size === size);
+          newVariants.push({ color: color.value, size, quantity: ex?.quantity || 0 });
+        }));
+      } else if (colors.length > 0) {
+        colors.forEach(color => {
+          const ex = prev.find(v => v.color === color.value && !v.size);
+          newVariants.push({ color: color.value, quantity: ex?.quantity || 0 });
+        });
+      } else {
+        sizes.forEach(size => {
+          const ex = prev.find(v => v.size === size && !v.color);
+          newVariants.push({ size, quantity: ex?.quantity || 0 });
+        });
+      }
+      return newVariants;
+    });
+  }, [colors, sizes]);
 
   const handleVariantQuantityChange = (index: number, quantity: number) => {
     const updated = [...variants];
@@ -148,9 +148,11 @@ const AddProduct = () => {
 
     setIsSubmitting(true);
     try {
+      const numericPrice = parseFloat(price.replace(/,/g, ''));
+      const numericCost = cost ? parseFloat(cost.replace(/,/g, '')) : null;
       const { error } = await supabase.from('products').insert([{
         owner_id: user.id, name: name.trim(), description: description.trim(), category,
-        price: Number(formatPriceInput(price)), cost: cost ? Number(formatPriceInput(cost)) : null,
+        price: numericPrice, cost: numericCost,
         image_url: mainImage, additional_images: additionalImages.length > 0 ? additionalImages : null,
         sizes: sizes.length > 0 ? sizes : null, colors: colors.length > 0 ? JSON.stringify(colors) : null,
         stock_quantity: stockQuantity ? parseInt(stockQuantity) : 0,
@@ -317,25 +319,23 @@ const AddProduct = () => {
                 {variants.length > 0 && (
                   <div className="space-y-3 mt-4">
                     <Label className="text-foreground text-right block font-medium">كميات المتغيرات</Label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {variants.map((variant, index) => (
-                        <div key={index} className="p-3 border border-border rounded-xl bg-card">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              {variant.color && (
-                                <div className="w-5 h-5 rounded-full border border-border" style={{ backgroundColor: variant.color }} />
-                              )}
-                              <span className="text-sm text-foreground">
-                                {variant.color && variant.size ? variant.size : variant.color ? 'لون' : variant.size}
-                              </span>
-                            </div>
+                        <div key={index} className="p-3 border border-border rounded-xl bg-card flex flex-col items-center gap-2">
+                          <div className="flex items-center gap-2">
+                            {variant.color && (
+                              <div className="w-6 h-6 rounded-full border-2 border-border shadow-sm" style={{ backgroundColor: variant.color }} />
+                            )}
+                            <span className="text-sm font-medium text-foreground">
+                              {variant.size || ''}
+                            </span>
                           </div>
                           <Input
                             type="number"
-                            placeholder="الكمية"
-                            value={variant.quantity}
+                            placeholder="0"
+                            value={variant.quantity || ''}
                             onChange={(e) => handleVariantQuantityChange(index, parseInt(e.target.value) || 0)}
-                            className="text-right rounded-xl border-border"
+                            className="text-center rounded-xl border-border h-9 text-sm"
                             min="0"
                           />
                         </div>

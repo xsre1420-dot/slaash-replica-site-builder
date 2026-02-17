@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X, Plus, Upload } from "lucide-react";
 import { ColorOption } from "@/types";
@@ -15,9 +14,7 @@ const ColorSwatchPicker = ({ colors, onColorsChange }: ColorSwatchPickerProps) =
 
   const addCustomColor = () => {
     if (customColor) {
-      const newColor: ColorOption = {
-        value: customColor,
-      };
+      const newColor: ColorOption = { value: customColor };
       onColorsChange([...colors, newColor]);
       setCustomColor("#000000");
     }
@@ -40,71 +37,69 @@ const ColorSwatchPicker = ({ colors, onColorsChange }: ColorSwatchPickerProps) =
   };
 
   const removeColor = (index: number) => {
-    const updatedColors = colors.filter((_, i) => i !== index);
-    onColorsChange(updatedColors);
+    onColorsChange(colors.filter((_, i) => i !== index));
   };
 
   return (
     <div className="space-y-4">
-      <Label className="text-right block">الألوان المتاحة</Label>
+      <Label className="text-right block font-medium text-foreground">الألوان المتاحة</Label>
       
       {/* Selected Colors */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        {colors.map((color, index) => (
-          <div key={index} className="flex flex-col items-center gap-2 p-3 border rounded-lg bg-gray-50">
-            <div 
-              className="w-12 h-12 rounded-full border-2 border-gray-300" 
-              style={{ backgroundColor: color.value }}
-            />
-            {color.image && (
-              <img 
-                src={color.image} 
-                alt={`صورة اللون`}
-                className="w-16 h-16 object-cover rounded"
+      {colors.length > 0 && (
+        <div className="flex flex-wrap gap-3 justify-end">
+          {colors.map((color, index) => (
+            <div key={index} className="flex flex-col items-center gap-1.5 p-2.5 border border-border rounded-xl bg-card">
+              <div 
+                className="w-10 h-10 rounded-full border-2 border-border shadow-sm" 
+                style={{ backgroundColor: color.value }}
               />
-            )}
-            <div className="flex gap-2">
-              <label className="cursor-pointer">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleImageUpload(index, e)}
-                  className="hidden"
+              {color.image && (
+                <img 
+                  src={color.image} 
+                  alt="صورة اللون"
+                  className="w-14 h-14 object-cover rounded-lg"
                 />
-                <Upload className="w-4 h-4 text-blue-600 hover:text-blue-800" />
-              </label>
-              <button 
-                onClick={() => removeColor(index)}
-                className="text-red-500 hover:text-red-700"
-              >
-                <X size={16} />
-              </button>
+              )}
+              <div className="flex gap-2 items-center">
+                <label className="cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleImageUpload(index, e)}
+                    className="hidden"
+                  />
+                  <Upload className="w-3.5 h-3.5" />
+                </label>
+                <button 
+                  type="button"
+                  onClick={() => removeColor(index)}
+                  className="text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Add Custom Color */}
-      <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg">
-        <div className="flex gap-3 items-end justify-center">
-          <div>
-            <Label htmlFor="customColor" className="text-right block mb-1">اللون</Label>
-            <input
-              id="customColor"
-              type="color"
-              value={customColor}
-              onChange={(e) => setCustomColor(e.target.value)}
-              className="w-12 h-10 border border-gray-300 rounded cursor-pointer"
-            />
-          </div>
-          <Button 
-            type="button"
-            onClick={addCustomColor}
-            className="px-3"
-          >
-            <Plus size={16} />
-          </Button>
-        </div>
+      <div className="flex gap-3 items-center justify-end">
+        <Button 
+          type="button"
+          onClick={addCustomColor}
+          size="icon"
+          variant="outline"
+          className="rounded-xl border-border hover:bg-accent h-10 w-10 flex-shrink-0"
+        >
+          <Plus className="w-4 h-4" />
+        </Button>
+        <input
+          type="color"
+          value={customColor}
+          onChange={(e) => setCustomColor(e.target.value)}
+          className="w-10 h-10 border border-border rounded-xl cursor-pointer bg-transparent"
+        />
       </div>
     </div>
   );
