@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Category } from "@/types";
-import { addCategory, updateCategory, deleteCategory } from "@/data/dummyData";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CategoryDialogProps {
   categories: Category[];
@@ -34,21 +34,30 @@ const CategoryDialog = ({ categories, onCategoryChange, onAddLocalCategory, open
       return;
     }
     setLoading(true);
-    const newCategoryObject: Category = { id: crypto.randomUUID(), name: newCategory.name.trim(), order: categories.length };
-    const result = await addCategory(newCategoryObject);
-    if (result.success) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+      const { error } = await supabase.from('categories').insert([{
+        name: newCategory.name.trim(),
+        owner_id: user.id,
+        display_order: categories.length
+      }]);
+      if (error) throw error;
       onCategoryChange();
       setNewCategory({ name: "" });
       setIsAddDialogOpen(false);
       toast({ title: "تم بنجاح", description: "تمت إضافة الفئة الجديدة" });
-      setTimeout(() => onCategoryChange(), 500);
-    } else if (onAddLocalCategory) {
-      onAddLocalCategory(newCategoryObject);
-      setNewCategory({ name: "" });
-      setIsAddDialogOpen(false);
-      toast({ title: "تم بنجاح", description: "تمت إضافة الفئة الجديدة" });
-    } else {
-      toast({ title: "خطأ", description: "فشل في إضافة الفئة", variant: "destructive" });
+    } catch (err: any) {
+      // Fallback to local
+      if (onAddLocalCategory) {
+        const newCat: Category = { id: crypto.randomUUID(), name: newCategory.name.trim(), order: categories.length };
+        onAddLocalCategory(newCat);
+        setNewCategory({ name: "" });
+        setIsAddDialogOpen(false);
+        toast({ title: "تم بنجاح", description: "تمت إضافة الفئة محلياً" });
+      } else {
+        toast({ title: "خطأ", description: "فشل في إضافة الفئة", variant: "destructive" });
+      }
     }
     setLoading(false);
   };
@@ -59,14 +68,15 @@ const CategoryDialog = ({ categories, onCategoryChange, onAddLocalCategory, open
       return;
     }
     setLoading(true);
-    const result = await updateCategory(editingCategory.id, editingCategory);
-    if (result.success) {
+    try {
+      const { error } = await supabase.from('categories').update({ name: editingCategory.name.trim() }).eq('id', editingCategory.id);
+      if (error) throw error;
       onCategoryChange();
       setIsEditDialogOpen(false);
       setEditingCategory(null);
       toast({ title: "تم بنجاح", description: "تم تحديث الفئة" });
-    } else {
-      toast({ title: "خطأ", description: result.error || "فشل في تحديث الفئة", variant: "destructive" });
+    } catch {
+      toast({ title: "خطأ", description: "فشل في تحديث الفئة", variant: "destructive" });
     }
     setLoading(false);
   };
@@ -74,14 +84,16 @@ const CategoryDialog = ({ categories, onCategoryChange, onAddLocalCategory, open
   const handleDeleteCategory = async () => {
     if (!deletingCategory) return;
     setLoading(true);
-    const result = await deleteCategory(deletingCategory.id);
-    if (result.success) {
+    try {
+      const { error } = await supabase.from('categories').delete().eq('id', deletingCategory.id);
+      if (error) throw error;
       onCategoryChange();
       setIsDeleteDialogOpen(false);
       setDeletingCategory(null);
       toast({ title: "تم بنجاح", description: "تم حذف الفئة" });
-    } else {
-      toast({ title: "خطأ", description: result.error || "فشل في حذف الفئة", variant: "destructive" });
+    } catch (err: any) {
+      console.error('Error deleting category:', err);
+      toast({ title: "خطأ", description: "فشل في حذف الفئة، تحقق من اتصال الإنترنت", variant: "destructive" });
     }
     setLoading(false);
   };
