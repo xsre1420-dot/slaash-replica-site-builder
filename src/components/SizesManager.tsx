@@ -25,21 +25,16 @@ const SizesManager = ({ sizes, onSizesChange }: SizesManagerProps) => {
 
   return (
     <div className="space-y-4">
-      <Label className="block text-black text-right">القياسات المتوفرة (اختياري)</Label>
+      <Label className="block text-foreground text-right font-medium">القياسات المتوفرة</Label>
       
-      {/* Add custom size input */}
       <div className="space-y-3">
-        <Label className="block text-sm text-gray-600 text-right">أضف قياس:</Label>
         <div className="flex gap-2">
           <Button 
             type="button"
             onClick={addCustomSize}
-            size="sm"
-            className="text-white shadow-lg"
-            style={{ 
-              background: 'linear-gradient(135deg, #5b47f5, #4c3ef7)',
-              boxShadow: '0 4px 15px rgba(91, 71, 245, 0.3)'
-            }}
+            size="icon"
+            variant="outline"
+            className="rounded-xl border-border hover:bg-accent flex-shrink-0 h-10 w-10"
           >
             <Plus className="w-4 h-4" />
           </Button>
@@ -48,30 +43,29 @@ const SizesManager = ({ sizes, onSizesChange }: SizesManagerProps) => {
             placeholder="مثال: XL أو 42 أو Large"
             value={newSize}
             onChange={(e) => setNewSize(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && addCustomSize()}
-            className="text-right text-black focus:border-blue-500 focus:ring-blue-500"
+            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomSize())}
+            className="text-right rounded-xl border-border focus:border-ring"
           />
         </div>
       </div>
 
-      {/* Display added sizes */}
       {sizes.length > 0 && (
         <div className="space-y-2">
-          <Label className="block text-sm text-gray-600 text-right">القياسات المضافة:</Label>
+          <Label className="block text-sm text-muted-foreground text-right">القياسات المضافة:</Label>
           <div className="flex flex-wrap gap-2 justify-end">
             {sizes.map((size, index) => (
               <div
                 key={index}
-                className="relative group bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 flex items-center gap-2"
+                className="bg-accent border border-border rounded-xl px-3 py-1.5 flex items-center gap-2"
               >
                 <button
                   type="button"
                   onClick={() => removeCustomSize(size)}
-                  className="text-red-500 hover:text-red-700 transition-colors"
+                  className="text-muted-foreground hover:text-destructive transition-colors"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
-                <span className="text-sm font-medium text-blue-700">{size}</span>
+                <span className="text-sm font-medium text-foreground">{size}</span>
               </div>
             ))}
           </div>
