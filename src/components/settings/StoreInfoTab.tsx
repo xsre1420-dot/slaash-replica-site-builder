@@ -1,11 +1,8 @@
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Upload, X, ChevronLeft, ChevronRight, Star, ImageIcon } from "lucide-react";
-
+import { Upload, X, ChevronLeft, ChevronRight, Star, ImageIcon, Store } from "lucide-react";
 
 interface StoreInfoTabProps {
   settings: {
@@ -44,206 +41,151 @@ const StoreInfoTab = ({ settings, setSettings }: StoreInfoTabProps) => {
     setSettings((prev: any) => {
       const newImages = prev.bannerImages.filter((_: any, i: number) => i !== index);
       let newPrimaryIndex = prev.primaryBannerIndex;
-      
-      if (index === prev.primaryBannerIndex) {
-        newPrimaryIndex = 0;
-      } else if (index < prev.primaryBannerIndex) {
-        newPrimaryIndex = prev.primaryBannerIndex - 1;
-      }
-      
-      return {
-        ...prev,
-        bannerImages: newImages,
-        primaryBannerIndex: Math.min(newPrimaryIndex, newImages.length - 1)
-      };
+      if (index === prev.primaryBannerIndex) newPrimaryIndex = 0;
+      else if (index < prev.primaryBannerIndex) newPrimaryIndex = prev.primaryBannerIndex - 1;
+      return { ...prev, bannerImages: newImages, primaryBannerIndex: Math.min(newPrimaryIndex, newImages.length - 1) };
     });
-    
     if (currentImageIndex >= settings.bannerImages.length - 1) {
       setCurrentImageIndex(Math.max(0, settings.bannerImages.length - 2));
     }
   };
 
   const setPrimaryImage = (index: number) => {
-    setSettings((prev: any) => ({
-      ...prev,
-      primaryBannerIndex: index
-    }));
+    setSettings((prev: any) => ({ ...prev, primaryBannerIndex: index }));
   };
 
-  const nextImage = () => {
-    setCurrentImageIndex((prev) => 
-      prev >= settings.bannerImages.length - 1 ? 0 : prev + 1
-    );
-  };
-
-  const prevImage = () => {
-    setCurrentImageIndex((prev) => 
-      prev <= 0 ? settings.bannerImages.length - 1 : prev - 1
-    );
-  };
+  const nextImage = () => setCurrentImageIndex((prev) => prev >= settings.bannerImages.length - 1 ? 0 : prev + 1);
+  const prevImage = () => setCurrentImageIndex((prev) => prev <= 0 ? settings.bannerImages.length - 1 : prev - 1);
 
   return (
     <div className="space-y-6">
-      {/* Store Name and Logo Card */}
-      <Card className="border-0 shadow-none bg-gray-50 rounded-2xl">
-        <CardHeader>
-          <CardTitle className="text-right text-xl text-black">معلومات المتجر الأساسية</CardTitle>
-          <CardDescription className="text-right text-gray-600">
-            قم بتحديث اسم المتجر والشعار
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Store Name */}
-          <div className="space-y-3">
-            <Label className="text-right block text-black font-medium">اسم المتجر</Label>
-            <Input
-              value={settings.storeName}
-              onChange={(e) => setSettings((prev: any) => ({ ...prev, storeName: e.target.value }))}
-              className="text-right rounded-2xl border-gray-200 text-black"
-              placeholder="أدخل اسم المتجر"
-            />
-          </div>
+      {/* Store Name and Logo */}
+      <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 space-y-5">
+        <div className="flex items-center gap-2 justify-end">
+          <h3 className="text-lg font-bold text-foreground">معلومات المتجر</h3>
+          <Store className="w-5 h-5 text-muted-foreground" />
+        </div>
 
-          {/* Store Logo */}
-          <div className="space-y-3">
-            <Label className="text-right block text-black font-medium">شعار المتجر</Label>
-            <div className="bg-white p-6 rounded-2xl border-2 border-gray-200">
-              <div className="flex flex-col items-center gap-6">
-                {settings.storeLogo ? (
-                  <div className="relative">
-                    <div className="w-32 h-32 rounded-2xl overflow-hidden border-2 border-gray-200 bg-white">
-                      <img src={settings.storeLogo} alt="شعار المتجر" className="w-full h-full object-contain" />
-                    </div>
-                    <button
-                      onClick={() => setSettings((prev: any) => ({ ...prev, storeLogo: '' }))}
-                      className="absolute -top-3 -right-3 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 transition-all shadow-lg hover:scale-110"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
+        <div className="space-y-2">
+          <Label className="text-right block text-foreground font-medium">اسم المتجر</Label>
+          <Input
+            value={settings.storeName}
+            onChange={(e) => setSettings((prev: any) => ({ ...prev, storeName: e.target.value }))}
+            className="text-right rounded-xl border-border"
+            placeholder="أدخل اسم المتجر"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-right block text-foreground font-medium">شعار المتجر</Label>
+          <div className="bg-muted/50 p-5 rounded-xl border border-border">
+            <div className="flex flex-col items-center gap-4">
+              {settings.storeLogo ? (
+                <div className="relative">
+                  <div className="w-24 h-24 rounded-xl overflow-hidden border border-border bg-background">
+                    <img src={settings.storeLogo} alt="شعار المتجر" className="w-full h-full object-contain" />
                   </div>
-                ) : (
-                  <div className="w-32 h-32 rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center">
-                    <ImageIcon className="w-12 h-12 text-gray-400" />
-                  </div>
-                )}
-                
-                <label htmlFor="logo-upload" className="cursor-pointer w-full">
-                  <div className="flex items-center justify-center w-full p-5 border-2 border-dashed border-primary/30 rounded-2xl hover:bg-primary/5 hover:border-primary/50 transition-all">
-                    <Upload className="w-6 h-6 ml-3 text-primary" />
-                    <span className="text-primary font-medium">رفع شعار جديد</span>
-                  </div>
-                  <input
-                    id="logo-upload"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleLogoUpload}
-                  />
-                </label>
-              </div>
+                  <button
+                    onClick={() => setSettings((prev: any) => ({ ...prev, storeLogo: '' }))}
+                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1.5 transition-all hover:scale-110 shadow-sm"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="w-24 h-24 rounded-xl border-2 border-dashed border-border flex items-center justify-center">
+                  <ImageIcon className="w-8 h-8 text-muted-foreground" />
+                </div>
+              )}
+              
+              <label htmlFor="logo-upload" className="cursor-pointer w-full">
+                <div className="flex items-center justify-center w-full p-3 border border-dashed border-border rounded-xl hover:bg-accent transition-colors">
+                  <Upload className="w-4 h-4 ml-2 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground font-medium">رفع شعار جديد</span>
+                </div>
+                <input id="logo-upload" type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+              </label>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Banner Images Card */}
-      <Card className="border-0 shadow-none bg-gray-50 rounded-2xl">
-        <CardHeader>
-          <CardTitle className="text-right text-xl text-black">صور البانر</CardTitle>
-          <CardDescription className="text-right text-gray-600">
-            أضف صور البانر وحدد الصورة الرئيسية التي ستظهر أولاً في المتجر
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {settings.bannerImages.length > 0 ? (
-            <div className="space-y-6">
-              <div className="relative bg-white p-4 rounded-2xl">
-                <div className="aspect-video bg-gray-100 rounded-2xl overflow-hidden">
-                  <img
-                    src={settings.bannerImages[currentImageIndex]}
-                    alt={`صورة البانر ${currentImageIndex + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                
-                {currentImageIndex === settings.primaryBannerIndex && (
-                  <div className="absolute top-8 right-8 bg-yellow-500 text-white p-3 rounded-2xl shadow-lg">
-                    <Star className="w-5 h-5 fill-current" />
-                  </div>
-                )}
-                
-                {settings.bannerImages.length > 1 && (
-                  <>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute left-8 top-1/2 -translate-y-1/2 bg-black/50 text-white hover:bg-black/70 rounded-2xl w-12 h-12"
-                      onClick={prevImage}
-                    >
-                      <ChevronLeft className="w-6 h-6" />
-                    </Button>
-                    
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-8 top-1/2 -translate-y-1/2 bg-black/50 text-white hover:bg-black/70 rounded-2xl w-12 h-12"
-                      onClick={nextImage}
-                    >
-                      <ChevronRight className="w-6 h-6" />
-                    </Button>
-                  </>
-                )}
-                
-                <div className="absolute bottom-8 left-8 flex gap-3">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="bg-red-500 text-white hover:bg-red-600 rounded-2xl w-12 h-12 shadow-lg"
-                    onClick={() => removeBannerImage(currentImageIndex)}
-                  >
-                    <X className="w-5 h-5" />
-                  </Button>
-                  
-                  {currentImageIndex !== settings.primaryBannerIndex && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="bg-yellow-500 text-white hover:bg-yellow-600 rounded-2xl w-12 h-12 shadow-lg"
-                      onClick={() => setPrimaryImage(currentImageIndex)}
-                    >
-                      <Star className="w-5 h-5" />
-                    </Button>
-                  )}
-                </div>
+      {/* Banner Images */}
+      <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 space-y-5">
+        <div className="flex items-center gap-2 justify-end">
+          <h3 className="text-lg font-bold text-foreground">صور البانر</h3>
+          <ImageIcon className="w-5 h-5 text-muted-foreground" />
+        </div>
+        <p className="text-sm text-muted-foreground text-right">أضف صور البانر وحدد الصورة الرئيسية</p>
+
+        {settings.bannerImages.length > 0 ? (
+          <div className="space-y-4">
+            <div className="relative rounded-xl overflow-hidden border border-border">
+              <div className="aspect-video bg-muted">
+                <img
+                  src={settings.bannerImages[currentImageIndex]}
+                  alt={`بانر ${currentImageIndex + 1}`}
+                  className="w-full h-full object-cover"
+                />
               </div>
               
-              <div className="text-center text-gray-600 font-medium">
-                {currentImageIndex + 1} من {settings.bannerImages.length}
-                {currentImageIndex === settings.primaryBannerIndex && " (الصورة الرئيسية)"}
+              {currentImageIndex === settings.primaryBannerIndex && (
+                <div className="absolute top-3 right-3 bg-foreground text-background p-2 rounded-lg shadow-lg">
+                  <Star className="w-4 h-4 fill-current" />
+                </div>
+              )}
+              
+              {settings.bannerImages.length > 1 && (
+                <>
+                  <Button variant="ghost" size="icon"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background rounded-lg w-9 h-9"
+                    onClick={prevImage}>
+                    <ChevronLeft className="w-5 h-5" />
+                  </Button>
+                  <Button variant="ghost" size="icon"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background rounded-lg w-9 h-9"
+                    onClick={nextImage}>
+                    <ChevronRight className="w-5 h-5" />
+                  </Button>
+                </>
+              )}
+              
+              <div className="absolute bottom-3 left-3 flex gap-2">
+                <Button variant="ghost" size="icon"
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-lg w-8 h-8"
+                  onClick={() => removeBannerImage(currentImageIndex)}>
+                  <X className="w-4 h-4" />
+                </Button>
+                {currentImageIndex !== settings.primaryBannerIndex && (
+                  <Button variant="ghost" size="icon"
+                    className="bg-foreground text-background hover:bg-foreground/90 rounded-lg w-8 h-8"
+                    onClick={() => setPrimaryImage(currentImageIndex)}>
+                    <Star className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
             </div>
-          ) : (
-            <div className="text-center py-16 text-gray-500 bg-white rounded-2xl">
-              <div className="text-6xl mb-4">📷</div>
-              <p className="text-lg">لا توجد صور بانر مضافة</p>
-            </div>
-          )}
+            
+            <p className="text-center text-sm text-muted-foreground">
+              {currentImageIndex + 1} من {settings.bannerImages.length}
+              {currentImageIndex === settings.primaryBannerIndex && " (الرئيسية)"}
+            </p>
+          </div>
+        ) : (
+          <div className="text-center py-10 text-muted-foreground bg-muted/50 rounded-xl border border-dashed border-border">
+            <ImageIcon className="w-10 h-10 mx-auto mb-2 text-muted-foreground/50" />
+            <p>لا توجد صور بانر</p>
+          </div>
+        )}
 
-          <label htmlFor="banner-upload" className="cursor-pointer block">
-            <div className="flex items-center justify-center w-full p-6 border-2 border-dashed border-primary/30 rounded-2xl hover:bg-primary/5 hover:border-primary/50 transition-all bg-white">
-              <Upload className="w-6 h-6 ml-3 text-primary" />
-              <span className="text-primary font-medium">إضافة صورة بانر جديدة</span>
-            </div>
-            <input
-              id="banner-upload"
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleBannerUpload}
-            />
-          </label>
-        </CardContent>
-      </Card>
+        <label htmlFor="banner-upload" className="cursor-pointer block">
+          <div className="flex items-center justify-center w-full p-3 border border-dashed border-border rounded-xl hover:bg-accent transition-colors">
+            <Upload className="w-4 h-4 ml-2 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground font-medium">إضافة صورة بانر</span>
+          </div>
+          <input id="banner-upload" type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} />
+        </label>
+      </div>
     </div>
   );
 };

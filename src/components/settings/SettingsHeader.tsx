@@ -1,20 +1,22 @@
-
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Settings } from "lucide-react";
 
 const SettingsHeader = () => {
   return (
-    <div className="bg-white shadow-sm">
-      <div className="max-w-6xl mx-auto px-6 py-4">
+    <div className="bg-card border-b border-border sticky top-0 z-20">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3">
         <div className="flex items-center justify-between">
           <Link to="/builder">
-            <Button variant="ghost" className="p-2 hover:bg-gray-100 rounded-xl">
-              <ArrowLeft className="w-6 h-6" />
+            <Button variant="ghost" size="icon" className="rounded-xl hover:bg-muted">
+              <ArrowLeft className="w-5 h-5" />
             </Button>
           </Link>
-          <h1 className="text-2xl font-bold text-black">إعدادات المتجر</h1>
-          <div className="w-10"></div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-foreground">الإعدادات</h1>
+            <Settings className="w-5 h-5 text-muted-foreground" />
+          </div>
+          <div className="w-10" />
         </div>
       </div>
     </div>
