@@ -160,8 +160,8 @@ const Login = () => {
         </div>
       </div>
 
-      <footer className="text-center py-5 text-muted-foreground text-xs">
-        <p>جميع الحقوق محفوظة © 2025 نومو</p>
+      <footer className="relative z-10 text-center py-5 text-muted-foreground text-xs">
+        <p>جميع الحقوق محفوظة © 2025 بداية</p>
       </footer>
     </div>
   );

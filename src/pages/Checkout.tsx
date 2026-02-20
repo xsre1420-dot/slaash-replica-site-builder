@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
 import { Order } from "@/types";
 
 const Checkout = () => {
@@ -18,6 +17,7 @@ const Checkout = () => {
   const navigate = useNavigate();
   
   const [orderCompleted, setOrderCompleted] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   
   const [customerInfo, setCustomerInfo] = useState({
     name: "",
@@ -28,27 +28,48 @@ const Checkout = () => {
   
   const [selectedGovernorate, setSelectedGovernorate] = useState<string>("");
   
-  // Get selected delivery price
   const selectedDeliveryPrice = selectedGovernorate 
     ? storeSettings.deliveryPrices?.find(d => d.governorate === selectedGovernorate)?.price || 0
     : 0;
   
-  // Calculate total with delivery
   const totalWithDelivery = cartTotal + selectedDeliveryPrice;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setCustomerInfo((prev) => ({ ...prev, [name]: value }));
+    // Clear error when user types
+    if (formErrors[name]) {
+      setFormErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    if (!customerInfo.name.trim()) {
+      errors.name = 'يرجى إدخال الاسم';
+    }
+    if (!customerInfo.phone.trim()) {
+      errors.phone = 'يرجى إدخال رقم الهاتف';
+    } else if (!/^[\d\s+()-]{7,15}$/.test(customerInfo.phone.trim())) {
+      errors.phone = 'رقم الهاتف غير صحيح';
+    }
+    if (!customerInfo.address.trim()) {
+      errors.address = 'يرجى إدخال العنوان';
+    }
+    if (storeSettings.deliveryPrices?.length && !selectedGovernorate) {
+      errors.governorate = 'يرجى اختيار المحافظة';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmitOrder = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!customerInfo.name || !customerInfo.phone || !customerInfo.address || !selectedGovernorate) {
-      return; // Just return without showing error notification
-    }
+    if (!validateForm()) return;
     
-    // Create a new order object
     const newOrder: Order = {
       id: `ord-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
       items: [...cartItems],
@@ -64,16 +85,12 @@ const Checkout = () => {
       status: 'pending',
     };
     
-    // In a real app, we would save the order to a backend
-    // For now, we can store it in localStorage for demo purposes
     const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]');
     const updatedOrders = [newOrder, ...existingOrders];
     localStorage.setItem('orders', JSON.stringify(updatedOrders));
     
-    // Show order completion notification
     setOrderCompleted(true);
     
-    // Hide notification after 3 seconds and navigate
     setTimeout(() => {
       setOrderCompleted(false);
       clearCart();
@@ -81,105 +98,95 @@ const Checkout = () => {
     }, 3000);
   };
 
+  const inputClasses = (field: string) => 
+    `text-right border-2 rounded-xl text-foreground bg-muted/30 focus:border-primary ${
+      formErrors[field] ? 'border-destructive focus:border-destructive' : 'border-border'
+    }`;
+
   return (
-    <div className="min-h-screen bg-gray-50 relative" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div className="min-h-screen bg-background relative font-arabic" dir="rtl">
       {/* Header */}
-      <div className="text-white p-4 bg-black">
+      <div className="bg-foreground text-background p-4">
         <div className="flex justify-between items-center">
-          <Link to="/preview">
-            <ArrowRight className="w-6 h-6" />
-          </Link>
+          <div className="w-6" />
           <h1 className="text-xl font-bold">إتمام الطلب</h1>
-          <div className="w-6"></div> {/* Empty div for alignment */}
+          <Link to="/preview">
+            <ArrowRight className="w-6 h-6 text-background" />
+          </Link>
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="max-w-xl mx-auto p-4">
         {cartItems.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-xl shadow-sm mt-4">
+          <div className="text-center py-12 bg-card rounded-2xl border border-border mt-4">
             <div className="flex justify-center mb-4">
-              <svg className="w-16 h-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-16 h-16 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-black mb-2">سلة التسوق فارغة</h3>
-            <p className="text-black">قم بإضافة بعض المنتجات للاستمرار بالطلب</p>
+            <h3 className="text-xl font-bold text-foreground mb-2">سلة التسوق فارغة</h3>
+            <p className="text-muted-foreground">قم بإضافة بعض المنتجات للاستمرار بالطلب</p>
             <Link to="/preview">
-              <Button 
-                className="mt-6 bg-black text-white hover:bg-gray-900 shadow-lg"
-              >
-                العودة للمتجر
-              </Button>
+              <Button className="mt-6 rounded-xl">العودة للمتجر</Button>
             </Link>
           </div>
         ) : (
           <>
             {/* Cart Items */}
-            <div className="bg-white rounded-xl shadow-sm p-4 mt-4">
-              <h2 className="text-xl font-bold mb-4 text-right text-black">طلبك</h2>
+            <div className="bg-card rounded-2xl border border-border p-4 mt-4">
+              <h2 className="text-xl font-bold mb-4 text-right text-foreground">طلبك</h2>
               <div className="space-y-4">
                 {cartItems.map((item, index) => (
-                  <div key={`${item.product.id}-${item.selectedSize || 'no-size'}-${item.selectedColor || 'no-color'}-${index}`} className="border-b pb-4 last:border-b-0">
+                  <div key={`${item.product.id}-${item.selectedSize || 'no-size'}-${item.selectedColor || 'no-color'}-${index}`} className="border-b border-border pb-4 last:border-b-0">
                     <div className="flex gap-4">
-                      {/* Product Image */}
                       <img
                         src={item.product.image}
                         alt={item.product.name}
-                        className="w-24 h-24 rounded-lg object-cover shadow-sm"
+                        className="w-24 h-24 rounded-xl object-cover"
+                        loading="lazy"
                       />
-                      
-                      {/* Product Info */}
                       <div className="flex-1 text-right">
-                        <h3 className="font-bold text-black text-lg mb-1">{item.product.name}</h3>
+                        <h3 className="font-bold text-foreground text-lg mb-1">{item.product.name}</h3>
                         
-                        {/* Display selected options */}
                         {(item.selectedSize || item.selectedColor) && (
                           <div className="flex gap-2 mb-2 justify-end flex-wrap">
                             {item.selectedSize && (
-                              <span className="text-xs bg-gray-100 px-3 py-1 rounded-full text-gray-700">
+                              <span className="text-xs bg-muted px-3 py-1 rounded-full text-muted-foreground">
                                 المقاس: {item.selectedSize}
                               </span>
                             )}
                             {item.selectedColor && (
-                              <span className="text-xs bg-gray-100 px-3 py-1 rounded-full text-gray-700 flex items-center gap-1">
-                                <span 
-                                  className="w-3 h-3 rounded-full border border-gray-300" 
-                                  style={{ backgroundColor: item.selectedColor }}
-                                />
+                              <span className="text-xs bg-muted px-3 py-1 rounded-full text-muted-foreground flex items-center gap-1">
+                                <span className="w-3 h-3 rounded-full border border-border" style={{ backgroundColor: item.selectedColor }} />
                                 اللون
                               </span>
                             )}
                           </div>
                         )}
                         
-                        {/* Price */}
-                        <p className="font-bold text-lg mb-3 text-black">
+                        <p className="font-bold text-lg mb-3 text-foreground">
                           {(item.product.price * item.quantity).toLocaleString()} د.ع
                         </p>
                         
-                        {/* Quantity Controls */}
                         <div className="flex items-center justify-end gap-3">
                           <button
                             onClick={() => removeFromCart(item.product.id, item.selectedSize, item.selectedColor)}
-                            className="text-red-500 hover:text-red-700 transition-colors"
+                            className="text-destructive hover:text-destructive/80 transition-colors"
                           >
                             <Trash2 className="w-5 h-5" />
                           </button>
                           
-                          <div className="flex items-center gap-2 bg-gray-100 rounded-full px-3 py-1">
+                          <div className="flex items-center gap-2 bg-muted rounded-full px-3 py-1">
                             <button
                               onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedSize, item.selectedColor)}
-                              className="rounded-full w-7 h-7 flex items-center justify-center text-white bg-black hover:bg-gray-900 shadow-sm hover:shadow-md transition-shadow"
+                              className="rounded-full w-7 h-7 flex items-center justify-center bg-foreground text-background"
                             >
                               <Minus className="w-4 h-4" />
                             </button>
-                            
-                            <span className="w-8 text-center text-black font-semibold">{item.quantity}</span>
-                            
+                            <span className="w-8 text-center text-foreground font-semibold">{item.quantity}</span>
                             <button
                               onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedSize, item.selectedColor)}
-                              className="rounded-full w-7 h-7 flex items-center justify-center text-white bg-black hover:bg-gray-900 shadow-sm hover:shadow-md transition-shadow"
+                              className="rounded-full w-7 h-7 flex items-center justify-center bg-foreground text-background"
                             >
                               <Plus className="w-4 h-4" />
                             </button>
@@ -190,47 +197,51 @@ const Checkout = () => {
                   </div>
                 ))}
               </div>
-              <div className="flex justify-between mt-4 pt-4 border-t">
-                <span className="font-bold text-lg text-black">{cartTotal.toLocaleString()} د.ع</span>
-                <span className="font-bold text-black">المجموع:</span>
+              <div className="flex justify-between mt-4 pt-4 border-t border-border">
+                <span className="font-bold text-lg text-foreground">{cartTotal.toLocaleString()} د.ع</span>
+                <span className="font-bold text-foreground">المجموع:</span>
               </div>
             </div>
             
             {/* Customer Info Form */}
-            <form onSubmit={handleSubmitOrder} className="bg-white rounded-xl shadow-sm p-4 mt-4">
-              <h2 className="text-xl font-bold mb-4 text-right text-black">معلومات التوصيل</h2>
+            <form onSubmit={handleSubmitOrder} className="bg-card rounded-2xl border border-border p-4 mt-4">
+              <h2 className="text-xl font-bold mb-4 text-right text-foreground">معلومات التوصيل</h2>
               
               <div className="space-y-4">
-                <div className="text-right">
-                  <Label htmlFor="name" className="block mb-1 text-black">الاسم</Label>
+                <FormField label="الاسم" error={formErrors.name}>
                   <Input
                     id="name"
                     name="name"
                     value={customerInfo.name}
                     onChange={handleInputChange}
-                    className="text-right text-black border-2 focus:border-blue-500 focus:ring-blue-500"
-                    required
+                    className={inputClasses('name')}
+                    placeholder="أدخل اسمك الكامل"
+                    autoComplete="name"
                   />
-                </div>
+                </FormField>
                 
-                <div className="text-right">
-                  <Label htmlFor="phone" className="block mb-1 text-black">رقم الهاتف</Label>
+                <FormField label="رقم الهاتف" error={formErrors.phone}>
                   <Input
                     id="phone"
                     name="phone"
+                    type="tel"
+                    inputMode="tel"
                     value={customerInfo.phone}
                     onChange={handleInputChange}
-                    className="text-right text-black border-2 focus:border-blue-500 focus:ring-blue-500"
-                    required
+                    className={inputClasses('phone')}
+                    placeholder="07xx xxx xxxx"
+                    autoComplete="tel"
+                    dir="ltr"
                   />
-                </div>
+                </FormField>
 
-                {/* Governorate Selection */}
                 {storeSettings.deliveryPrices && storeSettings.deliveryPrices.length > 0 && (
-                  <div className="text-right">
-                    <Label className="block mb-1 text-black">المحافظة *</Label>
-                    <Select value={selectedGovernorate} onValueChange={setSelectedGovernorate} required>
-                      <SelectTrigger className="text-right text-black border-2 focus:border-blue-500">
+                  <FormField label="المحافظة" error={formErrors.governorate}>
+                    <Select value={selectedGovernorate} onValueChange={(v) => {
+                      setSelectedGovernorate(v);
+                      if (formErrors.governorate) setFormErrors(prev => ({ ...prev, governorate: '' }));
+                    }}>
+                      <SelectTrigger className={`text-right rounded-xl ${formErrors.governorate ? 'border-destructive' : 'border-border'}`}>
                         <SelectValue placeholder="اختر المحافظة" />
                       </SelectTrigger>
                       <SelectContent>
@@ -241,84 +252,85 @@ const Checkout = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
+                  </FormField>
                 )}
                 
-                <div className="text-right">
-                  <Label htmlFor="address" className="block mb-1 text-black">العنوان</Label>
+                <FormField label="العنوان" error={formErrors.address}>
                   <Input
                     id="address"
                     name="address"
                     value={customerInfo.address}
                     onChange={handleInputChange}
-                    className="text-right text-black border-2 focus:border-blue-500 focus:ring-blue-500"
-                    required
+                    className={inputClasses('address')}
+                    placeholder="أدخل عنوانك بالتفصيل"
+                    autoComplete="street-address"
+                  />
+                </FormField>
+                
+                <div className="text-right">
+                  <Label htmlFor="notes" className="block mb-1.5 text-foreground text-sm">ملاحظات إضافية (اختياري)</Label>
+                  <Textarea
+                    id="notes"
+                    name="notes"
+                    value={customerInfo.notes}
+                    onChange={handleInputChange}
+                    className="text-right border-2 border-border rounded-xl text-foreground bg-muted/30 focus:border-primary"
+                    placeholder="أي ملاحظات خاصة بالطلب"
                   />
                 </div>
-                
-                 <div className="text-right">
-                   <Label htmlFor="notes" className="block mb-1 text-black">ملاحظات إضافية (اختياري)</Label>
-                   <Textarea
-                     id="notes"
-                     name="notes"
-                     value={customerInfo.notes}
-                     onChange={handleInputChange}
-                     className="text-right text-black border-2 focus:border-blue-500 focus:ring-blue-500"
-                   />
-                 </div>
 
-                  {/* Delivery Price Display */}
-                  {selectedGovernorate && selectedDeliveryPrice > 0 && (
-                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                      <div className="flex justify-between items-center">
-                        <span className="font-bold text-lg text-black">
-                          {selectedDeliveryPrice.toLocaleString()} د.ع
-                        </span>
-                        <span className="text-black font-medium">
-                          رسوم التوصيل إلى {selectedGovernorate}:
-                        </span>
-                      </div>
+                {selectedGovernorate && selectedDeliveryPrice > 0 && (
+                  <div className="bg-muted/50 p-4 rounded-xl border border-border">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-lg text-foreground">{selectedDeliveryPrice.toLocaleString()} د.ع</span>
+                      <span className="text-muted-foreground font-medium">رسوم التوصيل إلى {selectedGovernorate}:</span>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {/* Total with Delivery */}
-                  {selectedDeliveryPrice > 0 && (
-                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                      <div className="flex justify-between items-center">
-                        <span className="font-bold text-xl text-black">
-                          {totalWithDelivery.toLocaleString()} د.ع
-                        </span>
-                        <span className="text-black font-bold text-lg">
-                          المجموع النهائي:
-                        </span>
-                      </div>
+                {selectedDeliveryPrice > 0 && (
+                  <div className="bg-accent/50 p-4 rounded-xl border border-primary/20">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-xl text-foreground">{totalWithDelivery.toLocaleString()} د.ع</span>
+                      <span className="text-foreground font-bold text-lg">المجموع النهائي:</span>
                     </div>
-                  )}
-               </div>
+                  </div>
+                )}
+              </div>
                
-               <Button 
-                  type="submit" 
-                  className="w-full mt-6 bg-black text-white hover:bg-gray-900 shadow-lg"
-                >
-                  تأكيد الطلب
-                </Button>
+              <Button type="submit" className="w-full mt-6 rounded-xl py-3 text-base font-semibold">
+                تأكيد الطلب
+              </Button>
             </form>
           </>
         )}
       </div>
 
-      {/* Order Completion Notification */}
+      {/* Order Completion */}
       {orderCompleted && (
-        <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pt-4 px-4">
-          <div className="bg-green-100 border-2 border-green-400 text-green-800 px-12 py-4 rounded-lg shadow-lg w-full max-w-md">
-            <div className="text-center">
-              <div className="text-xl font-bold">تم الطلب</div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-2xl p-8 text-center max-w-sm mx-4 animate-fade-in">
+            <div className="w-16 h-16 bg-accent rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
             </div>
+            <h3 className="text-xl font-bold text-foreground mb-2">تم تأكيد الطلب بنجاح! 🎉</h3>
+            <p className="text-muted-foreground text-sm">سيتم التواصل معك قريباً لتأكيد التوصيل</p>
           </div>
         </div>
       )}
     </div>
   );
 };
+
+// Reusable form field with error display
+const FormField = ({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) => (
+  <div className="text-right">
+    <Label className="block mb-1.5 text-foreground text-sm">{label} *</Label>
+    {children}
+    {error && <p className="text-destructive text-xs mt-1">{error}</p>}
+  </div>
+);
 
 export default Checkout;

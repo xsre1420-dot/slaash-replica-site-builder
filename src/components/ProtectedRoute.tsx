@@ -11,8 +11,11 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-muted-foreground text-sm font-arabic">جارٍ التحميل...</p>
+        </div>
       </div>
     );
   }
