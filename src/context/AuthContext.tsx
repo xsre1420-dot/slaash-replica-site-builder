@@ -34,20 +34,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Initialize auth state from Supabase (listener first, then session)
   useEffect(() => {
-    // 1) Listen for auth changes (sync updates only)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         const meta: any = session.user.user_metadata ?? {};
-        // Set a minimal user immediately so the app doesn't depend on profiles
         setUser({
           id: session.user.id,
           username: meta.username || session.user.email?.split('@')[0] || 'مستخدم',
           store_name: meta.store_name
         });
 
-        // Defer fetching profile to avoid deadlocks in the callback
         setTimeout(async () => {
           try {
             const { data: profile } = await supabase
@@ -60,7 +56,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               setUser({ id: profile.id, username: profile.username, store_name: profile.store_name });
             }
           } catch (e) {
-            // Silent fail – profile table may not exist yet
             console.warn('Profile fetch skipped/failed:', e);
           }
         }, 0);
@@ -69,7 +64,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     });
 
-    // 2) Then check for existing session
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
         if (session?.user) {
@@ -92,26 +86,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     return () => subscription.unsubscribe();
   }, []);
+
   const login = async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        // Allow entry regardless of auth result
-        setUser({
-          id: crypto.randomUUID(),
-          username: email.split('@')[0] || 'مستخدم',
-          store_name: 'متجري'
-        });
-        return {};
+        if (error.message.includes('Invalid login credentials')) {
+          return { error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' };
+        }
+        if (error.message.includes('Email not confirmed')) {
+          return { error: 'يرجى تأكيد بريدك الإلكتروني أولاً' };
+        }
+        return { error: error.message };
       }
       return {};
     } catch {
-      setUser({
-        id: crypto.randomUUID(),
-        username: email.split('@')[0] || 'مستخدم',
-        store_name: 'متجري'
-      });
-      return {};
+      return { error: 'حدث خطأ في الاتصال. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.' };
     }
   };
 

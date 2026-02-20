@@ -9,6 +9,8 @@ import { CartProvider } from "./context/CartContext";
 import { StoreProvider } from "./context/StoreContext";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import ErrorBoundary from "./components/ErrorBoundary";
+import OfflineBanner from "./components/OfflineBanner";
 
 // Lazy load all pages
 const Index = lazy(() => import("./pages/Index"));
@@ -42,44 +44,47 @@ const PageLoader = () => (
 );
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <StoreProvider>
-        <TooltipProvider>
-          <CartProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Suspense fallback={<PageLoader />}>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/signup" element={<Signup />} />
-                  <Route path="/builder" element={<ProtectedRoute><Builder /></ProtectedRoute>} />
-                  <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                  <Route path="/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
-                  <Route path="/add-product" element={<ProtectedRoute><AddProduct /></ProtectedRoute>} />
-                  <Route path="/edit-product/:productId" element={<ProtectedRoute><EditProduct /></ProtectedRoute>} />
-                  <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
-                  <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-                  <Route path="/orders/:orderId" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
-                  <Route path="/marketing" element={<ProtectedRoute><Marketing /></ProtectedRoute>} />
-                  <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
-                  <Route path="/store/:username" element={<Store />} />
-                  <Route path="/store/:username/product/:productId" element={<ProductDetails />} />
-                  <Route path="/product-details/:productId" element={<ProductDetails />} />
-                  <Route path="/store/:username/checkout" element={<Checkout />} />
-                  <Route path="/checkout" element={<Checkout />} />
-                  <Route path="/preview" element={<ProtectedRoute><PreviewStore /></ProtectedRoute>} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
-            </BrowserRouter>
-          </CartProvider>
-        </TooltipProvider>
-      </StoreProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <StoreProvider>
+          <TooltipProvider>
+            <CartProvider>
+              <OfflineBanner />
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Suspense fallback={<PageLoader />}>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/signup" element={<Signup />} />
+                    <Route path="/builder" element={<ProtectedRoute><Builder /></ProtectedRoute>} />
+                    <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                    <Route path="/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
+                    <Route path="/add-product" element={<ProtectedRoute><AddProduct /></ProtectedRoute>} />
+                    <Route path="/edit-product/:productId" element={<ProtectedRoute><EditProduct /></ProtectedRoute>} />
+                    <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
+                    <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+                    <Route path="/orders/:orderId" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
+                    <Route path="/marketing" element={<ProtectedRoute><Marketing /></ProtectedRoute>} />
+                    <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+                    <Route path="/store/:username" element={<Store />} />
+                    <Route path="/store/:username/product/:productId" element={<ProductDetails />} />
+                    <Route path="/product-details/:productId" element={<ProductDetails />} />
+                    <Route path="/store/:username/checkout" element={<Checkout />} />
+                    <Route path="/checkout" element={<Checkout />} />
+                    <Route path="/preview" element={<ProtectedRoute><PreviewStore /></ProtectedRoute>} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Suspense>
+              </BrowserRouter>
+            </CartProvider>
+          </TooltipProvider>
+        </StoreProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

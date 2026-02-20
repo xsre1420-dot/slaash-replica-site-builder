@@ -1,15 +1,16 @@
 
 import { Link } from "react-router-dom";
-import { Eye, List, Plus, Settings, BarChart3, Copy, Check, Package, Archive, TrendingUp } from "lucide-react";
+import { Eye, List, Plus, Settings, BarChart3, Copy, Check, Package, Archive, TrendingUp, Share2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import StoreHeader from "@/components/StoreHeader";
 import { useStore } from "@/context/StoreContext";
 import { useAuth } from "@/context/AuthContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import platformLogo from "@/assets/platform-logo.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import OnboardingChecklist from "@/components/OnboardingChecklist";
 
 const dashboardCards = [
   { to: "/orders", icon: List, label: "الطلبات", desc: "إدارة الطلبات", gradient: "from-primary to-secondary" },
@@ -24,6 +25,45 @@ export default function Builder() {
   const { storeName, storeLogo, updateStore } = useStore();
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [completedSteps, setCompletedSteps] = useState<string[]>([]);
+
+  // Check completed onboarding steps
+  useEffect(() => {
+    const dismissed = localStorage.getItem('onboarding_dismissed');
+    if (dismissed) setShowOnboarding(false);
+
+    const steps: string[] = [];
+    // Check if products exist
+    const products = localStorage.getItem('products');
+    if (products && JSON.parse(products).length > 0) steps.push('add-product');
+    // Check if settings configured
+    if (storeName && storeName !== 'متجري') steps.push('settings');
+    // Check if shared
+    const shared = localStorage.getItem('store_shared');
+    if (shared) steps.push('share');
+    
+    setCompletedSteps(steps);
+  }, [storeName]);
+
+  const handleDismissOnboarding = () => {
+    setShowOnboarding(false);
+    localStorage.setItem('onboarding_dismissed', 'true');
+  };
+
+  const handleCopyLink = async () => {
+    if (user) {
+      try {
+        await navigator.clipboard.writeText(`${window.location.origin}/store/${user.username}`);
+        setCopied(true);
+        localStorage.setItem('store_shared', 'true');
+        toast.success("تم نسخ الرابط بنجاح!");
+        setTimeout(() => setCopied(false), 2000);
+      } catch (error) {
+        toast.error("فشل في نسخ الرابط");
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background font-arabic">
@@ -41,11 +81,19 @@ export default function Builder() {
       
       {/* Main Content */}
       <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+        {/* Onboarding Checklist */}
+        {showOnboarding && (
+          <OnboardingChecklist 
+            completedSteps={completedSteps}
+            onDismiss={handleDismissOnboarding}
+          />
+        )}
+
         {/* Store Link Card */}
         <div className="bg-card rounded-3xl p-6 sm:p-8 mb-6 max-w-3xl mx-auto border border-border/50 shadow-sm animate-fade-in">
           <div className="text-center mb-6">
             <div className="w-32 h-32 sm:w-40 sm:h-40 flex items-center justify-center mx-auto">
-              <img src={platformLogo} alt="بيلانة" className="w-full h-full object-contain" />
+              <img src={platformLogo} alt="بداية" className="w-full h-full object-contain" />
             </div>
           </div>
           
@@ -57,18 +105,7 @@ export default function Builder() {
                   ? 'bg-emerald-500 hover:bg-emerald-600 text-white' 
                   : 'bg-card hover:bg-muted text-foreground border border-border hover:border-primary/40'
               }`}
-              onClick={async () => {
-                if (user) {
-                  try {
-                    await navigator.clipboard.writeText(`${window.location.origin}/store/${user.username}`);
-                    setCopied(true);
-                    toast.success("تم نسخ الرابط بنجاح!");
-                    setTimeout(() => setCopied(false), 2000);
-                  } catch (error) {
-                    toast.error("فشل في نسخ الرابط");
-                  }
-                }
-              }}
+              onClick={handleCopyLink}
             >
               {copied ? (
                 <><Check className="w-4 h-4 ml-2" />تم النسخ بنجاح</>

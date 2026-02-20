@@ -269,8 +269,21 @@ const Orders = () => {
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
                 <ShoppingBag className="w-8 h-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">لا توجد طلبات</h3>
-              <p className="text-sm text-muted-foreground">لم يتم العثور على طلبات تطابق معايير البحث</p>
+              <h3 className="text-lg font-semibold text-foreground mb-2">لا توجد طلبات بعد</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                {searchQuery || statusFilter !== "all" || dateFilter !== "all"
+                  ? "لم يتم العثور على طلبات تطابق معايير البحث"
+                  : "شارك رابط متجرك مع عملائك للحصول على أول طلب"
+                }
+              </p>
+              {!searchQuery && statusFilter === "all" && dateFilter === "all" && (
+                <Link to="/builder">
+                  <Button className="rounded-xl">
+                    <ShoppingBag className="w-4 h-4 ml-2" />
+                    العودة للوحة التحكم
+                  </Button>
+                </Link>
+              )}
             </CardContent>
           </Card>
         )}
