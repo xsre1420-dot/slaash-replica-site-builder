@@ -6,6 +6,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Signup = () => {
   const [email, setEmail] = useState("");
@@ -21,7 +22,6 @@ const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Redirect if already logged in
   useEffect(() => {
     if (user) {
       navigate("/builder");
@@ -31,7 +31,6 @@ const Signup = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validation
     if (!email.trim() || !password.trim() || !username.trim()) {
       setError("يرجى ملء جميع الحقول المطلوبة");
       return;
@@ -83,31 +82,27 @@ const Signup = () => {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex flex-col font-arabic">
-        <header className="bg-white/80 backdrop-blur-md text-gray-800 py-6 px-6 text-center border-b border-gray-100/50">
-          <div className="flex items-center justify-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg">
-              <div className="w-5 h-5 bg-white rounded-sm"></div>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-800">نومو</h1>
+      <div className="min-h-screen bg-background flex flex-col font-arabic" dir="rtl">
+        <header className="py-5 px-6 border-b border-border/40">
+          <div className="flex items-center justify-center">
+            <img src="/lovable-uploads/f51ae0c5-1208-4965-a0c7-85a6d908ceb1.png" alt="بداية" className="h-8 w-auto" />
           </div>
         </header>
 
         <div className="flex-1 flex flex-col items-center justify-center p-6">
           <div className="w-full max-w-md text-center">
-            <div className="bg-white rounded-3xl shadow-2xl p-8 border border-gray-100/50">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Mail className="w-8 h-8 text-green-600" />
+            <div className="bg-card rounded-2xl border border-border/50 p-8">
+              <div className="w-14 h-14 bg-accent rounded-full flex items-center justify-center mx-auto mb-5">
+                <Mail className="w-7 h-7 text-primary" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">تحقق من بريدك الإلكتروني</h2>
-              <p className="text-gray-600 mb-6">
+              <h2 className="text-2xl font-bold text-foreground mb-3">تحقق من بريدك الإلكتروني</h2>
+              <p className="text-muted-foreground mb-6 text-sm leading-relaxed">
                 تم إرسال رابط التأكيد إلى بريدك الإلكتروني. يرجى النقر على الرابط لتأكيد حسابك.
               </p>
-              <Link 
-                to="/login"
-                className="inline-block bg-primary text-white px-6 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-colors"
-              >
-                العودة إلى تسجيل الدخول
+              <Link to="/login">
+                <Button className="bg-primary text-primary-foreground rounded-xl px-8">
+                  العودة إلى تسجيل الدخول
+                </Button>
               </Link>
             </div>
           </div>
@@ -117,172 +112,119 @@ const Signup = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex flex-col font-arabic">
+    <div className="min-h-screen bg-background flex flex-col font-arabic" dir="rtl">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md text-gray-800 py-6 px-6 text-center border-b border-gray-100/50">
-        <div className="flex items-center justify-center gap-3">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg">
-            <div className="w-5 h-5 bg-white rounded-sm"></div>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-800">نومو</h1>
+      <header className="py-5 px-6 border-b border-border/40">
+        <div className="flex items-center justify-between max-w-md mx-auto">
+          <Link to="/" className="flex items-center gap-2">
+            <img src="/lovable-uploads/f51ae0c5-1208-4965-a0c7-85a6d908ceb1.png" alt="بداية" className="h-8 w-auto" />
+          </Link>
+          <ThemeToggle />
         </div>
-        <p className="text-sm text-gray-600 mt-2">منصة إدارة المتاجر الإلكترونية</p>
       </header>
 
       <div className="flex-1 flex flex-col items-center justify-center p-6">
-        <div className="w-full max-w-md">
-          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100/50 backdrop-blur-lg">
-            {/* Signup Header */}
-            <div className="text-center p-8 bg-gradient-to-br from-primary to-secondary relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 backdrop-blur-sm"></div>
-              <div className="relative z-10">
-                <h2 className="text-3xl font-bold mb-3 text-white">
-                  إنشاء حساب جديد
-                </h2>
-                <p className="text-white/90">
-                  أنشئ متجرك الإلكتروني في دقائق
-                </p>
-              </div>
-            </div>
+        <div className="w-full max-w-md animate-fade-in">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-foreground mb-2">إنشاء حساب جديد</h2>
+            <p className="text-muted-foreground">أنشئ متجرك الإلكتروني في دقائق</p>
+          </div>
 
-            <form onSubmit={handleSubmit} className="p-8">
-              {/* Error Alert */}
+          <div className="bg-card rounded-2xl border border-border/50 overflow-hidden">
+            <form onSubmit={handleSubmit} className="p-7">
               {error && (
-                <Alert className="mb-6 bg-red-50 border-red-200 text-right rounded-xl">
-                  <div className="flex items-center">
-                    <AlertDescription className="flex-1 text-red-800">⚠️ {error}</AlertDescription>
-                  </div>
+                <Alert className="mb-5 bg-destructive/10 border-destructive/20 text-right rounded-xl">
+                  <AlertDescription className="text-destructive text-sm">⚠️ {error}</AlertDescription>
                 </Alert>
               )}
 
-              {/* Email Input */}
-              <div className="mb-4">
-                <label htmlFor="email" className="block text-right text-gray-700 mb-2 font-semibold text-sm">
-                  البريد الإلكتروني *
-                </label>
-                <div className="relative">
+              <div className="space-y-4">
+                <FormField id="email" label="البريد الإلكتروني *" icon={Mail}>
                   <Input
                     id="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="أدخل البريد الإلكتروني"
-                    className="pl-10 pr-4 py-3 text-right text-gray-800 border-gray-200 rounded-xl focus:border-primary focus:ring-primary bg-gray-50/50"
+                    className="pl-11 pr-4 py-2.5 text-right bg-muted/30 border-border rounded-xl focus:border-primary text-foreground"
                     dir="rtl"
                     disabled={isLoading}
                     required
                   />
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary h-4 w-4" />
-                </div>
-              </div>
+                </FormField>
 
-              {/* Username Input */}
-              <div className="mb-4">
-                <label htmlFor="username" className="block text-right text-gray-700 mb-2 font-semibold text-sm">
-                  اسم المستخدم *
-                </label>
-                <div className="relative">
+                <FormField id="username" label="اسم المستخدم *" icon={User}>
                   <Input
                     id="username"
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="اختر اسم المستخدم"
-                    className="pl-10 pr-4 py-3 text-right text-gray-800 border-gray-200 rounded-xl focus:border-primary focus:ring-primary bg-gray-50/50"
+                    className="pl-11 pr-4 py-2.5 text-right bg-muted/30 border-border rounded-xl focus:border-primary text-foreground"
                     dir="rtl"
                     disabled={isLoading}
                     required
                   />
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary h-4 w-4" />
-                </div>
-              </div>
+                </FormField>
 
-              {/* Store Name Input */}
-              <div className="mb-4">
-                <label htmlFor="storeName" className="block text-right text-gray-700 mb-2 font-semibold text-sm">
-                  اسم المتجر (اختياري)
-                </label>
-                <div className="relative">
+                <FormField id="storeName" label="اسم المتجر (اختياري)" icon={Store}>
                   <Input
                     id="storeName"
                     type="text"
                     value={storeName}
                     onChange={(e) => setStoreName(e.target.value)}
                     placeholder="اسم متجرك (افتراضي: متجري)"
-                    className="pl-10 pr-4 py-3 text-right text-gray-800 border-gray-200 rounded-xl focus:border-primary focus:ring-primary bg-gray-50/50"
+                    className="pl-11 pr-4 py-2.5 text-right bg-muted/30 border-border rounded-xl focus:border-primary text-foreground"
                     dir="rtl"
                     disabled={isLoading}
                   />
-                  <Store className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary h-4 w-4" />
-                </div>
-              </div>
+                </FormField>
 
-              {/* Password Input */}
-              <div className="mb-4">
-                <label htmlFor="password" className="block text-right text-gray-700 mb-2 font-semibold text-sm">
-                  كلمة المرور *
-                </label>
-                <div className="relative">
+                <FormField id="password" label="كلمة المرور *" icon={Lock}>
                   <Input
                     id="password"
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="أدخل كلمة المرور (6 أحرف على الأقل)"
-                    className="pl-10 pr-4 py-3 text-right text-gray-800 border-gray-200 rounded-xl focus:border-primary focus:ring-primary bg-gray-50/50"
+                    className="pl-11 pr-4 py-2.5 text-right bg-muted/30 border-border rounded-xl focus:border-primary text-foreground"
                     dir="rtl"
                     disabled={isLoading}
                     required
                     minLength={6}
                   />
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary h-4 w-4" />
-                </div>
-              </div>
+                </FormField>
 
-              {/* Confirm Password Input */}
-              <div className="mb-6">
-                <label htmlFor="confirmPassword" className="block text-right text-gray-700 mb-2 font-semibold text-sm">
-                  تأكيد كلمة المرور *
-                </label>
-                <div className="relative">
+                <FormField id="confirmPassword" label="تأكيد كلمة المرور *" icon={Lock}>
                   <Input
                     id="confirmPassword"
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="أعد إدخال كلمة المرور"
-                    className="pl-10 pr-4 py-3 text-right text-gray-800 border-gray-200 rounded-xl focus:border-primary focus:ring-primary bg-gray-50/50"
+                    className="pl-11 pr-4 py-2.5 text-right bg-muted/30 border-border rounded-xl focus:border-primary text-foreground"
                     dir="rtl"
                     disabled={isLoading}
                     required
                   />
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary h-4 w-4" />
-                </div>
+                </FormField>
               </div>
 
-              {/* Submit Button */}
               <Button 
                 type="submit" 
-                className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+                className="w-full mt-6 bg-primary hover:bg-primary/90 text-primary-foreground py-3 font-semibold rounded-xl"
                 disabled={isLoading}
               >
                 <span className="ml-2">
-                  {isLoading 
-                    ? "جارٍ إنشاء الحساب..." 
-                    : "إنشاء حساب جديد"
-                  }
+                  {isLoading ? "جارٍ إنشاء الحساب..." : "إنشاء حساب جديد"}
                 </span>
-                <ArrowLeft className="h-5 w-5" />
+                <ArrowLeft className="h-4 w-4" />
               </Button>
 
-              {/* Login Link */}
-              <div className="text-center mt-6">
-                <p className="text-gray-600 text-sm">
+              <div className="text-center mt-5">
+                <p className="text-muted-foreground text-sm">
                   لديك حساب بالفعل؟{" "}
-                  <Link 
-                    to="/login" 
-                    className="text-primary hover:text-primary/80 font-semibold transition-colors"
-                  >
+                  <Link to="/login" className="text-primary hover:text-primary/80 font-semibold">
                     سجل الدخول من هنا
                   </Link>
                 </p>
@@ -292,12 +234,29 @@ const Signup = () => {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-white/80 backdrop-blur-md text-center py-6 text-gray-600 text-sm border-t border-gray-200/50">
-        <p>جميع الحقوق محفوظة © 2025 نومو - منصة المتاجر الإلكترونية</p>
+      <footer className="text-center py-5 text-muted-foreground text-xs">
+        <p>جميع الحقوق محفوظة © 2025 نومو</p>
       </footer>
     </div>
   );
 };
+
+// Reusable form field component
+const FormField = ({ id, label, icon: Icon, children }: { 
+  id: string; 
+  label: string; 
+  icon: React.ComponentType<{ className?: string }>; 
+  children: React.ReactNode 
+}) => (
+  <div>
+    <label htmlFor={id} className="block text-right text-foreground mb-1.5 font-medium text-sm">
+      {label}
+    </label>
+    <div className="relative">
+      {children}
+      <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+    </div>
+  </div>
+);
 
 export default Signup;
