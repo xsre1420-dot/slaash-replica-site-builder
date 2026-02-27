@@ -10,24 +10,24 @@ interface ProductQuantityProps {
 
 const ProductQuantity = ({ quantity, onIncrement, onDecrement }: ProductQuantityProps) => {
   return (
-    <div className="flex items-center border-2 border-gray-200 rounded-full overflow-hidden bg-gray-50">
+    <div className="flex items-center border-2 border-border rounded-xl overflow-hidden bg-muted/50">
       <Button 
         variant="ghost" 
         size="icon" 
-        className="rounded-full h-10 w-10 hover:bg-gray-100 text-gray-600" 
+        className="rounded-none h-10 w-10 hover:bg-muted text-foreground" 
         onClick={onIncrement}
       >
-        <Plus className="h-3 w-3" />
+        <Plus className="h-3.5 w-3.5" />
       </Button>
-      <span className="mx-6 text-xl font-semibold min-w-[2rem] text-center text-gray-700">{quantity}</span>
+      <span className="mx-4 text-lg font-bold min-w-[2rem] text-center text-foreground">{quantity}</span>
       <Button 
         variant="ghost" 
         size="icon" 
-        className="rounded-full h-10 w-10 hover:bg-gray-100 text-gray-600" 
+        className="rounded-none h-10 w-10 hover:bg-muted text-foreground" 
         onClick={onDecrement}
         disabled={quantity <= 1}
       >
-        <Minus className="h-3 w-3" />
+        <Minus className="h-3.5 w-3.5" />
       </Button>
     </div>
   );
