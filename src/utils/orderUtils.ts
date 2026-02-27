@@ -5,7 +5,7 @@ import { Order, CartItem } from '@/types';
 export const saveOrderToDatabase = async (order: Order, ownerId: string) => {
   try {
     // Insert the main order
-    const { data: orderData, error: orderError } = await supabase
+    const { data: orderData, error: orderError } = await (supabase as any)
       .from('orders')
       .insert({
         id: order.id,
@@ -13,10 +13,10 @@ export const saveOrderToDatabase = async (order: Order, ownerId: string) => {
         customer_name: order.customerInfo.name,
         customer_phone: order.customerInfo.phone,
         customer_address: order.customerInfo.address,
-        total_amount: order.total,
+        total: order.total,
         status: order.status,
         notes: order.customerInfo.notes,
-        created_at: order.date
+        items: JSON.stringify(order.items),
       })
       .select()
       .single();
@@ -33,7 +33,7 @@ export const saveOrderToDatabase = async (order: Order, ownerId: string) => {
       subtotal: item.product.price * item.quantity
     }));
 
-    const { error: itemsError } = await supabase
+    const { error: itemsError } = await (supabase as any)
       .from('order_items')
       .insert(orderItems);
 

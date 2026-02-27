@@ -21,7 +21,7 @@ export const useStoreVisitTracking = (ownerId?: string) => {
 
         // Validate IP and check rate limiting before insertion
         if (visitorIp && visitorIp !== 'unknown' && visitorIp.length < 50) {
-          await supabase
+          await (supabase as any)
             .from('store_visits')
             .insert({
               owner_id: ownerId,

@@ -66,7 +66,7 @@ export class SecureDatabase {
   // Helper method to get customers for the current owner
   async getCustomers() {
     return this.query(async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('customers')
         .select('*')
         .order('created_at', { ascending: false });

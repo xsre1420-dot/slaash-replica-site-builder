@@ -30,11 +30,11 @@ const SuggestedProducts = ({ currentProductId, category }: SuggestedProductsProp
 
       try {
         // First get the suggested products for this product
-        const { data: suggestedData, error: suggestedError } = await supabase
+        const { data: suggestedData, error: suggestedError } = await (supabase as any)
           .from('suggested_products')
-          .select('suggested_product_id, display_order')
+          .select('suggested_product_id')
           .eq('product_id', currentProductId)
-          .order('display_order', { ascending: true });
+          .limit(10);
 
         if (suggestedError) {
           console.error('Error fetching suggested products:', suggestedError);

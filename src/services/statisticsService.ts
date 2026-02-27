@@ -27,10 +27,10 @@ export const fetchStatisticsData = async (dateRange: string): Promise<DatabaseDa
     const [ordersRes, itemsRes, customersRes, productsRes, visitsRes] = await withTimeout(
       Promise.all([
         supabase.from('orders').select('*').gte('created_at', dateFilter),
-        supabase.from('order_items').select('*'),
-        supabase.from('customers').select('*'),
+        (supabase as any).from('order_items').select('*'),
+        (supabase as any).from('customers').select('*'),
         supabase.from('products').select('*'),
-        supabase.from('store_visits').select('*').gte('created_at', dateFilter),
+        (supabase as any).from('store_visits').select('*').gte('created_at', dateFilter),
       ]),
       15000
     );

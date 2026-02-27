@@ -79,12 +79,12 @@ const SuggestedProductsManager = ({ productId, productName }: SuggestedProductsM
     setLoading(true);
     try {
       // First get suggested products
-      const { data: suggestedData, error: suggestedError } = await supabase
+      const { data: suggestedData, error: suggestedError } = await (supabase as any)
         .from('suggested_products')
-        .select('id, suggested_product_id, display_order')
+        .select('id, suggested_product_id')
         .eq('product_id', productId)
         .eq('owner_id', user.id)
-        .order('display_order', { ascending: true });
+        .limit(20);
 
       if (suggestedError) throw suggestedError;
       
@@ -177,15 +177,14 @@ const SuggestedProductsManager = ({ productId, productName }: SuggestedProductsM
     try {
       const nextOrder = Math.max(...suggestedProducts.map(sp => sp.display_order), 0) + 1;
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('suggested_products')
         .insert({
           product_id: productId,
           suggested_product_id: selectedProductId,
           owner_id: user.id,
-          display_order: nextOrder
         })
-        .select('id, suggested_product_id, display_order')
+        .select('id, suggested_product_id')
         .single();
 
       if (error) throw error;
@@ -201,7 +200,7 @@ const SuggestedProductsManager = ({ productId, productName }: SuggestedProductsM
       if (productError) throw productError;
 
       const newSuggestedProduct = {
-        ...data,
+        ...(data as any),
         product: productData
       };
 
