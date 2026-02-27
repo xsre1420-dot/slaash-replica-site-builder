@@ -1,34 +1,57 @@
 
-# اضافة تأثيرات حركية متقدمة لصفحة تفاصيل المنتج
+# تحسين صفحة الدفع (Checkout)
 
 ## ملخص
-اضافة Parallax Scrolling على صور المنتج وانيميشن Scroll-Reveal على جميع أقسام الصفحة لتجربة بصرية احترافية وسلسة.
+اعادة بناء صفحة Checkout بتصميم عصري يتوافق مع تحسينات صفحة تفاصيل المنتج والمتجر، مع اضافة تأثيرات حركية وتجربة مستخدم محسّنة.
 
 ---
 
 ## التحسينات
 
-### 1. Parallax Effect على صور المنتج
-- عند التمرير للاسفل، تتحرك الصورة ببطء اكثر من باقي الصفحة مما يعطي احساس بالعمق
-- استخدام `useEffect` + `scroll` event listener مع `transform: translateY`
-- التأثير يكون خفيف (عامل 0.3) لتجنب الدوخة
+### 1. Header محسّن
+- استبدال الـ header الحالي بتصميم شفاف مع blur، متوافق مع header صفحة المنتج
+- اضافة عداد المنتجات في السلة
 
-### 2. Scroll-Reveal Animations على كل قسم
-- استخدام `useScrollAnimation` hook الموجود بالفعل في المشروع
-- كل قسم (السعر، المقاسات، الالوان، الكمية، الضمانات، الوصف، التقييمات، المقترحات) يظهر بانيميشن `fade-in-up` عند الوصول اليه بالتمرير
-- تأخير تدريجي (stagger) بين الاقسام لتأثير متتابع
+### 2. ScrollReveal على جميع الاقسام
+- استخدام مكون `ScrollReveal` الموجود لتغليف كل قسم (السلة، النموذج، الملخص)
+- تأخير تدريجي بين الاقسام
 
-### 3. انيميشن Scale على الشارات (Badges)
-- شارات "جديد" و"خصم" و"نفذ المخزون" تظهر بتأثير `scale-in` مع bounce خفيف
+### 3. تحسين بطاقات المنتجات في السلة
+- تصميم اكثر انيقاً مع حركات انتقالية سلسة عند تغيير الكمية
+- تأثير حذف متحرك (fade-out) عند ازالة منتج
+- عرض سعر القطعة الواحدة بجانب المجموع
 
-### 4. انيميشن على اختيار المقاس واللون
-- تأثير `spring` عند تحديد مقاس أو لون (scale bounce)
+### 4. شريط التقدم (Progress Steps)
+- اضافة مؤشر خطوات بصري (السلة -> معلومات التوصيل -> التأكيد)
+- يتحرك تلقائياً حسب موقع التمرير
 
-### 5. انيميشن Slide-Up على شريط الضمانات
-- الايقونات الثلاثة تظهر بتأثير متتابع من الاسفل
+### 5. تحسين نموذج التوصيل
+- ايقونات بجانب كل حقل (User, Phone, MapPin, Home)
+- حركة اهتزاز عند وجود خطأ في حقل
+- تأثير focus محسّن مع ايقونة متحركة
 
-### 6. Keyframes جديدة في Tailwind Config
-- اضافة `slide-up`, `scale-bounce`, `parallax` keyframes
+### 6. ملخص الطلب المحسّن
+- بطاقة ملخص sticky اسفل الشاشة على الموبايل
+- عرض تفصيلي: عدد المنتجات + سعر المنتجات + التوصيل + المجموع النهائي
+- تأثير slide-up
+
+### 7. تحسين زر تأكيد الطلب
+- تأثير loading مع spinner عند الضغط
+- حالة disabled اثناء المعالجة
+- انيميشن نبض (pulse) لجذب الانتباه
+
+### 8. شريط ضمانات
+- نفس شريط الضمانات من صفحة المنتج (شحن، ضمان، ارجاع)
+- يظهر فوق زر التأكيد
+
+### 9. نافذة نجاح محسّنة
+- تأثيرات حركية (confetti-like) عند نجاح الطلب
+- انيميشن scale-bounce على ايقونة النجاح
+- عرض رقم الطلب
+
+### 10. حالة السلة الفارغة المحسّنة
+- انيميشن على الايقونة
+- تصميم اجمل مع رسالة تحفيزية
 
 ---
 
@@ -38,30 +61,10 @@
 
 | الملف | التعديل |
 |-------|---------|
-| `tailwind.config.ts` | اضافة keyframes جديدة: `slide-up`, `scale-bounce`, `fade-in-up` |
-| `src/pages/ProductDetails.tsx` | تغليف كل قسم بـ scroll-reveal animation مع stagger delays |
-| `src/components/product-details/ProductImages.tsx` | اضافة parallax effect على حاوية الصور باستخدام scroll listener |
-| `src/hooks/useScrollAnimation.tsx` | موجود بالفعل - سيتم استخدامه مباشرة |
+| `src/pages/Checkout.tsx` | اعادة بناء كاملة: ScrollReveal، progress steps، ملخص sticky، شريط ضمانات، نافذة نجاح محسّنة، ايقونات على الحقول |
 
-### Keyframes الجديدة:
-```text
-slide-up:      0% -> translateY(20px), opacity:0  |  100% -> translateY(0), opacity:1
-scale-bounce:  0% -> scale(0)  |  60% -> scale(1.1)  |  100% -> scale(1)
-fade-in-up:    0% -> translateY(30px), opacity:0  |  100% -> translateY(0), opacity:1
-```
-
-### نهج Parallax:
-- انشاء hook `useParallax` بسيط يستمع لـ `window.scroll` 
-- يحسب `translateY` بناء على موقع العنصر من الشاشة
-- يستخدم `requestAnimationFrame` للاداء
-- يُطبق على حاوية صور المنتج فقط
-
-### نهج Scroll Reveal:
-- استخدام `useScrollAnimation` الموجود مع `IntersectionObserver`
-- انشاء component مساعد `ScrollReveal` يغلف اي محتوى ويضيف الانيميشن تلقائياً
-- يدعم تأخير (delay) لتأثير الظهور المتتابع
-
-### ملاحظات الاداء:
-- جميع الانيميشن تستخدم `transform` و `opacity` فقط (GPU-accelerated)
-- Parallax يستخدم `requestAnimationFrame` + `will-change: transform`
-- IntersectionObserver يفصل المراقبة بعد اول ظهور (لا اعادة حساب)
+### المكتبات المستخدمة (موجودة):
+- `lucide-react` للايقونات (User, Phone, MapPin, Home, Truck, Shield, RotateCcw, ShoppingBag, Check)
+- `sonner` للاشعارات
+- `ScrollReveal` المكون الموجود
+- Tailwind animations الموجودة (`fade-in-up`, `slide-up`, `scale-bounce`)
