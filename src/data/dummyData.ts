@@ -54,7 +54,7 @@ export const loadProducts = async (): Promise<Product[]> => {
       return productsCache;
     }
     
-    const formattedProducts = data?.map(product => ({
+    const formattedProducts = data?.map((product: any) => ({
       id: product.id,
       name: product.name,
       description: product.description || '',

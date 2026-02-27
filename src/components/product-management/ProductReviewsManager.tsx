@@ -51,7 +51,7 @@ const ProductReviewsManager = ({ productId, productName }: ProductReviewsManager
     
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('product_reviews')
         .select('*')
         .eq('product_id', productId)

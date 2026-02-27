@@ -28,11 +28,11 @@ const MetaPixel = ({ event, data }: MetaPixelProps) => {
     const loadPixelSettings = async () => {
       const { data: settings } = await supabase
         .from('marketing_settings')
-        .select('meta_pixel_id, marketing_enabled')
+        .select('meta_pixel_id')
         .eq('owner_id', user.id)
         .single();
 
-      if (!settings?.marketing_enabled || !settings?.meta_pixel_id) return;
+      if (!settings?.meta_pixel_id) return;
 
       // Initialize Meta Pixel if not already loaded
       if (!window.fbq) {

@@ -36,7 +36,7 @@ const RatingSection = ({ productId, reviews = [] }: RatingSectionProps) => {
 
   const fetchReviews = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('product_reviews')
       .select('id, reviewer_name, rating, comment, created_at, helpful_count')
       .eq('product_id', productId)
