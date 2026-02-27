@@ -46,16 +46,16 @@ const Store = () => {
   const categoriesRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef(0);
 
-  // --- Load data ---
-  const loadData = useCallback(async () => {
+  // --- Load data (parallel + cached) ---
+  const loadData = useCallback(async (force = false) => {
     setIsLoading(true);
     try {
-      const [cats] = await Promise.all([getCategories(), loadProducts()]);
+      const [cats, prods] = await Promise.all([getCategories(force), loadProducts(force)]);
       setCategories([{ id: "all", name: "الكل", order: -1 }, ...cats]);
+      setAllProducts(selectedCategory === "all" ? prods : prods.filter(p => p.category === selectedCategory));
     } catch {
       setCategories([{ id: "all", name: "الكل", order: -1 }]);
     }
-    setAllProducts(getProductsByCategory(selectedCategory));
     setIsLoading(false);
   }, [selectedCategory]);
 
@@ -137,7 +137,7 @@ const Store = () => {
     const diff = e.changedTouches[0].clientY - pullStartY.current;
     if (diff > 100 && window.scrollY === 0) {
       setIsRefreshing(true);
-      await loadData();
+      await loadData(true); // Force refresh
       setIsRefreshing(false);
     }
   };

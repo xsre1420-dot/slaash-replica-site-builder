@@ -2,47 +2,85 @@
 import { Product, Category, ColorOption, ProductVariant } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
-// Cache for in-memory storage
+// Smart cache with timestamps
 let categoriesCache: Category[] = [];
 let productsCache: Product[] = [];
+let lastProductsFetch = 0;
+let lastCategoriesFetch = 0;
+const CACHE_TTL = 30_000; // 30 seconds
 
-// Get categories from Supabase
-export const getCategories = async (): Promise<Category[]> => {
+const isCacheValid = (lastFetch: number) => Date.now() - lastFetch < CACHE_TTL;
+
+const formatProduct = (product: any): Product => ({
+  id: product.id,
+  name: product.name,
+  description: product.description || '',
+  category: product.category,
+  price: Number(product.price),
+  cost: Number(product.cost) || undefined,
+  image: product.image_url || '',
+  additionalImages: product.additional_images || [],
+  stockQuantity: product.stock_quantity ?? undefined,
+  sizes: Array.isArray(product.sizes) ? product.sizes as string[] : undefined,
+  colors: (() => {
+    if (!product.colors) return undefined;
+    if (typeof product.colors === 'string') {
+      try { return JSON.parse(product.colors) as ColorOption[]; } catch { return undefined; }
+    }
+    if (Array.isArray(product.colors)) return product.colors as unknown as ColorOption[];
+    return undefined;
+  })(),
+  variants: (() => {
+    if (!product.variants) return undefined;
+    if (typeof product.variants === 'string') {
+      try { return JSON.parse(product.variants) as ProductVariant[]; } catch { return undefined; }
+    }
+    if (Array.isArray(product.variants)) return product.variants as unknown as ProductVariant[];
+    return undefined;
+  })(),
+  discountType: product.discount_type as 'none' | 'percentage' | 'amount' | undefined,
+  discountValue: product.discount_value ? Number(product.discount_value) : undefined,
+  discountStartDate: product.discount_start_date || undefined,
+  discountEndDate: product.discount_end_date || undefined,
+  originalPrice: product.original_price ? Number(product.original_price) : undefined,
+});
+
+// Get categories from Supabase with smart caching
+export const getCategories = async (force = false): Promise<Category[]> => {
+  if (!force && isCacheValid(lastCategoriesFetch) && categoriesCache.length > 0) {
+    return categoriesCache;
+  }
   try {
-    console.log('getCategories: تحميل الفئات من Supabase...');
     const { data, error } = await supabase
       .from('categories')
       .select('*')
       .order('display_order', { ascending: true });
     
     if (error) {
-      console.error('getCategories: خطأ في تحميل الفئات:', error);
+      console.error('Error loading categories:', error);
       return categoriesCache;
     }
     
-    console.log('getCategories: تم تحميل الفئات:', data?.length || 0, 'فئة');
-    
-    const formattedCategories = data?.map(cat => ({
+    categoriesCache = data?.map(cat => ({
       id: cat.id,
       name: cat.name,
       order: cat.display_order || 0
     })) || [];
-    
-    categoriesCache = formattedCategories;
-    return formattedCategories;
+    lastCategoriesFetch = Date.now();
+    return categoriesCache;
   } catch (error) {
-    console.error('getCategories: خطأ عام:', error);
+    console.error('Error loading categories:', error);
     return categoriesCache;
   }
 };
 
-// Get categories synchronously (returns cached version)
-export const getCategoriesSync = (): Category[] => {
-  return categoriesCache;
-};
+export const getCategoriesSync = (): Category[] => categoriesCache;
 
-// Load products from Supabase
-export const loadProducts = async (): Promise<Product[]> => {
+// Load products from Supabase with smart caching
+export const loadProducts = async (force = false): Promise<Product[]> => {
+  if (!force && isCacheValid(lastProductsFetch) && productsCache.length > 0) {
+    return productsCache;
+  }
   try {
     const { data, error } = await supabase
       .from('products')
@@ -54,61 +92,34 @@ export const loadProducts = async (): Promise<Product[]> => {
       return productsCache;
     }
     
-    const formattedProducts = data?.map((product: any) => ({
-      id: product.id,
-      name: product.name,
-      description: product.description || '',
-      category: product.category,
-      price: Number(product.price),
-      cost: Number(product.cost) || undefined,
-      image: product.image_url || '',
-      additionalImages: product.additional_images || [],
-      stockQuantity: product.stock_quantity || undefined,
-      sizes: Array.isArray(product.sizes) ? product.sizes as string[] : undefined,
-      colors: Array.isArray(product.colors) ? (product.colors as unknown as ColorOption[]) : undefined,
-      variants: Array.isArray(product.variants) ? (product.variants as unknown as ProductVariant[]) : undefined,
-      // Discount fields
-      discountType: product.discount_type as 'none' | 'percentage' | 'amount' | undefined,
-      discountValue: product.discount_value ? Number(product.discount_value) : undefined,
-      discountStartDate: product.discount_start_date || undefined,
-      discountEndDate: product.discount_end_date || undefined,
-      originalPrice: product.original_price ? Number(product.original_price) : undefined,
-    })) || [];
-    
-    productsCache = formattedProducts;
-    return formattedProducts;
+    productsCache = data?.map(formatProduct) || [];
+    lastProductsFetch = Date.now();
+    return productsCache;
   } catch (error) {
     console.error('Error loading products:', error);
     return productsCache;
   }
 };
 
-// Get products synchronously (returns cached version)
-export const getProductsSync = (): Product[] => {
-  return productsCache;
-};
-
-// Backward compatibility - use sync version
+export const getProductsSync = (): Product[] => productsCache;
 export let products: Product[] = productsCache;
 
-// Function to reload products from Supabase
 export const reloadProducts = async (): Promise<void> => {
-  await loadProducts();
+  await loadProducts(true);
   products = productsCache;
 };
 
-// Function to add a new product to Supabase
+// Invalidate cache (call after mutations)
+export const invalidateCache = () => {
+  lastProductsFetch = 0;
+  lastCategoriesFetch = 0;
+};
+
+// Add product with optimistic update
 export const addProduct = async (product: Product): Promise<{ success: boolean; error?: string }> => {
   try {
-    console.log('addProduct: البدء في إضافة المنتج');
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error('addProduct: المستخدم غير مصادق عليه');
-      return { success: false, error: 'User not authenticated' };
-    }
-
-    console.log('addProduct: المستخدم مصادق عليه:', user.id);
-    console.log('addProduct: بيانات المنتج:', product);
+    if (!user) return { success: false, error: 'User not authenticated' };
 
     const { data, error } = await supabase
       .from('products')
@@ -126,27 +137,29 @@ export const addProduct = async (product: Product): Promise<{ success: boolean; 
         variants: product.variants ? JSON.parse(JSON.stringify(product.variants)) : null,
         owner_id: user.id
       })
-      .select();
+      .select()
+      .single();
 
     if (error) {
-      console.error('addProduct: خطأ في إضافة المنتج:', error);
+      console.error('Error adding product:', error);
       return { success: false, error: error.message };
     }
 
-    console.log('addProduct: تم إضافة المنتج بنجاح:', data);
-
-    // Reload products to update cache
-    await loadProducts();
-    products = productsCache;
+    // Optimistic: add to cache immediately without re-fetching
+    if (data) {
+      const newProduct = formatProduct(data);
+      productsCache = [newProduct, ...productsCache];
+      products = productsCache;
+    }
     
     return { success: true };
   } catch (error) {
-    console.error('addProduct: خطأ عام:', error);
+    console.error('Error adding product:', error);
     return { success: false, error: 'Failed to add product' };
   }
 };
 
-// Function to update an existing product in Supabase
+// Update product with optimistic update
 export const updateProduct = async (productId: string, updatedProduct: Product): Promise<{ success: boolean; error?: string }> => {
   try {
     const { error } = await supabase
@@ -171,8 +184,10 @@ export const updateProduct = async (productId: string, updatedProduct: Product):
       return { success: false, error: error.message };
     }
 
-    // Reload products to update cache
-    await loadProducts();
+    // Optimistic update in cache
+    productsCache = productsCache.map(p => 
+      p.id === productId ? { ...updatedProduct, id: productId } : p
+    );
     products = productsCache;
     
     return { success: true };
@@ -182,7 +197,7 @@ export const updateProduct = async (productId: string, updatedProduct: Product):
   }
 };
 
-// Function to delete a product from Supabase
+// Delete product with optimistic update
 export const deleteProduct = async (productId: string): Promise<{ success: boolean; error?: string }> => {
   try {
     const { error } = await supabase
@@ -195,8 +210,8 @@ export const deleteProduct = async (productId: string): Promise<{ success: boole
       return { success: false, error: error.message };
     }
 
-    // Reload products to update cache
-    await loadProducts();
+    // Optimistic remove from cache
+    productsCache = productsCache.filter(p => p.id !== productId);
     products = productsCache;
     
     return { success: true };
@@ -206,72 +221,51 @@ export const deleteProduct = async (productId: string): Promise<{ success: boole
   }
 };
 
-// Get products by category
+// Get products by category (from cache)
 export const getProductsByCategory = (categoryId: string): Product[] => {
-  if (categoryId === "all") {
-    return productsCache;
-  }
+  if (categoryId === "all") return productsCache;
   return productsCache.filter(product => product.category === categoryId);
 };
 
-// Add a new category to Supabase
+// Category CRUD with optimistic updates
 export const addCategory = async (category: Category): Promise<{ success: boolean; error?: string }> => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return { success: false, error: 'User not authenticated' };
-    }
+    if (!user) return { success: false, error: 'User not authenticated' };
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('categories')
-      .insert({
-        name: category.name,
-        display_order: category.order || 0,
-        owner_id: user.id
-      });
+      .insert({ name: category.name, display_order: category.order || 0, owner_id: user.id })
+      .select()
+      .single();
 
-    if (error) {
-      console.error('Error adding category:', error);
-      return { success: false, error: error.message };
+    if (error) return { success: false, error: error.message };
+
+    if (data) {
+      categoriesCache = [...categoriesCache, { id: data.id, name: data.name, order: data.display_order }];
     }
-
-    // Reload categories to update cache
-    await getCategories();
-    
     return { success: true };
   } catch (error) {
-    console.error('Error adding category:', error);
     return { success: false, error: 'Failed to add category' };
   }
 };
 
-// Update an existing category in Supabase
 export const updateCategory = async (categoryId: string, updatedCategory: Category): Promise<{ success: boolean; error?: string }> => {
   try {
     const { error } = await supabase
       .from('categories')
-      .update({
-        name: updatedCategory.name,
-        display_order: updatedCategory.order || 0
-      })
+      .update({ name: updatedCategory.name, display_order: updatedCategory.order || 0 })
       .eq('id', categoryId);
 
-    if (error) {
-      console.error('Error updating category:', error);
-      return { success: false, error: error.message };
-    }
+    if (error) return { success: false, error: error.message };
 
-    // Reload categories to update cache
-    await getCategories();
-    
+    categoriesCache = categoriesCache.map(c => c.id === categoryId ? { ...updatedCategory, id: categoryId } : c);
     return { success: true };
   } catch (error) {
-    console.error('Error updating category:', error);
     return { success: false, error: 'Failed to update category' };
   }
 };
 
-// Delete a category from Supabase
 export const deleteCategory = async (categoryId: string): Promise<{ success: boolean; error?: string }> => {
   try {
     const { error } = await supabase
@@ -279,28 +273,20 @@ export const deleteCategory = async (categoryId: string): Promise<{ success: boo
       .delete()
       .eq('id', categoryId);
 
-    if (error) {
-      console.error('Error deleting category:', error);
-      return { success: false, error: error.message };
-    }
+    if (error) return { success: false, error: error.message };
 
-    // Reload categories to update cache
-    await getCategories();
-    
+    categoriesCache = categoriesCache.filter(c => c.id !== categoryId);
     return { success: true };
   } catch (error) {
-    console.error('Error deleting category:', error);
     return { success: false, error: 'Failed to delete category' };
   }
 };
 
-// Get product by ID
 export const getProductById = (id: string): Product | undefined => {
   return productsCache.find(product => product.id === id);
 };
 
 // Initialize data on module load
 (async () => {
-  await getCategories();
-  await loadProducts();
+  await Promise.all([getCategories(), loadProducts()]);
 })();
