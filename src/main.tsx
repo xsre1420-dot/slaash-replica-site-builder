@@ -75,3 +75,13 @@ createRoot(document.getElementById("root")!).render(
 // Initialize performance monitoring and SW
 reportWebVitals();
 registerServiceWorker();
+
+// Suggestion #20: Bundle analyzer (dev only)
+if (import.meta.env.DEV) {
+  window.addEventListener('load', () => {
+    setTimeout(async () => {
+      const { reportBundleSizes } = await import('./hooks/useBundleAnalyzer');
+      reportBundleSizes();
+    }, 3000);
+  });
+}

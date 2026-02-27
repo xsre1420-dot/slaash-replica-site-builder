@@ -58,12 +58,10 @@ export const saveProduct = async (productData: {
 
 export const getProducts = async (ownerId: string) => {
   try {
-    // RLS policies automatically filter by auth.uid()
-    // No manual context setting needed
-    
+    // Suggestion #14: Select only needed columns instead of *
     const { data, error } = await supabase
       .from('products')
-      .select('*')
+      .select('id, name, description, category, price, image_url, additional_images, is_active, stock_quantity, colors, sizes, variants, cost, created_at, updated_at')
       .order('created_at', { ascending: false });
 
     if (error) {

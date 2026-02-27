@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { ArrowLeft, MessageSquare, Lightbulb, Download, Plus, Package, AlertTriangle, XCircle, DollarSign, Search } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,12 +8,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { ProductsList } from "@/components/ProductsList";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ProductReviewsManager from "@/components/product-management/ProductReviewsManager";
-import SuggestedProductsManager from "@/components/product-management/SuggestedProductsManager";
 import { Product } from "@/types";
 import { exportProductsToCSV } from "@/utils/exportProducts";
 import { toast } from "sonner";
 import { getCategories } from "@/data/dummyData";
+import { useRealtimeProducts } from "@/hooks/useRealtimeProducts";
+import { useScrollPersistence, saveFilters, loadFilters } from "@/hooks/useScrollPersistence";
+
+// Suggestion #8: Lazy load sub-managers
+const ProductReviewsManager = lazy(() => import("@/components/product-management/ProductReviewsManager"));
+const SuggestedProductsManager = lazy(() => import("@/components/product-management/SuggestedProductsManager"));
 
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -25,6 +29,15 @@ const Products = () => {
   const [stockFilter, setStockFilter] = useState("all");
   const [categories, setCategories] = useState<{id: string; name: string}[]>([]);
   
+  // Suggestion #17: Scroll & filter persistence
+  useScrollPersistence('products');
+
+  // Suggestion #11: Realtime subscriptions
+  const handleRealtimeUpdate = useCallback(() => {
+    // Products will be reloaded by the hook
+  }, []);
+  useRealtimeProducts(handleRealtimeUpdate);
+
   const productIdParam = searchParams.get('productId');
   const productNameParam = searchParams.get('productName');
   
@@ -38,6 +51,21 @@ const Products = () => {
   useEffect(() => {
     getCategories().then(cats => setCategories(cats));
   }, []);
+
+  // Suggestion #17: Restore saved filters
+  useEffect(() => {
+    const saved = loadFilters('products');
+    if (saved) {
+      if (saved.categoryFilter) setCategoryFilter(saved.categoryFilter);
+      if (saved.stockFilter) setStockFilter(saved.stockFilter);
+      if (saved.searchQuery) setSearchQuery(saved.searchQuery);
+    }
+  }, []);
+
+  // Save filters when they change
+  useEffect(() => {
+    saveFilters('products', { categoryFilter, stockFilter, searchQuery });
+  }, [categoryFilter, stockFilter, searchQuery]);
 
   // Debounce search
   useEffect(() => {
@@ -131,17 +159,21 @@ const Products = () => {
               </TabsList>
               
               <TabsContent value="reviews" className="mt-6">
-                <ProductReviewsManager 
-                  productId={selectedProduct.id} 
-                  productName={selectedProduct.name}
-                />
+                <Suspense fallback={<div className="py-8 text-center text-muted-foreground">جاري التحميل...</div>}>
+                  <ProductReviewsManager 
+                    productId={selectedProduct.id} 
+                    productName={selectedProduct.name}
+                  />
+                </Suspense>
               </TabsContent>
               
               <TabsContent value="suggestions" className="mt-6">
-                <SuggestedProductsManager 
-                  productId={selectedProduct.id} 
-                  productName={selectedProduct.name}
-                />
+                <Suspense fallback={<div className="py-8 text-center text-muted-foreground">جاري التحميل...</div>}>
+                  <SuggestedProductsManager 
+                    productId={selectedProduct.id} 
+                    productName={selectedProduct.name}
+                  />
+                </Suspense>
               </TabsContent>
             </Tabs>
           </div>
