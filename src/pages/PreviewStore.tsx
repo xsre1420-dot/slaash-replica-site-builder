@@ -8,6 +8,7 @@ import { useStore } from "@/context/StoreContext";
 import { Button } from "@/components/ui/button";
 import MetaPixel from "@/components/MetaPixel";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
+import OptimizedImage from "@/components/OptimizedImage";
 
 const PreviewStore = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
