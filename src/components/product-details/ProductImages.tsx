@@ -2,6 +2,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
 import { Sparkles, Flame, Tag } from "lucide-react";
+import { useParallax } from "@/hooks/useParallax";
 
 interface ProductImagesProps {
   images: string[];
@@ -21,6 +22,7 @@ const ProductImages = ({
   const [activeIndex, setActiveIndex] = useState(0);
   const [api, setApi] = useState<CarouselApi>();
   const [imgLoaded, setImgLoaded] = useState<boolean[]>(new Array(images.length).fill(false));
+  const { ref: parallaxRef, offset } = useParallax(0.15);
 
   useEffect(() => {
     if (!api) return;
@@ -36,8 +38,8 @@ const ProductImages = ({
   };
 
   return (
-    <div className="w-full space-y-3">
-      <div className="relative">
+    <div className="w-full space-y-3" ref={parallaxRef}>
+      <div className="relative overflow-hidden" style={{ transform: `translateY(${offset}px)`, willChange: 'transform' }}>
         <Carousel className="w-full" setApi={setApi}>
           <CarouselContent>
             {images.map((img, index) => (
@@ -59,22 +61,22 @@ const ProductImages = ({
         {/* Badges */}
         <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-10">
           {discountPercent && discountPercent > 0 && (
-            <span className="bg-destructive text-destructive-foreground px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 shadow">
+            <span className="bg-destructive text-destructive-foreground px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 shadow animate-scale-bounce">
               <Tag className="w-3 h-3" /> {discountPercent}%-
             </span>
           )}
           {isNew && (
-            <span className="bg-primary text-primary-foreground px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 shadow">
+            <span className="bg-primary text-primary-foreground px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 shadow animate-scale-bounce" style={{ animationDelay: '100ms' }}>
               <Sparkles className="w-3 h-3" /> جديد
             </span>
           )}
           {isLowStock && stockQuantity && (
-            <span className="bg-warning text-warning-foreground px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 shadow">
+            <span className="bg-warning text-warning-foreground px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 shadow animate-scale-bounce" style={{ animationDelay: '200ms' }}>
               <Flame className="w-3 h-3" /> آخر {stockQuantity}
             </span>
           )}
           {isOutOfStock && (
-            <span className="bg-muted text-muted-foreground px-2.5 py-1 rounded-lg text-xs font-bold shadow">
+            <span className="bg-muted text-muted-foreground px-2.5 py-1 rounded-lg text-xs font-bold shadow animate-scale-bounce" style={{ animationDelay: '150ms' }}>
               نفذ المخزون
             </span>
           )}
