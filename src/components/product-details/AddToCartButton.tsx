@@ -34,7 +34,7 @@ const AddToCartButton = ({ onClick, disabled = false, isOutOfStock = false }: Ad
           ? 'bg-muted text-muted-foreground' 
           : added 
             ? 'bg-green-600 hover:bg-green-700 text-white scale-[0.98]' 
-            : 'bg-foreground hover:bg-foreground/90 text-background'
+            : 'bg-primary hover:bg-primary/90 text-primary-foreground'
       }`}
     >
       {isOutOfStock ? (
