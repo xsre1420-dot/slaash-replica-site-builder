@@ -90,7 +90,7 @@
 
   body {
     font-family: 'Tajawal', 'Inter', sans-serif;
-    color: #000000;
+    color: hsl(var(--foreground));
     background-color: hsl(var(--bg-primary));
   }
   
@@ -104,19 +104,19 @@
     font-family: 'Tajawal', sans-serif;
   }
 
-  /* Global input text color override - ensure black text */
+  /* Global input text color override */
   input, textarea, select {
-    color: #000000 !important;
+    color: hsl(var(--input-text));
   }
 
-  /* Specific input field styling - ensure black text */
+  /* Specific input field styling */
   .input-blue {
-    color: #000000 !important;
+    color: hsl(var(--input-text));
   }
 
   /* Placeholder text styling */
   input::placeholder, textarea::placeholder {
-    color: #9ca3af !important;
+    color: hsl(var(--muted-foreground));
   }
 }
 
@@ -126,7 +126,7 @@
   }
   
   .card-modern {
-    @apply bg-white rounded-2xl shadow-sm border-0;
+    @apply bg-card rounded-2xl shadow-sm border-0;
   }
   
   .card-hover {
@@ -135,7 +135,7 @@
   
   /* Modern glassmorphism effect */
   .glass-card {
-    @apply backdrop-blur-lg bg-white/80 border border-white/20;
+    @apply backdrop-blur-lg bg-card/80 border border-border/20;
   }
   
   /* RTL table headers */
@@ -145,7 +145,7 @@
   
   /* Custom modern utilities */
   .text-primary-modern {
-    color: #000000;
+    color: hsl(var(--text-primary));
   }
   
   .text-secondary-modern {

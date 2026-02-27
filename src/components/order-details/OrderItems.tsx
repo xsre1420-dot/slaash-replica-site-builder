@@ -13,12 +13,12 @@ const OrderItems = ({ items }: OrderItemsProps) => {
         {items.map((item, index) => (
           <div
             key={`${item.product.id}-${index}`}
-            className="flex justify-between items-center border-b pb-3"
+            className="flex justify-between items-center border-b border-border pb-3"
           >
             <div className="flex items-center">
               <div>
                 <span className="block font-medium">{item.product.price.toLocaleString()} x {item.quantity}</span>
-                <span className="text-gray-500 text-sm">
+                <span className="text-muted-foreground text-sm">
                   المجموع: {(item.product.price * item.quantity).toLocaleString()} د.ع
                 </span>
               </div>
@@ -26,26 +26,26 @@ const OrderItems = ({ items }: OrderItemsProps) => {
             <div className="flex items-center gap-5">
               <div className="text-right">
                 <span className="block font-semibold">{item.product.name}</span>
-                <span className="text-gray-600 text-sm line-clamp-1">
+                <span className="text-muted-foreground text-sm line-clamp-1">
                   {item.product.description}
                 </span>
                 {/* Display selected options */}
                 {(item.selectedSize || item.selectedColor) && (
                   <div className="flex gap-2 mt-1">
                     {item.selectedSize && (
-                      <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">
+                      <span className="text-xs bg-muted px-2 py-1 rounded-full">
                         القياس: {item.selectedSize}
                       </span>
                     )}
                     {item.selectedColor && (
-                      <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">
+                      <span className="text-xs bg-muted px-2 py-1 rounded-full">
                         اللون: {item.selectedColor}
                       </span>
                     )}
                   </div>
                 )}
               </div>
-              <div className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-white flex items-center justify-center">
+              <div className="w-16 h-16 rounded-lg overflow-hidden border border-border shadow-sm bg-card flex items-center justify-center">
                 <img
                   src={item.product.image}
                   alt={item.product.name}

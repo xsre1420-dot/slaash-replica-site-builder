@@ -19,11 +19,11 @@ const OrderTotal = ({ total, selectedGovernorate }: OrderTotalProps) => {
   const grandTotal = total;
 
   return (
-    <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-2xl p-6 mt-6">
+    <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 mt-6">
       <div className="space-y-3">
         <div className="flex justify-between items-center">
-          <span className="text-lg font-semibold text-blue-800">المجموع الفرعي:</span>
-          <span className="text-lg font-bold text-blue-900">
+          <span className="text-lg font-semibold text-primary">المجموع الفرعي:</span>
+          <span className="text-lg font-bold text-foreground">
             {productSubtotal.toLocaleString()} د.ع
           </span>
         </div>
@@ -31,24 +31,24 @@ const OrderTotal = ({ total, selectedGovernorate }: OrderTotalProps) => {
         {storeSettings.deliveryPrices && storeSettings.deliveryPrices.length > 0 && (
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-lg font-semibold text-blue-800">رسوم التوصيل:</span>
-              <span className="text-lg font-bold text-blue-900">
+              <span className="text-lg font-semibold text-primary">رسوم التوصيل:</span>
+              <span className="text-lg font-bold text-foreground">
                 {deliveryPrice.toLocaleString()} د.ع
               </span>
             </div>
             {selectedGovernorate && (
-              <div className="text-sm text-blue-700 text-right">
+              <div className="text-sm text-muted-foreground text-right">
                 التوصيل إلى: {selectedGovernorate}
               </div>
             )}
           </div>
         )}
         
-        <hr className="border-blue-200" />
+        <hr className="border-primary/20" />
         
         <div className="flex justify-between items-center">
-          <span className="text-lg font-semibold text-blue-800">المجموع الكلي:</span>
-          <span className="text-2xl font-bold text-blue-900">
+          <span className="text-lg font-semibold text-primary">المجموع الكلي:</span>
+          <span className="text-2xl font-bold text-foreground">
             {grandTotal.toLocaleString()} د.ع
           </span>
         </div>

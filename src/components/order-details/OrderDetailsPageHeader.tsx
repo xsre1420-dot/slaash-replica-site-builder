@@ -8,15 +8,15 @@ interface OrderDetailsPageHeaderProps {
 
 const OrderDetailsPageHeader = ({ orderId }: OrderDetailsPageHeaderProps) => {
   return (
-    <div className="bg-white shadow-sm">
+    <div className="bg-card shadow-sm">
       <div className="max-w-7xl mx-auto px-6 py-4">
         <div className="flex justify-between items-center">
           <Link to="/orders">
-            <Button variant="ghost" className="p-2 hover:bg-gray-100 rounded-xl">
+            <Button variant="ghost" className="p-2 hover:bg-muted rounded-xl">
               <ArrowLeft className="w-4 h-4" />
             </Button>
           </Link>
-          <h1 className="text-2xl font-bold text-gray-800">تفاصيل الطلب #{orderId}</h1>
+          <h1 className="text-2xl font-bold text-foreground">تفاصيل الطلب #{orderId}</h1>
           <div className="w-10"></div>
         </div>
       </div>
