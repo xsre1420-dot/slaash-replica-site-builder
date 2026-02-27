@@ -173,8 +173,8 @@ const ProductDetails = () => {
                       onClick={() => setSelectedSize(selectedSize === size ? "" : size)}
                       className={`px-4 py-2.5 rounded-xl text-sm font-medium border transition-all duration-200 ${
                         selectedSize === size
-                          ? 'bg-foreground text-background border-foreground shadow-sm scale-105'
-                          : 'bg-card text-foreground border-border hover:border-foreground/30 hover:scale-[1.02]'
+                          ? 'bg-primary text-primary-foreground border-primary shadow-sm scale-105'
+                          : 'bg-card text-foreground border-border hover:border-primary/30 hover:scale-[1.02]'
                       }`}
                     >
                       {selectedSize === size && <Check className="w-3 h-3 inline ml-1" />}
@@ -205,8 +205,8 @@ const ProductDetails = () => {
                       onClick={() => setSelectedColor(selectedColor === color.value ? "" : color.value)}
                       className={`w-12 h-12 rounded-xl border-2 transition-all duration-200 relative overflow-hidden ${
                         selectedColor === color.value
-                          ? 'border-foreground ring-2 ring-foreground/20 scale-110'
-                          : 'border-border hover:border-foreground/30 hover:scale-105'
+                          ? 'border-primary ring-2 ring-primary/20 scale-110'
+                          : 'border-border hover:border-primary/30 hover:scale-105'
                       }`}
                       style={{ backgroundColor: color.value }}
                     >

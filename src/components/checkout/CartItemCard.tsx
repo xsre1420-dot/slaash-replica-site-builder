@@ -58,14 +58,14 @@ const CartItemCard = ({ item, index, onRemove, onUpdateQuantity }: CartItemCardP
               <div className="flex items-center gap-1 bg-background rounded-full px-1 py-0.5 border border-border/50">
                 <button
                   onClick={() => onUpdateQuantity(item.product.id, item.quantity - 1, item.selectedSize, item.selectedColor)}
-                  className="rounded-full w-6 h-6 flex items-center justify-center bg-foreground text-background text-xs hover:opacity-80 transition-opacity"
+                  className="rounded-full w-6 h-6 flex items-center justify-center bg-primary text-primary-foreground text-xs hover:opacity-80 transition-opacity"
                 >
                   <Minus className="w-3 h-3" />
                 </button>
                 <span className="w-6 text-center text-foreground font-semibold text-sm">{item.quantity}</span>
                 <button
                   onClick={() => onUpdateQuantity(item.product.id, item.quantity + 1, item.selectedSize, item.selectedColor)}
-                  className="rounded-full w-6 h-6 flex items-center justify-center bg-foreground text-background text-xs hover:opacity-80 transition-opacity"
+                  className="rounded-full w-6 h-6 flex items-center justify-center bg-primary text-primary-foreground text-xs hover:opacity-80 transition-opacity"
                 >
                   <Plus className="w-3 h-3" />
                 </button>

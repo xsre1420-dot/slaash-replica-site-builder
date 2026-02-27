@@ -14,7 +14,7 @@ const ProductQuantity = ({ quantity, onIncrement, onDecrement }: ProductQuantity
       <Button 
         variant="ghost" 
         size="icon" 
-        className="rounded-none h-10 w-10 hover:bg-muted text-foreground" 
+        className="rounded-none h-10 w-10 hover:bg-primary/10 text-primary" 
         onClick={onIncrement}
       >
         <Plus className="h-3.5 w-3.5" />
@@ -23,7 +23,7 @@ const ProductQuantity = ({ quantity, onIncrement, onDecrement }: ProductQuantity
       <Button 
         variant="ghost" 
         size="icon" 
-        className="rounded-none h-10 w-10 hover:bg-muted text-foreground" 
+        className="rounded-none h-10 w-10 hover:bg-primary/10 text-primary" 
         onClick={onDecrement}
         disabled={quantity <= 1}
       >
