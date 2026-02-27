@@ -2,7 +2,7 @@ import { Heart, Plus, Minus, Star, Share2, ShoppingBag, Eye, Flame, Sparkles, Cl
 import { Button } from "@/components/ui/button";
 import { Product } from "@/types";
 import { useState, useRef } from "react";
-
+import OptimizedImage from "@/components/OptimizedImage";
 interface ProductCardProps {
   product: Product;
   viewMode: "grid" | "list";
@@ -54,14 +54,11 @@ const ProductCard = ({
       >
         {/* Image */}
         <div className="relative w-28 h-28 rounded-xl overflow-hidden flex-shrink-0">
-          {!imgLoaded && <div className="absolute inset-0 bg-muted animate-pulse" />}
-          <img
-            ref={imgRef}
+          <OptimizedImage
             src={product.image}
             alt={product.name}
-            className={`w-full h-full object-cover transition-all duration-500 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className="w-full h-full"
             loading="lazy"
-            onLoad={() => setImgLoaded(true)}
           />
           {/* Badges */}
           <div className="absolute top-1.5 right-1.5 flex flex-col gap-1">
@@ -138,13 +135,11 @@ const ProductCard = ({
       onClick={() => onView(product.id)}
     >
       <div className="relative aspect-square overflow-hidden">
-        {!imgLoaded && <div className="absolute inset-0 bg-muted animate-pulse" />}
-        <img
+        <OptimizedImage
           src={product.image}
           alt={product.name}
-          className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+          className="w-full h-full group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
-          onLoad={() => setImgLoaded(true)}
         />
 
         {/* Badges */}
