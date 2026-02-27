@@ -15,6 +15,7 @@ import ColorSwatchPicker from "@/components/ColorSwatchPicker";
 import CategoryDialog from "@/components/CategoryDialog";
 import { formatPriceInput, isValidPrice, convertArabicToEnglish } from "@/utils/numberUtils";
 import { supabase } from "@/integrations/supabase/client";
+import { validateProductImages } from "@/utils/imageValidator";
 import ProductFormProgress from "@/components/add-product/ProductFormProgress";
 import ProductPreviewCard from "@/components/add-product/ProductPreviewCard";
 import FormSection from "@/components/add-product/FormSection";
@@ -160,6 +161,17 @@ const AddProduct = () => {
     if (!price || !isValidPrice(price)) errors.price = "سعر صحيح مطلوب";
     if (!mainImage) errors.image = "أضف صورة رئيسية";
     if (Object.keys(errors).length) { setFieldErrors(errors); toast({ title: "تحقق من البيانات", description: "يرجى ملء الحقول المطلوبة", variant: "destructive" }); return; }
+
+    // Suggestion #1: Validate image URLs before saving
+    const imageValidation = await validateProductImages(mainImage, additionalImages);
+    if (imageValidation.hasBlobUrls) {
+      toast({ title: "خطأ في الصور", description: "بعض الصور لم تُرفع بعد. انتظر اكتمال الرفع.", variant: "destructive" });
+      return;
+    }
+    if (!imageValidation.valid) {
+      toast({ title: "تحذير", description: `${imageValidation.invalidUrls.length} صورة غير صالحة. يرجى إعادة رفعها.`, variant: "destructive" });
+      return;
+    }
 
     setIsSubmitting(true);
     try {

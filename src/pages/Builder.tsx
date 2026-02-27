@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import platformLogo from "@/assets/platform-logo.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import OnboardingChecklist from "@/components/OnboardingChecklist";
+import { usePreloadData } from "@/hooks/usePreloadData";
 
 const dashboardCards = [
   { to: "/orders", icon: List, label: "الطلبات", desc: "إدارة الطلبات", gradient: "from-primary to-secondary" },
@@ -27,6 +28,9 @@ export default function Builder() {
   const [copied, setCopied] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
+
+  // Suggestion #6: Preload critical data after login
+  usePreloadData();
 
   // Check completed onboarding steps
   useEffect(() => {

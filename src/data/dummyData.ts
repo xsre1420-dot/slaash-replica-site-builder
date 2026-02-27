@@ -82,9 +82,10 @@ export const loadProducts = async (force = false): Promise<Product[]> => {
     return productsCache;
   }
   try {
+    // Suggestion #14: Select only needed columns
     const { data, error } = await supabase
       .from('products')
-      .select('*')
+      .select('id, name, description, category, price, cost, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, created_at, updated_at')
       .order('created_at', { ascending: false });
     
     if (error) {

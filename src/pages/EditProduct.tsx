@@ -14,6 +14,8 @@ import ProductImagesManager from "@/components/ProductImagesManager";
 import SizesManager from "@/components/SizesManager";
 import ColorSwatchPicker from "@/components/ColorSwatchPicker";
 import { formatPriceInput, isValidPrice } from "@/utils/numberUtils";
+import { useUndoDelete } from "@/hooks/useUndoDelete";
+import { validateProductImages } from "@/utils/imageValidator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const EditProduct = () => {
@@ -155,23 +157,28 @@ const EditProduct = () => {
     }
   };
 
+  // Suggestion #18: Undo delete
+  const { deleteWithUndo } = useUndoDelete();
+
   const handleDeleteProduct = async () => {
     if (!productId) return;
     
-    const result = await deleteProduct(productId);
-    if (result.success) {
-      toast({
-        title: "تم الحذف",
-        description: "تم حذف المنتج بنجاح",
-      });
-      navigate('/products');
-    } else {
-      toast({
-        title: "خطأ",
-        description: "فشل في حذف المنتج",
-        variant: "destructive",
-      });
-    }
+    const product = getProductById(productId);
+    if (!product) return;
+
+    // Remove from UI immediately
+    navigate('/products');
+
+    deleteWithUndo({
+      item: product,
+      itemName: product.name,
+      onDelete: async () => deleteProduct(productId),
+      onRestore: () => {
+        toast({ title: "تم الاستعادة", description: "تم استعادة المنتج بنجاح" });
+        navigate(`/edit-product/${productId}`);
+      },
+      timeoutMs: 5000,
+    });
   };
 
   return (
