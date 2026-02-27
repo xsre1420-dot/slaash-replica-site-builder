@@ -1,45 +1,121 @@
 
-import { AspectRatio } from "@/components/ui/aspect-ratio";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { useState, useCallback, useEffect } from "react";
+import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
+import { Sparkles, Flame, Tag } from "lucide-react";
 
 interface ProductImagesProps {
   images: string[];
   productName: string;
   isLarge?: boolean;
+  isNew?: boolean;
+  isLowStock?: boolean;
+  stockQuantity?: number;
+  isOutOfStock?: boolean;
+  discountPercent?: number;
 }
 
-const ProductImages = ({ images, productName, isLarge = false }: ProductImagesProps) => {
-  // Use different aspect ratios based on isLarge prop
-  const aspectRatio = isLarge ? 4/3 : 16/9;
-  
+const ProductImages = ({ 
+  images, productName, isLarge = false,
+  isNew, isLowStock, stockQuantity, isOutOfStock, discountPercent 
+}: ProductImagesProps) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [api, setApi] = useState<CarouselApi>();
+  const [imgLoaded, setImgLoaded] = useState<boolean[]>(new Array(images.length).fill(false));
+
+  useEffect(() => {
+    if (!api) return;
+    api.on("select", () => setActiveIndex(api.selectedScrollSnap()));
+  }, [api]);
+
+  const handleImgLoad = useCallback((idx: number) => {
+    setImgLoaded(prev => { const n = [...prev]; n[idx] = true; return n; });
+  }, []);
+
+  const handleThumbClick = (idx: number) => {
+    api?.scrollTo(idx);
+  };
+
   return (
-    <div className="w-full">
-      {images.length > 1 ? (
-        <Carousel className="w-full">
+    <div className="w-full space-y-3">
+      <div className="relative">
+        <Carousel className="w-full" setApi={setApi}>
           <CarouselContent>
             {images.map((img, index) => (
               <CarouselItem key={index} className="relative">
-                <AspectRatio ratio={aspectRatio} className="bg-gray-100 rounded-3xl overflow-hidden">
+                <div className="aspect-square bg-muted rounded-2xl overflow-hidden">
+                  {!imgLoaded[index] && <div className="absolute inset-0 bg-muted animate-pulse rounded-2xl" />}
                   <img
                     src={img}
                     alt={productName}
-                    className="w-full h-full object-cover"
+                    className={`w-full h-full object-cover transition-opacity duration-500 ${imgLoaded[index] ? 'opacity-100' : 'opacity-0'}`}
+                    loading={index === 0 ? "eager" : "lazy"}
+                    onLoad={() => handleImgLoad(index)}
                   />
-                </AspectRatio>
+                </div>
               </CarouselItem>
             ))}
           </CarouselContent>
-          <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white border-0 shadow-lg" />
-          <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white border-0 shadow-lg" />
-        </Carousel>
-      ) : (
-        <AspectRatio ratio={aspectRatio} className="bg-gray-100 rounded-3xl overflow-hidden">
-          <img
-            src={images[0]}
-            alt={productName}
-            className="w-full h-full object-cover"
-          />
-        </AspectRatio>
+
+        {/* Badges */}
+        <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-10">
+          {discountPercent && discountPercent > 0 && (
+            <span className="bg-destructive text-destructive-foreground px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 shadow">
+              <Tag className="w-3 h-3" /> {discountPercent}%-
+            </span>
+          )}
+          {isNew && (
+            <span className="bg-primary text-primary-foreground px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 shadow">
+              <Sparkles className="w-3 h-3" /> جديد
+            </span>
+          )}
+          {isLowStock && stockQuantity && (
+            <span className="bg-warning text-warning-foreground px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 shadow">
+              <Flame className="w-3 h-3" /> آخر {stockQuantity}
+            </span>
+          )}
+          {isOutOfStock && (
+            <span className="bg-muted text-muted-foreground px-2.5 py-1 rounded-lg text-xs font-bold shadow">
+              نفذ المخزون
+            </span>
+          )}
+        </div>
+
+        {/* Dots indicator */}
+        {images.length > 1 && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-10">
+            {images.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleThumbClick(idx)}
+                className={`rounded-full transition-all duration-300 ${
+                  idx === activeIndex 
+                    ? 'w-6 h-2 bg-primary' 
+                    : 'w-2 h-2 bg-foreground/30'
+                }`}
+              />
+            ))}
+          </div>
+        )}
+      </Carousel>
+      </div>
+
+      {/* Thumbnails */}
+      {images.length > 1 && (
+        <div className="flex gap-2 justify-center px-2">
+          {images.map((img, idx) => (
+            <button
+              key={idx}
+              onClick={() => handleThumbClick(idx)}
+              className={`w-14 h-14 rounded-xl overflow-hidden border-2 transition-all ${
+                idx === activeIndex 
+                  ? 'border-primary ring-1 ring-primary/30' 
+                  : 'border-border/50 opacity-60 hover:opacity-100'
+              }`}
+            >
+              <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );
