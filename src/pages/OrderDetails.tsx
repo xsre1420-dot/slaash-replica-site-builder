@@ -13,7 +13,7 @@ const OrderDetails = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div className="min-h-screen bg-background" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <OrderDetailsPageHeader orderId={order.id} />
       <div className="max-w-4xl mx-auto p-6">
         <OrderDetailsCard order={order} />

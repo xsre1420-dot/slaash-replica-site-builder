@@ -70,11 +70,11 @@ const OrderHeader = ({ orderId, date, status: initialStatus, governorate }: Orde
             onStatusChange={handleStatusChange}
           />
         </CardTitle>
-        <CardDescription className="text-right text-blue-100 mt-2">
+        <CardDescription className="text-right text-primary-foreground/80 mt-2">
           {orderId}
         </CardDescription>
         {storeGovernorate && (
-          <div className="text-right text-blue-100 mt-1 text-sm">
+          <div className="text-right text-primary-foreground/80 mt-1 text-sm">
             محافظة المتجر: {storeGovernorate}
           </div>
         )}

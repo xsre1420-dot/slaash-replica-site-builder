@@ -31,7 +31,6 @@ const PreviewStore = () => {
         console.log('PreviewStore: تحميل الفئات من Supabase...');
         const categoriesData = await getCategories();
         console.log('PreviewStore: تم تحميل', categoriesData.length, 'فئة');
-        // Add "الكل" category at the beginning
         const allCategories = [
           { id: "all", name: "الكل", order: -1 },
           ...categoriesData
@@ -44,7 +43,6 @@ const PreviewStore = () => {
     };
     loadCategoriesData();
 
-    // Reload categories when window gains focus (user might have added categories in another tab)
     const handleFocus = () => {
       console.log('PreviewStore: إعادة تحميل الفئات عند التركيز على النافذة');
       loadCategoriesData();
@@ -54,16 +52,13 @@ const PreviewStore = () => {
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
-  // Only use banner images from settings (no automatic promotional banner)
   const bannerImages = storeSettings.bannerImages || [];
 
-  // Load products from Supabase and update when categories change
   useEffect(() => {
     const loadProductsData = async () => {
       await loadProducts();
       const allProducts = getProductsByCategory(selectedCategory);
       
-      // Filter by search query
       if (searchQuery.trim()) {
         const filtered = allProducts.filter(product => 
           product.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -76,14 +71,11 @@ const PreviewStore = () => {
     loadProductsData();
   }, [selectedCategory, searchQuery]);
 
-  // Handle adding a product to the cart
   const handleAddToCart = (product: Product) => {
     addToCart(product);
-    // Track Meta Pixel event  
     trackAddToCart(product.id, product.name, product.price);
   };
 
-  // Navigate to product details
   const handleViewProduct = (productId: string) => {
     const product = products.find(p => p.id === productId);
     if (product) {
@@ -92,7 +84,6 @@ const PreviewStore = () => {
     navigate(`/product-details/${productId}`);
   };
 
-  // Toggle favorite
   const toggleFavorite = (productId: string) => {
     setFavorites(prev => 
       prev.includes(productId) 
@@ -101,7 +92,6 @@ const PreviewStore = () => {
     );
   };
 
-  // Enhanced auto-rotate with faster transitions
   useEffect(() => {
     if (bannerImages.length > 1) {
       const interval = setInterval(() => {
@@ -110,23 +100,21 @@ const PreviewStore = () => {
           setCurrentImageIndex((prev) => (prev + 1) % bannerImages.length);
           setIsTransitioning(false);
         }, 150);
-      }, 2500); // Faster rotation
+      }, 2500);
       return () => clearInterval(interval);
     }
   }, [bannerImages.length]);
 
-  // Handle manual image navigation with faster smooth transitions
   const handleImageNavigation = (index: number) => {
     if (index !== currentImageIndex) {
       setIsTransitioning(true);
       setTimeout(() => {
         setCurrentImageIndex(index);
         setIsTransitioning(false);
-      }, 150); // Faster transition
+      }, 150);
     }
   };
 
-  // Handle hover effects for faster image transitions
   const handleImageHover = () => {
     if (bannerImages.length > 1) {
       const nextIndex = (currentImageIndex + 1) % bannerImages.length;
@@ -135,48 +123,43 @@ const PreviewStore = () => {
   };
 
   return (
-    <div 
-      className="min-h-screen bg-white"
-    >
-      {/* Meta Pixel Integration */}
+    <div className="min-h-screen bg-background">
       <MetaPixel />
       
       {/* Header with Logo and Store Name */}
-      <div className="bg-white sticky top-0 z-40 border-b border-gray-100">
+      <div className="bg-background sticky top-0 z-40 border-b border-border">
         <div className="px-4 py-3">
           <div className="flex justify-between items-center">
-            {/* Left: Store Logo + Name */}
             <div className="flex items-center gap-2">
               {storeLogo && (
                 <img src={storeLogo} alt={storeName} className="w-10 h-10 rounded-full object-cover" />
               )}
               <div className="flex items-center gap-1">
-                <span className="font-bold text-gray-900 text-base">{storeName}</span>
-                <svg className="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
+                <span className="font-bold text-foreground text-base">{storeName}</span>
+                <svg className="w-4 h-4 text-primary" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
                 </svg>
               </div>
             </div>
             
-            {/* Right: Search Icon Only */}
             <button 
               onClick={() => setSearchQuery("")}
               className="p-2"
             >
-              <Search className="w-5 h-5 text-gray-700" />
+              <Search className="w-5 h-5 text-muted-foreground" />
             </button>
           </div>
         </div>
         
-        {/* Categories Row with Border Style */}
+        {/* Categories Row */}
         <div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-hide items-center">
           {categories.map((category) => (
             <button 
               key={category.id}
               className={`whitespace-nowrap text-sm font-medium transition-all duration-200 px-4 py-2 rounded-full ${
                 selectedCategory === category.id 
-                  ? "bg-black text-white" 
-                  : "bg-gray-100 text-gray-500"
+                  ? "bg-primary text-primary-foreground" 
+                  : "bg-muted text-muted-foreground"
               }`}
               onClick={() => setSelectedCategory(category.id)}
             >
@@ -184,7 +167,7 @@ const PreviewStore = () => {
             </button>
           ))}
           <button className="p-2 flex-shrink-0">
-            <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
@@ -226,20 +209,20 @@ const PreviewStore = () => {
 
       {/* Product Count */}
       <div className="px-4 py-4">
-        <span className="text-sm font-medium text-gray-900">{products.length} منتجات</span>
+        <span className="text-sm font-medium text-foreground">{products.length} منتجات</span>
       </div>
 
-      {/* Clean Products Grid */}
+      {/* Products Grid */}
       <div className="px-4 pb-28">
         {products.length === 0 ? (
           <div className="text-center py-16">
-            <div className="w-20 h-20 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+            <div className="w-20 h-20 mx-auto mb-6 bg-muted rounded-full flex items-center justify-center">
               <div className="text-4xl">🛍️</div>
             </div>
-            <h3 className="text-xl font-bold mb-2 text-gray-900">
+            <h3 className="text-xl font-bold mb-2 text-foreground">
               لا توجد منتجات بعد
             </h3>
-            <p className="text-gray-500 mb-6">ابدأ بإضافة منتجاتك من قسم البناء</p>
+            <p className="text-muted-foreground mb-6">ابدأ بإضافة منتجاتك من قسم البناء</p>
             <Link to="/add-product">
               <Button className="rounded-full px-8">
                 <Plus className="w-4 h-4 ml-2" />
@@ -252,10 +235,10 @@ const PreviewStore = () => {
             {products.map((product) => (
               <div 
                 key={product.id} 
-                className="bg-white rounded-xl overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                className="bg-card rounded-xl overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
                 onClick={() => handleViewProduct(product.id)}
               >
-                <div className="relative bg-gray-100 aspect-square">
+                <div className="relative bg-muted aspect-square">
                   <img
                     src={product.image}
                     alt={product.name}
@@ -274,13 +257,13 @@ const PreviewStore = () => {
                 </div>
                 
                 <div className="p-3">
-                  <div className="text-sm font-medium text-gray-900 mb-1 text-right line-clamp-2">
+                  <div className="text-sm font-medium text-foreground mb-1 text-right line-clamp-2">
                     {product.name}
                   </div>
                   <div className="text-right">
                     {product.discountType && product.discountType !== 'none' && product.originalPrice ? (
                       <div className="flex flex-col items-end gap-0.5">
-                        <span className="text-xs text-gray-400 line-through">
+                        <span className="text-xs text-muted-foreground line-through">
                           IQD {product.originalPrice.toLocaleString()}
                         </span>
                         <span className="text-sm font-bold text-red-600">
@@ -288,7 +271,7 @@ const PreviewStore = () => {
                         </span>
                       </div>
                     ) : (
-                      <div className="text-sm font-bold text-gray-900">
+                      <div className="text-sm font-bold text-foreground">
                         IQD {product.price.toLocaleString()}
                       </div>
                     )}
@@ -302,19 +285,19 @@ const PreviewStore = () => {
 
       {/* Horizontal Cart Bar */}
       {cartCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-6 pt-2 bg-gradient-to-t from-white via-white to-transparent">
+        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-6 pt-2 bg-gradient-to-t from-background via-background to-transparent">
           <Link to="/checkout">
-            <div className="bg-black rounded-full shadow-2xl overflow-hidden">
+            <div className="accent-gradient rounded-full shadow-2xl overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4">
                 <div className="flex items-center gap-3">
-                  <div className="relative bg-black rounded-full p-3">
+                  <div className="relative rounded-full p-3">
                     <ShoppingCart className="w-6 h-6 text-white" />
-                    <span className="absolute -top-1 -right-1 bg-white text-black rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shadow-md">
+                    <span className="absolute -top-1 -right-1 bg-white text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shadow-md">
                       {cartCount}
                     </span>
                   </div>
                   <div className="text-left">
-                    <div className="text-xs text-gray-400">المبلغ الكلي</div>
+                    <div className="text-xs text-white/70">المبلغ الكلي</div>
                     <div className="text-lg font-bold text-white" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
                       IQD {cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0).toLocaleString()}
                     </div>
