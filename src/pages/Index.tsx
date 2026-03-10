@@ -242,28 +242,33 @@ const Index = () => {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-24 bg-muted/20 relative overflow-hidden">
+      <section id="pricing" className="py-28 bg-muted/20 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/3 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[120px]" />
+          <div className="absolute top-0 left-1/3 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[150px]" />
+          <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-secondary/5 rounded-full blur-[120px]" />
         </div>
 
         <div className="container mx-auto px-4 relative z-10">
           <FadeUp>
-            <div className="text-center mb-14">
-              <h2 className="text-4xl md:text-5xl font-bold mb-4 text-foreground">خطط تسعير بسيطة</h2>
+            <div className="text-center mb-16">
+              <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 px-4 py-2 rounded-full text-sm font-semibold text-primary mb-6">
+                <Star className="w-4 h-4" />
+                الباقات
+              </div>
+              <h2 className="text-4xl md:text-5xl font-bold mb-4 text-foreground">خطط تسعير بسيطة وشفافة</h2>
               <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-                اختر الخطة المناسبة وابدأ بثقة — بدون رسوم خفية
+                اختر الخطة المناسبة لعملك وابدأ بثقة — بدون رسوم خفية
               </p>
             </div>
           </FadeUp>
 
           {/* Billing Toggle */}
           <FadeUp delay={0.1}>
-            <div className="flex justify-center mb-12">
+            <div className="flex justify-center mb-14">
               <div className="bg-card border border-border/50 rounded-2xl p-1.5 flex shadow-sm">
                 <button
                   onClick={() => setBillingType('monthly')}
-                  className={`px-7 py-3 rounded-xl font-semibold text-sm transition-all duration-300 ${
+                  className={`px-8 py-3 rounded-xl font-semibold text-sm transition-all duration-300 ${
                     billingType === 'monthly'
                       ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
                       : 'text-muted-foreground hover:text-foreground'
@@ -273,7 +278,7 @@ const Index = () => {
                 </button>
                 <button
                   onClick={() => setBillingType('annual')}
-                  className={`px-7 py-3 rounded-xl font-semibold text-sm transition-all duration-300 relative ${
+                  className={`px-8 py-3 rounded-xl font-semibold text-sm transition-all duration-300 relative ${
                     billingType === 'annual'
                       ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
                       : 'text-muted-foreground hover:text-foreground'
@@ -288,10 +293,10 @@ const Index = () => {
 
           {billingType === 'monthly' && (
             <FadeUp>
-              <div className="max-w-md mx-auto">
+              <div className="max-w-lg mx-auto">
                 <div
                   onClick={() => setSelectedPlan('elite')}
-                  className={`bg-card rounded-3xl p-8 border-2 relative hover:shadow-2xl transition-all duration-500 cursor-pointer group ${
+                  className={`bg-card rounded-3xl p-8 md:p-10 border-2 relative hover:shadow-2xl transition-all duration-500 cursor-pointer group ${
                     selectedPlan === 'elite'
                       ? 'border-primary shadow-2xl shadow-primary/15'
                       : 'border-border/50 hover:border-primary/30 shadow-lg'
@@ -300,39 +305,63 @@ const Index = () => {
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-l from-primary to-secondary text-primary-foreground px-6 py-2 rounded-full text-xs font-bold shadow-lg shadow-primary/20">
                     ✨ الباقة المميزة
                   </div>
-                  <div className="flex items-center gap-3 mb-8 justify-center pt-4">
-                    <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
-                      <Star className="w-5 h-5 text-primary" />
+
+                  {/* Header - Right aligned */}
+                  <div className="flex items-center gap-3 mb-6 pt-4">
+                    <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center">
+                      <Star className="w-6 h-6 text-primary" />
                     </div>
-                    <h3 className="text-2xl font-bold text-foreground">باقة النخبة</h3>
+                    <div>
+                      <h3 className="text-2xl font-bold text-foreground">باقة النخبة</h3>
+                      <p className="text-xs text-muted-foreground">كل ما تحتاجه لمتجر ناجح</p>
+                    </div>
                   </div>
-                  <div className="flex items-baseline gap-1.5 mb-10 justify-center">
+
+                  {/* Price - Right aligned */}
+                  <div className="flex items-baseline gap-2 mb-8">
                     <span className="text-6xl font-bold text-foreground">50</span>
-                    <div className="text-right">
+                    <div>
                       <div className="text-muted-foreground text-sm">ألف د.ع</div>
                       <div className="text-muted-foreground/70 text-xs">/ شهرياً</div>
                     </div>
                   </div>
 
-                  <ul className="space-y-4 mb-10 text-right">
-                    {["عدد الطلبات: غير محدود", "عدد المنتجات: غير محدود", "تحليل البيانات المتقدم", "إدارة الطلبات المتكاملة", "دعم فني أولوية عالية", "عدد الأصناف غير محدود", "شهادة حماية SSL متقدمة", "تخصيص كامل للمتجر"].map((item, i) => (
-                      <li key={i} className="text-muted-foreground flex items-center gap-3 justify-end text-sm">
-                        {item}
-                        <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <Check className="w-3 h-3 text-primary" />
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                  {/* Divider */}
+                  <div className="h-px bg-border/60 mb-8" />
+
+                  {/* Features - Right aligned */}
+                  <div className="mb-8">
+                    <p className="text-xs font-bold text-foreground/70 mb-4 tracking-wider">المميزات المتضمنة</p>
+                    <ul className="space-y-3.5">
+                      {[
+                        { text: "عدد الطلبات: غير محدود", highlight: true },
+                        { text: "عدد المنتجات: غير محدود", highlight: true },
+                        { text: "تحليل البيانات المتقدم", highlight: false },
+                        { text: "إدارة الطلبات المتكاملة", highlight: false },
+                        { text: "دعم فني أولوية عالية", highlight: false },
+                        { text: "عدد الأصناف غير محدود", highlight: false },
+                        { text: "شهادة حماية SSL متقدمة", highlight: false },
+                        { text: "تخصيص كامل للمتجر", highlight: false },
+                      ].map((item, i) => (
+                        <li key={i} className="flex items-center gap-3 text-sm">
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${item.highlight ? 'bg-primary/20' : 'bg-primary/10'}`}>
+                            <Check className={`w-3 h-3 ${item.highlight ? 'text-primary' : 'text-primary/70'}`} />
+                          </div>
+                          <span className={item.highlight ? 'text-foreground font-semibold' : 'text-muted-foreground'}>{item.text}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
                   <Button
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl py-6 text-base font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl py-6 text-base font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 hover:-translate-y-0.5"
                     onClick={(e) => {
                       e.stopPropagation();
                       navigate('/signup', { state: { selectedPlan: { id: 'elite', name: 'باقة النخبة', price: '50 ألف د.ع' } } });
                     }}
                   >
                     ابدأ الآن مجاناً
+                    <ArrowLeft className="mr-2 h-4 w-4" />
                   </Button>
                 </div>
               </div>
@@ -341,86 +370,131 @@ const Index = () => {
 
           {billingType === 'annual' && (
             <FadeUp>
-              <div className="max-w-md mx-auto">
+              <div className="max-w-lg mx-auto">
                 <div
                   onClick={() => setSelectedPlan('annual')}
-                  className={`bg-card rounded-3xl p-8 text-center border-2 transition-all duration-500 cursor-pointer group ${
+                  className={`bg-card rounded-3xl p-8 md:p-10 border-2 transition-all duration-500 cursor-pointer group ${
                     selectedPlan === 'annual'
                       ? 'border-primary shadow-2xl shadow-primary/15'
                       : 'border-border/50 hover:border-primary/30 shadow-lg'
                   }`}
                 >
-                  <h3 className="text-2xl font-bold mb-6 text-foreground">باقة 6 أشهر</h3>
-                  <div className="flex items-center justify-center gap-4 mb-4">
+                  {/* Header - Right aligned */}
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center">
+                      <Zap className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold text-foreground">باقة 6 أشهر</h3>
+                      <p className="text-xs text-muted-foreground">أفضل قيمة لمتجرك</p>
+                    </div>
+                  </div>
+
+                  {/* Price - Right aligned */}
+                  <div className="flex items-baseline gap-3 mb-3">
                     <span className="text-6xl font-bold text-foreground">125</span>
-                    <div className="text-right">
+                    <div>
                       <div className="text-muted-foreground line-through text-sm">300 ألف د.ع</div>
                       <div className="text-primary font-semibold text-sm">ألف د.ع / لـ 6 أشهر</div>
                     </div>
                   </div>
-                  <div className="bg-primary/10 text-primary px-5 py-2 rounded-full text-xs font-bold mb-10 inline-block">
+                  <div className="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-xs font-bold mb-8 inline-block">
                     وفّر 49% مقارنة بالدفع الشهري
                   </div>
 
-                  <ul className="space-y-4 mb-10 max-w-sm mx-auto text-right">
-                    {["عدد الطلبات: غير محدود", "عدد المنتجات: غير محدود", "تحليل البيانات", "إدارة الطلبات", "دعم فني", "عدد الأصناف غير محدود", "شهادة حماية SSL"].map((item, i) => (
-                      <li key={i} className="text-muted-foreground flex items-center gap-3 justify-end text-sm">
-                        {item}
-                        <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <Check className="w-3 h-3 text-primary" />
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                  {/* Divider */}
+                  <div className="h-px bg-border/60 mb-8" />
+
+                  {/* Features - Right aligned */}
+                  <div className="mb-8">
+                    <p className="text-xs font-bold text-foreground/70 mb-4 tracking-wider">المميزات المتضمنة</p>
+                    <ul className="space-y-3.5">
+                      {["عدد الطلبات: غير محدود", "عدد المنتجات: غير محدود", "تحليل البيانات", "إدارة الطلبات", "دعم فني", "عدد الأصناف غير محدود", "شهادة حماية SSL"].map((item, i) => (
+                        <li key={i} className="flex items-center gap-3 text-sm">
+                          <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <Check className="w-3 h-3 text-primary" />
+                          </div>
+                          <span className="text-muted-foreground">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
                   <Button
                     size="lg"
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl py-6 text-base font-bold shadow-lg shadow-primary/20"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl py-6 text-base font-bold shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all duration-300"
                     onClick={(e) => {
                       e.stopPropagation();
                       navigate('/signup', { state: { selectedPlan: { id: 'annual', name: 'باقة 6 أشهر', price: '125 ألف د.ع' } } });
                     }}
                   >
                     ابدأ الآن
+                    <ArrowLeft className="mr-2 h-4 w-4" />
                   </Button>
                 </div>
               </div>
             </FadeUp>
           )}
-
-          <FadeUp delay={0.2}>
-            <div className="mt-12 text-center">
-              <div className="bg-card border border-primary/10 rounded-2xl p-6 max-w-lg mx-auto shadow-sm">
-                <h4 className="text-sm font-bold text-foreground mb-2">✅ ضمان استرجاع الأموال</h4>
-                <p className="text-muted-foreground text-sm">
-                  إذا لم تكن راضياً، سنعيد لك كامل المبلغ خلال أول 7 أيام
-                </p>
-              </div>
-            </div>
-          </FadeUp>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 bg-background relative overflow-hidden">
+      <section className="py-28 bg-background relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-primary/3" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-primary/5 rounded-full blur-[150px]" />
         </div>
         <div className="container mx-auto px-4 relative z-10">
           <FadeUp>
-            <div className="max-w-3xl mx-auto text-center bg-card border border-border/40 rounded-3xl p-12 md:p-16 shadow-xl relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
+            <div className="max-w-4xl mx-auto text-center bg-gradient-to-br from-card via-card to-accent/30 border border-border/40 rounded-[2rem] p-12 md:p-20 shadow-2xl relative overflow-hidden">
+              {/* Decorative elements */}
+              <div className="absolute top-0 right-0 w-40 h-40 bg-primary/10 rounded-full blur-[80px]" />
+              <div className="absolute bottom-0 left-0 w-40 h-40 bg-secondary/10 rounded-full blur-[80px]" />
+              <div className="absolute top-6 left-6 w-20 h-20 border border-primary/10 rounded-2xl rotate-12 opacity-50" />
+              <div className="absolute bottom-6 right-6 w-16 h-16 border border-secondary/10 rounded-full opacity-50" />
+              
               <div className="relative z-10">
-                <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">جاهز لإطلاق متجرك؟</h2>
-                <p className="text-muted-foreground mb-8 text-lg">
-                  انضم لمئات التجار الذين يثقون بمنصة بداية
+                <motion.div
+                  initial={{ scale: 0 }}
+                  whileInView={{ scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                  className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-8"
+                >
+                  <Sparkles className="w-8 h-8 text-primary" />
+                </motion.div>
+                <h2 className="text-3xl md:text-5xl font-bold mb-5 text-foreground leading-tight">
+                  جاهز لإطلاق
+                  <span className="bg-gradient-to-l from-primary to-secondary bg-clip-text text-transparent"> متجرك الاحترافي؟</span>
+                </h2>
+                <p className="text-muted-foreground mb-10 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
+                  انضم لمئات التجار الناجحين الذين يديرون متاجرهم بكل سهولة عبر منصة بداية
                 </p>
-                <Link to="/signup">
-                  <Button size="lg" className="text-lg px-12 py-7 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-2xl shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 hover:-translate-y-0.5 group">
-                    ابدأ مجاناً الآن
-                    <ArrowLeft className="mr-2 h-5 w-5 group-hover:-translate-x-1 transition-transform" />
-                  </Button>
-                </Link>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                  <Link to="/signup">
+                    <Button size="lg" className="text-lg px-12 py-7 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-2xl shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 hover:-translate-y-1 group min-w-[240px]">
+                      ابدأ مجاناً الآن
+                      <ArrowLeft className="mr-2 h-5 w-5 group-hover:-translate-x-1 transition-transform" />
+                    </Button>
+                  </Link>
+                </div>
+                {/* Trust indicators */}
+                <div className="flex items-center justify-center gap-6 mt-10 pt-8 border-t border-border/30">
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <Shield className="w-4 h-4 text-primary/70" />
+                    <span>حماية كاملة</span>
+                  </div>
+                  <div className="w-1 h-1 rounded-full bg-border" />
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <Zap className="w-4 h-4 text-primary/70" />
+                    <span>إعداد فوري</span>
+                  </div>
+                  <div className="w-1 h-1 rounded-full bg-border" />
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <Headphones className="w-4 h-4 text-primary/70" />
+                    <span>دعم مستمر</span>
+                  </div>
+                </div>
               </div>
             </div>
           </FadeUp>
