@@ -431,18 +431,15 @@ const Index = () => {
         </div>
       </section>
 
-      {/* CTA Section - No gap */}
-
-      {/* CTA Section */}
-      <section className="py-28 bg-background relative overflow-hidden">
+      {/* CTA Section - connected to pricing */}
+      <section className="pb-28 pt-16 bg-muted/20 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-primary/3" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/3 to-primary/5" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-primary/5 rounded-full blur-[150px]" />
         </div>
         <div className="container mx-auto px-4 relative z-10">
           <FadeUp>
             <div className="max-w-4xl mx-auto text-center bg-gradient-to-br from-card via-card to-accent/30 border border-border/40 rounded-[2rem] p-12 md:p-20 shadow-2xl relative overflow-hidden">
-              {/* Decorative elements */}
               <div className="absolute top-0 right-0 w-40 h-40 bg-primary/10 rounded-full blur-[80px]" />
               <div className="absolute bottom-0 left-0 w-40 h-40 bg-secondary/10 rounded-full blur-[80px]" />
               <div className="absolute top-6 left-6 w-20 h-20 border border-primary/10 rounded-2xl rotate-12 opacity-50" />
@@ -462,30 +459,27 @@ const Index = () => {
                   جاهز لإطلاق
                   <span className="bg-gradient-to-l from-primary to-secondary bg-clip-text text-transparent"> متجرك الاحترافي؟</span>
                 </h2>
-                <p className="text-muted-foreground mb-10 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
+                <p className="text-foreground/60 mb-10 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
                   انضم لمئات التجار الناجحين الذين يديرون متاجرهم بكل سهولة عبر منصة بداية
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                  <Link to="/signup">
-                    <Button size="lg" className="text-lg px-12 py-7 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-2xl shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 hover:-translate-y-1 group min-w-[240px]">
-                      ابدأ مجاناً الآن
-                      <ArrowLeft className="mr-2 h-5 w-5 group-hover:-translate-x-1 transition-transform" />
-                    </Button>
-                  </Link>
-                </div>
-                {/* Trust indicators */}
+                <Link to="/signup">
+                  <Button size="lg" className="text-lg px-12 py-7 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-2xl shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 hover:-translate-y-1 group min-w-[240px]">
+                    ابدأ الآن
+                    <ArrowLeft className="mr-2 h-5 w-5 group-hover:-translate-x-1 transition-transform" />
+                  </Button>
+                </Link>
                 <div className="flex items-center justify-center gap-6 mt-10 pt-8 border-t border-border/30">
-                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <div className="flex items-center gap-2 text-foreground/50 text-sm">
                     <Shield className="w-4 h-4 text-primary/70" />
                     <span>حماية كاملة</span>
                   </div>
                   <div className="w-1 h-1 rounded-full bg-border" />
-                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <div className="flex items-center gap-2 text-foreground/50 text-sm">
                     <Zap className="w-4 h-4 text-primary/70" />
                     <span>إعداد فوري</span>
                   </div>
                   <div className="w-1 h-1 rounded-full bg-border" />
-                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <div className="flex items-center gap-2 text-foreground/50 text-sm">
                     <Headphones className="w-4 h-4 text-primary/70" />
                     <span>دعم مستمر</span>
                   </div>
