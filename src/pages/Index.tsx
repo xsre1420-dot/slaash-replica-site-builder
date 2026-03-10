@@ -306,48 +306,44 @@ const Index = () => {
                     ✨ الباقة المميزة
                   </div>
 
-                  {/* Header - Right aligned */}
+                  {/* Header */}
                   <div className="flex items-center gap-3 mb-6 pt-4">
                     <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center">
                       <Star className="w-6 h-6 text-primary" />
                     </div>
                     <div>
                       <h3 className="text-2xl font-bold text-foreground">باقة النخبة</h3>
-                      <p className="text-xs text-muted-foreground">كل ما تحتاجه لمتجر ناجح</p>
+                      <p className="text-xs text-foreground/60">كل ما تحتاجه لمتجر ناجح</p>
                     </div>
                   </div>
 
-                  {/* Price - Right aligned */}
-                  <div className="flex items-baseline gap-2 mb-8">
-                    <span className="text-6xl font-bold text-foreground">50</span>
-                    <div>
-                      <div className="text-muted-foreground text-sm">ألف د.ع</div>
-                      <div className="text-muted-foreground/70 text-xs">/ شهرياً</div>
+                  {/* Price - Centered */}
+                  <div className="text-center py-6 mb-6 bg-muted/30 rounded-2xl">
+                    <div className="flex items-baseline gap-2 justify-center">
+                      <span className="text-5xl font-bold text-foreground">50</span>
+                      <span className="text-foreground/70 text-sm font-medium">ألف د.ع / شهرياً</span>
                     </div>
                   </div>
 
-                  {/* Divider */}
-                  <div className="h-px bg-border/60 mb-8" />
-
-                  {/* Features - Right aligned */}
-                  <div className="mb-8">
-                    <p className="text-xs font-bold text-foreground/70 mb-4 tracking-wider">المميزات المتضمنة</p>
-                    <ul className="space-y-3.5">
+                  {/* Features */}
+                  <div className="mb-6">
+                    <p className="text-xs font-bold text-foreground/60 mb-4 tracking-wider">المميزات المتضمنة</p>
+                    <ul className="space-y-3">
                       {[
-                        { text: "عدد الطلبات: غير محدود", highlight: true },
-                        { text: "عدد المنتجات: غير محدود", highlight: true },
-                        { text: "تحليل البيانات المتقدم", highlight: false },
-                        { text: "إدارة الطلبات المتكاملة", highlight: false },
-                        { text: "دعم فني أولوية عالية", highlight: false },
-                        { text: "عدد الأصناف غير محدود", highlight: false },
-                        { text: "شهادة حماية SSL متقدمة", highlight: false },
-                        { text: "تخصيص كامل للمتجر", highlight: false },
+                        "عدد الطلبات: غير محدود",
+                        "عدد المنتجات: غير محدود",
+                        "تحليل البيانات المتقدم",
+                        "إدارة الطلبات المتكاملة",
+                        "دعم فني أولوية عالية",
+                        "عدد الأصناف غير محدود",
+                        "شهادة حماية SSL متقدمة",
+                        "تخصيص كامل للمتجر",
                       ].map((item, i) => (
                         <li key={i} className="flex items-center gap-3 text-sm">
-                          <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${item.highlight ? 'bg-primary/20' : 'bg-primary/10'}`}>
-                            <Check className={`w-3 h-3 ${item.highlight ? 'text-primary' : 'text-primary/70'}`} />
+                          <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <Check className="w-3 h-3 text-primary" />
                           </div>
-                          <span className={item.highlight ? 'text-foreground font-semibold' : 'text-muted-foreground'}>{item.text}</span>
+                          <span className="text-foreground">{item}</span>
                         </li>
                       ))}
                     </ul>
@@ -360,7 +356,7 @@ const Index = () => {
                       navigate('/signup', { state: { selectedPlan: { id: 'elite', name: 'باقة النخبة', price: '50 ألف د.ع' } } });
                     }}
                   >
-                    ابدأ الآن مجاناً
+                    ابدأ الآن
                     <ArrowLeft className="mr-2 h-4 w-4" />
                   </Button>
                 </div>
@@ -379,42 +375,39 @@ const Index = () => {
                       : 'border-border/50 hover:border-primary/30 shadow-lg'
                   }`}
                 >
-                  {/* Header - Right aligned */}
+                  {/* Header */}
                   <div className="flex items-center gap-3 mb-6">
                     <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center">
                       <Zap className="w-6 h-6 text-primary" />
                     </div>
                     <div>
                       <h3 className="text-2xl font-bold text-foreground">باقة 6 أشهر</h3>
-                      <p className="text-xs text-muted-foreground">أفضل قيمة لمتجرك</p>
+                      <p className="text-xs text-foreground/60">أفضل قيمة لمتجرك</p>
                     </div>
                   </div>
 
-                  {/* Price - Right aligned */}
-                  <div className="flex items-baseline gap-3 mb-3">
-                    <span className="text-6xl font-bold text-foreground">125</span>
-                    <div>
-                      <div className="text-muted-foreground line-through text-sm">300 ألف د.ع</div>
-                      <div className="text-primary font-semibold text-sm">ألف د.ع / لـ 6 أشهر</div>
+                  {/* Price - Centered */}
+                  <div className="text-center py-6 mb-4 bg-muted/30 rounded-2xl">
+                    <div className="text-foreground/50 line-through text-sm mb-1">300 ألف د.ع</div>
+                    <div className="flex items-baseline gap-2 justify-center">
+                      <span className="text-5xl font-bold text-foreground">125</span>
+                      <span className="text-foreground/70 text-sm font-medium">ألف د.ع / لـ 6 أشهر</span>
                     </div>
                   </div>
-                  <div className="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-xs font-bold mb-8 inline-block">
+                  <div className="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-xs font-bold mb-6 inline-block">
                     وفّر 49% مقارنة بالدفع الشهري
                   </div>
 
-                  {/* Divider */}
-                  <div className="h-px bg-border/60 mb-8" />
-
-                  {/* Features - Right aligned */}
-                  <div className="mb-8">
-                    <p className="text-xs font-bold text-foreground/70 mb-4 tracking-wider">المميزات المتضمنة</p>
-                    <ul className="space-y-3.5">
+                  {/* Features */}
+                  <div className="mb-6">
+                    <p className="text-xs font-bold text-foreground/60 mb-4 tracking-wider">المميزات المتضمنة</p>
+                    <ul className="space-y-3">
                       {["عدد الطلبات: غير محدود", "عدد المنتجات: غير محدود", "تحليل البيانات", "إدارة الطلبات", "دعم فني", "عدد الأصناف غير محدود", "شهادة حماية SSL"].map((item, i) => (
                         <li key={i} className="flex items-center gap-3 text-sm">
                           <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                             <Check className="w-3 h-3 text-primary" />
                           </div>
-                          <span className="text-muted-foreground">{item}</span>
+                          <span className="text-foreground">{item}</span>
                         </li>
                       ))}
                     </ul>
@@ -437,6 +430,8 @@ const Index = () => {
           )}
         </div>
       </section>
+
+      {/* CTA Section - No gap */}
 
       {/* CTA Section */}
       <section className="py-28 bg-background relative overflow-hidden">
