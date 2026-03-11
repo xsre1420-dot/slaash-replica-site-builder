@@ -1,10 +1,11 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useState, useRef } from "react";
 import { ShoppingBag, Loader2 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useStore } from "@/context/StoreContext";
 import { Button } from "@/components/ui/button";
 import { Order } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
 import ScrollReveal from "@/components/product-details/ScrollReveal";
 import CheckoutHeader from "@/components/checkout/CheckoutHeader";
 import ProgressSteps from "@/components/checkout/ProgressSteps";
