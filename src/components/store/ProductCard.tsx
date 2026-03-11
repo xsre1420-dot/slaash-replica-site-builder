@@ -233,4 +233,6 @@ const ProductCard = memo(({
   );
 };
 
+ProductCard.displayName = 'ProductCard';
+
 export default ProductCard;
