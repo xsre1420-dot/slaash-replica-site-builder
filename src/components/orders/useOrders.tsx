@@ -1,6 +1,7 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Order } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
+import { mapDbOrder } from "@/hooks/useOrderData";
 import { format } from "date-fns";
 
 export const useOrders = () => {
@@ -8,39 +9,32 @@ export const useOrders = () => {
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Load orders from localStorage only - no demo data
-    const storedOrders = localStorage.getItem('orders');
-    if (storedOrders) {
-      try {
-        const parsedOrders = JSON.parse(storedOrders);
-        // Filter orders to only include valid statuses
-        const validOrders = parsedOrders.filter((order: Order) => 
-          ['pending', 'completed', 'cancelled'].includes(order.status)
-        );
-        setOrders(validOrders);
-        setFilteredOrders(validOrders);
-      } catch (error) {
-        console.error('Error parsing stored orders:', error);
-        setOrders([]);
-        setFilteredOrders([]);
-      }
+  const fetchOrders = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      const mapped = data.map(mapDbOrder);
+      setOrders(mapped);
+      setFilteredOrders(mapped);
     } else {
-      // Start with empty orders array - no demo data
-      setOrders([]);
-      setFilteredOrders([]);
+      console.error('Error fetching orders:', error);
     }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
-    filterOrders();
-  }, [searchQuery, dateFilter, orders]);
+    fetchOrders();
+  }, [fetchOrders]);
 
-  const filterOrders = () => {
+  useEffect(() => {
     let filtered = [...orders];
 
-    // Filter by search query
     if (searchQuery) {
       filtered = filtered.filter(
         (order) =>
@@ -50,40 +44,39 @@ export const useOrders = () => {
       );
     }
 
-    // Filter by date
     if (dateFilter) {
       const filterDate = format(dateFilter, "yyyy-MM-dd");
-      filtered = filtered.filter((order) => 
+      filtered = filtered.filter((order) =>
         order.date.startsWith(filterDate)
       );
     }
 
     setFilteredOrders(filtered);
+  }, [searchQuery, dateFilter, orders]);
+
+  const archiveOrder = async (orderId: string) => {
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: 'cancelled' })
+      .eq('id', orderId);
+
+    if (!error) {
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' as const } : o));
+    }
   };
 
-  const archiveOrder = (orderId: string) => {
-    const updatedOrders = orders.map((order) =>
-      order.id === orderId ? { ...order, status: "cancelled" as const } : order
-    );
-    setOrders(updatedOrders);
-    updateLocalStorage(updatedOrders);
+  const updateOrderStatus = async (orderId: string, newStatus: "pending" | "completed" | "cancelled") => {
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: newStatus })
+      .eq('id', orderId);
+
+    if (!error) {
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+    }
   };
 
-  const updateOrderStatus = (orderId: string, newStatus: "pending" | "completed" | "cancelled") => {
-    const updatedOrders = orders.map((order) =>
-      order.id === orderId ? { ...order, status: newStatus } : order
-    );
-    setOrders(updatedOrders);
-    updateLocalStorage(updatedOrders);
-  };
-
-  const updateLocalStorage = (updatedOrders: Order[]) => {
-    localStorage.setItem('orders', JSON.stringify(updatedOrders));
-  };
-
-  const clearDateFilter = () => {
-    setDateFilter(undefined);
-  };
+  const clearDateFilter = () => setDateFilter(undefined);
 
   return {
     orders,
@@ -95,5 +88,7 @@ export const useOrders = () => {
     archiveOrder,
     updateOrderStatus,
     clearDateFilter,
+    loading,
+    refetch: fetchOrders,
   };
 };
