@@ -263,7 +263,18 @@ const Orders = () => {
               );
             })}
           </div>
-        ) : (
+          {hasMore && (
+            <div className="flex justify-center mt-6">
+              <Button 
+                variant="outline" 
+                onClick={loadMore} 
+                disabled={loading}
+                className="rounded-xl border-border text-foreground"
+              >
+                {loading ? "جارٍ التحميل..." : "تحميل المزيد"}
+              </Button>
+            </div>
+          )}
           <Card className="border border-border rounded-2xl shadow-sm">
             <CardContent className="text-center py-16">
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
