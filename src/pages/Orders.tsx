@@ -18,7 +18,7 @@ import {
 import { toast } from "sonner";
 
 const Orders = () => {
-  const { filteredOrders, searchQuery, setSearchQuery, updateOrderStatus } = useOrders();
+  const { filteredOrders, searchQuery, setSearchQuery, updateOrderStatus, loading, hasMore, loadMore } = useOrders();
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
 
