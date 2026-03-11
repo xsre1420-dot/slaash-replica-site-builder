@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Order } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { mapDbOrder } from "@/hooks/useOrderData";
 import { format } from "date-fns";
+
+const ORDERS_PER_PAGE = 50;
 
 export const useOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -10,49 +12,65 @@ export const useOrders = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
   const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const pageRef = useRef(0);
 
-  const fetchOrders = useCallback(async () => {
-    setLoading(true);
+  const fetchOrders = useCallback(async (page = 0, append = false) => {
+    if (!append) setLoading(true);
+    
+    const from = page * ORDERS_PER_PAGE;
+    const to = from + ORDERS_PER_PAGE - 1;
+
     const { data, error } = await supabase
       .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('id, status, total, delivery_fee, created_at, updated_at, customer_name, customer_phone, customer_address, customer_governorate, items, notes')
+      .order('created_at', { ascending: false })
+      .range(from, to);
 
     if (!error && data) {
       const mapped = data.map(mapDbOrder);
-      setOrders(mapped);
-      setFilteredOrders(mapped);
-    } else {
-      console.error('Error fetching orders:', error);
+      if (append) {
+        setOrders(prev => [...prev, ...mapped]);
+      } else {
+        setOrders(mapped);
+      }
+      setHasMore(data.length === ORDERS_PER_PAGE);
+      pageRef.current = page;
     }
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    fetchOrders();
+    fetchOrders(0);
   }, [fetchOrders]);
 
+  // Client-side filtering
   useEffect(() => {
-    let filtered = [...orders];
+    let filtered = orders;
 
     if (searchQuery) {
+      const q = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (order) =>
-          order.customerInfo.name.includes(searchQuery) ||
-          order.customerInfo.phone.includes(searchQuery) ||
-          order.id.includes(searchQuery)
+          order.customerInfo.name.toLowerCase().includes(q) ||
+          order.customerInfo.phone.includes(q) ||
+          order.id.includes(q)
       );
     }
 
     if (dateFilter) {
       const filterDate = format(dateFilter, "yyyy-MM-dd");
-      filtered = filtered.filter((order) =>
-        order.date.startsWith(filterDate)
-      );
+      filtered = filtered.filter((order) => order.date.startsWith(filterDate));
     }
 
     setFilteredOrders(filtered);
   }, [searchQuery, dateFilter, orders]);
+
+  const loadMore = useCallback(() => {
+    if (hasMore && !loading) {
+      fetchOrders(pageRef.current + 1, true);
+    }
+  }, [hasMore, loading, fetchOrders]);
 
   const archiveOrder = async (orderId: string) => {
     const { error } = await supabase
@@ -89,6 +107,8 @@ export const useOrders = () => {
     updateOrderStatus,
     clearDateFilter,
     loading,
-    refetch: fetchOrders,
+    hasMore,
+    loadMore,
+    refetch: () => fetchOrders(0),
   };
 };
