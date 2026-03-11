@@ -1,7 +1,7 @@
-import { Heart, Plus, Minus, Star, Share2, ShoppingBag, Eye, Flame, Sparkles, Clock } from "lucide-react";
+import { Heart, Plus, Minus, Star, Share2, Eye, Flame, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Product } from "@/types";
-import { useState, useRef } from "react";
+import { memo, useMemo } from "react";
 import OptimizedImage from "@/components/OptimizedImage";
 interface ProductCardProps {
   product: Product;
