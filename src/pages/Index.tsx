@@ -132,7 +132,7 @@ const Index = () => {
             >
               منصة متكاملة لبناء وإدارة متجرك الإلكتروني — بدون برمجة، بدون تعقيد.
               <br />
-              <span className="text-foreground/60">ابدأ مجاناً واحصل على كل الأدوات التي تحتاجها.</span>
+              <span className="text-foreground/60">ابدأ الآن واحصل على كل الأدوات التي تحتاجها.</span>
             </motion.p>
 
             <motion.div
