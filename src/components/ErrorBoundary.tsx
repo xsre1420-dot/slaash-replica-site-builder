@@ -54,7 +54,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                 تحديث الصفحة
               </Button>
             </div>
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <details className="mt-6 text-left text-xs text-muted-foreground bg-muted rounded-xl p-4">
                 <summary className="cursor-pointer font-medium mb-2">تفاصيل الخطأ</summary>
                 <pre className="whitespace-pre-wrap break-words">{this.state.error.message}</pre>
