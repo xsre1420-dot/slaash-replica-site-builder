@@ -72,7 +72,7 @@ const Index = () => {
             </Link>
             <Link to="/signup">
               <Button size="sm" className="rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground px-5 font-semibold shadow-lg shadow-primary/20">
-                ابدأ مجاناً
+                ابدأ الآن
               </Button>
             </Link>
           </div>
@@ -132,7 +132,7 @@ const Index = () => {
             >
               منصة متكاملة لبناء وإدارة متجرك الإلكتروني — بدون برمجة، بدون تعقيد.
               <br />
-              <span className="text-foreground/60">ابدأ مجاناً واحصل على كل الأدوات التي تحتاجها.</span>
+              <span className="text-foreground/60">ابدأ الآن واحصل على كل الأدوات التي تحتاجها.</span>
             </motion.p>
 
             <motion.div
@@ -143,7 +143,7 @@ const Index = () => {
             >
               <Link to="/signup">
                 <Button size="lg" className="text-lg px-12 py-7 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-2xl shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 hover:-translate-y-0.5 min-w-[260px] group">
-                  ابدأ مجاناً الآن
+                  ابدأ الآن
                   <ArrowLeft className="mr-2 h-5 w-5 group-hover:-translate-x-1 transition-transform" />
                 </Button>
               </Link>
@@ -451,7 +451,7 @@ const Index = () => {
                   whileInView={{ scale: 1 }}
                   viewport={{ once: true }}
                   transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                  className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-8"
+                  className="w-16 h-16 bg-gradient-to-br from-primary/15 to-secondary/15 rounded-2xl flex items-center justify-center mx-auto mb-8 border-0 shadow-none"
                 >
                   <Sparkles className="w-8 h-8 text-primary" />
                 </motion.div>
