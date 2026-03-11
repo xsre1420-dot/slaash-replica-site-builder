@@ -1,7 +1,7 @@
-import { Heart, Plus, Minus, Star, Share2, ShoppingBag, Eye, Flame, Sparkles, Clock } from "lucide-react";
+import { Heart, Plus, Minus, Star, Share2, Eye, Flame, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Product } from "@/types";
-import { useState, useRef } from "react";
+import { memo, useMemo } from "react";
 import OptimizedImage from "@/components/OptimizedImage";
 interface ProductCardProps {
   product: Product;
@@ -16,7 +16,7 @@ interface ProductCardProps {
   index: number;
 }
 
-const ProductCard = ({
+const ProductCard = memo(({
   product,
   viewMode,
   isFavorite,
@@ -28,17 +28,13 @@ const ProductCard = ({
   onShare,
   index,
 }: ProductCardProps) => {
-  const [imgLoaded, setImgLoaded] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
-
-  // Badges logic
-  const isNew = (product as any).created_at ? (Date.now() - new Date((product as any).created_at).getTime()) < 7 * 24 * 60 * 60 * 1000 : false;
-  const isLowStock = product.stockQuantity !== undefined && product.stockQuantity > 0 && product.stockQuantity <= 3;
-  const isOutOfStock = product.stockQuantity !== undefined && product.stockQuantity === 0;
-  const hasDiscount = product.discountType && product.discountType !== 'none';
-
-  // Social proof (simulated)
-  const viewerCount = Math.floor(Math.random() * 5) + 1;
+  // Memoize badges logic
+  const { isNew, isLowStock, isOutOfStock, hasDiscount } = useMemo(() => ({
+    isNew: (product as any).created_at ? (Date.now() - new Date((product as any).created_at).getTime()) < 7 * 86400000 : false,
+    isLowStock: product.stockQuantity !== undefined && product.stockQuantity > 0 && product.stockQuantity <= 3,
+    isOutOfStock: product.stockQuantity !== undefined && product.stockQuantity === 0,
+    hasDiscount: product.discountType && product.discountType !== 'none',
+  }), [product.stockQuantity, product.discountType, (product as any).created_at]);
 
   const handleShare = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -184,13 +180,7 @@ const ProductCard = ({
           </button>
         </div>
 
-        {/* Social proof */}
-        {viewerCount >= 3 && (
-          <div className="absolute bottom-2 left-2 bg-card/90 backdrop-blur-sm rounded-full px-2 py-0.5 flex items-center gap-1">
-            <Eye className="w-3 h-3 text-muted-foreground" />
-            <span className="text-[9px] text-muted-foreground">{viewerCount} يشاهدون</span>
-          </div>
-        )}
+        {/* Social proof removed - was causing re-renders with Math.random() */}
       </div>
 
       <div className="p-3">
@@ -241,6 +231,8 @@ const ProductCard = ({
       </div>
     </div>
   );
-};
+});
+
+ProductCard.displayName = 'ProductCard';
 
 export default ProductCard;
