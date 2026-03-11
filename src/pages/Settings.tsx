@@ -13,7 +13,7 @@ import DesignTab from "@/components/settings/DesignTab";
 
 const Settings = () => {
   const { storeName, storeLogo, storeGovernorate, storeSettings, updateStore, updateStoreSettings } = useStore();
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstRender = useRef(true);
   const lastSavedRef = useRef<string>("");
   
