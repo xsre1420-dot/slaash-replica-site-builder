@@ -287,7 +287,5 @@ export const getProductById = (id: string): Product | undefined => {
   return productsCache.find(product => product.id === id);
 };
 
-// Initialize data on module load
-(async () => {
-  await Promise.all([getCategories(), loadProducts()]);
-})();
+// Data is loaded on-demand when pages request it, not at module load
+// This prevents fetching before auth is ready
