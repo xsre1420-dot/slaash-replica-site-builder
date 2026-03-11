@@ -6,6 +6,7 @@ import StatusChangeDropdown from "./StatusChangeDropdown";
 import { useStore } from "@/context/StoreContext";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface OrderHeaderProps {
   orderId: string;
@@ -21,37 +22,25 @@ const OrderHeader = ({ orderId, date, status: initialStatus, governorate }: Orde
   
   const handleStatusChange = async (orderId: string, newStatus: 'pending' | 'completed' | 'cancelled') => {
     try {
-      // Get current orders from localStorage
-      const storedOrders = localStorage.getItem('orders');
-      if (storedOrders) {
-        const orders = JSON.parse(storedOrders);
-        const updatedOrders = orders.map((order: any) =>
-          order.id === orderId ? { ...order, status: newStatus } : order
-        );
-        localStorage.setItem('orders', JSON.stringify(updatedOrders));
-        
-        // Update local state for smooth transition
-        setCurrentStatus(newStatus);
-        
-        // Show success message
-        const statusMessages = {
-          completed: "تم تحديث حالة الطلب إلى مكتمل",
-          pending: "تم تحديث حالة الطلب إلى قيد الانتظار", 
-          cancelled: "تم تحديث حالة الطلب إلى ملغي"
-        };
-        
-        toast({
-          title: statusMessages[newStatus],
-          duration: 2000
-        });
-      }
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: newStatus })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      setCurrentStatus(newStatus);
+      
+      const statusMessages = {
+        completed: "تم تحديث حالة الطلب إلى مكتمل",
+        pending: "تم تحديث حالة الطلب إلى قيد الانتظار", 
+        cancelled: "تم تحديث حالة الطلب إلى ملغي"
+      };
+      
+      toast({ title: statusMessages[newStatus], duration: 2000 });
     } catch (error) {
       console.error('Error updating order status:', error);
-      toast({
-        title: "حدث خطأ في تحديث حالة الطلب",
-        variant: "destructive",
-        duration: 2000
-      });
+      toast({ title: "حدث خطأ في تحديث حالة الطلب", variant: "destructive", duration: 2000 });
     }
   };
 
