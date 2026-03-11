@@ -143,7 +143,7 @@ const Index = () => {
             >
               <Link to="/signup">
                 <Button size="lg" className="text-lg px-12 py-7 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-2xl shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 hover:-translate-y-0.5 min-w-[260px] group">
-                  ابدأ مجاناً الآن
+                  ابدأ الآن
                   <ArrowLeft className="mr-2 h-5 w-5 group-hover:-translate-x-1 transition-transform" />
                 </Button>
               </Link>
