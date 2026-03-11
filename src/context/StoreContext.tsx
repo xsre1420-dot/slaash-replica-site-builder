@@ -121,10 +121,8 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateStoreSettings = async (settings: StoreSettings) => {
-    console.log('Updating store settings:', settings);
     setStoreSettings(settings);
     
-    // Save to database
     if (user?.id) {
       await saveStoreSettings({
         menu_background_color: settings.menuBackgroundColor,
