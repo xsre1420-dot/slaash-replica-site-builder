@@ -275,6 +275,8 @@ const Orders = () => {
               </Button>
             </div>
           )}
+        </>
+        ) : (
           <Card className="border border-border rounded-2xl shadow-sm">
             <CardContent className="text-center py-16">
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
