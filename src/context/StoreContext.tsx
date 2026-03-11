@@ -65,7 +65,6 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     if (!user?.id) return;
 
     try {
-      console.log('Loading store settings for user:', user.id);
       const { data, error } = await supabase
         .from('store_settings')
         .select('*')
@@ -76,8 +75,6 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         console.error('Error loading store settings:', error);
         return;
       }
-
-      console.log('Store settings loaded:', data);
       
       if (data) {
         setStoreName(data.store_name || "");
@@ -92,8 +89,6 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
           deliveryPrices: (data.delivery_prices as unknown as DeliveryPrice[]) || []
         });
       } else {
-        console.log('No store settings found, creating default ones');
-        // Create default settings if none exist
         await saveStoreSettings({
           store_name: "",
           store_logo: "",
