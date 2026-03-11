@@ -180,13 +180,7 @@ const ProductCard = memo(({
           </button>
         </div>
 
-        {/* Social proof */}
-        {viewerCount >= 3 && (
-          <div className="absolute bottom-2 left-2 bg-card/90 backdrop-blur-sm rounded-full px-2 py-0.5 flex items-center gap-1">
-            <Eye className="w-3 h-3 text-muted-foreground" />
-            <span className="text-[9px] text-muted-foreground">{viewerCount} يشاهدون</span>
-          </div>
-        )}
+        {/* Social proof removed - was causing re-renders with Math.random() */}
       </div>
 
       <div className="p-3">
