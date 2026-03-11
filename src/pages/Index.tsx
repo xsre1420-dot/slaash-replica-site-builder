@@ -451,7 +451,7 @@ const Index = () => {
                   whileInView={{ scale: 1 }}
                   viewport={{ once: true }}
                   transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                  className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-8"
+                  className="w-16 h-16 bg-gradient-to-br from-primary/15 to-secondary/15 rounded-2xl flex items-center justify-center mx-auto mb-8 border-0 shadow-none"
                 >
                   <Sparkles className="w-8 h-8 text-primary" />
                 </motion.div>
