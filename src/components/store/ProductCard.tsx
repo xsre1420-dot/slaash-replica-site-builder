@@ -16,7 +16,7 @@ interface ProductCardProps {
   index: number;
 }
 
-const ProductCard = ({
+const ProductCard = memo(({
   product,
   viewMode,
   isFavorite,
@@ -28,17 +28,13 @@ const ProductCard = ({
   onShare,
   index,
 }: ProductCardProps) => {
-  const [imgLoaded, setImgLoaded] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
-
-  // Badges logic
-  const isNew = (product as any).created_at ? (Date.now() - new Date((product as any).created_at).getTime()) < 7 * 24 * 60 * 60 * 1000 : false;
-  const isLowStock = product.stockQuantity !== undefined && product.stockQuantity > 0 && product.stockQuantity <= 3;
-  const isOutOfStock = product.stockQuantity !== undefined && product.stockQuantity === 0;
-  const hasDiscount = product.discountType && product.discountType !== 'none';
-
-  // Social proof (simulated)
-  const viewerCount = Math.floor(Math.random() * 5) + 1;
+  // Memoize badges logic
+  const { isNew, isLowStock, isOutOfStock, hasDiscount } = useMemo(() => ({
+    isNew: (product as any).created_at ? (Date.now() - new Date((product as any).created_at).getTime()) < 7 * 86400000 : false,
+    isLowStock: product.stockQuantity !== undefined && product.stockQuantity > 0 && product.stockQuantity <= 3,
+    isOutOfStock: product.stockQuantity !== undefined && product.stockQuantity === 0,
+    hasDiscount: product.discountType && product.discountType !== 'none',
+  }), [product.stockQuantity, product.discountType, (product as any).created_at]);
 
   const handleShare = async (e: React.MouseEvent) => {
     e.stopPropagation();
