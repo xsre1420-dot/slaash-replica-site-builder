@@ -72,7 +72,7 @@ const Index = () => {
             </Link>
             <Link to="/signup">
               <Button size="sm" className="rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground px-5 font-semibold shadow-lg shadow-primary/20">
-                ابدأ مجاناً
+                ابدأ الآن
               </Button>
             </Link>
           </div>
