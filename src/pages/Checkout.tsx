@@ -57,34 +57,67 @@ const Checkout = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const handleSubmitOrder = (e: React.FormEvent) => {
+  const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
 
     setIsSubmitting(true);
-    const orderId = `ord-${Math.floor(Math.random() * 1000).toString().padStart(3, "0")}`;
 
-    // Simulate brief processing
-    setTimeout(() => {
-      const newOrder: Order = {
-        id: orderId,
-        items: [...cartItems],
-        customerInfo: {
-          name: customerInfo.name,
-          phone: customerInfo.phone,
-          address: customerInfo.address,
-          notes: customerInfo.notes || undefined,
-          governorate: selectedGovernorate,
-        },
-        total: totalWithDelivery,
-        date: new Date().toISOString(),
-        status: "pending",
-      };
+    try {
+      // Determine store owner from the first product's data or current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // For public stores, find the owner from a product in the cart
+      let ownerId = user?.id;
+      if (!ownerId && cartItems.length > 0) {
+        const { data: product } = await supabase
+          .from('products')
+          .select('owner_id')
+          .eq('id', cartItems[0].product.id)
+          .maybeSingle();
+        ownerId = product?.owner_id;
+      }
 
-      const existingOrders = JSON.parse(localStorage.getItem("orders") || "[]");
-      localStorage.setItem("orders", JSON.stringify([newOrder, ...existingOrders]));
+      if (!ownerId) {
+        console.error('Could not determine store owner');
+        setIsSubmitting(false);
+        return;
+      }
 
-      setCompletedOrderId(orderId);
+      const orderItems = cartItems.map(item => ({
+        productId: item.product.id,
+        name: item.product.name,
+        price: item.product.price,
+        image: item.product.image,
+        quantity: item.quantity,
+        selectedSize: item.selectedSize,
+        selectedColor: item.selectedColor,
+      }));
+
+      const { data: newOrder, error } = await supabase
+        .from('orders')
+        .insert({
+          owner_id: ownerId,
+          customer_name: customerInfo.name,
+          customer_phone: customerInfo.phone,
+          customer_address: customerInfo.address,
+          customer_governorate: selectedGovernorate || null,
+          notes: customerInfo.notes || null,
+          items: orderItems,
+          total: totalWithDelivery,
+          delivery_fee: selectedDeliveryPrice,
+          status: 'pending',
+        })
+        .select('id')
+        .single();
+
+      if (error) {
+        console.error('Error creating order:', error);
+        setIsSubmitting(false);
+        return;
+      }
+
+      setCompletedOrderId(newOrder.id);
       setOrderCompleted(true);
       setIsSubmitting(false);
 
@@ -93,7 +126,10 @@ const Checkout = () => {
         clearCart();
         navigate("/preview");
       }, 3000);
-    }, 800);
+    } catch (error) {
+      console.error('Error submitting order:', error);
+      setIsSubmitting(false);
+    }
   };
 
   return (
