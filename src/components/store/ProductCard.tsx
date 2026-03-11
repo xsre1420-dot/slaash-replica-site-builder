@@ -231,7 +231,7 @@ const ProductCard = memo(({
       </div>
     </div>
   );
-};
+});
 
 ProductCard.displayName = 'ProductCard';
 
