@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, memo } from 'react';
 
 interface OptimizedImageProps {
   src: string;
@@ -14,10 +14,10 @@ interface OptimizedImageProps {
 }
 
 const FALLBACK_IMAGE = '/placeholder.svg';
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 2;
 const RETRY_DELAY = 1000;
 
-const OptimizedImage = ({
+const OptimizedImage = memo(({
   src,
   alt,
   className = '',
@@ -33,9 +33,7 @@ const OptimizedImage = ({
   const [error, setError] = useState(false);
   const [currentSrc, setCurrentSrc] = useState(src);
   const retriesRef = useRef(0);
-  const imgRef = useRef<HTMLImageElement>(null);
 
-  // Reset state when src changes
   useEffect(() => {
     setLoaded(false);
     setError(false);
@@ -52,27 +50,23 @@ const OptimizedImage = ({
   const handleError = useCallback(() => {
     if (retriesRef.current < MAX_RETRIES) {
       retriesRef.current += 1;
-      // Retry with cache-busting parameter
       setTimeout(() => {
-        const separator = currentSrc.includes('?') ? '&' : '?';
-        setCurrentSrc(`${src}${separator}_retry=${retriesRef.current}&t=${Date.now()}`);
+        const separator = src.includes('?') ? '&' : '?';
+        setCurrentSrc(`${src}${separator}_r=${retriesRef.current}`);
       }, RETRY_DELAY * retriesRef.current);
     } else {
       setError(true);
       setCurrentSrc(fallbackSrc);
       onError?.();
     }
-  }, [src, currentSrc, fallbackSrc, onError]);
+  }, [src, fallbackSrc, onError]);
 
   return (
     <div className={`relative overflow-hidden ${className}`} style={{ width, height }}>
-      {/* Blur placeholder */}
       {blurPlaceholder && !loaded && !error && (
         <div className="absolute inset-0 bg-muted animate-pulse" />
       )}
-      
       <img
-        ref={imgRef}
         src={currentSrc}
         alt={alt}
         width={width}
@@ -87,6 +81,8 @@ const OptimizedImage = ({
       />
     </div>
   );
-};
+});
+
+OptimizedImage.displayName = 'OptimizedImage';
 
 export default OptimizedImage;
