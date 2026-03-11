@@ -107,12 +107,10 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateStore = async (logo: string, name: string, governorate?: string) => {
-    console.log('Updating store:', { logo, name, governorate });
     setStoreLogo(logo);
     setStoreName(name);
     if (governorate !== undefined) setStoreGovernorate(governorate);
     
-    // Save to database
     if (user?.id) {
       await saveStoreSettings({
         store_name: name,
