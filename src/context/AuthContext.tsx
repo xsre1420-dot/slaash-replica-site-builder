@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { invalidateCache, loadProducts } from '@/data/dummyData';
 
 interface User {
   id: string;
@@ -34,33 +35,54 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const loadProfile = async (userId: string, fallbackMeta?: any) => {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('user_id, username, store_name')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (profile) {
+        setUser({ id: profile.user_id, username: profile.username || 'مستخدم', store_name: profile.store_name || undefined });
+      } else if (fallbackMeta) {
+        setUser({
+          id: userId,
+          username: fallbackMeta.username || 'مستخدم',
+          store_name: fallbackMeta.store_name
+        });
+      }
+    } catch (e) {
+      console.warn('Profile fetch failed:', e);
+      if (fallbackMeta) {
+        setUser({
+          id: userId,
+          username: fallbackMeta.username || 'مستخدم',
+          store_name: fallbackMeta.store_name
+        });
+      }
+    }
+  };
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         const meta: any = session.user.user_metadata ?? {};
+        // Set user immediately from metadata
         setUser({
           id: session.user.id,
           username: meta.username || session.user.email?.split('@')[0] || 'مستخدم',
           store_name: meta.store_name
         });
 
-        setTimeout(async () => {
-          try {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .maybeSingle();
-
-            if (profile) {
-              setUser({ id: profile.id, username: profile.username, store_name: profile.store_name });
-            }
-          } catch (e) {
-            console.warn('Profile fetch skipped/failed:', e);
-          }
-        }, 0);
+        // Then load full profile & invalidate cache so fresh data loads
+        if (event === 'SIGNED_IN') {
+          invalidateCache();
+        }
+        setTimeout(() => loadProfile(session.user.id, meta), 0);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
+        invalidateCache();
       }
     });
 
@@ -73,6 +95,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             username: meta.username || session.user.email?.split('@')[0] || 'مستخدم',
             store_name: meta.store_name
           });
+          setTimeout(() => loadProfile(session.user.id, meta), 0);
         } else {
           setUser(null);
         }
@@ -130,6 +153,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = async () => {
+    invalidateCache();
     await supabase.auth.signOut();
     setUser(null);
   };
