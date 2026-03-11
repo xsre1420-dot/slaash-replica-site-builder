@@ -139,46 +139,23 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     if (!user?.id) return;
 
     try {
-      console.log('Saving store settings:', updates);
-      
-      // First try to update existing record
-      const { data: existingSettings, error: selectError } = await supabase
+      const { data: existingSettings } = await supabase
         .from('store_settings')
         .select('id')
         .eq('owner_id', user.id)
         .maybeSingle();
 
-      if (selectError) {
-        console.error('Error checking existing settings:', selectError);
-        return;
-      }
-
       if (existingSettings) {
-        // Update existing record
         const { error } = await supabase
           .from('store_settings')
           .update(updates)
           .eq('owner_id', user.id);
-
-        if (error) {
-          console.error('Error updating store settings:', error);
-        } else {
-          console.log('Store settings updated successfully');
-        }
+        if (error) console.error('Error updating store settings:', error);
       } else {
-        // Insert new record
         const { error } = await supabase
           .from('store_settings')
-          .insert({
-            owner_id: user.id,
-            ...updates
-          });
-
-        if (error) {
-          console.error('Error inserting store settings:', error);
-        } else {
-          console.log('Store settings inserted successfully');
-        }
+          .insert({ owner_id: user.id, ...updates });
+        if (error) console.error('Error inserting store settings:', error);
       }
     } catch (error) {
       console.error('Failed to save store settings:', error);
