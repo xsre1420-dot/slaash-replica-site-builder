@@ -1,5 +1,5 @@
 import { X, ShoppingCart, Plus, Search, Heart, Star, SlidersHorizontal, ArrowUpDown, Grid3X3, List, Mic, MicOff, RefreshCw } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { getProductsByCategory, getCategories, loadProducts } from "@/data/dummyData";
 import { Product, Category } from "@/types";
@@ -8,6 +8,7 @@ import { useStore } from "@/context/StoreContext";
 import MetaPixel from "@/components/MetaPixel";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import CartDrawer from "@/components/CartDrawer";
+import { useTenantStore } from "@/hooks/useTenantStore";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import ProductCard from "@/components/store/ProductCard";
 import ProductSkeleton from "@/components/store/ProductSkeleton";
