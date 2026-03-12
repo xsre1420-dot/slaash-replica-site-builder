@@ -215,7 +215,8 @@ const Store = () => {
 
   // --- Share ---
   const handleShare = async (product: Product) => {
-    const shareData = { title: product.name, text: `${product.name} - ${product.price.toLocaleString()} د.ع`, url: `${window.location.origin}/product-details/${product.id}` };
+    const productUrl = isTenantMode ? `${window.location.origin}/store/${storeSlug}/product/${product.id}` : `${window.location.origin}/product-details/${product.id}`;
+    const shareData = { title: product.name, text: `${product.name} - ${product.price.toLocaleString()} د.ع`, url: productUrl };
     try {
       if (navigator.share) await navigator.share(shareData);
       else { await navigator.clipboard.writeText(shareData.url); toast({ title: "تم النسخ", description: "تم نسخ رابط المنتج" }); }
