@@ -20,6 +20,10 @@ import { useToast } from "@/hooks/use-toast";
 const PRODUCTS_PER_PAGE = 12;
 
 const Store = () => {
+  const { username: storeSlug } = useParams();
+  const isTenantMode = !!storeSlug;
+  const tenant = useTenantStore(storeSlug);
+
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -36,19 +40,37 @@ const Store = () => {
   const [filterSizes, setFilterSizes] = useState<string[]>([]);
 
   const { addToCart, cartItems, cartCount, updateQuantity, cartTotal } = useCart();
-  const { storeName, storeLogo, storeSettings } = useStore();
+  const ownStore = useStore();
   const { trackAddToCart, trackViewContent } = useMetaPixel();
   const { favorites, toggleFavorite, isFavorite, count: favCount } = useFavorites();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Derive display values from tenant or own store
+  const storeName = isTenantMode ? (tenant.storeInfo?.storeName || '') : ownStore.storeName;
+  const storeLogo = isTenantMode ? (tenant.storeInfo?.storeLogo || '') : ownStore.storeLogo;
+  const storeSettings = isTenantMode ? {
+    bannerImages: tenant.storeInfo?.bannerImages || [],
+    menuBackgroundColor: tenant.storeInfo?.menuBackgroundColor || '#ffffff',
+    menuTextColor: tenant.storeInfo?.menuTextColor || '#333333',
+    menuAccentColor: tenant.storeInfo?.menuAccentColor || '#6366f1',
+    primaryBannerIndex: tenant.storeInfo?.primaryBannerIndex || 0,
+    deliveryPrices: tenant.storeInfo?.deliveryPrices || [],
+    whatsappNumber: tenant.storeInfo?.whatsappNumber || '',
+  } : { ...ownStore.storeSettings, whatsappNumber: '' };
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const pullStartY = useRef(0);
   const categoriesRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef(0);
 
-  // --- Load data (parallel + cached) ---
+  // --- Load data: tenant mode vs owner mode ---
   const loadData = useCallback(async (force = false) => {
+    if (isTenantMode) {
+      // Tenant mode — data comes from useTenantStore hook
+      if (force) tenant.refetch();
+      return;
+    }
     setIsLoading(true);
     try {
       const [cats, prods] = await Promise.all([getCategories(force), loadProducts(force)]);
@@ -58,9 +80,20 @@ const Store = () => {
       setCategories([{ id: "all", name: "الكل", order: -1 }]);
     }
     setIsLoading(false);
-  }, [selectedCategory]);
+  }, [selectedCategory, isTenantMode]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  // Sync tenant data into local state
+  useEffect(() => {
+    if (isTenantMode) {
+      setIsLoading(tenant.loading);
+      if (!tenant.loading) {
+        setCategories([{ id: "all", name: "الكل", order: -1 }, ...tenant.categories]);
+        setAllProducts(selectedCategory === "all" ? tenant.products : tenant.products.filter(p => p.category === selectedCategory));
+      }
+    }
+  }, [isTenantMode, tenant.loading, tenant.products, tenant.categories, selectedCategory]);
+
+  useEffect(() => { if (!isTenantMode) loadData(); }, [loadData, isTenantMode]);
 
   // Update products when category changes
   useEffect(() => {
