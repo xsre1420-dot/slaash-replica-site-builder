@@ -209,7 +209,8 @@ const Store = () => {
   const handleViewProduct = (productId: string) => {
     const product = allProducts.find(p => p.id === productId);
     if (product) trackViewContent(product.id, product.name, product.price);
-    navigate(`/product-details/${productId}`);
+    const path = isTenantMode ? `/store/${storeSlug}/product/${productId}` : `/product-details/${productId}`;
+    navigate(path);
   };
 
   // --- Share ---
