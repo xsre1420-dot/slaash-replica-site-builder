@@ -9,6 +9,7 @@ interface StoreInfoTabProps {
     storeName: string;
     storeLogo: string;
     storeGovernorate: string;
+    storeSlug: string;
     bannerImages: string[];
     primaryBannerIndex: number;
   };
