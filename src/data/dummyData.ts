@@ -1,15 +1,8 @@
-
 import { Product, Category, ColorOption, ProductVariant } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
+import { cache, CacheKeys, CacheTTL } from "@/lib/cache";
 
-// Smart cache with timestamps
-let categoriesCache: Category[] = [];
-let productsCache: Product[] = [];
-let lastProductsFetch = 0;
-let lastCategoriesFetch = 0;
-const CACHE_TTL = 30_000; // 30 seconds
-
-const isCacheValid = (lastFetch: number) => Date.now() - lastFetch < CACHE_TTL;
+// --- Formatters ---
 
 const formatProduct = (product: any): Product => ({
   id: product.id,
@@ -45,78 +38,113 @@ const formatProduct = (product: any): Product => ({
   originalPrice: product.original_price ? Number(product.original_price) : undefined,
 });
 
-// Get categories from Supabase with smart caching
+// --- Internal owner ID helper ---
+
+let _currentOwnerId: string | null = null;
+
+export const setCurrentOwner = (ownerId: string | null) => {
+  _currentOwnerId = ownerId;
+};
+
+const getOwnerId = () => _currentOwnerId || 'anonymous';
+
+// --- Categories ---
+
 export const getCategories = async (force = false): Promise<Category[]> => {
-  if (!force && isCacheValid(lastCategoriesFetch) && categoriesCache.length > 0) {
-    return categoriesCache;
+  const key = CacheKeys.categories(getOwnerId());
+
+  if (!force) {
+    const cached = cache.get<Category[]>(key);
+    if (cached) return cached;
   }
+
   try {
     const { data, error } = await supabase
       .from('categories')
-      .select('*')
+      .select('id, name, display_order')
       .order('display_order', { ascending: true });
-    
+
     if (error) {
       console.error('Error loading categories:', error);
-      return categoriesCache;
+      return cache.get<Category[]>(key) || [];
     }
-    
-    categoriesCache = data?.map(cat => ({
+
+    const categories = data?.map(cat => ({
       id: cat.id,
       name: cat.name,
       order: cat.display_order || 0
     })) || [];
-    lastCategoriesFetch = Date.now();
-    return categoriesCache;
+
+    cache.set(key, categories, CacheTTL.MEDIUM, CacheTTL.STALE);
+    return categories;
   } catch (error) {
     console.error('Error loading categories:', error);
-    return categoriesCache;
+    return cache.get<Category[]>(key) || [];
   }
 };
 
-export const getCategoriesSync = (): Category[] => categoriesCache;
+export const getCategoriesSync = (): Category[] => {
+  return cache.get<Category[]>(CacheKeys.categories(getOwnerId())) || [];
+};
 
-// Load products from Supabase with smart caching
+// --- Products ---
+
 export const loadProducts = async (force = false): Promise<Product[]> => {
-  if (!force && isCacheValid(lastProductsFetch) && productsCache.length > 0) {
-    return productsCache;
+  const key = CacheKeys.products(getOwnerId());
+
+  if (!force) {
+    const cached = cache.get<Product[]>(key);
+    if (cached) return cached;
   }
+
   try {
-    // Suggestion #14: Select only needed columns
     const { data, error } = await supabase
       .from('products')
       .select('id, name, description, category, price, cost, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, created_at, updated_at')
       .order('created_at', { ascending: false });
-    
+
     if (error) {
       console.error('Error loading products:', error);
-      return productsCache;
+      return cache.get<Product[]>(key) || [];
     }
-    
-    productsCache = data?.map(formatProduct) || [];
-    lastProductsFetch = Date.now();
-    return productsCache;
+
+    const products = data?.map(formatProduct) || [];
+    cache.set(key, products, CacheTTL.MEDIUM, CacheTTL.STALE);
+    return products;
   } catch (error) {
     console.error('Error loading products:', error);
-    return productsCache;
+    return cache.get<Product[]>(key) || [];
   }
 };
 
-export const getProductsSync = (): Product[] => productsCache;
-export let products: Product[] = productsCache;
+export const getProductsSync = (): Product[] => {
+  return cache.get<Product[]>(CacheKeys.products(getOwnerId())) || [];
+};
+
+// Keep backward compat
+export let products: Product[] = [];
 
 export const reloadProducts = async (): Promise<void> => {
-  await loadProducts(true);
-  products = productsCache;
+  const loaded = await loadProducts(true);
+  products = loaded;
 };
 
-// Invalidate cache (call after mutations)
+// --- Cache Invalidation ---
+
 export const invalidateCache = () => {
-  lastProductsFetch = 0;
-  lastCategoriesFetch = 0;
+  cache.flushAll();
 };
 
-// Add product with optimistic update
+export const invalidateProducts = () => {
+  cache.flushByPrefix('products:');
+};
+
+export const invalidateCategories = () => {
+  cache.flushByPrefix('categories:');
+};
+
+// --- Product CRUD (optimistic + cache update) ---
+
 export const addProduct = async (product: Product): Promise<{ success: boolean; error?: string }> => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -141,26 +169,22 @@ export const addProduct = async (product: Product): Promise<{ success: boolean; 
       .select()
       .single();
 
-    if (error) {
-      console.error('Error adding product:', error);
-      return { success: false, error: error.message };
+    if (error) return { success: false, error: error.message };
+
+    // Optimistic cache update
+    if (data) {
+      const key = CacheKeys.products(user.id);
+      const current = cache.get<Product[]>(key) || [];
+      cache.set(key, [formatProduct(data), ...current], CacheTTL.MEDIUM, CacheTTL.STALE);
+      products = cache.get<Product[]>(key) || [];
     }
 
-    // Optimistic: add to cache immediately without re-fetching
-    if (data) {
-      const newProduct = formatProduct(data);
-      productsCache = [newProduct, ...productsCache];
-      products = productsCache;
-    }
-    
     return { success: true };
-  } catch (error) {
-    console.error('Error adding product:', error);
+  } catch {
     return { success: false, error: 'Failed to add product' };
   }
 };
 
-// Update product with optimistic update
 export const updateProduct = async (productId: string, updatedProduct: Product): Promise<{ success: boolean; error?: string }> => {
   try {
     const { error } = await supabase
@@ -180,25 +204,20 @@ export const updateProduct = async (productId: string, updatedProduct: Product):
       })
       .eq('id', productId);
 
-    if (error) {
-      console.error('Error updating product:', error);
-      return { success: false, error: error.message };
-    }
+    if (error) return { success: false, error: error.message };
 
-    // Optimistic update in cache
-    productsCache = productsCache.map(p => 
-      p.id === productId ? { ...updatedProduct, id: productId } : p
-    );
-    products = productsCache;
-    
+    // Optimistic cache update
+    const key = CacheKeys.products(getOwnerId());
+    const current = cache.get<Product[]>(key) || [];
+    cache.set(key, current.map(p => p.id === productId ? { ...updatedProduct, id: productId } : p), CacheTTL.MEDIUM, CacheTTL.STALE);
+    products = cache.get<Product[]>(key) || [];
+
     return { success: true };
-  } catch (error) {
-    console.error('Error updating product:', error);
+  } catch {
     return { success: false, error: 'Failed to update product' };
   }
 };
 
-// Delete product with optimistic update
 export const deleteProduct = async (productId: string): Promise<{ success: boolean; error?: string }> => {
   try {
     const { error } = await supabase
@@ -206,29 +225,34 @@ export const deleteProduct = async (productId: string): Promise<{ success: boole
       .delete()
       .eq('id', productId);
 
-    if (error) {
-      console.error('Error deleting product:', error);
-      return { success: false, error: error.message };
-    }
+    if (error) return { success: false, error: error.message };
 
-    // Optimistic remove from cache
-    productsCache = productsCache.filter(p => p.id !== productId);
-    products = productsCache;
-    
+    const key = CacheKeys.products(getOwnerId());
+    const current = cache.get<Product[]>(key) || [];
+    cache.set(key, current.filter(p => p.id !== productId), CacheTTL.MEDIUM, CacheTTL.STALE);
+    products = cache.get<Product[]>(key) || [];
+
     return { success: true };
-  } catch (error) {
-    console.error('Error deleting product:', error);
+  } catch {
     return { success: false, error: 'Failed to delete product' };
   }
 };
 
-// Get products by category (from cache)
+// --- Product Queries (from cache) ---
+
 export const getProductsByCategory = (categoryId: string): Product[] => {
-  if (categoryId === "all") return productsCache;
-  return productsCache.filter(product => product.category === categoryId);
+  const all = cache.get<Product[]>(CacheKeys.products(getOwnerId())) || [];
+  if (categoryId === "all") return all;
+  return all.filter(product => product.category === categoryId);
 };
 
-// Category CRUD with optimistic updates
+export const getProductById = (id: string): Product | undefined => {
+  const all = cache.get<Product[]>(CacheKeys.products(getOwnerId())) || [];
+  return all.find(product => product.id === id);
+};
+
+// --- Category CRUD ---
+
 export const addCategory = async (category: Category): Promise<{ success: boolean; error?: string }> => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -243,10 +267,12 @@ export const addCategory = async (category: Category): Promise<{ success: boolea
     if (error) return { success: false, error: error.message };
 
     if (data) {
-      categoriesCache = [...categoriesCache, { id: data.id, name: data.name, order: data.display_order }];
+      const key = CacheKeys.categories(user.id);
+      const current = cache.get<Category[]>(key) || [];
+      cache.set(key, [...current, { id: data.id, name: data.name, order: data.display_order }], CacheTTL.MEDIUM, CacheTTL.STALE);
     }
     return { success: true };
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Failed to add category' };
   }
 };
@@ -260,9 +286,11 @@ export const updateCategory = async (categoryId: string, updatedCategory: Catego
 
     if (error) return { success: false, error: error.message };
 
-    categoriesCache = categoriesCache.map(c => c.id === categoryId ? { ...updatedCategory, id: categoryId } : c);
+    const key = CacheKeys.categories(getOwnerId());
+    const current = cache.get<Category[]>(key) || [];
+    cache.set(key, current.map(c => c.id === categoryId ? { ...updatedCategory, id: categoryId } : c), CacheTTL.MEDIUM, CacheTTL.STALE);
     return { success: true };
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Failed to update category' };
   }
 };
@@ -276,15 +304,13 @@ export const deleteCategory = async (categoryId: string): Promise<{ success: boo
 
     if (error) return { success: false, error: error.message };
 
-    categoriesCache = categoriesCache.filter(c => c.id !== categoryId);
+    const key = CacheKeys.categories(getOwnerId());
+    const current = cache.get<Category[]>(key) || [];
+    cache.set(key, current.filter(c => c.id !== categoryId), CacheTTL.MEDIUM, CacheTTL.STALE);
     return { success: true };
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Failed to delete category' };
   }
-};
-
-export const getProductById = (id: string): Product | undefined => {
-  return productsCache.find(product => product.id === id);
 };
 
 // Data is loaded on-demand when pages request it, not at module load

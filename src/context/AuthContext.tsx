@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { invalidateCache, loadProducts } from '@/data/dummyData';
+import { invalidateCache, setCurrentOwner } from '@/data/dummyData';
 
 interface User {
   id: string;
@@ -35,6 +35,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const setUserAndOwner = (u: User | null) => {
+    setUser(u);
+    setCurrentOwner(u?.id || null);
+  };
+
   const loadProfile = async (userId: string, fallbackMeta?: any) => {
     try {
       const { data: profile } = await supabase
@@ -44,9 +49,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         .maybeSingle();
 
       if (profile) {
-        setUser({ id: profile.user_id, username: profile.username || 'مستخدم', store_name: profile.store_name || undefined });
+        setUserAndOwner({ id: profile.user_id, username: profile.username || 'مستخدم', store_name: profile.store_name || undefined });
       } else if (fallbackMeta) {
-        setUser({
+        setUserAndOwner({
           id: userId,
           username: fallbackMeta.username || 'مستخدم',
           store_name: fallbackMeta.store_name
@@ -55,7 +60,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (e) {
       console.warn('Profile fetch failed:', e);
       if (fallbackMeta) {
-        setUser({
+        setUserAndOwner({
           id: userId,
           username: fallbackMeta.username || 'مستخدم',
           store_name: fallbackMeta.store_name
@@ -68,20 +73,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         const meta: any = session.user.user_metadata ?? {};
-        // Set user immediately from metadata
-        setUser({
+        setUserAndOwner({
           id: session.user.id,
           username: meta.username || session.user.email?.split('@')[0] || 'مستخدم',
           store_name: meta.store_name
         });
 
-        // Then load full profile & invalidate cache so fresh data loads
         if (event === 'SIGNED_IN') {
           invalidateCache();
         }
         setTimeout(() => loadProfile(session.user.id, meta), 0);
       } else if (event === 'SIGNED_OUT') {
-        setUser(null);
+        setUserAndOwner(null);
         invalidateCache();
       }
     });
@@ -90,14 +93,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       .then(({ data: { session } }) => {
         if (session?.user) {
           const meta: any = session.user.user_metadata ?? {};
-          setUser({
+          setUserAndOwner({
             id: session.user.id,
             username: meta.username || session.user.email?.split('@')[0] || 'مستخدم',
             store_name: meta.store_name
           });
           setTimeout(() => loadProfile(session.user.id, meta), 0);
         } else {
-          setUser(null);
+          setUserAndOwner(null);
         }
       })
       .catch((error) => {
@@ -155,7 +158,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async () => {
     invalidateCache();
     await supabase.auth.signOut();
-    setUser(null);
+    setUserAndOwner(null);
   };
 
   const value = {
