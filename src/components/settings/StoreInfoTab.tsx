@@ -78,6 +78,28 @@ const StoreInfoTab = ({ settings, setSettings }: StoreInfoTabProps) => {
         </div>
 
         <div className="space-y-2">
+          <Label className="text-right block text-foreground font-medium">رابط المتجر (Slug)</Label>
+          <div className="flex items-center gap-2 direction-ltr">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">/store/</span>
+            <Input
+              value={settings.storeSlug || ''}
+              onChange={(e) => {
+                const slug = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                setSettings((prev: any) => ({ ...prev, storeSlug: slug }));
+              }}
+              className="text-left rounded-xl border-border font-mono text-sm"
+              placeholder="my-store"
+              dir="ltr"
+            />
+          </div>
+          {settings.storeSlug && (
+            <p className="text-xs text-muted-foreground text-right">
+              رابط متجرك: {window.location.origin}/store/{settings.storeSlug}
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
           <Label className="text-right block text-foreground font-medium">شعار المتجر</Label>
           <div className="bg-muted/50 p-5 rounded-xl border border-border">
             <div className="flex flex-col items-center gap-4">
