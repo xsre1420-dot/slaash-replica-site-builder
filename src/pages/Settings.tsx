@@ -43,6 +43,7 @@ const Settings = () => {
   });
 
   useEffect(() => {
+    // Load extra settings from localStorage + slug from DB
     try {
       const saved = localStorage.getItem("extra_store_settings");
       if (saved) {
@@ -50,7 +51,21 @@ const Settings = () => {
         setSettings(prev => ({ ...prev, ...parsed }));
       }
     } catch {}
-  }, []);
+
+    // Load slug from database
+    if (user?.id) {
+      supabase
+        .from('store_settings')
+        .select('store_slug')
+        .eq('owner_id', user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.store_slug) {
+            setSettings(prev => ({ ...prev, storeSlug: data.store_slug }));
+          }
+        });
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     setSettings(prev => ({
