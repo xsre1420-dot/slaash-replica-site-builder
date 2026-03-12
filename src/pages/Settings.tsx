@@ -96,6 +96,13 @@ const Settings = () => {
         primaryBannerIndex: settings.primaryBannerIndex,
         deliveryPrices: settings.deliveryPrices
       });
+      // Save slug to database
+      if (user?.id && settings.storeSlug) {
+        await supabase
+          .from('store_settings')
+          .update({ store_slug: settings.storeSlug })
+          .eq('owner_id', user.id);
+      }
       localStorage.setItem("extra_store_settings", JSON.stringify({
         returnPolicy: settings.returnPolicy,
         termsConditions: settings.termsConditions,
