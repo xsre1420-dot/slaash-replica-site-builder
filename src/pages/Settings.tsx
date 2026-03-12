@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStore } from "@/context/StoreContext";
 import { toast } from "sonner";
@@ -12,6 +14,7 @@ import PaymentTab from "@/components/settings/PaymentTab";
 import DesignTab from "@/components/settings/DesignTab";
 
 const Settings = () => {
+  const { user } = useAuth();
   const { storeName, storeLogo, storeGovernorate, storeSettings, updateStore, updateStoreSettings } = useStore();
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstRender = useRef(true);
@@ -21,6 +24,7 @@ const Settings = () => {
     storeName: storeName,
     storeLogo: storeLogo,
     storeGovernorate: storeGovernorate,
+    storeSlug: "",
     menuBackgroundColor: storeSettings.menuBackgroundColor,
     menuTextColor: storeSettings.menuTextColor,
     menuAccentColor: storeSettings.menuAccentColor,
@@ -39,6 +43,7 @@ const Settings = () => {
   });
 
   useEffect(() => {
+    // Load extra settings from localStorage + slug from DB
     try {
       const saved = localStorage.getItem("extra_store_settings");
       if (saved) {
@@ -46,7 +51,21 @@ const Settings = () => {
         setSettings(prev => ({ ...prev, ...parsed }));
       }
     } catch {}
-  }, []);
+
+    // Load slug from database
+    if (user?.id) {
+      supabase
+        .from('store_settings')
+        .select('store_slug')
+        .eq('owner_id', user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.store_slug) {
+            setSettings(prev => ({ ...prev, storeSlug: data.store_slug }));
+          }
+        });
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     setSettings(prev => ({
@@ -77,6 +96,13 @@ const Settings = () => {
         primaryBannerIndex: settings.primaryBannerIndex,
         deliveryPrices: settings.deliveryPrices
       });
+      // Save slug to database
+      if (user?.id && settings.storeSlug) {
+        await supabase
+          .from('store_settings')
+          .update({ store_slug: settings.storeSlug })
+          .eq('owner_id', user.id);
+      }
       localStorage.setItem("extra_store_settings", JSON.stringify({
         returnPolicy: settings.returnPolicy,
         termsConditions: settings.termsConditions,

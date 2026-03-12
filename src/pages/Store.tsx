@@ -1,5 +1,5 @@
 import { X, ShoppingCart, Plus, Search, Heart, Star, SlidersHorizontal, ArrowUpDown, Grid3X3, List, Mic, MicOff, RefreshCw } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { getProductsByCategory, getCategories, loadProducts } from "@/data/dummyData";
 import { Product, Category } from "@/types";
@@ -8,6 +8,7 @@ import { useStore } from "@/context/StoreContext";
 import MetaPixel from "@/components/MetaPixel";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import CartDrawer from "@/components/CartDrawer";
+import { useTenantStore } from "@/hooks/useTenantStore";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import ProductCard from "@/components/store/ProductCard";
 import ProductSkeleton from "@/components/store/ProductSkeleton";
@@ -19,6 +20,10 @@ import { useToast } from "@/hooks/use-toast";
 const PRODUCTS_PER_PAGE = 12;
 
 const Store = () => {
+  const { username: storeSlug } = useParams();
+  const isTenantMode = !!storeSlug;
+  const tenant = useTenantStore(storeSlug);
+
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -35,19 +40,37 @@ const Store = () => {
   const [filterSizes, setFilterSizes] = useState<string[]>([]);
 
   const { addToCart, cartItems, cartCount, updateQuantity, cartTotal } = useCart();
-  const { storeName, storeLogo, storeSettings } = useStore();
+  const ownStore = useStore();
   const { trackAddToCart, trackViewContent } = useMetaPixel();
   const { favorites, toggleFavorite, isFavorite, count: favCount } = useFavorites();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Derive display values from tenant or own store
+  const storeName = isTenantMode ? (tenant.storeInfo?.storeName || '') : ownStore.storeName;
+  const storeLogo = isTenantMode ? (tenant.storeInfo?.storeLogo || '') : ownStore.storeLogo;
+  const storeSettings = isTenantMode ? {
+    bannerImages: tenant.storeInfo?.bannerImages || [],
+    menuBackgroundColor: tenant.storeInfo?.menuBackgroundColor || '#ffffff',
+    menuTextColor: tenant.storeInfo?.menuTextColor || '#333333',
+    menuAccentColor: tenant.storeInfo?.menuAccentColor || '#6366f1',
+    primaryBannerIndex: tenant.storeInfo?.primaryBannerIndex || 0,
+    deliveryPrices: tenant.storeInfo?.deliveryPrices || [],
+    whatsappNumber: tenant.storeInfo?.whatsappNumber || '',
+  } : { ...ownStore.storeSettings, whatsappNumber: '' };
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const pullStartY = useRef(0);
   const categoriesRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef(0);
 
-  // --- Load data (parallel + cached) ---
+  // --- Load data: tenant mode vs owner mode ---
   const loadData = useCallback(async (force = false) => {
+    if (isTenantMode) {
+      // Tenant mode — data comes from useTenantStore hook
+      if (force) tenant.refetch();
+      return;
+    }
     setIsLoading(true);
     try {
       const [cats, prods] = await Promise.all([getCategories(force), loadProducts(force)]);
@@ -57,9 +80,20 @@ const Store = () => {
       setCategories([{ id: "all", name: "الكل", order: -1 }]);
     }
     setIsLoading(false);
-  }, [selectedCategory]);
+  }, [selectedCategory, isTenantMode]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  // Sync tenant data into local state
+  useEffect(() => {
+    if (isTenantMode) {
+      setIsLoading(tenant.loading);
+      if (!tenant.loading) {
+        setCategories([{ id: "all", name: "الكل", order: -1 }, ...tenant.categories]);
+        setAllProducts(selectedCategory === "all" ? tenant.products : tenant.products.filter(p => p.category === selectedCategory));
+      }
+    }
+  }, [isTenantMode, tenant.loading, tenant.products, tenant.categories, selectedCategory]);
+
+  useEffect(() => { if (!isTenantMode) loadData(); }, [loadData, isTenantMode]);
 
   // Update products when category changes
   useEffect(() => {
@@ -175,12 +209,14 @@ const Store = () => {
   const handleViewProduct = (productId: string) => {
     const product = allProducts.find(p => p.id === productId);
     if (product) trackViewContent(product.id, product.name, product.price);
-    navigate(`/product-details/${productId}`);
+    const path = isTenantMode ? `/store/${storeSlug}/product/${productId}` : `/product-details/${productId}`;
+    navigate(path);
   };
 
   // --- Share ---
   const handleShare = async (product: Product) => {
-    const shareData = { title: product.name, text: `${product.name} - ${product.price.toLocaleString()} د.ع`, url: `${window.location.origin}/product-details/${product.id}` };
+    const productUrl = isTenantMode ? `${window.location.origin}/store/${storeSlug}/product/${product.id}` : `${window.location.origin}/product-details/${product.id}`;
+    const shareData = { title: product.name, text: `${product.name} - ${product.price.toLocaleString()} د.ع`, url: productUrl };
     try {
       if (navigator.share) await navigator.share(shareData);
       else { await navigator.clipboard.writeText(shareData.url); toast({ title: "تم النسخ", description: "تم نسخ رابط المنتج" }); }
@@ -415,7 +451,7 @@ const Store = () => {
       {/* Fixed Cart Bar */}
       {cartCount > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background to-transparent">
-          <button onClick={() => navigate('/checkout')} className="w-full">
+          <button onClick={() => navigate(isTenantMode ? `/store/${storeSlug}/checkout` : '/checkout')} className="w-full">
             <div className="bg-foreground rounded-2xl shadow-xl">
               <div className="flex items-center justify-between px-5 py-3.5">
                 <div className="flex items-center gap-3">

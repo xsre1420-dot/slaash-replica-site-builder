@@ -9,6 +9,7 @@ interface StoreInfoTabProps {
     storeName: string;
     storeLogo: string;
     storeGovernorate: string;
+    storeSlug: string;
     bannerImages: string[];
     primaryBannerIndex: number;
   };
@@ -74,6 +75,28 @@ const StoreInfoTab = ({ settings, setSettings }: StoreInfoTabProps) => {
             className="text-right rounded-xl border-border"
             placeholder="أدخل اسم المتجر"
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-right block text-foreground font-medium">رابط المتجر (Slug)</Label>
+          <div className="flex items-center gap-2 direction-ltr">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">/store/</span>
+            <Input
+              value={settings.storeSlug || ''}
+              onChange={(e) => {
+                const slug = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                setSettings((prev: any) => ({ ...prev, storeSlug: slug }));
+              }}
+              className="text-left rounded-xl border-border font-mono text-sm"
+              placeholder="my-store"
+              dir="ltr"
+            />
+          </div>
+          {settings.storeSlug && (
+            <p className="text-xs text-muted-foreground text-right">
+              رابط متجرك: {window.location.origin}/store/{settings.storeSlug}
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">
