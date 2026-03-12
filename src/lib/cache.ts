@@ -88,6 +88,22 @@ class CacheStore {
 // Singleton — mirrors a single Redis connection
 export const cache = new CacheStore();
 
+// --- Request deduplication (prevents duplicate in-flight requests) ---
+const inflight = new Map<string, Promise<any>>();
+
+/**
+ * Deduplicate concurrent requests for the same key.
+ * If a request is already in-flight, return the same promise.
+ */
+export function dedup<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const existing = inflight.get(key);
+  if (existing) return existing as Promise<T>;
+
+  const promise = fn().finally(() => inflight.delete(key));
+  inflight.set(key, promise);
+  return promise;
+}
+
 // Cache key namespaces (like Redis key prefixes)
 export const CacheKeys = {
   products: (ownerId: string) => `products:${ownerId}`,
