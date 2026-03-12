@@ -251,6 +251,7 @@ export type Database = {
           store_governorate: string | null
           store_logo: string | null
           store_name: string | null
+          store_slug: string | null
           updated_at: string
           whatsapp_number: string | null
         }
@@ -272,6 +273,7 @@ export type Database = {
           store_governorate?: string | null
           store_logo?: string | null
           store_name?: string | null
+          store_slug?: string | null
           updated_at?: string
           whatsapp_number?: string | null
         }
@@ -293,6 +295,7 @@ export type Database = {
           store_governorate?: string | null
           store_logo?: string | null
           store_name?: string | null
+          store_slug?: string | null
           updated_at?: string
           whatsapp_number?: string | null
         }
@@ -342,7 +345,53 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_store_by_slug: {
+        Args: { p_slug: string }
+        Returns: {
+          banner_images: string[]
+          delivery_prices: Json
+          facebook_url: string
+          instagram_url: string
+          menu_accent_color: string
+          menu_background_color: string
+          menu_text_color: string
+          owner_id: string
+          payment_methods: Json
+          primary_banner_index: number
+          privacy_policy: string
+          return_policy: string
+          store_logo: string
+          store_name: string
+          store_slug: string
+          whatsapp_number: string
+        }[]
+      }
+      get_store_categories: {
+        Args: { p_owner_id: string }
+        Returns: {
+          display_order: number
+          id: string
+          name: string
+        }[]
+      }
+      get_store_products: {
+        Args: { p_owner_id: string }
+        Returns: {
+          additional_images: string[]
+          category: string
+          colors: Json
+          description: string
+          discount_type: string
+          discount_value: number
+          id: string
+          image_url: string
+          name: string
+          original_price: number
+          price: number
+          sizes: string[]
+          variants: Json
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
