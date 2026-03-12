@@ -21,6 +21,7 @@ const Settings = () => {
     storeName: storeName,
     storeLogo: storeLogo,
     storeGovernorate: storeGovernorate,
+    storeSlug: "",
     menuBackgroundColor: storeSettings.menuBackgroundColor,
     menuTextColor: storeSettings.menuTextColor,
     menuAccentColor: storeSettings.menuAccentColor,
