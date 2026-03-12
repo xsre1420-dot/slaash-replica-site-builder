@@ -1,6 +1,7 @@
 import { createContext, useState, useContext, ReactNode, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./AuthContext";
+import { cache, CacheKeys, CacheTTL } from "@/lib/cache";
 
 interface DeliveryPrice {
   governorate: string;
@@ -25,6 +26,15 @@ interface StoreContextType {
   updateStoreSettings: (settings: StoreSettings) => Promise<void>;
 }
 
+const defaultSettings: StoreSettings = {
+  menuBackgroundColor: "#ffffff",
+  menuTextColor: "#333333",
+  menuAccentColor: "#6366f1",
+  bannerImages: [],
+  primaryBannerIndex: 0,
+  deliveryPrices: []
+};
+
 const StoreContext = createContext<StoreContextType | null>(null);
 
 export const StoreProvider = ({ children }: { children: ReactNode }) => {
@@ -32,37 +42,29 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const [storeName, setStoreName] = useState("");
   const [storeLogo, setStoreLogo] = useState("");
   const [storeGovernorate, setStoreGovernorate] = useState("");
-  const [storeSettings, setStoreSettings] = useState<StoreSettings>({
-    menuBackgroundColor: "#ffffff",
-    menuTextColor: "#333333",
-    menuAccentColor: "#6366f1",
-    bannerImages: [],
-    primaryBannerIndex: 0,
-    deliveryPrices: []
-  });
+  const [storeSettings, setStoreSettings] = useState<StoreSettings>(defaultSettings);
 
-  // Load settings from database when user changes
   useEffect(() => {
     if (user?.id) {
       loadStoreSettings();
     } else {
-      // Reset to defaults when user logs out
       setStoreName("");
       setStoreLogo("");
       setStoreGovernorate("");
-      setStoreSettings({
-        menuBackgroundColor: "#ffffff",
-        menuTextColor: "#333333",
-        menuAccentColor: "#6366f1",
-        bannerImages: [],
-        primaryBannerIndex: 0,
-        deliveryPrices: []
-      });
+      setStoreSettings(defaultSettings);
     }
   }, [user?.id]);
 
   const loadStoreSettings = async () => {
     if (!user?.id) return;
+
+    // Check cache first
+    const cacheKey = CacheKeys.storeSettings(user.id);
+    const cached = cache.get<any>(cacheKey);
+    if (cached) {
+      applySettings(cached);
+      return;
+    }
 
     try {
       const { data, error } = await supabase
@@ -77,17 +79,8 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
       }
       
       if (data) {
-        setStoreName(data.store_name || "");
-        setStoreLogo(data.store_logo || "");
-        setStoreGovernorate(data.store_governorate || "");
-        setStoreSettings({
-          menuBackgroundColor: data.menu_background_color || "#ffffff",
-          menuTextColor: data.menu_text_color || "#333333",
-          menuAccentColor: data.menu_accent_color || "#6366f1",
-          bannerImages: data.banner_images || [],
-          primaryBannerIndex: data.primary_banner_index || 0,
-          deliveryPrices: (data.delivery_prices as unknown as DeliveryPrice[]) || []
-        });
+        cache.set(cacheKey, data, CacheTTL.LONG, CacheTTL.STALE);
+        applySettings(data);
       } else {
         await saveStoreSettings({
           store_name: "",
@@ -106,12 +99,28 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const applySettings = (data: any) => {
+    setStoreName(data.store_name || "");
+    setStoreLogo(data.store_logo || "");
+    setStoreGovernorate(data.store_governorate || "");
+    setStoreSettings({
+      menuBackgroundColor: data.menu_background_color || "#ffffff",
+      menuTextColor: data.menu_text_color || "#333333",
+      menuAccentColor: data.menu_accent_color || "#6366f1",
+      bannerImages: data.banner_images || [],
+      primaryBannerIndex: data.primary_banner_index || 0,
+      deliveryPrices: (data.delivery_prices as unknown as DeliveryPrice[]) || []
+    });
+  };
+
   const updateStore = async (logo: string, name: string, governorate?: string) => {
     setStoreLogo(logo);
     setStoreName(name);
     if (governorate !== undefined) setStoreGovernorate(governorate);
     
     if (user?.id) {
+      // Invalidate store settings cache on update
+      cache.del(CacheKeys.storeSettings(user.id));
       await saveStoreSettings({
         store_name: name,
         store_logo: logo,
@@ -124,6 +133,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     setStoreSettings(settings);
     
     if (user?.id) {
+      cache.del(CacheKeys.storeSettings(user.id));
       await saveStoreSettings({
         menu_background_color: settings.menuBackgroundColor,
         menu_text_color: settings.menuTextColor,
