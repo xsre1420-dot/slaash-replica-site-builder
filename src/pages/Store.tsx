@@ -451,7 +451,7 @@ const Store = () => {
       {/* Fixed Cart Bar */}
       {cartCount > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background to-transparent">
-          <button onClick={() => navigate('/checkout')} className="w-full">
+          <button onClick={() => navigate(isTenantMode ? `/store/${storeSlug}/checkout` : '/checkout')} className="w-full">
             <div className="bg-foreground rounded-2xl shadow-xl">
               <div className="flex items-center justify-between px-5 py-3.5">
                 <div className="flex items-center gap-3">
