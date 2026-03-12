@@ -1,6 +1,7 @@
+
 import { Product, Category, ColorOption, ProductVariant } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
-import { cache, CacheKeys, CacheTTL } from "@/lib/cache";
+import { cache, CacheKeys, CacheTTL, dedup } from "@/lib/cache";
 
 // --- Formatters ---
 
@@ -58,29 +59,31 @@ export const getCategories = async (force = false): Promise<Category[]> => {
     if (cached) return cached;
   }
 
-  try {
-    const { data, error } = await supabase
-      .from('categories')
-      .select('id, name, display_order')
-      .order('display_order', { ascending: true });
+  return dedup(key, async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name, display_order')
+        .order('display_order', { ascending: true });
 
-    if (error) {
+      if (error) {
+        console.error('Error loading categories:', error);
+        return cache.get<Category[]>(key) || [];
+      }
+
+      const categories = data?.map(cat => ({
+        id: cat.id,
+        name: cat.name,
+        order: cat.display_order || 0
+      })) || [];
+
+      cache.set(key, categories, CacheTTL.MEDIUM, CacheTTL.STALE);
+      return categories;
+    } catch (error) {
       console.error('Error loading categories:', error);
       return cache.get<Category[]>(key) || [];
     }
-
-    const categories = data?.map(cat => ({
-      id: cat.id,
-      name: cat.name,
-      order: cat.display_order || 0
-    })) || [];
-
-    cache.set(key, categories, CacheTTL.MEDIUM, CacheTTL.STALE);
-    return categories;
-  } catch (error) {
-    console.error('Error loading categories:', error);
-    return cache.get<Category[]>(key) || [];
-  }
+  });
 };
 
 export const getCategoriesSync = (): Category[] => {
@@ -97,24 +100,26 @@ export const loadProducts = async (force = false): Promise<Product[]> => {
     if (cached) return cached;
   }
 
-  try {
-    const { data, error } = await supabase
-      .from('products')
-      .select('id, name, description, category, price, cost, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, created_at, updated_at')
-      .order('created_at', { ascending: false });
+  return dedup(key, async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, description, category, price, cost, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, created_at, updated_at')
+        .order('created_at', { ascending: false });
 
-    if (error) {
+      if (error) {
+        console.error('Error loading products:', error);
+        return cache.get<Product[]>(key) || [];
+      }
+
+      const products = data?.map(formatProduct) || [];
+      cache.set(key, products, CacheTTL.MEDIUM, CacheTTL.STALE);
+      return products;
+    } catch (error) {
       console.error('Error loading products:', error);
       return cache.get<Product[]>(key) || [];
     }
-
-    const products = data?.map(formatProduct) || [];
-    cache.set(key, products, CacheTTL.MEDIUM, CacheTTL.STALE);
-    return products;
-  } catch (error) {
-    console.error('Error loading products:', error);
-    return cache.get<Product[]>(key) || [];
-  }
+  });
 };
 
 export const getProductsSync = (): Product[] => {
@@ -171,7 +176,6 @@ export const addProduct = async (product: Product): Promise<{ success: boolean; 
 
     if (error) return { success: false, error: error.message };
 
-    // Optimistic cache update
     if (data) {
       const key = CacheKeys.products(user.id);
       const current = cache.get<Product[]>(key) || [];
@@ -206,7 +210,6 @@ export const updateProduct = async (productId: string, updatedProduct: Product):
 
     if (error) return { success: false, error: error.message };
 
-    // Optimistic cache update
     const key = CacheKeys.products(getOwnerId());
     const current = cache.get<Product[]>(key) || [];
     cache.set(key, current.map(p => p.id === productId ? { ...updatedProduct, id: productId } : p), CacheTTL.MEDIUM, CacheTTL.STALE);
@@ -312,6 +315,3 @@ export const deleteCategory = async (categoryId: string): Promise<{ success: boo
     return { success: false, error: 'Failed to delete category' };
   }
 };
-
-// Data is loaded on-demand when pages request it, not at module load
-// This prevents fetching before auth is ready
