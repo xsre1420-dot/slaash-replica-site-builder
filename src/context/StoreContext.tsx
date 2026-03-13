@@ -81,19 +81,8 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
       if (data) {
         cache.set(cacheKey, data, CacheTTL.LONG, CacheTTL.STALE);
         applySettings(data);
-      } else {
-        await saveStoreSettings({
-          store_name: "",
-          store_logo: "",
-          store_governorate: "",
-          menu_background_color: "#ffffff",
-          menu_text_color: "#333333",
-          menu_accent_color: "#6366f1",
-          banner_images: [],
-          primary_banner_index: 0,
-          delivery_prices: []
-        });
       }
+      // No else needed — store_settings is auto-provisioned by DB trigger on signup
     } catch (error) {
       console.error('Failed to load store settings:', error);
     }

@@ -11,9 +11,9 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { motion } from "framer-motion";
 
 const benefits = [
-  { icon: Zap, text: "إعداد المتجر خلال 5 دقائق" },
+  { icon: Zap, text: "إعداد المتجر خلال 60 ثانية فقط" },
   { icon: Shield, text: "حماية كاملة لبياناتك وبيانات عملائك" },
-  { icon: Globe, text: "رابط متجر خاص بك جاهز للمشاركة" },
+  { icon: Globe, text: "رابط متجر خاص بك جاهز للمشاركة فوراً" },
 ];
 
 const Signup = () => {
@@ -187,7 +187,7 @@ const Signup = () => {
                   <User className="w-7 h-7 text-primary" />
                 </div>
                 <h2 className="text-3xl font-bold text-foreground mb-2">إنشاء حساب جديد</h2>
-                <p className="text-muted-foreground text-sm">أنشئ متجرك الإلكتروني في دقائق</p>
+                <p className="text-muted-foreground text-sm">أنشئ متجرك الإلكتروني في 60 ثانية</p>
               </div>
 
               {/* Step indicator */}
