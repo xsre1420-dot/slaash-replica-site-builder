@@ -146,6 +146,7 @@ const Settings = () => {
   const tabItems = [
     { value: "store", label: "المتجر", icon: Store },
     { value: "delivery", label: "التوصيل", icon: Truck },
+    { value: "domain", label: "النطاق", icon: Globe },
     { value: "policies", label: "السياسات", icon: FileText },
     { value: "communication", label: "التواصل والدفع", icon: MessageCircle },
   ];
