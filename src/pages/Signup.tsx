@@ -11,9 +11,9 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { motion } from "framer-motion";
 
 const benefits = [
-  { icon: Zap, text: "إعداد المتجر خلال 5 دقائق" },
+  { icon: Zap, text: "إعداد المتجر خلال 60 ثانية فقط" },
   { icon: Shield, text: "حماية كاملة لبياناتك وبيانات عملائك" },
-  { icon: Globe, text: "رابط متجر خاص بك جاهز للمشاركة" },
+  { icon: Globe, text: "رابط متجر خاص بك جاهز للمشاركة فوراً" },
 ];
 
 const Signup = () => {
