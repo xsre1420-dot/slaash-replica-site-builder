@@ -12,6 +12,7 @@ import PoliciesTab from "@/components/settings/PoliciesTab";
 import WhatsAppTab from "@/components/settings/WhatsAppTab";
 import PaymentTab from "@/components/settings/PaymentTab";
 import DesignTab from "@/components/settings/DesignTab";
+import CustomDomainTab from "@/components/settings/CustomDomainTab";
 
 const Settings = () => {
   const { user } = useAuth();
