@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStore } from "@/context/StoreContext";
 import { toast } from "sonner";
-import { Store, Truck, FileText, MessageCircle } from "lucide-react";
+import { Store, Truck, FileText, MessageCircle, Globe } from "lucide-react";
 import SettingsHeader from "@/components/settings/SettingsHeader";
 import StoreInfoTab from "@/components/settings/StoreInfoTab";
 import DeliveryTab from "@/components/settings/DeliveryTab";
