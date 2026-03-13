@@ -236,7 +236,9 @@ export type Database = {
         Row: {
           banner_images: string[] | null
           created_at: string
+          custom_domain: string | null
           delivery_prices: Json | null
+          domain_verified: boolean | null
           facebook_url: string | null
           id: string
           instagram_url: string | null
@@ -258,7 +260,9 @@ export type Database = {
         Insert: {
           banner_images?: string[] | null
           created_at?: string
+          custom_domain?: string | null
           delivery_prices?: Json | null
+          domain_verified?: boolean | null
           facebook_url?: string | null
           id?: string
           instagram_url?: string | null
@@ -280,7 +284,9 @@ export type Database = {
         Update: {
           banner_images?: string[] | null
           created_at?: string
+          custom_domain?: string | null
           delivery_prices?: Json | null
+          domain_verified?: boolean | null
           facebook_url?: string | null
           id?: string
           instagram_url?: string | null

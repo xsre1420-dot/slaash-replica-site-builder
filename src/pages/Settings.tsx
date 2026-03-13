@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStore } from "@/context/StoreContext";
 import { toast } from "sonner";
-import { Store, Truck, FileText, MessageCircle } from "lucide-react";
+import { Store, Truck, FileText, MessageCircle, Globe } from "lucide-react";
 import SettingsHeader from "@/components/settings/SettingsHeader";
 import StoreInfoTab from "@/components/settings/StoreInfoTab";
 import DeliveryTab from "@/components/settings/DeliveryTab";
@@ -12,6 +12,7 @@ import PoliciesTab from "@/components/settings/PoliciesTab";
 import WhatsAppTab from "@/components/settings/WhatsAppTab";
 import PaymentTab from "@/components/settings/PaymentTab";
 import DesignTab from "@/components/settings/DesignTab";
+import CustomDomainTab from "@/components/settings/CustomDomainTab";
 
 const Settings = () => {
   const { user } = useAuth();
@@ -145,6 +146,7 @@ const Settings = () => {
   const tabItems = [
     { value: "store", label: "المتجر", icon: Store },
     { value: "delivery", label: "التوصيل", icon: Truck },
+    { value: "domain", label: "النطاق", icon: Globe },
     { value: "policies", label: "السياسات", icon: FileText },
     { value: "communication", label: "التواصل والدفع", icon: MessageCircle },
   ];
@@ -178,6 +180,10 @@ const Settings = () => {
 
           <TabsContent value="delivery" className="space-y-6">
             <DeliveryTab settings={settings} setSettings={setSettings} />
+          </TabsContent>
+
+          <TabsContent value="domain" className="space-y-6">
+            <CustomDomainTab storeSlug={settings.storeSlug || ''} />
           </TabsContent>
 
           <TabsContent value="policies" className="space-y-6">
