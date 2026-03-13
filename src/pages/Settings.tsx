@@ -185,7 +185,6 @@ const Settings = () => {
           <TabsContent value="domain" className="space-y-6">
             <CustomDomainTab storeSlug={settings.storeSlug || ''} />
           </TabsContent>
-          </TabsContent>
 
           <TabsContent value="policies" className="space-y-6">
             <PoliciesTab settings={settings} setSettings={setSettings} />
