@@ -12,8 +12,10 @@ import { Product } from "@/types";
 import { exportProductsToCSV } from "@/utils/exportProducts";
 import { toast } from "sonner";
 import { getCategories } from "@/data/dummyData";
+import { invalidateProducts, loadProducts as reloadProductsData } from "@/data/dummyData";
 import { useRealtimeProducts } from "@/hooks/useRealtimeProducts";
 import { useScrollPersistence, saveFilters, loadFilters } from "@/hooks/useScrollPersistence";
+import { BulkUpload } from "@/components/product-management/BulkUpload";
 
 // Suggestion #8: Lazy load sub-managers
 const ProductReviewsManager = lazy(() => import("@/components/product-management/ProductReviewsManager"));
