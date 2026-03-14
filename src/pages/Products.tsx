@@ -12,8 +12,10 @@ import { Product } from "@/types";
 import { exportProductsToCSV } from "@/utils/exportProducts";
 import { toast } from "sonner";
 import { getCategories } from "@/data/dummyData";
+import { invalidateProducts, loadProducts as reloadProductsData } from "@/data/dummyData";
 import { useRealtimeProducts } from "@/hooks/useRealtimeProducts";
 import { useScrollPersistence, saveFilters, loadFilters } from "@/hooks/useScrollPersistence";
+import { BulkUpload } from "@/components/product-management/BulkUpload";
 
 // Suggestion #8: Lazy load sub-managers
 const ProductReviewsManager = lazy(() => import("@/components/product-management/ProductReviewsManager"));
@@ -250,17 +252,22 @@ const Products = () => {
                   </Select>
 
                   <div className="flex gap-2">
+                    <BulkUpload onComplete={async () => {
+                      invalidateProducts();
+                      const data = await reloadProductsData(true);
+                      setLoadedProducts(data);
+                    }} />
                     <Button
                       variant="outline"
                       size="sm"
-                      className="rounded-xl border-border text-foreground text-xs flex-1"
+                      className="rounded-xl border-border text-foreground text-xs"
                       onClick={handleExport}
                     >
                       <Download className="w-3.5 h-3.5 ml-1" />
                       تصدير
                     </Button>
-                    <Link to="/add-product" className="flex-1">
-                      <Button size="sm" className="rounded-xl text-xs w-full">
+                    <Link to="/add-product">
+                      <Button size="sm" className="rounded-xl text-xs">
                         <Plus className="w-3.5 h-3.5 ml-1" />
                         إضافة
                       </Button>

@@ -1,12 +1,13 @@
 
 import { Button } from "@/components/ui/button";
-import { Edit, Plus, Star, MessageSquare, GripVertical, Copy } from "lucide-react";
+import { Edit, Plus, Star, MessageSquare, GripVertical, Copy, Zap } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
 import { loadProducts, addProduct } from "@/data/dummyData";
 import { Product } from "@/types";
 import { toast } from "sonner";
 import React from "react";
+import { QuickEditDialog } from "@/components/product-management/QuickEditDialog";
 
 const DragDropContext = React.lazy(() => import("@hello-pangea/dnd").then(m => ({ default: m.DragDropContext })));
 const Droppable = React.lazy(() => import("@hello-pangea/dnd").then(m => ({ default: m.Droppable })));
@@ -22,6 +23,8 @@ interface ProductsListProps {
 export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProducts }: ProductsListProps = {}) => {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [isDragEnabled, setIsDragEnabled] = useState(false);
+  const [quickEditProduct, setQuickEditProduct] = useState<Product | null>(null);
+  const [quickEditOpen, setQuickEditOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -137,6 +140,13 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
               <Edit className="w-4 h-4" />
             </Button>
           </Link>
+          <Button 
+            size="sm"
+            className="w-9 h-9 p-0 bg-background/90 backdrop-blur-sm hover:bg-background text-foreground rounded-lg shadow-md"
+            onClick={() => { setQuickEditProduct(product); setQuickEditOpen(true); }}
+          >
+            <Zap className="w-4 h-4" />
+          </Button>
           <Button 
             size="sm"
             className="w-9 h-9 p-0 bg-background/90 backdrop-blur-sm hover:bg-background text-foreground rounded-lg shadow-md"
@@ -269,6 +279,17 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
           ))}
         </div>
       )}
+
+      <QuickEditDialog
+        product={quickEditProduct}
+        open={quickEditOpen}
+        onOpenChange={setQuickEditOpen}
+        onSaved={async () => {
+          const productsData = await loadProducts(true);
+          setAllProducts(productsData);
+          onProductsLoaded?.(productsData);
+        }}
+      />
     </div>
   );
 };
