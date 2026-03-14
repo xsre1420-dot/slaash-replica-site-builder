@@ -23,6 +23,8 @@ interface ProductsListProps {
 export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProducts }: ProductsListProps = {}) => {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [isDragEnabled, setIsDragEnabled] = useState(false);
+  const [quickEditProduct, setQuickEditProduct] = useState<Product | null>(null);
+  const [quickEditOpen, setQuickEditOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
