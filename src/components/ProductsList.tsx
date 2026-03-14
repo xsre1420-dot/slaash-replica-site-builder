@@ -143,6 +143,13 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
           <Button 
             size="sm"
             className="w-9 h-9 p-0 bg-background/90 backdrop-blur-sm hover:bg-background text-foreground rounded-lg shadow-md"
+            onClick={() => { setQuickEditProduct(product); setQuickEditOpen(true); }}
+          >
+            <Zap className="w-4 h-4" />
+          </Button>
+          <Button 
+            size="sm"
+            className="w-9 h-9 p-0 bg-background/90 backdrop-blur-sm hover:bg-background text-foreground rounded-lg shadow-md"
             onClick={() => handleDuplicate(product)}
           >
             <Copy className="w-4 h-4" />
