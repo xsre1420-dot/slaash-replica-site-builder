@@ -1,12 +1,13 @@
 
 import { Button } from "@/components/ui/button";
-import { Edit, Plus, Star, MessageSquare, GripVertical, Copy } from "lucide-react";
+import { Edit, Plus, Star, MessageSquare, GripVertical, Copy, Zap } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
 import { loadProducts, addProduct } from "@/data/dummyData";
 import { Product } from "@/types";
 import { toast } from "sonner";
 import React from "react";
+import { QuickEditDialog } from "@/components/product-management/QuickEditDialog";
 
 const DragDropContext = React.lazy(() => import("@hello-pangea/dnd").then(m => ({ default: m.DragDropContext })));
 const Droppable = React.lazy(() => import("@hello-pangea/dnd").then(m => ({ default: m.Droppable })));
