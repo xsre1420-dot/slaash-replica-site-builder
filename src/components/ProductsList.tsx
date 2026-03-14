@@ -279,6 +279,17 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
           ))}
         </div>
       )}
+
+      <QuickEditDialog
+        product={quickEditProduct}
+        open={quickEditOpen}
+        onOpenChange={setQuickEditOpen}
+        onSaved={async () => {
+          const productsData = await loadProducts(true);
+          setAllProducts(productsData);
+          onProductsLoaded?.(productsData);
+        }}
+      />
     </div>
   );
 };
