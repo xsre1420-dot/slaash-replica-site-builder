@@ -12,6 +12,7 @@ interface StoreSettings {
   menuBackgroundColor: string;
   menuTextColor: string;
   menuAccentColor: string;
+  storeFont: string;
   bannerImages: string[];
   primaryBannerIndex: number;
   deliveryPrices: DeliveryPrice[];
