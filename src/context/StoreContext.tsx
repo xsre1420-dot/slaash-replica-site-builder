@@ -98,6 +98,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
       menuBackgroundColor: data.menu_background_color || "#ffffff",
       menuTextColor: data.menu_text_color || "#333333",
       menuAccentColor: data.menu_accent_color || "#6366f1",
+      storeFont: data.store_font || "Tajawal",
       bannerImages: data.banner_images || [],
       primaryBannerIndex: data.primary_banner_index || 0,
       deliveryPrices: (data.delivery_prices as unknown as DeliveryPrice[]) || []
