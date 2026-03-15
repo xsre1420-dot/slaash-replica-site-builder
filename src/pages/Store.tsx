@@ -14,6 +14,7 @@ import ProductCard from "@/components/store/ProductCard";
 import ProductSkeleton from "@/components/store/ProductSkeleton";
 import FavoritesDrawer from "@/components/store/FavoritesDrawer";
 import StoreFilterDrawer from "@/components/store/StoreFilterDrawer";
+import StoreThemeProvider from "@/components/StoreThemeProvider";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useToast } from "@/hooks/use-toast";
 
