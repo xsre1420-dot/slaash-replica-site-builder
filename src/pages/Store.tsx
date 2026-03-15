@@ -252,7 +252,15 @@ const Store = () => {
   // Active filter count
   const activeFilterCount = (filterPriceRange[0] > 0 || (filterPriceRange[1] > 0 && filterPriceRange[1] < maxPrice) ? 1 : 0) + (filterSizes.length > 0 ? 1 : 0);
 
+  const themeColors = {
+    backgroundColor: storeSettings.menuBackgroundColor,
+    textColor: storeSettings.menuTextColor,
+    accentColor: storeSettings.menuAccentColor,
+    font: (storeSettings as any).storeFont || 'Tajawal',
+  };
+
   return (
+    <StoreThemeProvider colors={themeColors}>
     <div className="min-h-screen bg-background" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <MetaPixel />
 
