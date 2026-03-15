@@ -31,6 +31,7 @@ const defaultSettings: StoreSettings = {
   menuBackgroundColor: "#ffffff",
   menuTextColor: "#333333",
   menuAccentColor: "#6366f1",
+  storeFont: "Tajawal",
   bannerImages: [],
   primaryBannerIndex: 0,
   deliveryPrices: []
