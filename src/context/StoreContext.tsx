@@ -130,6 +130,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         menu_background_color: settings.menuBackgroundColor,
         menu_text_color: settings.menuTextColor,
         menu_accent_color: settings.menuAccentColor,
+        store_font: settings.storeFont,
         banner_images: settings.bannerImages,
         primary_banner_index: settings.primaryBannerIndex,
         delivery_prices: settings.deliveryPrices as any
