@@ -29,6 +29,7 @@ const Settings = () => {
     menuBackgroundColor: storeSettings.menuBackgroundColor,
     menuTextColor: storeSettings.menuTextColor,
     menuAccentColor: storeSettings.menuAccentColor,
+    storeFont: storeSettings.storeFont || "Tajawal",
     bannerImages: storeSettings.bannerImages,
     primaryBannerIndex: storeSettings.primaryBannerIndex,
     deliveryPrices: storeSettings.deliveryPrices || [],
