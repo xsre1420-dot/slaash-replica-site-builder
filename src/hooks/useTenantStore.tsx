@@ -115,6 +115,7 @@ export const useTenantStore = (slug: string | undefined): TenantStoreData => {
           menuBackgroundColor: store.menu_background_color || '#ffffff',
           menuTextColor: store.menu_text_color || '#333333',
           menuAccentColor: store.menu_accent_color || '#6366f1',
+          storeFont: (store as any).store_font || 'Tajawal',
           bannerImages: store.banner_images || [],
           primaryBannerIndex: store.primary_banner_index || 0,
           deliveryPrices: (store.delivery_prices as any) || [],
