@@ -250,6 +250,7 @@ export type Database = {
           primary_banner_index: number | null
           privacy_policy: string | null
           return_policy: string | null
+          store_font: string | null
           store_governorate: string | null
           store_logo: string | null
           store_name: string | null
@@ -274,6 +275,7 @@ export type Database = {
           primary_banner_index?: number | null
           privacy_policy?: string | null
           return_policy?: string | null
+          store_font?: string | null
           store_governorate?: string | null
           store_logo?: string | null
           store_name?: string | null
@@ -298,6 +300,7 @@ export type Database = {
           primary_banner_index?: number | null
           privacy_policy?: string | null
           return_policy?: string | null
+          store_font?: string | null
           store_governorate?: string | null
           store_logo?: string | null
           store_name?: string | null
