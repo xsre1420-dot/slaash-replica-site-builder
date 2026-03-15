@@ -482,6 +482,7 @@ const Store = () => {
         </div>
       )}
     </div>
+    </StoreThemeProvider>
   );
 };
 
