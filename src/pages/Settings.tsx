@@ -95,6 +95,7 @@ const Settings = () => {
         menuBackgroundColor: settings.menuBackgroundColor,
         menuTextColor: settings.menuTextColor,
         menuAccentColor: settings.menuAccentColor,
+        storeFont: settings.storeFont || "Tajawal",
         bannerImages: settings.bannerImages,
         primaryBannerIndex: settings.primaryBannerIndex,
         deliveryPrices: settings.deliveryPrices
