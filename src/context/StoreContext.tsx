@@ -12,6 +12,7 @@ interface StoreSettings {
   menuBackgroundColor: string;
   menuTextColor: string;
   menuAccentColor: string;
+  storeFont: string;
   bannerImages: string[];
   primaryBannerIndex: number;
   deliveryPrices: DeliveryPrice[];
@@ -30,6 +31,7 @@ const defaultSettings: StoreSettings = {
   menuBackgroundColor: "#ffffff",
   menuTextColor: "#333333",
   menuAccentColor: "#6366f1",
+  storeFont: "Tajawal",
   bannerImages: [],
   primaryBannerIndex: 0,
   deliveryPrices: []
@@ -96,6 +98,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
       menuBackgroundColor: data.menu_background_color || "#ffffff",
       menuTextColor: data.menu_text_color || "#333333",
       menuAccentColor: data.menu_accent_color || "#6366f1",
+      storeFont: data.store_font || "Tajawal",
       bannerImages: data.banner_images || [],
       primaryBannerIndex: data.primary_banner_index || 0,
       deliveryPrices: (data.delivery_prices as unknown as DeliveryPrice[]) || []
@@ -127,6 +130,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         menu_background_color: settings.menuBackgroundColor,
         menu_text_color: settings.menuTextColor,
         menu_accent_color: settings.menuAccentColor,
+        store_font: settings.storeFont,
         banner_images: settings.bannerImages,
         primary_banner_index: settings.primaryBannerIndex,
         delivery_prices: settings.deliveryPrices as any

@@ -29,6 +29,7 @@ const Settings = () => {
     menuBackgroundColor: storeSettings.menuBackgroundColor,
     menuTextColor: storeSettings.menuTextColor,
     menuAccentColor: storeSettings.menuAccentColor,
+    storeFont: storeSettings.storeFont || "Tajawal",
     bannerImages: storeSettings.bannerImages,
     primaryBannerIndex: storeSettings.primaryBannerIndex,
     deliveryPrices: storeSettings.deliveryPrices || [],
@@ -77,6 +78,7 @@ const Settings = () => {
       menuBackgroundColor: storeSettings.menuBackgroundColor,
       menuTextColor: storeSettings.menuTextColor,
       menuAccentColor: storeSettings.menuAccentColor,
+      storeFont: storeSettings.storeFont || "Tajawal",
       bannerImages: storeSettings.bannerImages,
       primaryBannerIndex: storeSettings.primaryBannerIndex,
       deliveryPrices: storeSettings.deliveryPrices || []
@@ -93,6 +95,7 @@ const Settings = () => {
         menuBackgroundColor: settings.menuBackgroundColor,
         menuTextColor: settings.menuTextColor,
         menuAccentColor: settings.menuAccentColor,
+        storeFont: settings.storeFont || "Tajawal",
         bannerImages: settings.bannerImages,
         primaryBannerIndex: settings.primaryBannerIndex,
         deliveryPrices: settings.deliveryPrices

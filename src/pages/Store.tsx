@@ -14,6 +14,7 @@ import ProductCard from "@/components/store/ProductCard";
 import ProductSkeleton from "@/components/store/ProductSkeleton";
 import FavoritesDrawer from "@/components/store/FavoritesDrawer";
 import StoreFilterDrawer from "@/components/store/StoreFilterDrawer";
+import StoreThemeProvider from "@/components/StoreThemeProvider";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useToast } from "@/hooks/use-toast";
 
@@ -54,6 +55,7 @@ const Store = () => {
     menuBackgroundColor: tenant.storeInfo?.menuBackgroundColor || '#ffffff',
     menuTextColor: tenant.storeInfo?.menuTextColor || '#333333',
     menuAccentColor: tenant.storeInfo?.menuAccentColor || '#6366f1',
+    storeFont: (tenant.storeInfo as any)?.storeFont || 'Tajawal',
     primaryBannerIndex: tenant.storeInfo?.primaryBannerIndex || 0,
     deliveryPrices: tenant.storeInfo?.deliveryPrices || [],
     whatsappNumber: tenant.storeInfo?.whatsappNumber || '',
@@ -250,7 +252,15 @@ const Store = () => {
   // Active filter count
   const activeFilterCount = (filterPriceRange[0] > 0 || (filterPriceRange[1] > 0 && filterPriceRange[1] < maxPrice) ? 1 : 0) + (filterSizes.length > 0 ? 1 : 0);
 
+  const themeColors = {
+    backgroundColor: storeSettings.menuBackgroundColor,
+    textColor: storeSettings.menuTextColor,
+    accentColor: storeSettings.menuAccentColor,
+    font: (storeSettings as any).storeFont || 'Tajawal',
+  };
+
   return (
+    <StoreThemeProvider colors={themeColors}>
     <div className="min-h-screen bg-background" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <MetaPixel />
 
@@ -472,6 +482,7 @@ const Store = () => {
         </div>
       )}
     </div>
+    </StoreThemeProvider>
   );
 };
 
