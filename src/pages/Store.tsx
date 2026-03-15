@@ -55,6 +55,7 @@ const Store = () => {
     menuBackgroundColor: tenant.storeInfo?.menuBackgroundColor || '#ffffff',
     menuTextColor: tenant.storeInfo?.menuTextColor || '#333333',
     menuAccentColor: tenant.storeInfo?.menuAccentColor || '#6366f1',
+    storeFont: (tenant.storeInfo as any)?.storeFont || 'Tajawal',
     primaryBannerIndex: tenant.storeInfo?.primaryBannerIndex || 0,
     deliveryPrices: tenant.storeInfo?.deliveryPrices || [],
     whatsappNumber: tenant.storeInfo?.whatsappNumber || '',
