@@ -222,42 +222,54 @@ export type Database = {
         Row: {
           created_at: string
           customer_address: string | null
+          customer_governorate: string | null
           customer_name: string | null
           customer_phone: string | null
+          delivery_fee: number | null
           delivery_time: number | null
           id: string
+          items: Json | null
           notes: string | null
           owner_id: string
           payment_method: string | null
           status: string
+          total: number | null
           total_amount: number
           updated_at: string
         }
         Insert: {
           created_at?: string
           customer_address?: string | null
+          customer_governorate?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          delivery_fee?: number | null
           delivery_time?: number | null
           id?: string
+          items?: Json | null
           notes?: string | null
           owner_id: string
           payment_method?: string | null
           status?: string
+          total?: number | null
           total_amount: number
           updated_at?: string
         }
         Update: {
           created_at?: string
           customer_address?: string | null
+          customer_governorate?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          delivery_fee?: number | null
           delivery_time?: number | null
           id?: string
+          items?: Json | null
           notes?: string | null
           owner_id?: string
           payment_method?: string | null
           status?: string
+          total?: number | null
           total_amount?: number
           updated_at?: string
         }
@@ -316,10 +328,16 @@ export type Database = {
           cost: number | null
           created_at: string
           description: string | null
+          discount_end_date: string | null
+          discount_start_date: string | null
+          discount_type: string | null
+          discount_value: number | null
           id: string
           image_url: string | null
+          is_active: boolean | null
           min_stock_level: number | null
           name: string
+          original_price: number | null
           owner_id: string
           price: number
           sizes: Json | null
@@ -334,10 +352,16 @@ export type Database = {
           cost?: number | null
           created_at?: string
           description?: string | null
+          discount_end_date?: string | null
+          discount_start_date?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
           id?: string
           image_url?: string | null
+          is_active?: boolean | null
           min_stock_level?: number | null
           name: string
+          original_price?: number | null
           owner_id: string
           price: number
           sizes?: Json | null
@@ -352,10 +376,16 @@ export type Database = {
           cost?: number | null
           created_at?: string
           description?: string | null
+          discount_end_date?: string | null
+          discount_start_date?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
           id?: string
           image_url?: string | null
+          is_active?: boolean | null
           min_stock_level?: number | null
           name?: string
+          original_price?: number | null
           owner_id?: string
           price?: number
           sizes?: Json | null
@@ -365,51 +395,108 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          store_name: string | null
+          updated_at: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          store_name?: string | null
+          updated_at?: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          store_name?: string | null
+          updated_at?: string
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
       store_settings: {
         Row: {
           banner_images: string[] | null
           created_at: string
+          custom_domain: string | null
           delivery_prices: Json | null
+          domain_verified: boolean | null
+          facebook_url: string | null
           id: string
+          instagram_url: string | null
           menu_accent_color: string | null
           menu_background_color: string | null
           menu_text_color: string | null
           owner_id: string
+          payment_methods: Json | null
           primary_banner_index: number | null
+          privacy_policy: string | null
+          return_policy: string | null
+          store_font: string | null
           store_governorate: string | null
           store_logo: string | null
           store_name: string | null
+          store_slug: string | null
           updated_at: string
+          whatsapp_number: string | null
         }
         Insert: {
           banner_images?: string[] | null
           created_at?: string
+          custom_domain?: string | null
           delivery_prices?: Json | null
+          domain_verified?: boolean | null
+          facebook_url?: string | null
           id?: string
+          instagram_url?: string | null
           menu_accent_color?: string | null
           menu_background_color?: string | null
           menu_text_color?: string | null
           owner_id: string
+          payment_methods?: Json | null
           primary_banner_index?: number | null
+          privacy_policy?: string | null
+          return_policy?: string | null
+          store_font?: string | null
           store_governorate?: string | null
           store_logo?: string | null
           store_name?: string | null
+          store_slug?: string | null
           updated_at?: string
+          whatsapp_number?: string | null
         }
         Update: {
           banner_images?: string[] | null
           created_at?: string
+          custom_domain?: string | null
           delivery_prices?: Json | null
+          domain_verified?: boolean | null
+          facebook_url?: string | null
           id?: string
+          instagram_url?: string | null
           menu_accent_color?: string | null
           menu_background_color?: string | null
           menu_text_color?: string | null
           owner_id?: string
+          payment_methods?: Json | null
           primary_banner_index?: number | null
+          privacy_policy?: string | null
+          return_policy?: string | null
+          store_font?: string | null
           store_governorate?: string | null
           store_logo?: string | null
           store_name?: string | null
+          store_slug?: string | null
           updated_at?: string
+          whatsapp_number?: string | null
         }
         Relationships: []
       }
@@ -472,6 +559,54 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_store_by_slug: {
+        Args: { p_slug: string }
+        Returns: {
+          banner_images: string[]
+          delivery_prices: Json
+          facebook_url: string
+          instagram_url: string
+          menu_accent_color: string
+          menu_background_color: string
+          menu_text_color: string
+          owner_id: string
+          payment_methods: Json
+          primary_banner_index: number
+          privacy_policy: string
+          return_policy: string
+          store_font: string
+          store_logo: string
+          store_name: string
+          store_slug: string
+          whatsapp_number: string
+        }[]
+      }
+      get_store_categories: {
+        Args: { p_owner_id: string }
+        Returns: {
+          display_order: number
+          id: string
+          name: string
+        }[]
+      }
+      get_store_products: {
+        Args: { p_owner_id: string }
+        Returns: {
+          additional_images: string[]
+          category: string
+          colors: Json
+          description: string
+          discount_type: string
+          discount_value: number
+          id: string
+          image_url: string
+          name: string
+          original_price: number
+          price: number
+          sizes: Json
+          variants: Json
+        }[]
+      }
       is_valid_store_visit: {
         Args: { p_owner_id: string; p_visitor_ip: string }
         Returns: boolean
