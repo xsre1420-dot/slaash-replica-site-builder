@@ -94,7 +94,7 @@ const Checkout = () => {
         selectedColor: item.selectedColor,
       }));
 
-      const { data: newOrder, error } = await supabase
+      const { data: newOrder, error } = await (supabase as any)
         .from('orders')
         .insert({
           owner_id: ownerId,

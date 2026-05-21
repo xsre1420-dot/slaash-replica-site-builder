@@ -21,7 +21,7 @@ const CustomDomainTab = ({ storeSlug }: CustomDomainTabProps) => {
 
   useEffect(() => {
     if (user?.id) {
-      supabase
+      (supabase as any)
         .from('store_settings')
         .select('custom_domain, domain_verified')
         .eq('owner_id', user.id)
@@ -56,9 +56,9 @@ const CustomDomainTab = ({ storeSlug }: CustomDomainTabProps) => {
 
     setSaving(true);
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('store_settings')
-        .update({ custom_domain: cleaned, domain_verified: false } as any)
+        .update({ custom_domain: cleaned, domain_verified: false })
         .eq('owner_id', user.id);
 
       if (error) {
@@ -85,9 +85,9 @@ const CustomDomainTab = ({ storeSlug }: CustomDomainTabProps) => {
     if (!user?.id) return;
     setSaving(true);
     try {
-      await supabase
+      await (supabase as any)
         .from('store_settings')
-        .update({ custom_domain: null, domain_verified: false } as any)
+        .update({ custom_domain: null, domain_verified: false })
         .eq('owner_id', user.id);
       
       setDomain("");

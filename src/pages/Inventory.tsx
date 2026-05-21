@@ -72,7 +72,7 @@ function Inventory() {
         updateData.min_stock_level = minLevel;
       }
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('products')
         .update(updateData)
         .eq('id', productId);

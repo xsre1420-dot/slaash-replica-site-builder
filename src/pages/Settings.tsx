@@ -56,7 +56,7 @@ const Settings = () => {
 
     // Load slug from database
     if (user?.id) {
-      supabase
+      (supabase as any)
         .from('store_settings')
         .select('store_slug')
         .eq('owner_id', user.id)
@@ -102,7 +102,7 @@ const Settings = () => {
       });
       // Save slug to database
       if (user?.id && settings.storeSlug) {
-        await supabase
+        await (supabase as any)
           .from('store_settings')
           .update({ store_slug: settings.storeSlug })
           .eq('owner_id', user.id);
