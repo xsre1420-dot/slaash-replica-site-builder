@@ -91,7 +91,7 @@ export const useTenantStore = (slug: string | undefined): TenantStoreData => {
     try {
       const data = await dedup(cacheKey, async () => {
         // 1. Get store info by slug
-        const { data: storeData, error: storeErr } = await supabase
+        const { data: storeData, error: storeErr } = await (supabase as any)
           .rpc('get_store_by_slug', { p_slug: slug });
 
         if (storeErr || !storeData || storeData.length === 0) {
@@ -103,8 +103,8 @@ export const useTenantStore = (slug: string | undefined): TenantStoreData => {
 
         // 2. Fetch products and categories in parallel
         const [prodsRes, catsRes] = await Promise.all([
-          supabase.rpc('get_store_products', { p_owner_id: ownerId }),
-          supabase.rpc('get_store_categories', { p_owner_id: ownerId }),
+          (supabase as any).rpc('get_store_products', { p_owner_id: ownerId }),
+          (supabase as any).rpc('get_store_categories', { p_owner_id: ownerId }),
         ]);
 
         const info: TenantStoreInfo = {
@@ -129,8 +129,8 @@ export const useTenantStore = (slug: string | undefined): TenantStoreData => {
 
         return {
           storeInfo: info,
-          products: (prodsRes.data || []).map(formatProduct),
-          categories: (catsRes.data || []).map((c: any) => ({
+          products: ((prodsRes.data || []) as any[]).map(formatProduct),
+          categories: ((catsRes.data || []) as any[]).map((c: any) => ({
             id: c.id,
             name: c.name,
             order: c.display_order || 0,
