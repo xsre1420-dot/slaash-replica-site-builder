@@ -272,15 +272,15 @@ const Store = () => {
       )}
 
       {/* Header */}
-      <div className="bg-card border-b border-border sticky top-0 z-40">
-        <div className="px-4 py-3">
+      <div className="bg-card/90 backdrop-blur-xl border-b border-border/60 sticky top-0 z-40">
+        <div className="px-4 py-3 max-w-3xl mx-auto">
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center gap-1">
               <CartDrawer>
                 <button className="relative p-2 rounded-full hover:bg-muted transition-colors">
                   <ShoppingCart className="w-5 h-5 text-foreground" />
                   {cartCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold animate-scale-in">
+                    <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold animate-scale-in shadow-sm">
                       {cartCount}
                     </span>
                   )}
@@ -294,9 +294,14 @@ const Store = () => {
                 onViewProduct={handleViewProduct}
               />
             </div>
-            <div className="text-center flex-1 flex items-center justify-center gap-2">
-              {storeLogo && <img src={storeLogo} alt="" className="w-8 h-8 rounded-full object-cover" />}
-              <p className="font-bold text-lg text-foreground">{storeName}</p>
+            <div className="text-center flex-1 flex items-center justify-center gap-2.5 min-w-0">
+              {storeLogo && (
+                <div className="relative">
+                  <div className="absolute inset-0 bg-primary/20 rounded-full blur-md" />
+                  <img src={storeLogo} alt="" className="relative w-9 h-9 rounded-full object-cover ring-2 ring-primary/20" />
+                </div>
+              )}
+              <p className="font-bold text-base text-foreground truncate">{storeName}</p>
             </div>
             <div className="w-10" />
           </div>
@@ -309,11 +314,11 @@ const Store = () => {
               placeholder="ابحث عن منتج..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-10 pr-10 pl-12 rounded-xl bg-muted border-0 text-right text-sm placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/30 focus:bg-card transition-all text-foreground"
+              className="w-full h-11 pr-10 pl-12 rounded-xl bg-muted/70 border border-transparent text-right text-sm placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/30 focus:bg-card focus:border-primary/30 transition-all text-foreground"
             />
             <button
               onClick={toggleVoiceSearch}
-              className={`absolute left-3 top-1/2 -translate-y-1/2 p-1 rounded-full transition-colors ${isListening ? 'text-destructive animate-pulse' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`absolute left-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-colors ${isListening ? 'text-destructive animate-pulse bg-destructive/10' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
             >
               {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             </button>
@@ -321,86 +326,92 @@ const Store = () => {
         </div>
       </div>
 
-      {/* Categories with swipe */}
-      <div
-        className="px-4 pt-3 pb-1"
-        ref={categoriesRef}
-        onTouchStart={handleCategoryTouchStart}
-        onTouchEnd={handleCategoryTouchEnd}
-      >
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              className={`px-4 py-2 rounded-xl transition-all duration-200 whitespace-nowrap text-xs font-medium ${
-                selectedCategory === cat.id
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-card hover:bg-muted border border-border text-muted-foreground"
-              }`}
-              onClick={() => setSelectedCategory(cat.id)}
-            >
-              {cat.name}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Toolbar: Sort, Filter, View Mode */}
-      <div className="px-4 pb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={cycleSortBy}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              sortBy !== "default" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-            }`}
-          >
-            <ArrowUpDown className="w-3 h-3" />
-            {sortLabel}
-          </button>
-          <StoreFilterDrawer
-            maxPrice={maxPrice}
-            currentRange={filterPriceRange}
-            availableSizes={availableSizes}
-            selectedSizes={filterSizes}
-            onApply={(range, sizes) => { setFilterPriceRange(range); setFilterSizes(sizes); }}
-            onReset={() => { setFilterPriceRange([0, maxPrice]); setFilterSizes([]); }}
-            activeFilterCount={activeFilterCount}
-          />
-        </div>
-        <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
-          <button
-            onClick={() => setViewMode("grid")}
-            className={`p-1.5 rounded-md transition-colors ${viewMode === "grid" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}
-          >
-            <Grid3X3 className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => setViewMode("list")}
-            className={`p-1.5 rounded-md transition-colors ${viewMode === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}
-          >
-            <List className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Banner */}
-      {bannerImages.length > 0 && (
-        <div className="px-4 mb-4">
-          <div className="relative h-40 sm:h-48 overflow-hidden rounded-2xl shadow-sm">
-            <div className={`w-full h-full transition-all duration-300 ${isTransitioning ? 'opacity-0 scale-[1.02]' : 'opacity-100 scale-100'}`}>
-              <img src={bannerImages[currentImageIndex]} alt="Banner" className="w-full h-full object-cover" loading="lazy" />
-            </div>
-            {bannerImages.length > 1 && (
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
-                {bannerImages.map((_, i) => (
-                  <button key={i} onClick={() => { setIsTransitioning(true); setTimeout(() => { setCurrentImageIndex(i); setIsTransitioning(false); }, 200); }}
-                    className={`transition-all rounded-full ${currentImageIndex === i ? "bg-primary w-6 h-2" : "bg-foreground/30 w-2 h-2 hover:bg-foreground/50"}`} />
-                ))}
+      <div className="max-w-3xl mx-auto">
+        {/* Banner — hero placement */}
+        {bannerImages.length > 0 && (
+          <div className="px-4 pt-4">
+            <div className="relative h-40 sm:h-52 overflow-hidden rounded-2xl shadow-md ring-1 ring-border/40">
+              <div className={`w-full h-full transition-all duration-500 ${isTransitioning ? 'opacity-0 scale-[1.03]' : 'opacity-100 scale-100'}`}>
+                <img src={bannerImages[currentImageIndex]} alt="Banner" className="w-full h-full object-cover" loading="lazy" />
               </div>
-            )}
+              <div className="absolute inset-0 bg-gradient-to-t from-foreground/20 via-transparent to-transparent pointer-events-none" />
+              {bannerImages.length > 1 && (
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                  {bannerImages.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => { setIsTransitioning(true); setTimeout(() => { setCurrentImageIndex(i); setIsTransitioning(false); }, 200); }}
+                      className={`transition-all rounded-full ${currentImageIndex === i ? "bg-primary w-6 h-2" : "bg-background/70 w-2 h-2 hover:bg-background"}`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Categories with swipe */}
+        <div
+          className="px-4 pt-4 pb-1"
+          ref={categoriesRef}
+          onTouchStart={handleCategoryTouchStart}
+          onTouchEnd={handleCategoryTouchEnd}
+        >
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                className={`px-4 py-2 rounded-full transition-all duration-200 whitespace-nowrap text-xs font-semibold ${
+                  selectedCategory === cat.id
+                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/25 scale-105"
+                    : "bg-card hover:bg-muted border border-border/60 text-muted-foreground hover:text-foreground"
+                }`}
+                onClick={() => setSelectedCategory(cat.id)}
+              >
+                {cat.name}
+              </button>
+            ))}
           </div>
         </div>
-      )}
+
+        {/* Toolbar: Sort, Filter, View Mode */}
+        <div className="px-4 pb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={cycleSortBy}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                sortBy !== "default" ? "bg-primary/10 text-primary ring-1 ring-primary/20" : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              <ArrowUpDown className="w-3 h-3" />
+              {sortLabel}
+            </button>
+            <StoreFilterDrawer
+              maxPrice={maxPrice}
+              currentRange={filterPriceRange}
+              availableSizes={availableSizes}
+              selectedSizes={filterSizes}
+              onApply={(range, sizes) => { setFilterPriceRange(range); setFilterSizes(sizes); }}
+              onReset={() => { setFilterPriceRange([0, maxPrice]); setFilterSizes([]); }}
+              activeFilterCount={activeFilterCount}
+            />
+          </div>
+          <div className="flex items-center gap-0.5 bg-muted rounded-lg p-0.5">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-1.5 rounded-md transition-all ${viewMode === "grid" ? "bg-card shadow-sm text-primary" : "text-muted-foreground"}`}
+            >
+              <Grid3X3 className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-1.5 rounded-md transition-all ${viewMode === "list" ? "bg-card shadow-sm text-primary" : "text-muted-foreground"}`}
+            >
+              <List className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Products */}
       <div className="px-4 pb-28">
