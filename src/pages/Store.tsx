@@ -414,23 +414,22 @@ const Store = () => {
       </div>
 
       {/* Products */}
-      <div className="px-4 pb-28">
-        {/* Results count */}
+      <div className="px-4 pb-28 max-w-3xl mx-auto">
         {searchQuery && (
-          <p className="text-xs text-muted-foreground text-right mb-2">
+          <p className="text-xs text-muted-foreground text-right mb-3">
             {displayProducts.length} نتيجة
           </p>
         )}
 
         {isLoading ? (
-          <div className={viewMode === "grid" ? "grid grid-cols-2 gap-3" : "space-y-3"}>
+          <div className={viewMode === "grid" ? "grid grid-cols-2 sm:grid-cols-3 gap-3" : "space-y-3"}>
             {Array.from({ length: 6 }).map((_, i) => (
               <ProductSkeleton key={i} viewMode={viewMode} />
             ))}
           </div>
         ) : visibleProducts.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center text-3xl">🛍️</div>
+          <div className="text-center py-20">
+            <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-full flex items-center justify-center text-3xl ring-1 ring-primary/10">🛍️</div>
             <h3 className="text-lg font-bold mb-1 text-foreground">
               {searchQuery ? "لا توجد نتائج" : "لا توجد منتجات"}
             </h3>
@@ -440,7 +439,7 @@ const Store = () => {
           </div>
         ) : (
           <>
-            <div className={viewMode === "grid" ? "grid grid-cols-2 gap-3" : "space-y-3"}>
+            <div className={viewMode === "grid" ? "grid grid-cols-2 sm:grid-cols-3 gap-3" : "space-y-3"}>
               {visibleProducts.map((product, i) => (
                 <ProductCard
                   key={product.id}
@@ -457,7 +456,6 @@ const Store = () => {
                 />
               ))}
             </div>
-            {/* Infinite scroll sentinel */}
             {visibleCount < displayProducts.length && (
               <div ref={sentinelRef} className="flex justify-center py-6">
                 <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -471,22 +469,22 @@ const Store = () => {
 
       {/* Fixed Cart Bar */}
       {cartCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background to-transparent">
-          <button onClick={() => navigate(isTenantMode ? `/store/${storeSlug}/checkout` : '/checkout')} className="w-full">
-            <div className="bg-foreground rounded-2xl shadow-xl">
+        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background/95 to-transparent">
+          <button onClick={() => navigate(isTenantMode ? `/store/${storeSlug}/checkout` : '/checkout')} className="w-full max-w-3xl mx-auto block">
+            <div className="bg-gradient-to-r from-primary to-primary/85 rounded-2xl shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 transition-all">
               <div className="flex items-center justify-between px-5 py-3.5">
                 <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <ShoppingCart className="w-5 h-5 text-background" />
-                    <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold">
+                  <div className="relative w-9 h-9 rounded-full bg-primary-foreground/15 flex items-center justify-center">
+                    <ShoppingCart className="w-4 h-4 text-primary-foreground" />
+                    <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold ring-2 ring-primary">
                       {cartCount}
                     </span>
                   </div>
-                  <span className="text-sm font-bold text-background">
+                  <span className="text-sm font-bold text-primary-foreground">
                     {cartTotal.toLocaleString()} د.ع
                   </span>
                 </div>
-                <span className="text-sm font-bold text-background">إتمام الطلب ←</span>
+                <span className="text-sm font-bold text-primary-foreground">إتمام الطلب ←</span>
               </div>
             </div>
           </button>
