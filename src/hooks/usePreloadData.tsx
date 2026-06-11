@@ -13,8 +13,8 @@ export const usePreloadData = () => {
 
     // Preload products and categories in parallel
     Promise.all([
-      loadProducts(true),
-      getCategories(true),
+      loadProducts(false),
+      getCategories(false),
     ]).catch(() => {});
 
     // Predictive route preloading after a delay

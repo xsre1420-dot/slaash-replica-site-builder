@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 interface Product {
   id: string;
@@ -35,6 +36,7 @@ function Inventory() {
   const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebouncedValue(searchTerm, 300);
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [newQuantity, setNewQuantity] = useState("");
@@ -56,7 +58,7 @@ function Inventory() {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select('id, name, price, category, image_url, stock_quantity, min_stock_level, created_at')
         .eq('owner_id', user.id)
         .order('name');
 
@@ -109,12 +111,12 @@ function Inventory() {
 
   const filteredProducts = useMemo(() => {
     return products.filter(product => {
-      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.category.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = product.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        product.category.toLowerCase().includes(debouncedSearch.toLowerCase());
       const matchesFilter = stockFilter === "all" || getStockStatus(product).status === stockFilter;
       return matchesSearch && matchesFilter;
     });
-  }, [products, searchTerm, stockFilter]);
+  }, [products, debouncedSearch, stockFilter]);
 
   const stats = useMemo(() => ({
     total: products.length,

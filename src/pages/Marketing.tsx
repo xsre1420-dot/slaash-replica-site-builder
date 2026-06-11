@@ -1,10 +1,16 @@
+import { lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Gift, Tag, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import CouponsTab from "@/components/marketing/CouponsTab";
-import ProductDiscountsTab from "@/components/marketing/ProductDiscountsTab";
-import MarketingSettingsTab from "@/components/marketing/MarketingSettingsTab";
+
+const CouponsTab = lazy(() => import("@/components/marketing/CouponsTab"));
+const ProductDiscountsTab = lazy(() => import("@/components/marketing/ProductDiscountsTab"));
+const MarketingSettingsTab = lazy(() => import("@/components/marketing/MarketingSettingsTab"));
+
+const TabFallback = () => (
+  <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">جاري التحميل...</div>
+);
 
 const Marketing = () => {
   return (
@@ -46,15 +52,21 @@ const Marketing = () => {
           </TabsList>
 
           <TabsContent value="coupons">
-            <CouponsTab />
+            <Suspense fallback={<TabFallback />}>
+              <CouponsTab />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="product-discounts">
-            <ProductDiscountsTab />
+            <Suspense fallback={<TabFallback />}>
+              <ProductDiscountsTab />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="settings">
-            <MarketingSettingsTab />
+            <Suspense fallback={<TabFallback />}>
+              <MarketingSettingsTab />
+            </Suspense>
           </TabsContent>
         </Tabs>
       </div>

@@ -166,6 +166,27 @@ export const invalidateCategories = () => {
   cache.flushByPrefix('categories:');
 };
 
+/** Patch a single product in cache after realtime UPDATE (avoids full catalog reload) */
+export const patchCachedProduct = (ownerId: string, row: Record<string, unknown>): boolean => {
+  const key = CacheKeys.products(ownerId);
+  const cached = cache.get<Product[]>(key);
+  if (!cached) return false;
+  const updated = cached.map((p) => (p.id === row.id ? formatProduct(row) : p));
+  cache.set(key, updated, CacheTTL.MEDIUM, CacheTTL.STALE);
+  products = updated;
+  return true;
+};
+
+export const removeCachedProduct = (ownerId: string, productId: string): boolean => {
+  const key = CacheKeys.products(ownerId);
+  const cached = cache.get<Product[]>(key);
+  if (!cached) return false;
+  const updated = cached.filter((p) => p.id !== productId);
+  cache.set(key, updated, CacheTTL.MEDIUM, CacheTTL.STALE);
+  products = updated;
+  return true;
+};
+
 // --- Product CRUD (optimistic + cache update) ---
 
 export const addProduct = async (product: Product): Promise<{ success: boolean; error?: string }> => {

@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Product } from "@/types";
 import { useCart } from "@/context/CartContext";
 import { useStore } from "@/context/StoreContext";
@@ -72,7 +72,19 @@ const ProductDetails = () => {
     }
   }, [isTenantMode, tenant.storeInfo?.ownerId, setStoreOwner]);
 
-  const totalAmount = cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+  const cachedTenantProduct = useMemo(
+    () => (productId && isTenantMode ? tenant.products.find((p) => p.id === productId) ?? null : null),
+    [productId, isTenantMode, tenant.products]
+  );
+
+  const handleProductLoaded = useCallback((p: Product | null) => {
+    setProduct(p);
+  }, []);
+
+  const totalAmount = useMemo(
+    () => cartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
+    [cartItems]
+  );
 
   // Social proof (simulated)
   const viewerCount = useMemo(() => Math.floor(Math.random() * 8) + 3, []);
@@ -113,7 +125,11 @@ const ProductDetails = () => {
   if (!product) {
     return (
       <>
-        <ProductData productId={productId} onProductLoaded={setProduct} />
+        <ProductData
+          productId={productId}
+          initialProduct={cachedTenantProduct}
+          onProductLoaded={handleProductLoaded}
+        />
         <ProductDetailsSkeleton />
       </>
     );
@@ -123,7 +139,6 @@ const ProductDetails = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <ProductData productId={productId} onProductLoaded={setProduct} />
       <ProductHeader productId={product.id} productName={product.name} />
 
       <div className="max-w-md mx-auto bg-card">

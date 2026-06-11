@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Order } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { mapDbOrder } from "@/hooks/useOrderData";
@@ -11,7 +11,6 @@ const ORDERS_PER_PAGE = 50;
 export const useOrders = () => {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
-  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
   const [loading, setLoading] = useState(true);
@@ -22,7 +21,6 @@ export const useOrders = () => {
     const ownerId = user?.id;
     if (!ownerId) {
       setOrders([]);
-      setFilteredOrders([]);
       setHasMore(false);
       setLoading(false);
       return;
@@ -51,7 +49,7 @@ export const useOrders = () => {
     const mapped = await dedup(`fetch-orders-${ownerId}-${page}`, async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('id, status, total_amount, created_at, updated_at, customer_name, customer_phone, customer_address, customer_governorate, items, notes, order_items(*)')
+        .select('id, status, total_amount, created_at, updated_at, customer_name, customer_phone, customer_address, customer_governorate, notes, order_items(id, product_id, product_name, product_price, quantity, subtotal, variant_metadata)')
         .eq('owner_id', ownerId)
         .order('created_at', { ascending: false })
         .range(from, to);
@@ -76,8 +74,8 @@ export const useOrders = () => {
     fetchOrders(0);
   }, [fetchOrders]);
 
-  // Client-side filtering
-  useEffect(() => {
+  // Client-side filtering (memoized — avoids effect + extra state)
+  const filteredOrders = useMemo(() => {
     let filtered = orders;
 
     if (searchQuery) {
@@ -95,7 +93,7 @@ export const useOrders = () => {
       filtered = filtered.filter((order) => order.date.startsWith(filterDate));
     }
 
-    setFilteredOrders(filtered);
+    return filtered;
   }, [searchQuery, dateFilter, orders]);
 
   const loadMore = useCallback(() => {
@@ -140,6 +138,11 @@ export const useOrders = () => {
 
   const clearDateFilter = () => setDateFilter(undefined);
 
+  const refetch = useCallback(() => {
+    cache.flushByPrefix('orders:');
+    fetchOrders(0);
+  }, [fetchOrders]);
+
   return {
     orders,
     filteredOrders,
@@ -153,6 +156,6 @@ export const useOrders = () => {
     loading,
     hasMore,
     loadMore,
-    refetch: () => { cache.flushByPrefix('orders:'); fetchOrders(0); },
+    refetch,
   };
 };

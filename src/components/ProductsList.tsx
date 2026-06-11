@@ -8,6 +8,7 @@ import { Product } from "@/types";
 import { toast } from "sonner";
 import React from "react";
 import { QuickEditDialog } from "@/components/product-management/QuickEditDialog";
+import OptimizedImage from "@/components/OptimizedImage";
 
 const DragDropContext = React.lazy(() => import("@hello-pangea/dnd").then(m => ({ default: m.DragDropContext })));
 const Droppable = React.lazy(() => import("@hello-pangea/dnd").then(m => ({ default: m.Droppable })));
@@ -42,10 +43,16 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
     };
     loadProductsData();
 
-    const handleFocus = () => { loadProductsData(); };
+    let lastFocusRefresh = 0;
+    const handleFocus = () => {
+      const now = Date.now();
+      if (now - lastFocusRefresh < 60_000) return;
+      lastFocusRefresh = now;
+      loadProductsData();
+    };
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, []);
+  }, [onProductsLoaded]);
 
   // Use filteredProducts if provided, otherwise use all
   const products = filteredProducts ?? allProducts;
@@ -125,10 +132,10 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
             <GripVertical className="w-5 h-5 text-muted-foreground" />
           </div>
         )}
-        <img
+        <OptimizedImage
           src={product.image}
           alt={product.name}
-          className="w-full h-48 object-cover"
+          className="w-full h-48"
           loading="lazy"
         />
         <div className="absolute top-4 right-4 flex gap-1.5" onClick={(e) => e.stopPropagation()}>

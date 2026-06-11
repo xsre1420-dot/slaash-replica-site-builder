@@ -1,7 +1,7 @@
 
-import { supabase } from "@/integrations/supabase/client";
-import { DatabaseData } from "@/types/statistics";
-import { cache, CacheKeys, CacheTTL, dedup } from "@/lib/cache";
+import { supabase } from '@/integrations/supabase/client';
+import { DatabaseData } from '@/types/statistics';
+import { cache, CacheKeys, CacheTTL, dedup } from '@/lib/cache';
 
 const withTimeout = <T>(promise: Promise<T>, ms = 10000): Promise<T> => {
   return Promise.race([
@@ -9,6 +9,9 @@ const withTimeout = <T>(promise: Promise<T>, ms = 10000): Promise<T> => {
     new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Request timeout')), ms))
   ]);
 };
+
+const ORDER_LIST_COLUMNS = 'id,status,total_amount,created_at,customer_name,customer_phone';
+const PRODUCT_STATS_COLUMNS = 'id,name,price,stock_quantity';
 
 export const fetchStatisticsData = async (dateRange: string): Promise<DatabaseData> => {
   const { data: { user } } = await supabase.auth.getUser();
@@ -28,15 +31,16 @@ export const fetchStatisticsData = async (dateRange: string): Promise<DatabaseDa
     const extendedStart = new Date(Date.now() - extendedDays * 86400000);
     const dateFilter = extendedStart.toISOString();
 
-    const [ordersRes, productsRes] = await withTimeout(
+    const [ordersRes, productsRes, kpiRes] = await withTimeout(
       Promise.all([
         supabase.from('orders')
-          .select('id,status,total_amount,created_at,customer_name,customer_phone')
+          .select(ORDER_LIST_COLUMNS)
           .eq('owner_id', ownerId)
           .gte('created_at', dateFilter),
         supabase.from('products')
-          .select('id,name,price,stock_quantity')
+          .select(PRODUCT_STATS_COLUMNS)
           .eq('owner_id', ownerId),
+        (supabase as any).rpc('get_store_statistics', { p_owner_id: ownerId, p_days: days }),
       ]),
       12000
     );
@@ -52,6 +56,7 @@ export const fetchStatisticsData = async (dateRange: string): Promise<DatabaseDa
       customers: [],
       products: productsRes.data || [],
       visits: [],
+      kpis: kpiRes.data ?? undefined,
     };
 
     cache.set(cacheKey, result, CacheTTL.SHORT, CacheTTL.STALE);

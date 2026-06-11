@@ -1,4 +1,4 @@
-import { createContext, useState, useContext, ReactNode, useEffect } from "react";
+import { createContext, useState, useContext, ReactNode, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./AuthContext";
 import { cache, CacheKeys, CacheTTL } from "@/lib/cache";
@@ -71,7 +71,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { data, error } = await supabase
         .from('store_settings')
-        .select('*')
+        .select('store_name, store_logo, store_governorate, menu_background_color, menu_text_color, menu_accent_color, store_font, banner_images, primary_banner_index, delivery_prices')
         .eq('owner_id', user.id)
         .maybeSingle();
 
@@ -105,25 +105,37 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const updateStore = async (logo: string, name: string, governorate?: string) => {
+  const saveStoreSettings = useCallback(async (updates: Record<string, unknown>) => {
+    if (!user?.id) return;
+
+    try {
+      const { error } = await supabase
+        .from('store_settings')
+        .upsert({ owner_id: user.id, ...updates }, { onConflict: 'owner_id' });
+      if (error) console.error('Error saving store settings:', error);
+    } catch (error) {
+      console.error('Failed to save store settings:', error);
+    }
+  }, [user?.id]);
+
+  const updateStore = useCallback(async (logo: string, name: string, governorate?: string) => {
     setStoreLogo(logo);
     setStoreName(name);
     if (governorate !== undefined) setStoreGovernorate(governorate);
-    
+
     if (user?.id) {
-      // Invalidate store settings cache on update
       cache.del(CacheKeys.storeSettings(user.id));
       await saveStoreSettings({
         store_name: name,
         store_logo: logo,
-        store_governorate: governorate || storeGovernorate
+        store_governorate: governorate ?? storeGovernorate,
       });
     }
-  };
+  }, [user?.id, storeGovernorate, saveStoreSettings]);
 
-  const updateStoreSettings = async (settings: StoreSettings) => {
+  const updateStoreSettings = useCallback(async (settings: StoreSettings) => {
     setStoreSettings(settings);
-    
+
     if (user?.id) {
       cache.del(CacheKeys.storeSettings(user.id));
       await saveStoreSettings({
@@ -133,47 +145,22 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         store_font: settings.storeFont,
         banner_images: settings.bannerImages,
         primary_banner_index: settings.primaryBannerIndex,
-        delivery_prices: settings.deliveryPrices as any
+        delivery_prices: settings.deliveryPrices,
       });
     }
-  };
+  }, [user?.id, saveStoreSettings]);
 
-  const saveStoreSettings = async (updates: any) => {
-    if (!user?.id) return;
-
-    try {
-      const { data: existingSettings } = await supabase
-        .from('store_settings')
-        .select('id')
-        .eq('owner_id', user.id)
-        .maybeSingle();
-
-      if (existingSettings) {
-        const { error } = await supabase
-          .from('store_settings')
-          .update(updates)
-          .eq('owner_id', user.id);
-        if (error) console.error('Error updating store settings:', error);
-      } else {
-        const { error } = await supabase
-          .from('store_settings')
-          .insert({ owner_id: user.id, ...updates });
-        if (error) console.error('Error inserting store settings:', error);
-      }
-    } catch (error) {
-      console.error('Failed to save store settings:', error);
-    }
-  };
+  const value = useMemo(() => ({
+    storeName,
+    storeLogo,
+    storeGovernorate,
+    storeSettings,
+    updateStore,
+    updateStoreSettings,
+  }), [storeName, storeLogo, storeGovernorate, storeSettings, updateStore, updateStoreSettings]);
 
   return (
-    <StoreContext.Provider value={{ 
-      storeName, 
-      storeLogo, 
-      storeGovernorate,
-      storeSettings, 
-      updateStore, 
-      updateStoreSettings 
-    }}>
+    <StoreContext.Provider value={value}>
       {children}
     </StoreContext.Provider>
   );

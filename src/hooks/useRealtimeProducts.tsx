@@ -1,32 +1,43 @@
 
 /**
- * Suggestion #11: Realtime subscriptions for products
- * Sync products instantly across devices without reload
+ * Realtime subscriptions for products — patch cache on UPDATE instead of full reload
  */
 
 import { useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { invalidateCache, loadProducts } from '@/data/dummyData';
-import { toast } from 'sonner';
+import { invalidateProducts, loadProducts, patchCachedProduct, removeCachedProduct } from '@/data/dummyData';
 
 export const useRealtimeProducts = (onUpdate?: () => void) => {
   const { user } = useAuth();
 
   const handleChange = useCallback((payload: any) => {
-    console.log('[Realtime] Products changed:', payload.eventType);
-    // Invalidate cache and reload
-    invalidateCache();
-    loadProducts(true).then(() => {
+    const ownerId = user?.id;
+    if (!ownerId) return;
+
+    if (payload.eventType === 'UPDATE' && payload.new) {
+      patchCachedProduct(ownerId, payload.new);
       onUpdate?.();
-    });
-  }, [onUpdate]);
+      return;
+    }
+
+    if (payload.eventType === 'DELETE' && payload.old?.id) {
+      removeCachedProduct(ownerId, payload.old.id);
+      onUpdate?.();
+      return;
+    }
+
+    if (payload.eventType === 'INSERT') {
+      invalidateProducts();
+      loadProducts(true).then(() => onUpdate?.());
+    }
+  }, [user?.id, onUpdate]);
 
   useEffect(() => {
     if (!user?.id) return;
 
     const channel = supabase
-      .channel('products-realtime')
+      .channel(`products-realtime-${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -37,11 +48,7 @@ export const useRealtimeProducts = (onUpdate?: () => void) => {
         },
         handleChange
       )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('[Realtime] Subscribed to products changes');
-        }
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);

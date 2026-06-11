@@ -32,13 +32,6 @@ function isRateLimited(ip: string): boolean {
   return false;
 }
 
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, record] of requestCounts.entries()) {
-    if (now > record.resetTime) requestCounts.delete(ip);
-  }
-}, 300000);
-
 function validateSlug(slug: string): boolean {
   return /^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/.test(slug);
 }
@@ -81,32 +74,19 @@ Deno.serve(async (req) => {
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    const [storeRes, prodsRes, catsRes] = await Promise.all([
-      supabase.rpc('get_store_by_slug', { p_slug: slug }),
-      supabase.rpc('get_store_products_by_slug', { p_slug: slug }),
-      supabase.rpc('get_store_categories_by_slug', { p_slug: slug }),
-    ]);
+    const { data: bundle, error: bundleErr } = await supabase.rpc('get_store_bundle', { p_slug: slug });
 
-    if (storeRes.error || !storeRes.data) {
+    if (bundleErr || !bundle?.store) {
       return new Response(JSON.stringify({ error: 'Store not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const store = Array.isArray(storeRes.data) ? storeRes.data[0] : storeRes.data;
-
-    if (prodsRes.error) {
-      return new Response(JSON.stringify({ error: 'Failed to fetch products' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     return new Response(JSON.stringify({
-      products: prodsRes.data || [],
-      categories: catsRes.data || [],
-      storeInfo: store,
+      products: bundle.products || [],
+      categories: bundle.categories || [],
+      storeInfo: bundle.store,
       success: true,
     }), {
       status: 200,

@@ -39,4 +39,5 @@ export interface DatabaseData {
   customers: any[];
   products: any[];
   visits: any[];
+  kpis?: Record<string, unknown>;
 }

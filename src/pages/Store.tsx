@@ -9,6 +9,7 @@ import MetaPixel from "@/components/MetaPixel";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import CartDrawer from "@/components/CartDrawer";
 import { useTenantStore } from "@/hooks/useTenantStore";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import ProductCard from "@/components/store/ProductCard";
 import ProductSkeleton from "@/components/store/ProductSkeleton";
@@ -31,6 +32,7 @@ const Store = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebouncedValue(searchQuery, 300);
   const [sortBy, setSortBy] = useState<"default" | "price-asc" | "price-desc">("default");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isLoading, setIsLoading] = useState(true);
@@ -72,9 +74,21 @@ const Store = () => {
     } else if (!isTenantMode && ownStore) {
       // owner preview uses auth context owner via loadProducts
     }
-  }, [isTenantMode, tenant.storeInfo?.ownerId, setStoreOwner, ownStore]);
+  }, [isTenantMode, tenant.storeInfo?.ownerId, setStoreOwner]);
 
-  // --- Load data: tenant mode vs owner mode ---
+  // Update products when category changes (tenant vs owner mode)
+  useEffect(() => {
+    if (isTenantMode) {
+      setAllProducts(
+        selectedCategory === "all"
+          ? tenant.products
+          : tenant.products.filter((p) => p.category === selectedCategory)
+      );
+    } else {
+      setAllProducts(getProductsByCategory(selectedCategory));
+    }
+    setVisibleCount(PRODUCTS_PER_PAGE);
+  }, [selectedCategory, isTenantMode, tenant.products]);
   const loadData = useCallback(async (force = false) => {
     if (isTenantMode) {
       // Tenant mode — data comes from useTenantStore hook
@@ -105,13 +119,6 @@ const Store = () => {
 
   useEffect(() => { if (!isTenantMode) loadData(); }, [loadData, isTenantMode]);
 
-  // Update products when category changes
-  useEffect(() => {
-    setAllProducts(getProductsByCategory(selectedCategory));
-    setVisibleCount(PRODUCTS_PER_PAGE);
-  }, [selectedCategory]);
-
-  // --- Banner ---
   const bannerImages = storeSettings.bannerImages || [];
   useEffect(() => {
     if (bannerImages.length > 1) {
@@ -143,7 +150,7 @@ const Store = () => {
     let filtered = allProducts;
     // Search
     if (searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase();
+      const q = debouncedSearch.trim().toLowerCase();
       filtered = filtered.filter(p => p.name.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q));
     }
     // Price filter
@@ -158,7 +165,7 @@ const Store = () => {
     if (sortBy === "price-asc") filtered = [...filtered].sort((a, b) => a.price - b.price);
     if (sortBy === "price-desc") filtered = [...filtered].sort((a, b) => b.price - a.price);
     return filtered;
-  }, [allProducts, searchQuery, sortBy, filterPriceRange, filterSizes, maxPrice]);
+  }, [allProducts, debouncedSearch, sortBy, filterPriceRange, filterSizes, maxPrice]);
 
   // Infinite scroll with IntersectionObserver
   useEffect(() => {
@@ -198,12 +205,12 @@ const Store = () => {
   };
 
   // --- Cart helpers ---
-  const getCartQuantity = (productId: string) => {
-    const item = cartItems.find(i => i.product.id === productId);
-    return item?.quantity || 0;
-  };
+  const cartQuantityById = useMemo(
+    () => new Map(cartItems.map((i) => [i.product.id, i.quantity])),
+    [cartItems]
+  );
 
-  const handleAddToCart = (product: Product) => {
+  const handleAddToCart = useCallback((product: Product) => {
     if (isTenantMode && tenant.storeInfo?.ownerId) {
       setStoreOwner(tenant.storeInfo.ownerId);
     }
@@ -213,18 +220,18 @@ const Store = () => {
       title: "✅ تمت الإضافة",
       description: `${product.name} أُضيف إلى السلة`,
     });
-  };
+  }, [isTenantMode, tenant.storeInfo?.ownerId, setStoreOwner, addToCart, trackAddToCart, toast]);
 
-  const handleUpdateQuantity = (productId: string, qty: number) => {
+  const handleUpdateQuantity = useCallback((productId: string, qty: number) => {
     updateQuantity(productId, qty);
-  };
+  }, [updateQuantity]);
 
-  const handleViewProduct = (productId: string) => {
-    const product = allProducts.find(p => p.id === productId);
-    if (product) trackViewContent(product.id, product.name, product.price);
+  const handleViewProduct = useCallback((productId: string) => {
+    const p = allProducts.find((x) => x.id === productId);
+    if (p) trackViewContent(p.id, p.name, p.price);
     const path = isTenantMode ? `/store/${storeSlug}/product/${productId}` : `/product-details/${productId}`;
     navigate(path);
-  };
+  }, [allProducts, isTenantMode, storeSlug, trackViewContent, navigate]);
 
   // --- Share ---
   const handleShare = async (product: Product) => {
@@ -457,7 +464,7 @@ const Store = () => {
                   product={product}
                   viewMode={viewMode}
                   isFavorite={isFavorite(product.id)}
-                  cartQuantity={getCartQuantity(product.id)}
+                  cartQuantity={cartQuantityById.get(product.id) ?? 0}
                   onToggleFavorite={toggleFavorite}
                   onAddToCart={handleAddToCart}
                   onUpdateQuantity={handleUpdateQuantity}

@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from "react";
 import { CartItem, Product } from "@/types";
 
 interface CartContextType {
@@ -56,7 +56,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     persistCart(storeOwnerId, cartItems);
   }, [cartItems, storeOwnerId]);
 
-  const addToCart = (product: Product, selectedSize?: string, selectedColor?: string, quantity = 1) => {
+  const addToCart = useCallback((product: Product, selectedSize?: string, selectedColor?: string, quantity = 1) => {
     if (quantity <= 0) return;
 
     setCartItems((prevItems) => {
@@ -79,9 +79,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
       return [...prevItems, { product, quantity, selectedSize, selectedColor }];
     });
-  };
+  }, []);
 
-  const removeFromCart = (productId: string, selectedSize?: string, selectedColor?: string) => {
+  const removeFromCart = useCallback((productId: string, selectedSize?: string, selectedColor?: string) => {
     setCartItems((prevItems) =>
       prevItems.filter(
         (item) =>
@@ -92,11 +92,20 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           )
       )
     );
-  };
+  }, []);
 
-  const updateQuantity = (productId: string, quantity: number, selectedSize?: string, selectedColor?: string) => {
+  const updateQuantity = useCallback((productId: string, quantity: number, selectedSize?: string, selectedColor?: string) => {
     if (quantity <= 0) {
-      removeFromCart(productId, selectedSize, selectedColor);
+      setCartItems((prevItems) =>
+        prevItems.filter(
+          (item) =>
+            !(
+              item.product.id === productId &&
+              item.selectedSize === selectedSize &&
+              item.selectedColor === selectedColor
+            )
+        )
+      );
       return;
     }
 
@@ -109,39 +118,42 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           : item
       )
     );
-  };
+  }, []);
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     setCartItems([]);
-    if (storeOwnerId) {
-      sessionStorage.removeItem(cartStorageKey(storeOwnerId));
-    }
-  };
+    setStoreOwnerId((prev) => {
+      if (prev) sessionStorage.removeItem(cartStorageKey(prev));
+      return prev;
+    });
+  }, []);
 
-  const cartTotal = cartItems.reduce(
-    (total, item) => total + item.product.price * item.quantity,
-    0
+  const cartTotal = useMemo(
+    () => cartItems.reduce((total, item) => total + item.product.price * item.quantity, 0),
+    [cartItems]
   );
 
-  const cartCount = cartItems.reduce((count, item) => count + item.quantity, 0);
-
-  return (
-    <CartContext.Provider
-      value={{
-        cartItems,
-        storeOwnerId,
-        setStoreOwner,
-        addToCart,
-        removeFromCart,
-        updateQuantity,
-        clearCart,
-        cartTotal,
-        cartCount,
-      }}
-    >
-      {children}
-    </CartContext.Provider>
+  const cartCount = useMemo(
+    () => cartItems.reduce((count, item) => count + item.quantity, 0),
+    [cartItems]
   );
+
+  const value = useMemo(
+    () => ({
+      cartItems,
+      storeOwnerId,
+      setStoreOwner,
+      addToCart,
+      removeFromCart,
+      updateQuantity,
+      clearCart,
+      cartTotal,
+      cartCount,
+    }),
+    [cartItems, storeOwnerId, setStoreOwner, addToCart, removeFromCart, updateQuantity, clearCart, cartTotal, cartCount]
+  );
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
 
 export const useCart = () => {

@@ -1,25 +1,25 @@
-
 import { useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { Product, ColorOption, ProductVariant } from "@/types";
 import { loadProducts, getProductById } from "@/data/dummyData";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/context/AuthContext";
 
 interface ProductDataProps {
   productId: string | undefined;
+  /** Pre-resolved product from tenant catalog — skips RPC when provided */
+  initialProduct?: Product | null;
   onProductLoaded: (product: Product | null) => void;
 }
 
-const formatRpcProduct = (p: any): Product => ({
-  id: p.id,
-  name: p.name,
-  description: p.description || '',
-  category: p.category,
+export const formatRpcProduct = (p: Record<string, unknown>): Product => ({
+  id: p.id as string,
+  name: p.name as string,
+  description: (p.description as string) || '',
+  category: p.category as string,
   price: Number(p.price),
-  image: p.image_url || '',
-  additionalImages: p.additional_images || [],
-  stockQuantity: p.stock_quantity ?? undefined,
+  image: (p.image_url as string) || '',
+  additionalImages: (p.additional_images as string[]) || [],
+  stockQuantity: p.stock_quantity != null ? Number(p.stock_quantity) : undefined,
   sizes: Array.isArray(p.sizes) ? p.sizes as string[] : undefined,
   colors: (() => {
     if (!p.colors) return undefined;
@@ -42,9 +42,8 @@ const formatRpcProduct = (p: any): Product => ({
   originalPrice: p.original_price ? Number(p.original_price) : undefined,
 });
 
-const ProductData = ({ productId, onProductLoaded }: ProductDataProps) => {
+const ProductData = ({ productId, initialProduct, onProductLoaded }: ProductDataProps) => {
   const { username: storeSlug } = useParams<{ username?: string }>();
-  const { user } = useAuth();
 
   const loadProduct = useCallback(async () => {
     if (!productId) {
@@ -52,7 +51,11 @@ const ProductData = ({ productId, onProductLoaded }: ProductDataProps) => {
       return;
     }
 
-    // Tenant storefront: load via slug-bound RPC (no auth required)
+    if (initialProduct?.id === productId) {
+      onProductLoaded(initialProduct);
+      return;
+    }
+
     if (storeSlug) {
       const { data, error } = await (supabase as any).rpc('get_store_product_by_id', {
         p_slug: storeSlug.trim().toLowerCase(),
@@ -68,11 +71,10 @@ const ProductData = ({ productId, onProductLoaded }: ProductDataProps) => {
       return;
     }
 
-    // Merchant preview / admin: owner-scoped catalog
     await loadProducts();
     const foundProduct = getProductById(productId);
     onProductLoaded(foundProduct || null);
-  }, [productId, storeSlug, user?.id, onProductLoaded]);
+  }, [productId, storeSlug, initialProduct, onProductLoaded]);
 
   useEffect(() => {
     loadProduct();

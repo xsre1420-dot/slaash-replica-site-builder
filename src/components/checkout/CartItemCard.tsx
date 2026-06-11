@@ -1,6 +1,7 @@
 import { Plus, Minus, Trash2 } from "lucide-react";
 import { CartItem } from "@/types";
-import { useState } from "react";
+import { memo, useState } from "react";
+import OptimizedImage from "@/components/OptimizedImage";
 
 interface CartItemCardProps {
   item: CartItem;
@@ -9,7 +10,7 @@ interface CartItemCardProps {
   onUpdateQuantity: (productId: string, qty: number, size?: string, color?: string) => void;
 }
 
-const CartItemCard = ({ item, index, onRemove, onUpdateQuantity }: CartItemCardProps) => {
+const CartItemCard = memo(({ item, index, onRemove, onUpdateQuantity }: CartItemCardProps) => {
   const [removing, setRemoving] = useState(false);
 
   const handleRemove = () => {
@@ -23,10 +24,12 @@ const CartItemCard = ({ item, index, onRemove, onUpdateQuantity }: CartItemCardP
       style={{ animationDelay: `${index * 80}ms` }}
     >
       <div className="flex gap-3 p-3 rounded-xl bg-muted/30 border border-border/50">
-        <img
+        <OptimizedImage
           src={item.product.image}
           alt={item.product.name}
-          className="w-20 h-20 rounded-lg object-cover"
+          className="w-20 h-20 rounded-lg shrink-0"
+          width={80}
+          height={80}
           loading="lazy"
         />
         <div className="flex-1 text-right min-w-0">
@@ -82,6 +85,8 @@ const CartItemCard = ({ item, index, onRemove, onUpdateQuantity }: CartItemCardP
       </div>
     </div>
   );
-};
+});
+
+CartItemCard.displayName = 'CartItemCard';
 
 export default CartItemCard;

@@ -1,6 +1,6 @@
 import { X, ShoppingCart, Plus, Trash2, Search, Heart, Star } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getProductsByCategory, getCategories, loadProducts } from "@/data/dummyData";
 import { Product, Category } from "@/types";
 import { useCart } from "@/context/CartContext";
@@ -10,10 +10,11 @@ import { useAuth } from "@/context/AuthContext";
 import MetaPixel from "@/components/MetaPixel";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import OptimizedImage from "@/components/OptimizedImage";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 const PreviewStore = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [products, setProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -26,6 +27,13 @@ const PreviewStore = () => {
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebouncedValue(searchQuery, 300);
+
+  const products = useMemo(() => {
+    if (!debouncedSearch.trim()) return allProducts;
+    const q = debouncedSearch.trim().toLowerCase();
+    return allProducts.filter((p) => p.name.toLowerCase().includes(q));
+  }, [allProducts, debouncedSearch]);
 
   useEffect(() => {
     if (user?.id) setStoreOwner(user.id);
@@ -50,8 +58,11 @@ const PreviewStore = () => {
     };
     loadCategoriesData();
 
+    let lastFocusRefresh = 0;
     const handleFocus = () => {
-      console.log('PreviewStore: إعادة تحميل الفئات عند التركيز على النافذة');
+      const now = Date.now();
+      if (now - lastFocusRefresh < 60_000) return;
+      lastFocusRefresh = now;
       loadCategoriesData();
     };
 
@@ -61,22 +72,14 @@ const PreviewStore = () => {
 
   const bannerImages = storeSettings.bannerImages || [];
 
+  // Load products when category changes only (search is client-side)
   useEffect(() => {
     const loadProductsData = async () => {
       await loadProducts();
-      const allProducts = getProductsByCategory(selectedCategory);
-      
-      if (searchQuery.trim()) {
-        const filtered = allProducts.filter(product => 
-          product.name.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-        setProducts(filtered);
-      } else {
-        setProducts(allProducts);
-      }
+      setAllProducts(getProductsByCategory(selectedCategory));
     };
     loadProductsData();
-  }, [selectedCategory, searchQuery]);
+  }, [selectedCategory]);
 
   const handleAddToCart = (product: Product) => {
     addToCart(product);

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Plus, Tag, Trash2, Edit, CalendarIcon, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,7 +52,7 @@ export default function ProductDiscountsTab() {
     if (!error) setProducts((data || []) as Product[]);
   }, [user]);
 
-  useState(() => { loadProducts(); });
+  useEffect(() => { loadProducts(); }, [loadProducts]);
 
   const discountedProducts = useMemo(() =>
     products.filter(p => p.discount_type && p.discount_type !== 'none'), [products]);

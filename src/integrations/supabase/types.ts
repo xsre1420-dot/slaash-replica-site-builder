@@ -175,31 +175,37 @@ export type Database = {
           created_at: string
           id: string
           order_id: string
+          owner_id: string | null
           product_id: string
           product_name: string
           product_price: number
           quantity: number
           subtotal: number
+          variant_metadata: Json | null
         }
         Insert: {
           created_at?: string
           id?: string
           order_id: string
+          owner_id?: string | null
           product_id: string
           product_name: string
           product_price: number
           quantity: number
           subtotal: number
+          variant_metadata?: Json | null
         }
         Update: {
           created_at?: string
           id?: string
           order_id?: string
+          owner_id?: string | null
           product_id?: string
           product_name?: string
           product_price?: number
           quantity?: number
           subtotal?: number
+          variant_metadata?: Json | null
         }
         Relationships: [
           {
@@ -218,8 +224,39 @@ export type Database = {
           },
         ]
       }
+      inventory_movements: {
+        Row: {
+          id: string
+          order_id: string | null
+          product_id: string
+          owner_id: string
+          quantity_delta: number
+          reason: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          order_id?: string | null
+          product_id: string
+          owner_id: string
+          quantity_delta: number
+          reason: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          order_id?: string | null
+          product_id?: string
+          owner_id?: string
+          quantity_delta?: number
+          reason?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
+          coupon_code: string | null
           created_at: string
           customer_address: string | null
           customer_governorate: string | null
@@ -227,8 +264,9 @@ export type Database = {
           customer_phone: string | null
           delivery_fee: number | null
           delivery_time: number | null
+          discount_amount: number | null
           id: string
-          items: Json | null
+          idempotency_key: string | null
           notes: string | null
           owner_id: string
           payment_method: string | null
@@ -606,6 +644,18 @@ export type Database = {
           sizes: Json
           variants: Json
         }[]
+      }
+      get_store_statistics: {
+        Args: { p_owner_id: string; p_days?: number }
+        Returns: Json
+      }
+      get_store_products_by_slug: {
+        Args: { p_slug: string }
+        Returns: Json[]
+      }
+      get_store_categories_by_slug: {
+        Args: { p_slug: string }
+        Returns: Json[]
       }
       is_valid_store_visit: {
         Args: { p_owner_id: string; p_visitor_ip: string }

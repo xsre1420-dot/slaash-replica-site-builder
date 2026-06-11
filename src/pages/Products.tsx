@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
 import { ArrowLeft, MessageSquare, Lightbulb, Download, Plus, Package, AlertTriangle, XCircle, DollarSign, Search } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -94,15 +94,16 @@ const Products = () => {
     toast.success(`تم تصدير ${loadedProducts.length} منتج بنجاح`);
   };
 
-  // Stats
-  const totalProducts = loadedProducts.length;
-  const inStock = loadedProducts.filter(p => (p.stockQuantity ?? 1) > 5).length;
-  const lowStock = loadedProducts.filter(p => p.stockQuantity !== undefined && p.stockQuantity > 0 && p.stockQuantity <= 5).length;
-  const outOfStock = loadedProducts.filter(p => p.stockQuantity !== undefined && p.stockQuantity === 0).length;
-  const totalValue = loadedProducts.reduce((sum, p) => sum + p.price * (p.stockQuantity ?? 1), 0);
+  // Stats (memoized)
+  const stats = useMemo(() => ({
+    total: loadedProducts.length,
+    inStock: loadedProducts.filter(p => (p.stockQuantity ?? 1) > 5).length,
+    lowStock: loadedProducts.filter(p => p.stockQuantity !== undefined && p.stockQuantity > 0 && p.stockQuantity <= 5).length,
+    outOfStock: loadedProducts.filter(p => p.stockQuantity !== undefined && p.stockQuantity === 0).length,
+    totalValue: loadedProducts.reduce((sum, p) => sum + p.price * (p.stockQuantity ?? 1), 0),
+  }), [loadedProducts]);
 
-  // Filtered products
-  const filteredProducts = loadedProducts.filter(p => {
+  const filteredProducts = useMemo(() => loadedProducts.filter(p => {
     const matchesSearch = !debouncedSearch || 
       p.name.includes(debouncedSearch) || 
       p.description?.includes(debouncedSearch) ||
@@ -116,7 +117,7 @@ const Products = () => {
     else if (stockFilter === "out") matchesStock = p.stockQuantity !== undefined && p.stockQuantity === 0;
 
     return matchesSearch && matchesCategory && matchesStock;
-  });
+  }), [loadedProducts, debouncedSearch, categoryFilter, stockFilter]);
 
   return (
     <div className="min-h-screen bg-background font-arabic">
@@ -186,28 +187,28 @@ const Products = () => {
               <Card className="border border-border rounded-2xl shadow-sm">
                 <CardContent className="p-4 text-center">
                   <Package className="w-5 h-5 mx-auto mb-1.5 text-muted-foreground" />
-                  <p className="text-2xl font-bold text-foreground">{totalProducts}</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.total}</p>
                   <p className="text-xs text-muted-foreground">إجمالي المنتجات</p>
                 </CardContent>
               </Card>
               <Card className="border border-border rounded-2xl shadow-sm">
                 <CardContent className="p-4 text-center">
                   <AlertTriangle className="w-5 h-5 mx-auto mb-1.5 text-yellow-500" />
-                  <p className="text-2xl font-bold text-foreground">{lowStock}</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.lowStock}</p>
                   <p className="text-xs text-muted-foreground">منخفض المخزون</p>
                 </CardContent>
               </Card>
               <Card className="border border-border rounded-2xl shadow-sm">
                 <CardContent className="p-4 text-center">
                   <XCircle className="w-5 h-5 mx-auto mb-1.5 text-red-500" />
-                  <p className="text-2xl font-bold text-foreground">{outOfStock}</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.outOfStock}</p>
                   <p className="text-xs text-muted-foreground">نفد المخزون</p>
                 </CardContent>
               </Card>
               <Card className="border border-border rounded-2xl shadow-sm">
                 <CardContent className="p-4 text-center">
                   <DollarSign className="w-5 h-5 mx-auto mb-1.5 text-foreground" />
-                  <p className="text-lg sm:text-2xl font-bold text-foreground truncate">{totalValue.toLocaleString()}</p>
+                  <p className="text-lg sm:text-2xl font-bold text-foreground truncate">{stats.totalValue.toLocaleString()}</p>
                   <p className="text-xs text-muted-foreground">القيمة (د.ع)</p>
                 </CardContent>
               </Card>
