@@ -47,13 +47,18 @@ function Inventory() {
   }, [user]);
 
   const fetchProducts = async () => {
+    if (!user?.id) {
+      setProducts([]);
+      setLoading(false);
+      return;
+    }
+
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let query: any = supabase.from('products').select('*');
-      if (user?.id) {
-        query = query.eq('user_id', user.id);
-      }
-      const { data, error } = await query.order('name');
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('owner_id', user.id)
+        .order('name');
 
       if (error) throw error;
       setProducts(data || []);
@@ -67,6 +72,7 @@ function Inventory() {
 
   const updateStock = async (productId: string, quantity: number, minLevel?: number) => {
     try {
+      if (!user?.id) throw new Error('Not authenticated');
       const updateData: Record<string, number> = { stock_quantity: quantity };
       if (minLevel !== undefined) {
         updateData.min_stock_level = minLevel;
@@ -75,7 +81,8 @@ function Inventory() {
       const { error } = await (supabase as any)
         .from('products')
         .update(updateData)
-        .eq('id', productId);
+        .eq('id', productId)
+        .eq('owner_id', user.id);
 
       if (error) throw error;
       

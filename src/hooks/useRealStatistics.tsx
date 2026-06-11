@@ -26,7 +26,7 @@ export const useRealStatistics = (dateRange: string = "7") => {
       console.error('Error fetching statistics:', err);
       setStats(getDefaultStatistics());
       setRawOrders([]);
-      setError(null);
+      setError('تعذر تحميل الإحصائيات. يرجى المحاولة مرة أخرى.');
     } finally {
       setLoading(false);
     }

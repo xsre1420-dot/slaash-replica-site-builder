@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Plus, Gift, Trash2, Search, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,8 +57,7 @@ export default function CouponsTab() {
     if (!error) setCoupons((data || []) as Coupon[]);
   }, [user]);
 
-  // Load on mount
-  useState(() => { loadCoupons(); });
+  useEffect(() => { loadCoupons(); }, [loadCoupons]);
 
   const filteredCoupons = useMemo(() =>
     coupons.filter(c =>
@@ -114,15 +113,25 @@ export default function CouponsTab() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!user) return;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).from('marketing_coupons').delete().eq('id', id);
+    const { error } = await (supabase as any)
+      .from('marketing_coupons')
+      .delete()
+      .eq('id', id)
+      .eq('owner_id', user.id);
     if (!error) { toast.success("تم حذف الكوبون"); loadCoupons(); }
     else toast.error("فشل في حذف الكوبون");
   };
 
   const handleToggle = async (id: string, isActive: boolean) => {
+    if (!user) return;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).from('marketing_coupons').update({ is_active: !isActive }).eq('id', id);
+    const { error } = await (supabase as any)
+      .from('marketing_coupons')
+      .update({ is_active: !isActive })
+      .eq('id', id)
+      .eq('owner_id', user.id);
     if (!error) { loadCoupons(); toast.success(`تم ${!isActive ? 'تفعيل' : 'إيقاف'} الكوبون`); }
   };
 

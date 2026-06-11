@@ -100,18 +100,27 @@ export default function ProductDiscountsTab() {
     if (discountForm.discount_type === 'none' && selectedProduct.original_price) updateData.original_price = null;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).from('products').update(updateData).eq('id', selectedProduct.id);
+    const { error } = await (supabase as any)
+      .from('products')
+      .update(updateData)
+      .eq('id', selectedProduct.id)
+      .eq('owner_id', user!.id);
     if (error) toast.error("فشل في تحديث الخصم");
     else { toast.success(discountForm.discount_type === 'none' ? "تم إزالة الخصم" : "تم حفظ الخصم"); loadProducts(); setIsDialogOpen(false); setSelectedProduct(null); }
     setLoading(false);
   };
 
   const removeDiscount = async (product: Product) => {
+    if (!user) return;
     setLoading(true);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).from('products').update({
-      discount_type: 'none', discount_value: 0, price: product.original_price || product.price, original_price: null,
-    }).eq('id', product.id);
+    const { error } = await (supabase as any)
+      .from('products')
+      .update({
+        discount_type: 'none', discount_value: 0, price: product.original_price || product.price, original_price: null,
+      })
+      .eq('id', product.id)
+      .eq('owner_id', user.id);
     if (!error) { toast.success("تم إزالة الخصم"); loadProducts(); }
     setLoading(false);
   };

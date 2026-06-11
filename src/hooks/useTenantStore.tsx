@@ -40,6 +40,7 @@ const formatProduct = (p: any): Product => ({
   price: Number(p.price),
   image: p.image_url || '',
   additionalImages: p.additional_images || [],
+  stockQuantity: p.stock_quantity ?? undefined,
   sizes: Array.isArray(p.sizes) ? p.sizes as string[] : undefined,
   colors: (() => {
     if (!p.colors) return undefined;
@@ -72,7 +73,14 @@ export const useTenantStore = (slug: string | undefined): TenantStoreData => {
       return;
     }
 
-    const cacheKey = `tenant:${slug.toLowerCase()}`;
+    const normalizedSlug = slug.trim().toLowerCase();
+    if (!/^[a-z0-9-]+$/.test(normalizedSlug)) {
+      setLoading(false);
+      setError('رابط المتجر غير صالح');
+      return;
+    }
+
+    const cacheKey = `tenant:${normalizedSlug}`;
 
     if (!force) {
       const cached = cache.get<{ storeInfo: TenantStoreInfo; products: Product[]; categories: Category[] }>(cacheKey);
@@ -92,26 +100,37 @@ export const useTenantStore = (slug: string | undefined): TenantStoreData => {
       const data = await dedup(cacheKey, async () => {
         // 1. Get store info by slug
         const { data: storeData, error: storeErr } = await (supabase as any)
-          .rpc('get_store_by_slug', { p_slug: slug });
+          .rpc('get_store_by_slug', { p_slug: normalizedSlug });
 
-        if (storeErr || !storeData || storeData.length === 0) {
+        if (storeErr || !storeData) {
           throw new Error('المتجر غير موجود');
         }
 
-        const store = storeData[0];
-        const ownerId = store.owner_id;
+        const store = Array.isArray(storeData) ? storeData[0] : storeData;
+        if (!store) {
+          throw new Error('المتجر غير موجود');
+        }
 
-        // 2. Fetch products and categories in parallel
+        const ownerId = store.owner_id;
+        if (!ownerId) {
+          throw new Error('المتجر غير صالح');
+        }
+
+        // 2. Fetch products and categories in parallel (slug-bound — no raw owner_id RPC)
         const [prodsRes, catsRes] = await Promise.all([
-          (supabase as any).rpc('get_store_products', { p_owner_id: ownerId }),
-          (supabase as any).rpc('get_store_categories', { p_owner_id: ownerId }),
+          (supabase as any).rpc('get_store_products_by_slug', { p_slug: normalizedSlug }),
+          (supabase as any).rpc('get_store_categories_by_slug', { p_slug: normalizedSlug }),
         ]);
+
+        if (prodsRes.error || catsRes.error) {
+          throw new Error('فشل في تحميل بيانات المتجر');
+        }
 
         const info: TenantStoreInfo = {
           ownerId,
           storeName: store.store_name || '',
           storeLogo: store.store_logo || '',
-          storeSlug: store.store_slug || slug,
+          storeSlug: store.store_slug || normalizedSlug,
           menuBackgroundColor: store.menu_background_color || '#ffffff',
           menuTextColor: store.menu_text_color || '#333333',
           menuAccentColor: store.menu_accent_color || '#6366f1',
@@ -138,7 +157,7 @@ export const useTenantStore = (slug: string | undefined): TenantStoreData => {
         };
       });
 
-      cache.set(cacheKey, data, CacheTTL.MEDIUM, CacheTTL.STALE);
+      cache.set(cacheKey, data, CacheTTL.SHORT, CacheTTL.STALE);
       setStoreInfo(data.storeInfo);
       setProducts(data.products);
       setCategories(data.categories);

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -34,14 +34,14 @@ export default function MarketingSettingsTab() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data } = await (supabase as any)
       .from('marketing_settings')
-      .select('*')
+      .select('meta_pixel_id, google_analytics_id, marketing_enabled, email_marketing_enabled, sms_marketing_enabled')
       .eq('owner_id', user.id)
       .single();
 
     if (data) {
       setSettings({
         meta_pixel_id: data.meta_pixel_id || '',
-        facebook_access_token: data.facebook_access_token || '',
+        facebook_access_token: '',
         google_analytics_id: data.google_analytics_id || '',
         marketing_enabled: data.marketing_enabled || false,
         email_marketing_enabled: data.email_marketing_enabled || false,
@@ -50,15 +50,27 @@ export default function MarketingSettingsTab() {
     }
   }, [user]);
 
-  useState(() => { loadSettings(); });
+  useEffect(() => { loadSettings(); }, [loadSettings]);
 
   const saveSettings = async () => {
     if (!user) return;
     setLoading(true);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const payload: Record<string, unknown> = {
+      owner_id: user.id,
+      meta_pixel_id: settings.meta_pixel_id,
+      google_analytics_id: settings.google_analytics_id,
+      marketing_enabled: settings.marketing_enabled,
+      email_marketing_enabled: settings.email_marketing_enabled,
+      sms_marketing_enabled: settings.sms_marketing_enabled,
+    };
+    if (settings.facebook_access_token.trim()) {
+      payload.facebook_access_token = settings.facebook_access_token.trim();
+    }
+
     const { error } = await (supabase as any)
       .from('marketing_settings')
-      .upsert({ owner_id: user.id, ...settings });
+      .upsert(payload, { onConflict: ['owner_id'] });
 
     if (error) toast.error("فشل في حفظ الإعدادات");
     else toast.success("تم حفظ إعدادات التسويق بنجاح");

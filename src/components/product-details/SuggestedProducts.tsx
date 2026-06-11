@@ -14,16 +14,33 @@ interface SuggestedProduct {
 
 interface SuggestedProductsProps {
   currentProductId: string;
+  storeSlug?: string;
   category?: string;
 }
 
-const SuggestedProducts = ({ currentProductId, category }: SuggestedProductsProps) => {
+const SuggestedProducts = ({ currentProductId, storeSlug, category }: SuggestedProductsProps) => {
   const [suggestedProducts, setSuggestedProducts] = useState<SuggestedProduct[]>([]);
 
   useEffect(() => {
     const fetchSuggestedProducts = async () => {
       if (!currentProductId) return;
+
       try {
+        if (storeSlug) {
+          const { data, error } = await (supabase as any).rpc('get_suggested_products_for_store', {
+            p_slug: storeSlug.trim().toLowerCase(),
+            p_product_id: currentProductId,
+          });
+
+          if (!error && Array.isArray(data)) {
+            setSuggestedProducts(data.slice(0, 4));
+          }
+          return;
+        }
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user?.id) return;
+
         const { data: suggestedData, error: suggestedError } = await (supabase as any)
           .from('suggested_products')
           .select('suggested_product_id')
@@ -36,7 +53,8 @@ const SuggestedProducts = ({ currentProductId, category }: SuggestedProductsProp
         const { data: productsData, error: productsError } = await supabase
           .from('products')
           .select('id, name, price, image_url, category')
-          .in('id', productIds);
+          .in('id', productIds)
+          .eq('owner_id', user.id);
 
         if (!productsError && productsData) {
           setSuggestedProducts(productsData.slice(0, 4));
@@ -46,19 +64,22 @@ const SuggestedProducts = ({ currentProductId, category }: SuggestedProductsProp
       }
     };
     fetchSuggestedProducts();
-  }, [currentProductId]);
+  }, [currentProductId, storeSlug]);
 
   if (suggestedProducts.length === 0) return null;
+
+  const productLink = (id: string) =>
+    storeSlug ? `/store/${storeSlug}/product/${id}` : `/product-details/${id}`;
 
   return (
     <div className="space-y-4 mt-6">
       <h2 className="text-lg font-bold text-right text-foreground">قد يعجبك أيضاً</h2>
-      
+
       <Carousel className="w-full">
         <CarouselContent className="-ml-2">
           {suggestedProducts.map((product) => (
             <CarouselItem key={product.id} className="pl-2 basis-[45%]">
-              <Link to={`/product-details/${product.id}`} className="block">
+              <Link to={productLink(product.id)} className="block">
                 <div className="bg-card rounded-2xl overflow-hidden border border-border/50 hover:shadow-md transition-all">
                   <div className="aspect-square bg-muted relative overflow-hidden">
                     <img

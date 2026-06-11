@@ -71,7 +71,7 @@ const Signup = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) { setError("كلمات المرور غير متطابقة"); return; }
-    if (password.length < 6) { setError("كلمة المرور يجب أن تكون 6 أحرف على الأقل"); return; }
+    if (password.length < 8) { setError("كلمة المرور يجب أن تكون 8 أحرف على الأقل"); return; }
 
     setIsLoading(true);
     setError(null);
@@ -287,12 +287,12 @@ const Signup = () => {
                           type={showPassword ? "text" : "password"}
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          placeholder="6 أحرف على الأقل"
+                          placeholder="8 أحرف على الأقل"
                           className="pl-20 pr-4 py-6 text-right bg-muted/30 border-border/60 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/10 text-foreground transition-all"
                           dir="rtl"
                           disabled={isLoading}
                           required
-                          minLength={6}
+                          minLength={8}
                         />
                         <Lock className="absolute left-11 top-1/2 -translate-y-1/2 text-muted-foreground h-4.5 w-4.5 group-focus-within:text-primary transition-colors" />
                         <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">

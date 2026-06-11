@@ -1,10 +1,12 @@
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { CartItem, Product } from "@/types";
 
 interface CartContextType {
   cartItems: CartItem[];
-  addToCart: (product: Product, selectedSize?: string, selectedColor?: string) => void;
+  storeOwnerId: string | null;
+  setStoreOwner: (ownerId: string) => void;
+  addToCart: (product: Product, selectedSize?: string, selectedColor?: string, quantity?: number) => void;
   removeFromCart: (productId: string, selectedSize?: string, selectedColor?: string) => void;
   updateQuantity: (productId: string, quantity: number, selectedSize?: string, selectedColor?: string) => void;
   clearCart: () => void;
@@ -14,52 +16,82 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+const cartStorageKey = (ownerId: string) => `cart:${ownerId}`;
+
+const loadStoredCart = (ownerId: string | null): CartItem[] => {
+  if (!ownerId) return [];
+  try {
+    const raw = sessionStorage.getItem(cartStorageKey(ownerId));
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+const persistCart = (ownerId: string | null, items: CartItem[]) => {
+  if (!ownerId) return;
+  try {
+    sessionStorage.setItem(cartStorageKey(ownerId), JSON.stringify(items));
+  } catch {
+    /* ignore quota errors */
+  }
+};
+
 export const CartProvider = ({ children }: { children: ReactNode }) => {
+  const [storeOwnerId, setStoreOwnerId] = useState<string | null>(null);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-  const addToCart = (product: Product, selectedSize?: string, selectedColor?: string) => {
+  const setStoreOwner = useCallback((ownerId: string) => {
+    setStoreOwnerId((prev) => {
+      if (prev && prev !== ownerId) {
+        persistCart(prev, []);
+      }
+      const stored = loadStoredCart(ownerId);
+      setCartItems(stored);
+      return ownerId;
+    });
+  }, []);
+
+  useEffect(() => {
+    persistCart(storeOwnerId, cartItems);
+  }, [cartItems, storeOwnerId]);
+
+  const addToCart = (product: Product, selectedSize?: string, selectedColor?: string, quantity = 1) => {
+    if (quantity <= 0) return;
+
     setCartItems((prevItems) => {
-      // Check if the item with same product, size, and color is already in the cart
       const existingItem = prevItems.find(
-        (item) => item.product.id === product.id && 
-                  item.selectedSize === selectedSize && 
-                  item.selectedColor === selectedColor
+        (item) =>
+          item.product.id === product.id &&
+          item.selectedSize === selectedSize &&
+          item.selectedColor === selectedColor
       );
 
       if (existingItem) {
-        // If it exists, increment the quantity
         return prevItems.map((item) =>
-          item.product.id === product.id && 
-          item.selectedSize === selectedSize && 
+          item.product.id === product.id &&
+          item.selectedSize === selectedSize &&
           item.selectedColor === selectedColor
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: item.quantity + quantity }
             : item
         );
-      } else {
-        // If it's new, add it with quantity 1
-        return [...prevItems, { product, quantity: 1, selectedSize, selectedColor }];
       }
-    });
 
-    // No notification needed for adding to cart
+      return [...prevItems, { product, quantity, selectedSize, selectedColor }];
+    });
   };
 
   const removeFromCart = (productId: string, selectedSize?: string, selectedColor?: string) => {
-    const product = cartItems.find(item => 
-      item.product.id === productId && 
-      item.selectedSize === selectedSize && 
-      item.selectedColor === selectedColor
+    setCartItems((prevItems) =>
+      prevItems.filter(
+        (item) =>
+          !(
+            item.product.id === productId &&
+            item.selectedSize === selectedSize &&
+            item.selectedColor === selectedColor
+          )
+      )
     );
-    
-    setCartItems((prevItems) => 
-      prevItems.filter((item) => !(
-        item.product.id === productId && 
-        item.selectedSize === selectedSize && 
-        item.selectedColor === selectedColor
-      ))
-    );
-
-    // No notification needed for removing from cart
   };
 
   const updateQuantity = (productId: string, quantity: number, selectedSize?: string, selectedColor?: string) => {
@@ -68,46 +100,37 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    const product = cartItems.find(item => 
-      item.product.id === productId && 
-      item.selectedSize === selectedSize && 
-      item.selectedColor === selectedColor
-    );
-
     setCartItems((prevItems) =>
       prevItems.map((item) =>
-        item.product.id === productId && 
-        item.selectedSize === selectedSize && 
+        item.product.id === productId &&
+        item.selectedSize === selectedSize &&
         item.selectedColor === selectedColor
-          ? { ...item, quantity } 
+          ? { ...item, quantity }
           : item
       )
     );
-
-    // No notification needed for updating quantity
   };
 
   const clearCart = () => {
     setCartItems([]);
-    // No notification needed for clearing cart
+    if (storeOwnerId) {
+      sessionStorage.removeItem(cartStorageKey(storeOwnerId));
+    }
   };
 
-  // Calculate the total price of all items in the cart
   const cartTotal = cartItems.reduce(
     (total, item) => total + item.product.price * item.quantity,
     0
   );
 
-  // Calculate the total number of items in the cart
-  const cartCount = cartItems.reduce(
-    (count, item) => count + item.quantity,
-    0
-  );
+  const cartCount = cartItems.reduce((count, item) => count + item.quantity, 0);
 
   return (
     <CartContext.Provider
       value={{
         cartItems,
+        storeOwnerId,
+        setStoreOwner,
         addToCart,
         removeFromCart,
         updateQuantity,

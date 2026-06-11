@@ -152,9 +152,9 @@ const Login = () => {
 
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <button type="button" className="text-xs text-primary hover:text-primary/80 font-medium transition-colors">
+                    <Link to="/reset-password" className="text-xs text-primary hover:text-primary/80 font-medium transition-colors">
                       نسيت كلمة المرور؟
-                    </button>
+                    </Link>
                     <label htmlFor="password" className="text-foreground font-medium text-sm">
                       كلمة المرور
                     </label>

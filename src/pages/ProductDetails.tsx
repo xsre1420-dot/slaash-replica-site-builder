@@ -1,8 +1,9 @@
 import { useParams } from "react-router-dom";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Product } from "@/types";
 import { useCart } from "@/context/CartContext";
 import { useStore } from "@/context/StoreContext";
+import { useTenantStore } from "@/hooks/useTenantStore";
 import { Truck, Shield, RotateCcw, Eye, Check } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -54,14 +55,22 @@ const ProductDetailsSkeleton = () => (
 );
 
 const ProductDetails = () => {
-  const { productId } = useParams<{ productId: string }>();
+  const { productId, username: storeSlug } = useParams<{ productId: string; username?: string }>();
+  const isTenantMode = !!storeSlug;
+  const tenant = useTenantStore(storeSlug);
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [selectedColor, setSelectedColor] = useState<string>("");
   const [isAdding, setIsAdding] = useState(false);
-  const { addToCart, cartCount, cartItems } = useCart();
+  const { addToCart, cartCount, cartItems, setStoreOwner } = useCart();
   const { storeSettings } = useStore();
+
+  useEffect(() => {
+    if (isTenantMode && tenant.storeInfo?.ownerId) {
+      setStoreOwner(tenant.storeInfo.ownerId);
+    }
+  }, [isTenantMode, tenant.storeInfo?.ownerId, setStoreOwner]);
 
   const totalAmount = cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
 
@@ -70,10 +79,12 @@ const ProductDetails = () => {
 
   const handleAddToCart = () => {
     if (product && !isAdding) {
-      setIsAdding(true);
-      for (let i = 0; i < quantity; i++) {
-        addToCart(product, selectedSize, selectedColor);
+      if (product.stockQuantity !== undefined && product.stockQuantity <= 0) {
+        toast.error("المنتج غير متوفر في المخزون");
+        return;
       }
+      setIsAdding(true);
+      addToCart(product, selectedSize, selectedColor, quantity);
       
       toast.success(`تمت إضافة "${product.name}" إلى السلة`, {
         description: [
@@ -273,12 +284,12 @@ const ProductDetails = () => {
 
           {/* Rating Section */}
           <ScrollReveal delay={350}>
-            <RatingSection productId={productId || ""} />
+            <RatingSection productId={productId || ""} storeSlug={storeSlug} />
           </ScrollReveal>
 
           {/* Suggested Products */}
           <ScrollReveal delay={400}>
-            <SuggestedProducts currentProductId={productId || ""} category={product.category} />
+            <SuggestedProducts currentProductId={productId || ""} storeSlug={storeSlug} category={product.category} />
           </ScrollReveal>
         </div>
       </div>

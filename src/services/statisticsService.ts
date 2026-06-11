@@ -11,48 +11,50 @@ const withTimeout = <T>(promise: Promise<T>, ms = 10000): Promise<T> => {
 };
 
 export const fetchStatisticsData = async (dateRange: string): Promise<DatabaseData> => {
-  // Get current user for cache key
   const { data: { user } } = await supabase.auth.getUser();
-  const ownerId = user?.id || 'anon';
-  const cacheKey = CacheKeys.statistics(ownerId, dateRange);
+  const ownerId = user?.id;
+  const cacheKey = CacheKeys.statistics(ownerId || 'anon', dateRange);
 
-  // Check cache first
+  if (!ownerId) {
+    return { orders: [], orderItems: [], customers: [], products: [], visits: [] };
+  }
+
   const cached = cache.get<DatabaseData>(cacheKey);
   if (cached) return cached;
 
-  // Deduplicate concurrent requests for same range
   return dedup(cacheKey, async () => {
     const days = parseInt(dateRange) || 7;
     const extendedDays = days * 2;
     const extendedStart = new Date(Date.now() - extendedDays * 86400000);
     const dateFilter = extendedStart.toISOString();
 
-    try {
-      // Single parallel batch for all data
-      const [ordersRes, productsRes] = await withTimeout(
-        Promise.all([
-          supabase.from('orders')
-            .select('id,status,total,created_at,customer_name,customer_phone,delivery_fee')
-            .gte('created_at', dateFilter),
-          supabase.from('products')
-            .select('id,name,price,stock_quantity'),
-        ]),
-        12000
-      );
+    const [ordersRes, productsRes] = await withTimeout(
+      Promise.all([
+        supabase.from('orders')
+          .select('id,status,total_amount,created_at,customer_name,customer_phone')
+          .eq('owner_id', ownerId)
+          .gte('created_at', dateFilter),
+        supabase.from('products')
+          .select('id,name,price,stock_quantity')
+          .eq('owner_id', ownerId),
+      ]),
+      12000
+    );
 
-      const result: DatabaseData = {
-        orders: ordersRes.data || [],
-        orderItems: [],
-        customers: [],
-        products: productsRes.data || [],
-        visits: [],
-      };
-
-      // Cache for 30s (volatile data)
-      cache.set(cacheKey, result, CacheTTL.SHORT, CacheTTL.STALE);
-      return result;
-    } catch (error) {
-      return { orders: [], orderItems: [], customers: [], products: [], visits: [] };
+    if (ordersRes.error || productsRes.error) {
+      console.error('Statistics fetch failed:', ordersRes.error || productsRes.error);
+      throw ordersRes.error || productsRes.error;
     }
+
+    const result: DatabaseData = {
+      orders: ordersRes.data || [],
+      orderItems: [],
+      customers: [],
+      products: productsRes.data || [],
+      visits: [],
+    };
+
+    cache.set(cacheKey, result, CacheTTL.SHORT, CacheTTL.STALE);
+    return result;
   });
 };

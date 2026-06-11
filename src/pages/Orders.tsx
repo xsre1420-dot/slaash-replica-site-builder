@@ -17,8 +17,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 
+import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
+
 const Orders = () => {
-  const { filteredOrders, searchQuery, setSearchQuery, updateOrderStatus, loading, hasMore, loadMore } = useOrders();
+  const { filteredOrders, searchQuery, setSearchQuery, updateOrderStatus, loading, hasMore, loadMore, refetch } = useOrders();
+  useRealtimeOrders(refetch);
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
 

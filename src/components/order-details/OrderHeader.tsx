@@ -5,6 +5,7 @@ import { CardTitle, CardDescription } from "@/components/ui/card";
 import StatusChangeDropdown from "./StatusChangeDropdown";
 import { useStore } from "@/context/StoreContext";
 import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -17,15 +18,18 @@ interface OrderHeaderProps {
 
 const OrderHeader = ({ orderId, date, status: initialStatus, governorate }: OrderHeaderProps) => {
   const { storeGovernorate } = useStore();
+  const { user } = useAuth();
   const [currentStatus, setCurrentStatus] = useState(initialStatus);
   const { toast } = useToast();
   
   const handleStatusChange = async (orderId: string, newStatus: 'pending' | 'completed' | 'cancelled') => {
     try {
+      if (!user?.id) throw new Error('Not authenticated');
       const { error } = await supabase
         .from('orders')
         .update({ status: newStatus })
-        .eq('id', orderId);
+        .eq('id', orderId)
+        .eq('owner_id', user.id);
 
       if (error) throw error;
 

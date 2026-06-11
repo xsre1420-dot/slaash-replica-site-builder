@@ -9,6 +9,15 @@ import { getQueuedOperations, removeFromQueue, addToQueue, QueuedOperation } fro
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+const ALLOWED_OFFLINE_TABLES = new Set([
+  'products',
+  'categories',
+  'marketing_coupons',
+  'store_settings',
+  'product_reviews',
+  'suggested_products',
+]);
+
 export const useOfflineQueue = () => {
   const processingRef = useRef(false);
 
@@ -17,6 +26,12 @@ export const useOfflineQueue = () => {
     processingRef.current = true;
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) {
+        processingRef.current = false;
+        return;
+      }
+
       const operations = await getQueuedOperations();
       if (operations.length === 0) {
         processingRef.current = false;
@@ -25,26 +40,66 @@ export const useOfflineQueue = () => {
 
       console.log(`[OfflineQueue] Processing ${operations.length} queued operations`);
       let successCount = 0;
+      let skippedCount = 0;
 
       for (const op of operations) {
+        if (!ALLOWED_OFFLINE_TABLES.has(op.table)) {
+          console.warn(`[OfflineQueue] Skipping unsupported table: ${op.table}`);
+          skippedCount++;
+          continue;
+        }
+
         try {
           let error: any;
-          
+          const payloadOwnerId = op.data?.owner_id;
+
+          if (payloadOwnerId !== user.id) {
+            console.warn('[OfflineQueue] Skipping operation with mismatched owner_id', op);
+            skippedCount++;
+            continue;
+          }
+
           if (op.type === 'insert') {
+            if (!op.data?.owner_id) {
+              console.warn('[OfflineQueue] Skipping insert without owner_id', op);
+              skippedCount++;
+              continue;
+            }
             const result = await supabase.from(op.table as any).insert(op.data);
             error = result.error;
           } else if (op.type === 'update') {
-            const { id, ...updateData } = op.data;
-            const result = await supabase.from(op.table as any).update(updateData).eq('id', id);
+            const { id, owner_id, ...updateData } = op.data;
+            if (!id || !owner_id) {
+              console.warn('[OfflineQueue] Skipping update without id or owner_id', op);
+              skippedCount++;
+              continue;
+            }
+            const result = await supabase
+              .from(op.table as any)
+              .update(updateData)
+              .eq('id', id)
+              .eq('owner_id', owner_id);
             error = result.error;
           } else if (op.type === 'delete') {
-            const result = await supabase.from(op.table as any).delete().eq('id', op.data.id);
+            const { id, owner_id } = op.data;
+            if (!id || !owner_id) {
+              console.warn('[OfflineQueue] Skipping delete without id or owner_id', op);
+              skippedCount++;
+              continue;
+            }
+            const result = await supabase
+              .from(op.table as any)
+              .delete()
+              .eq('id', id)
+              .eq('owner_id', owner_id);
             error = result.error;
           }
 
           if (!error && op.id) {
             await removeFromQueue(op.id);
             successCount++;
+          } else if (error) {
+            console.error('[OfflineQueue] Operation failed:', op.table, error.message);
           }
         } catch (e) {
           console.warn('[OfflineQueue] Failed to process operation:', e);
@@ -53,6 +108,9 @@ export const useOfflineQueue = () => {
 
       if (successCount > 0) {
         toast.success(`تمت مزامنة ${successCount} عملية معلقة`);
+      }
+      if (skippedCount > 0) {
+        toast.warning(`${skippedCount} عملية لم تُزامَن — بيانات غير مكتملة`);
       }
     } finally {
       processingRef.current = false;

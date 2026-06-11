@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Product } from "@/types";
 
@@ -16,6 +17,7 @@ interface QuickEditDialogProps {
 }
 
 export const QuickEditDialog = ({ product, open, onOpenChange, onSaved }: QuickEditDialogProps) => {
+  const { user } = useAuth();
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
@@ -33,7 +35,7 @@ export const QuickEditDialog = ({ product, open, onOpenChange, onSaved }: QuickE
   };
 
   const handleSave = async () => {
-    if (!product) return;
+    if (!product || !user) return;
     const priceNum = parseFloat(price);
     if (!name.trim() || isNaN(priceNum) || priceNum <= 0) {
       toast.error("يرجى إدخال بيانات صالحة");
@@ -49,7 +51,8 @@ export const QuickEditDialog = ({ product, open, onOpenChange, onSaved }: QuickE
         stock_quantity: parseInt(stock) || 0,
         cost: cost ? parseFloat(cost) || null : null,
       })
-      .eq("id", product.id);
+      .eq("id", product.id)
+      .eq("owner_id", user.id);
 
     setSaving(false);
     if (error) {

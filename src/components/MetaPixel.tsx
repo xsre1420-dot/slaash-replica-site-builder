@@ -3,6 +3,8 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 interface MetaPixelProps {
+  /** Store owner's ID — required on public storefronts so the correct merchant pixel loads */
+  storeOwnerId?: string | null;
   event?: 'ViewContent' | 'AddToCart' | 'Purchase' | 'CompleteRegistration';
   data?: {
     content_ids?: string[];
@@ -16,50 +18,73 @@ interface MetaPixelProps {
 declare global {
   interface Window {
     fbq: any;
+    _fbq?: any;
+    _metaPixelOwnerId?: string;
   }
 }
 
-const MetaPixel = ({ event, data }: MetaPixelProps) => {
+const MetaPixel = ({ storeOwnerId, event, data }: MetaPixelProps) => {
   const { user } = useAuth();
+  const pixelOwnerId = storeOwnerId || user?.id;
 
   useEffect(() => {
-    if (!user) return;
+    if (!pixelOwnerId) return;
 
     const loadPixelSettings = async () => {
       const { data: settings } = await supabase
         .from('marketing_settings')
         .select('meta_pixel_id')
-        .eq('owner_id', user.id)
+        .eq('owner_id', pixelOwnerId)
         .single();
 
-      if (!settings?.meta_pixel_id) return;
+      const pixelId = String(settings?.meta_pixel_id || '').trim();
+      if (!pixelId || !/^[0-9]+$/.test(pixelId)) return;
 
-      // Initialize Meta Pixel if not already loaded
-      if (!window.fbq) {
+      const needsReinit = window._metaPixelOwnerId && window._metaPixelOwnerId !== pixelOwnerId;
+
+      if (!window.fbq || needsReinit) {
+        if (needsReinit && window.fbq) {
+          window.fbq('init', pixelId);
+          window.fbq('track', 'PageView');
+          window._metaPixelOwnerId = pixelOwnerId;
+          return;
+        }
+
         const script = document.createElement('script');
-        script.innerHTML = `
-          !function(f,b,e,v,n,t,s)
-          {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-          n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-          if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-          n.queue=[];t=b.createElement(e);t.async=!0;
-          t.src=v;s=b.getElementsByTagName(e)[0];
-          s.parentNode.insertBefore(t,s)}(window, document,'script',
-          'https://connect.facebook.net/en_US/fbevents.js');
-        `;
+        script.async = true;
+        script.src = 'https://connect.facebook.net/en_US/fbevents.js';
+
+        window.fbq = function () {
+          if ((window.fbq as any).callMethod) {
+            (window.fbq as any).callMethod.apply((window.fbq as any), arguments as any);
+          } else {
+            (window.fbq as any).queue.push(arguments);
+          }
+        } as any;
+        if (!window._fbq) window._fbq = window.fbq;
+        (window.fbq as any).push = window.fbq;
+        (window.fbq as any).loaded = true;
+        (window.fbq as any).version = '2.0';
+        (window.fbq as any).queue = [];
+
+        script.onload = () => {
+          window.fbq('init', pixelId);
+          window.fbq('track', 'PageView');
+          window._metaPixelOwnerId = pixelOwnerId;
+        };
+
         document.head.appendChild(script);
 
-        // Initialize pixel
-        window.fbq('init', settings.meta_pixel_id);
-        window.fbq('track', 'PageView');
-
-        // Add noscript fallback
         const noscript = document.createElement('noscript');
-        noscript.innerHTML = `<img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=${settings.meta_pixel_id}&ev=PageView&noscript=1" />`;
+        const img = document.createElement('img');
+        img.height = 1;
+        img.width = 1;
+        img.style.display = 'none';
+        img.src = `https://www.facebook.com/tr?id=${encodeURIComponent(pixelId)}&ev=PageView&noscript=1`;
+        noscript.appendChild(img);
         document.body.appendChild(noscript);
       }
 
-      // Track specific events if provided
       if (event && window.fbq) {
         if (data) {
           window.fbq('track', event, data);
@@ -70,7 +95,7 @@ const MetaPixel = ({ event, data }: MetaPixelProps) => {
     };
 
     loadPixelSettings();
-  }, [user, event, data]);
+  }, [pixelOwnerId, event, data]);
 
   return null;
 };

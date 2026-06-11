@@ -40,7 +40,7 @@ const Store = () => {
   const [filterPriceRange, setFilterPriceRange] = useState<[number, number]>([0, 0]);
   const [filterSizes, setFilterSizes] = useState<string[]>([]);
 
-  const { addToCart, cartItems, cartCount, updateQuantity, cartTotal } = useCart();
+  const { addToCart, cartItems, cartCount, updateQuantity, cartTotal, setStoreOwner } = useCart();
   const ownStore = useStore();
   const { trackAddToCart, trackViewContent } = useMetaPixel();
   const { favorites, toggleFavorite, isFavorite, count: favCount } = useFavorites();
@@ -65,6 +65,14 @@ const Store = () => {
   const pullStartY = useRef(0);
   const categoriesRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef(0);
+
+  useEffect(() => {
+    if (isTenantMode && tenant.storeInfo?.ownerId) {
+      setStoreOwner(tenant.storeInfo.ownerId);
+    } else if (!isTenantMode && ownStore) {
+      // owner preview uses auth context owner via loadProducts
+    }
+  }, [isTenantMode, tenant.storeInfo?.ownerId, setStoreOwner, ownStore]);
 
   // --- Load data: tenant mode vs owner mode ---
   const loadData = useCallback(async (force = false) => {
@@ -196,6 +204,9 @@ const Store = () => {
   };
 
   const handleAddToCart = (product: Product) => {
+    if (isTenantMode && tenant.storeInfo?.ownerId) {
+      setStoreOwner(tenant.storeInfo.ownerId);
+    }
     addToCart(product);
     trackAddToCart(product.id, product.name, product.price);
     toast({
@@ -262,7 +273,7 @@ const Store = () => {
   return (
     <StoreThemeProvider colors={themeColors}>
     <div className="min-h-screen bg-background" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-      <MetaPixel />
+      <MetaPixel storeOwnerId={isTenantMode ? tenant.storeInfo?.ownerId : undefined} />
 
       {/* Pull to refresh indicator */}
       {isRefreshing && (

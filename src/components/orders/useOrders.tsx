@@ -19,9 +19,17 @@ export const useOrders = () => {
   const pageRef = useRef(0);
 
   const fetchOrders = useCallback(async (page = 0, append = false) => {
+    const ownerId = user?.id;
+    if (!ownerId) {
+      setOrders([]);
+      setFilteredOrders([]);
+      setHasMore(false);
+      setLoading(false);
+      return;
+    }
+
     if (!append) setLoading(true);
-    
-    const ownerId = user?.id || 'anon';
+
     const cacheKey = CacheKeys.orders(ownerId, page);
 
     // Check cache for this page
@@ -39,14 +47,14 @@ export const useOrders = () => {
     const from = page * ORDERS_PER_PAGE;
     const to = from + ORDERS_PER_PAGE - 1;
 
-    // Deduplicate concurrent fetches for same page
-    const mapped = await dedup(`fetch-orders-${page}`, async () => {
+    // Deduplicate concurrent fetches for same page and owner
+    const mapped = await dedup(`fetch-orders-${ownerId}-${page}`, async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('id, status, total, delivery_fee, created_at, updated_at, customer_name, customer_phone, customer_address, customer_governorate, items, notes')
+        .select('id, status, total_amount, created_at, updated_at, customer_name, customer_phone, customer_address, customer_governorate, items, notes, order_items(*)')
+        .eq('owner_id', ownerId)
         .order('created_at', { ascending: false })
         .range(from, to);
-
       if (error || !data) return [];
       return data.map(mapDbOrder);
     });
@@ -97,10 +105,14 @@ export const useOrders = () => {
   }, [hasMore, loading, fetchOrders]);
 
   const archiveOrder = async (orderId: string) => {
+    const ownerId = user?.id;
+    if (!ownerId) return;
+
     const { error } = await supabase
       .from('orders')
       .update({ status: 'cancelled' })
-      .eq('id', orderId);
+      .eq('id', orderId)
+      .eq('owner_id', ownerId);
 
     if (!error) {
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' as const } : o));
@@ -109,10 +121,14 @@ export const useOrders = () => {
   };
 
   const updateOrderStatus = async (orderId: string, newStatus: "pending" | "completed" | "cancelled") => {
+    const ownerId = user?.id;
+    if (!ownerId) return;
+
     const { error } = await supabase
       .from('orders')
       .update({ status: newStatus })
-      .eq('id', orderId);
+      .eq('id', orderId)
+      .eq('owner_id', ownerId);
 
     if (!error) {
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));

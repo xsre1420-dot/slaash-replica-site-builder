@@ -47,12 +47,21 @@ export const setCurrentOwner = (ownerId: string | null) => {
   _currentOwnerId = ownerId;
 };
 
-const getOwnerId = () => _currentOwnerId || 'anonymous';
+const getOwnerId = (): string | null => _currentOwnerId;
 
 // --- Categories ---
 
+const getAuthOwnerId = async (): Promise<string | null> => {
+  if (_currentOwnerId) return _currentOwnerId;
+  const { data: { user } } = await supabase.auth.getUser();
+  return user?.id ?? null;
+};
+
 export const getCategories = async (force = false): Promise<Category[]> => {
-  const key = CacheKeys.categories(getOwnerId());
+  const ownerId = await getAuthOwnerId();
+  if (!ownerId) return [];
+
+  const key = CacheKeys.categories(ownerId);
 
   if (!force) {
     const cached = cache.get<Category[]>(key);
@@ -64,6 +73,7 @@ export const getCategories = async (force = false): Promise<Category[]> => {
       const { data, error } = await supabase
         .from('categories')
         .select('id, name, display_order')
+        .eq('owner_id', ownerId)
         .order('display_order', { ascending: true });
 
       if (error) {
@@ -87,13 +97,18 @@ export const getCategories = async (force = false): Promise<Category[]> => {
 };
 
 export const getCategoriesSync = (): Category[] => {
-  return cache.get<Category[]>(CacheKeys.categories(getOwnerId())) || [];
+  const ownerId = getOwnerId();
+  if (!ownerId) return [];
+  return cache.get<Category[]>(CacheKeys.categories(ownerId)) || [];
 };
 
 // --- Products ---
 
 export const loadProducts = async (force = false): Promise<Product[]> => {
-  const key = CacheKeys.products(getOwnerId());
+  const ownerId = await getAuthOwnerId();
+  if (!ownerId) return [];
+
+  const key = CacheKeys.products(ownerId);
 
   if (!force) {
     const cached = cache.get<Product[]>(key);
@@ -105,6 +120,7 @@ export const loadProducts = async (force = false): Promise<Product[]> => {
       const { data, error } = await supabase
         .from('products')
         .select('id, name, description, category, price, cost, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, created_at, updated_at')
+        .eq('owner_id', ownerId)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -123,7 +139,9 @@ export const loadProducts = async (force = false): Promise<Product[]> => {
 };
 
 export const getProductsSync = (): Product[] => {
-  return cache.get<Product[]>(CacheKeys.products(getOwnerId())) || [];
+  const ownerId = getOwnerId();
+  if (!ownerId) return [];
+  return cache.get<Product[]>(CacheKeys.products(ownerId)) || [];
 };
 
 // Keep backward compat
@@ -191,6 +209,9 @@ export const addProduct = async (product: Product): Promise<{ success: boolean; 
 
 export const updateProduct = async (productId: string, updatedProduct: Product): Promise<{ success: boolean; error?: string }> => {
   try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: 'User not authenticated' };
+
     const { error } = await supabase
       .from('products')
       .update({
@@ -206,7 +227,8 @@ export const updateProduct = async (productId: string, updatedProduct: Product):
         sizes: updatedProduct.sizes || null,
         variants: updatedProduct.variants ? JSON.parse(JSON.stringify(updatedProduct.variants)) : null
       })
-      .eq('id', productId);
+      .eq('id', productId)
+      .eq('owner_id', user.id);
 
     if (error) return { success: false, error: error.message };
 
@@ -223,10 +245,14 @@ export const updateProduct = async (productId: string, updatedProduct: Product):
 
 export const deleteProduct = async (productId: string): Promise<{ success: boolean; error?: string }> => {
   try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: 'User not authenticated' };
+
     const { error } = await supabase
       .from('products')
       .delete()
-      .eq('id', productId);
+      .eq('id', productId)
+      .eq('owner_id', user.id);
 
     if (error) return { success: false, error: error.message };
 
@@ -282,10 +308,14 @@ export const addCategory = async (category: Category): Promise<{ success: boolea
 
 export const updateCategory = async (categoryId: string, updatedCategory: Category): Promise<{ success: boolean; error?: string }> => {
   try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: 'User not authenticated' };
+
     const { error } = await supabase
       .from('categories')
       .update({ name: updatedCategory.name, display_order: updatedCategory.order || 0 })
-      .eq('id', categoryId);
+      .eq('id', categoryId)
+      .eq('owner_id', user.id);
 
     if (error) return { success: false, error: error.message };
 
@@ -300,10 +330,14 @@ export const updateCategory = async (categoryId: string, updatedCategory: Catego
 
 export const deleteCategory = async (categoryId: string): Promise<{ success: boolean; error?: string }> => {
   try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: 'User not authenticated' };
+
     const { error } = await supabase
       .from('categories')
       .delete()
-      .eq('id', categoryId);
+      .eq('id', categoryId)
+      .eq('owner_id', user.id);
 
     if (error) return { success: false, error: error.message };
 

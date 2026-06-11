@@ -91,14 +91,20 @@ const generateThumbnail = async (file: File): Promise<Blob> => {
  * Returns the public URL of the uploaded image
  */
 export const uploadImage = async (file: File, userId: string): Promise<string> => {
-  // Compress the image before uploading
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  if (!allowedTypes.includes(file.type)) {
+    throw new Error('نوع الملف غير مدعوم. يرجى رفع صورة JPG أو PNG أو WebP');
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error('حجم الصورة يجب أن لا يتجاوز 5MB');
+  }
+
   let processedFile: Blob;
   try {
     processedFile = await compressImage(file, MAX_WIDTH, MAX_HEIGHT, QUALITY);
-    console.log(`Image compressed: ${(file.size / 1024).toFixed(0)}KB → ${(processedFile.size / 1024).toFixed(0)}KB`);
   } catch (err) {
-    console.warn('Image compression failed, uploading original:', err);
-    processedFile = file;
+    console.error('Image compression failed:', err);
+    throw new Error('فشل في معالجة الصورة. يرجى اختيار ملف صورة صالح');
   }
 
   const ext = processedFile.type === 'image/webp' ? 'webp' : 'jpg';
@@ -162,19 +168,30 @@ export const isBlobUrl = (url: string): boolean => {
  */
 export const deleteImage = async (publicUrl: string): Promise<void> => {
   try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.id) {
+      throw new Error('يجب تسجيل الدخول لحذف الصورة');
+    }
+
     const url = new URL(publicUrl);
     const pathParts = url.pathname.split(`/object/public/${BUCKET}/`);
     if (pathParts.length < 2) return;
-    
-    const filePath = pathParts[1];
+
+    const filePath = decodeURIComponent(pathParts[1]);
+    const pathOwnerId = filePath.split('/')[0];
+
+    if (pathOwnerId !== user.id) {
+      throw new Error('غير مصرح بحذف هذه الصورة');
+    }
+
     const thumbPath = filePath.replace(/^([^/]+)\//, '$1/thumbs/');
-    
-    // Delete both original and thumbnail
+
     await Promise.allSettled([
       supabase.storage.from(BUCKET).remove([filePath]),
       supabase.storage.from(BUCKET).remove([thumbPath]),
     ]);
   } catch (error) {
     console.error('Error deleting image:', error);
+    throw error;
   }
 };

@@ -13,6 +13,8 @@ interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<{ error?: string }>;
   register: (email: string, password: string, username: string, storeName?: string) => Promise<{ error?: string }>;
+  resetPassword: (email: string) => Promise<{ error?: string; success?: boolean }>;
+  updatePassword: (newPassword: string) => Promise<{ error?: string }>;
   logout: () => void;
   loading: boolean;
 }
@@ -44,17 +46,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const { data: profile } = await (supabase as any)
         .from('profiles')
-        .select('user_id, username, store_name')
+        .select('id, user_id, username, store_name')
         .eq('user_id', userId)
         .maybeSingle();
 
+      const profileId = profile?.user_id || profile?.id || userId;
+
       if (profile) {
-        setUserAndOwner({ id: profile.user_id, username: profile.username || 'مستخدم', store_name: profile.store_name || undefined });
+        setUserAndOwner({
+          id: profileId,
+          username: profile.username || 'مستخدم',
+          store_name: profile.store_name || undefined,
+        });
       } else if (fallbackMeta) {
         setUserAndOwner({
           id: userId,
           username: fallbackMeta.username || 'مستخدم',
-          store_name: fallbackMeta.store_name
+          store_name: fallbackMeta.store_name,
         });
       }
     } catch (e) {
@@ -63,7 +71,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUserAndOwner({
           id: userId,
           username: fallbackMeta.username || 'مستخدم',
-          store_name: fallbackMeta.store_name
+          store_name: fallbackMeta.store_name,
         });
       }
     }
@@ -76,7 +84,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUserAndOwner({
           id: session.user.id,
           username: meta.username || session.user.email?.split('@')[0] || 'مستخدم',
-          store_name: meta.store_name
+          store_name: meta.store_name,
         });
 
         if (event === 'SIGNED_IN') {
@@ -96,7 +104,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUserAndOwner({
             id: session.user.id,
             username: meta.username || session.user.email?.split('@')[0] || 'مستخدم',
-            store_name: meta.store_name
+            store_name: meta.store_name,
           });
           setTimeout(() => loadProfile(session.user.id, meta), 0);
         } else {
@@ -140,18 +148,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           emailRedirectTo: `${window.location.origin}/builder`,
           data: {
             username,
-            store_name: storeName || 'متجري'
-          }
-        }
+            store_name: storeName || 'متجري',
+          },
+        },
       });
-      
+
       if (error) {
         return { error: error.message };
       }
-      
+
       return {};
-    } catch (error) {
+    } catch {
       return { error: 'حدث خطأ أثناء إنشاء الحساب' };
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) return { error: error.message };
+      return { success: true };
+    } catch {
+      return { error: 'تعذر إرسال رابط إعادة التعيين' };
+    }
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) return { error: error.message };
+      return {};
+    } catch {
+      return { error: 'تعذر تحديث كلمة المرور' };
     }
   };
 
@@ -165,8 +195,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     login,
     register,
+    resetPassword,
+    updatePassword,
     logout,
-    loading
+    loading,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

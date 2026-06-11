@@ -58,12 +58,18 @@ const Settings = () => {
     if (user?.id) {
       (supabase as any)
         .from('store_settings')
-        .select('store_slug')
+        .select('store_slug, return_policy, privacy_policy, whatsapp_number')
         .eq('owner_id', user.id)
         .maybeSingle()
         .then(({ data }) => {
-          if (data?.store_slug) {
-            setSettings(prev => ({ ...prev, storeSlug: data.store_slug }));
+          if (data) {
+            setSettings(prev => ({
+              ...prev,
+              storeSlug: data.store_slug || prev.storeSlug,
+              returnPolicy: data.return_policy || prev.returnPolicy,
+              privacyPolicy: data.privacy_policy || prev.privacyPolicy,
+              whatsappNumber: data.whatsapp_number || prev.whatsappNumber,
+            }));
           }
         });
     }
@@ -104,7 +110,17 @@ const Settings = () => {
       if (user?.id && settings.storeSlug) {
         await (supabase as any)
           .from('store_settings')
-          .update({ store_slug: settings.storeSlug })
+          .update({
+            store_slug: settings.storeSlug,
+            return_policy: settings.returnPolicy || null,
+            privacy_policy: settings.privacyPolicy || null,
+            whatsapp_number: settings.whatsappNumber || null,
+            payment_methods: [
+              settings.paymentCashOnDelivery ? 'cash_on_delivery' : null,
+              settings.paymentCreditCard ? 'credit_card' : null,
+              settings.paymentEwallet ? 'digital_wallet' : null,
+            ].filter(Boolean),
+          })
           .eq('owner_id', user.id);
       }
       localStorage.setItem("extra_store_settings", JSON.stringify({

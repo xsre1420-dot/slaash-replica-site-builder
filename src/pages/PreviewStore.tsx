@@ -6,6 +6,7 @@ import { Product, Category } from "@/types";
 import { useCart } from "@/context/CartContext";
 import { useStore } from "@/context/StoreContext";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/AuthContext";
 import MetaPixel from "@/components/MetaPixel";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import OptimizedImage from "@/components/OptimizedImage";
@@ -17,13 +18,18 @@ const PreviewStore = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const { addToCart, cartItems } = useCart();
+  const { user } = useAuth();
+  const { addToCart, cartItems, setStoreOwner } = useCart();
   const { storeName, storeLogo, storeSettings } = useStore();
   const { trackAddToCart, trackViewContent } = useMetaPixel();
   const navigate = useNavigate();
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    if (user?.id) setStoreOwner(user.id);
+  }, [user?.id, setStoreOwner]);
 
   // Load categories from Supabase
   useEffect(() => {
@@ -125,7 +131,7 @@ const PreviewStore = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <MetaPixel />
+      <MetaPixel storeOwnerId={user?.id} />
       
       {/* Header with Logo and Store Name */}
       <div className="bg-background sticky top-0 z-40 border-b border-border">

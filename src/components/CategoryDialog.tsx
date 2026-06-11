@@ -69,7 +69,14 @@ const CategoryDialog = ({ categories, onCategoryChange, onAddLocalCategory, open
     }
     setLoading(true);
     try {
-      const { error } = await supabase.from('categories').update({ name: editingCategory.name.trim() }).eq('id', editingCategory.id);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('categories')
+        .update({ name: editingCategory.name.trim() })
+        .eq('id', editingCategory.id)
+        .eq('owner_id', user.id);
       if (error) throw error;
       onCategoryChange();
       setIsEditDialogOpen(false);
@@ -85,7 +92,14 @@ const CategoryDialog = ({ categories, onCategoryChange, onAddLocalCategory, open
     if (!deletingCategory) return;
     setLoading(true);
     try {
-      const { error } = await supabase.from('categories').delete().eq('id', deletingCategory.id);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', deletingCategory.id)
+        .eq('owner_id', user.id);
       if (error) throw error;
       onCategoryChange();
       setIsDeleteDialogOpen(false);
