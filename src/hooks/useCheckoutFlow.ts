@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Order } from "@/types";
 import { saveOrderToDatabase, clearCheckoutIdempotencyKey } from "@/utils/orderUtils";
 import { mapOrderError } from "@/utils/orderErrors";
+import { logger, metrics, reportError, alertOnError } from "@/lib/observability";
 import {
   fetchFreshProducts,
   validateAndRefreshCart,
@@ -174,6 +175,7 @@ export const useCheckoutFlow = () => {
     }
 
     setIsSubmitting(true);
+    metrics.increment('checkout.submit.started');
 
     try {
       const productIds = cartItems.map((i) => i.product.id);
@@ -262,13 +264,17 @@ export const useCheckoutFlow = () => {
       setOrderCompleted(true);
       clearCart();
       sessionStorage.removeItem(COUPON_STORAGE_KEY(ownerId));
+      metrics.increment('checkout.submit.success');
+      logger.info('checkout.submit.success', { orderId: savedOrder?.id || orderId, ownerId });
 
       setTimeout(() => {
         setOrderCompleted(false);
         navigate(storeHomePath);
       }, 3000);
     } catch (error) {
-      console.error("Error submitting order:", error);
+      metrics.increment('checkout.submit.failed');
+      reportError(error, { source: 'checkout.submit', ownerId });
+      alertOnError('checkout.submit', error, { ownerId });
       toast.error(mapOrderError(error instanceof Error ? error.message : "فشل في إنشاء الطلب"));
     } finally {
       setIsSubmitting(false);

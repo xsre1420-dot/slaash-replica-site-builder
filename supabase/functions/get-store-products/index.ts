@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
 import { isProduction } from '../_shared/env.ts';
+import { logStructured, withEdgeSpan } from '../_shared/observability.ts';
 
 const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') || '').split(',').map(s => s.trim()).filter(Boolean);
 
@@ -50,11 +51,13 @@ function validateSlug(slug: string): boolean {
 }
 
 Deno.serve(async (req) => {
+  return withEdgeSpan('get-store-products', async () => {
   const origin = req.headers.get('origin');
   const corsHeaders = getCorsHeaders(origin);
   const clientIP = getRealIP(req);
 
   if (!corsHeaders) {
+    logStructured('warn', 'get-store-products.origin_blocked', { origin, clientIP });
     return new Response(JSON.stringify({ error: 'Origin not allowed' }), {
       status: 403,
       headers: { 'Content-Type': 'application/json' },
@@ -66,6 +69,7 @@ Deno.serve(async (req) => {
   }
 
   if (isRateLimited(clientIP)) {
+    logStructured('warn', 'get-store-products.rate_limited', { clientIP });
     return new Response(JSON.stringify({ error: 'Too many requests' }), {
       status: 429,
       headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': '60' },
@@ -162,10 +166,14 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error(`Error from IP ${clientIP}:`, error);
+    logStructured('error', 'get-store-products.error', {
+      clientIP,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
+  }, { function: 'get-store-products' });
 });

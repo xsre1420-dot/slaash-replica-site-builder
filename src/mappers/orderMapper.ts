@@ -17,7 +17,7 @@ export const mapDbOrder = (row: Record<string, unknown>): Order => {
         };
 
         return {
-          product: product as CartItem['product'],
+          product: product as unknown as CartItem['product'],
           quantity: Number(item.quantity) || 1,
           selectedSize: (variantMeta.selected_size as string) || (item.selectedSize as string),
           selectedColor: (variantMeta.selected_color as string) || (item.selectedColor as string),

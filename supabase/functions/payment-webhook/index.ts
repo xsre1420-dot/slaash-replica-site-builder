@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
 import { isProduction, requireInProduction } from '../_shared/env.ts';
+import { logStructured, withEdgeSpan } from '../_shared/observability.ts';
 
 const STRIPE_WEBHOOK_SECRET = Deno.env.get('STRIPE_WEBHOOK_SECRET') || '';
 
@@ -43,57 +44,63 @@ async function verifyStripeSignature(payload: string, signature: string, secret:
 }
 
 Deno.serve(async (req) => {
-  if (req.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 });
-  }
+  return withEdgeSpan('payment-webhook', async () => {
+    if (req.method !== 'POST') {
+      return new Response('Method not allowed', { status: 405 });
+    }
 
-  const webhookSecret = requireInProduction('STRIPE_WEBHOOK_SECRET', STRIPE_WEBHOOK_SECRET);
-  if (isProduction() && !webhookSecret) {
-    return new Response(JSON.stringify({ error: 'Webhook not configured' }), {
-      status: 503,
+    const webhookSecret = requireInProduction('STRIPE_WEBHOOK_SECRET', STRIPE_WEBHOOK_SECRET);
+    if (isProduction() && !webhookSecret) {
+      logStructured('error', 'payment-webhook.misconfigured');
+      return new Response(JSON.stringify({ error: 'Webhook not configured' }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const rawBody = await req.text();
+    const signature = req.headers.get('stripe-signature') || '';
+
+    if (webhookSecret) {
+      const valid = await verifyStripeSignature(rawBody, signature, webhookSecret);
+      if (!valid) {
+        logStructured('warn', 'payment-webhook.invalid_signature');
+        return new Response(JSON.stringify({ error: 'Invalid signature' }), { status: 401 });
+      }
+    }
+
+    let event: { id?: string; type?: string; data?: unknown };
+    try {
+      event = JSON.parse(rawBody);
+    } catch {
+      return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400 });
+    }
+
+    const eventId = event.id || `anon-${Date.now()}`;
+    const eventType = event.type || 'unknown';
+
+    logStructured('info', 'payment-webhook.received', { eventId, eventType });
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, serviceKey);
+
+    const { data, error } = await supabase.rpc('process_payment_webhook_event', {
+      p_provider: 'stripe',
+      p_event_id: eventId,
+      p_event_type: eventType,
+      p_payload: event,
+    });
+
+    if (error) {
+      logStructured('error', 'payment-webhook.processing_failed', { eventId, eventType, error: error.message });
+      return new Response(JSON.stringify({ error: 'Processing failed' }), { status: 500 });
+    }
+
+    logStructured('info', 'payment-webhook.processed', { eventId, eventType });
+    return new Response(JSON.stringify({ received: true, ...data }), {
+      status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
-  }
-
-  const rawBody = await req.text();
-  const signature = req.headers.get('stripe-signature') || '';
-
-  if (webhookSecret) {
-    const valid = await verifyStripeSignature(rawBody, signature, webhookSecret);
-    if (!valid) {
-      console.error('Invalid webhook signature');
-      return new Response(JSON.stringify({ error: 'Invalid signature' }), { status: 401 });
-    }
-  }
-
-  let event: { id?: string; type?: string; data?: unknown };
-  try {
-    event = JSON.parse(rawBody);
-  } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400 });
-  }
-
-  const eventId = event.id || `anon-${Date.now()}`;
-  const eventType = event.type || 'unknown';
-
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const supabase = createClient(supabaseUrl, serviceKey);
-
-  const { data, error } = await supabase.rpc('process_payment_webhook_event', {
-    p_provider: 'stripe',
-    p_event_id: eventId,
-    p_event_type: eventType,
-    p_payload: event,
-  });
-
-  if (error) {
-    console.error('Webhook processing failed:', error);
-    return new Response(JSON.stringify({ error: 'Processing failed' }), { status: 500 });
-  }
-
-  return new Response(JSON.stringify({ received: true, ...data }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  });
+  }, { function: 'payment-webhook' });
 });

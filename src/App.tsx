@@ -3,14 +3,17 @@ import React, { Suspense, lazy, memo } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { reportError } from "@/lib/observability";
+import RouteObserver from "./components/RouteObserver";
 import { CartProvider } from "./context/CartContext";
 import { StoreProvider } from "./context/StoreContext";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 import OfflineBanner from "./components/OfflineBanner";
+import RecoveryBanner from "./components/RecoveryBanner";
 
 // Lazy load ALL pages
 const Index = lazy(() => import("./pages/Index"));
@@ -34,6 +37,19 @@ const Marketing = lazy(() => import("./pages/Marketing"));
 const Inventory = lazy(() => import("./pages/Inventory"));
 
 const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error, query) => {
+      reportError(error, { source: 'react-query', queryKey: JSON.stringify(query.queryKey) });
+    },
+  }),
+  mutationCache: new MutationCache({
+    onError: (error, _vars, _ctx, mutation) => {
+      reportError(error, {
+        source: 'react-query-mutation',
+        mutationKey: JSON.stringify(mutation.options.mutationKey),
+      });
+    },
+  }),
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000,
@@ -62,9 +78,11 @@ const App = () => (
           <TooltipProvider>
             <CartProvider>
               <OfflineBanner />
+              <RecoveryBanner />
               <Toaster />
               <Sonner />
               <BrowserRouter>
+                <RouteObserver />
                 <Suspense fallback={<PageLoader />}>
                   <Routes>
                     <Route path="/" element={<Index />} />

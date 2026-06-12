@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { invalidateCache, setCurrentOwner } from '@/services/productService';
+import { setObservabilityUser } from '@/lib/observability';
 
 interface User {
   id: string;
@@ -40,6 +41,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const setUserAndOwner = (u: User | null) => {
     setUser(u);
     setCurrentOwner(u?.id || null);
+    setObservabilityUser(u?.id);
   };
 
   const loadProfile = async (userId: string, fallbackMeta?: any) => {
