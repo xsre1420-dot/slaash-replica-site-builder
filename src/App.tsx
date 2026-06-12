@@ -14,6 +14,8 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 import OfflineBanner from "./components/OfflineBanner";
 import RecoveryBanner from "./components/RecoveryBanner";
+import StoreBootstrap from "./components/StoreBootstrap";
+import SubdomainRouter from "./components/SubdomainRouter";
 
 // Lazy load ALL pages
 const Index = lazy(() => import("./pages/Index"));
@@ -35,6 +37,7 @@ const Settings = lazy(() => import("./pages/Settings"));
 const Statistics = lazy(() => import("./pages/Statistics"));
 const Marketing = lazy(() => import("./pages/Marketing"));
 const Inventory = lazy(() => import("./pages/Inventory"));
+const Sitemap = lazy(() => import("./pages/Sitemap"));
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
@@ -75,6 +78,7 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <StoreProvider>
+          <StoreBootstrap />
           <TooltipProvider>
             <CartProvider>
               <OfflineBanner />
@@ -83,6 +87,7 @@ const App = () => (
               <Sonner />
               <BrowserRouter>
                 <RouteObserver />
+                <SubdomainRouter />
                 <Suspense fallback={<PageLoader />}>
                   <Routes>
                     <Route path="/" element={<Index />} />
@@ -105,6 +110,7 @@ const App = () => (
                     <Route path="/store/:username/checkout" element={<Checkout />} />
                     <Route path="/checkout" element={<Checkout />} />
                     <Route path="/preview" element={<ProtectedRoute><PreviewStore /></ProtectedRoute>} />
+                    <Route path="/sitemap.xml" element={<Sitemap />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Suspense>

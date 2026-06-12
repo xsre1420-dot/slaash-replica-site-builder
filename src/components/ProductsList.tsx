@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Edit, Plus, Star, MessageSquare, GripVertical, Copy, Zap } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
-import { loadProducts, addProduct } from "@/data/dummyData";
+import { loadProducts, addProduct } from "@/services/productService";
 import { Product } from "@/types";
 import { toast } from "sonner";
 import React from "react";

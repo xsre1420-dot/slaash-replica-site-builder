@@ -1,8 +1,11 @@
 
 import { useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { loadProductsPage, getCategories } from '@/data/dummyData';
 
+/**
+ * Predictive route preloading after login.
+ * Data bootstrap is handled globally by StoreBootstrap / useStoreBootstrap.
+ */
 export const usePreloadData = () => {
   const { user } = useAuth();
   const hasPreloaded = useRef(false);
@@ -11,17 +14,11 @@ export const usePreloadData = () => {
     if (!user?.id || hasPreloaded.current) return;
     hasPreloaded.current = true;
 
-    // Preload products and categories in parallel
-    Promise.all([
-      loadProductsPage(0, 50, false),
-      getCategories(false),
-    ]).catch(() => {});
-
-    // Predictive route preloading after a delay
     const timer = setTimeout(() => {
       import('@/pages/AddProduct').catch(() => {});
       import('@/pages/Orders').catch(() => {});
-    }, 3000);
+      import('@/pages/Products').catch(() => {});
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, [user?.id]);

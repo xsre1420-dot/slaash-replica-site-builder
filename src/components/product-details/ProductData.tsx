@@ -12,9 +12,6 @@ interface ProductDataProps {
   onProductLoaded: (product: Product | null) => void;
 }
 
-/** @deprecated Use mapStorefrontProduct from @/mappers */
-export const formatRpcProduct = mapStorefrontProduct;
-
 const ProductData = ({ productId, initialProduct, onProductLoaded }: ProductDataProps) => {
   const { username: storeSlug } = useParams<{ username?: string }>();
 

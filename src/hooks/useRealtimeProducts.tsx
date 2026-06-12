@@ -6,7 +6,7 @@
 import { useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { appendCachedProduct, patchCachedProduct, removeCachedProduct } from '@/data/dummyData';
+import { appendCachedProduct, patchCachedProduct, removeCachedProduct } from '@/services/productService';
 
 export const useRealtimeProducts = (onUpdate?: () => void) => {
   const { user } = useAuth();

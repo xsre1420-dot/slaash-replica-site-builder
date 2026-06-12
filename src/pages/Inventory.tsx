@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ProductVariant } from "@/types";
 import { scaleVariantsToTotal } from "@/utils/inventoryUtils";
+import { OWNER_PRODUCTS_PAGE_SIZE } from "@/constants/pagination";
 
 interface Product {
   id: string;
@@ -48,7 +49,7 @@ function Inventory() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
-  const PAGE_SIZE = 50;
+  const PAGE_SIZE = OWNER_PRODUCTS_PAGE_SIZE;
 
   useEffect(() => {
     if (user) fetchProducts(0, false);

@@ -95,8 +95,11 @@ export function dedup<T>(key: string, fn: () => Promise<T>): Promise<T> {
 
 export const CacheKeys = {
   products: (ownerId: string) => `products:${ownerId}`,
+  productsByStore: (storeId: string) => `products:store:${storeId}`,
   categories: (ownerId: string) => `categories:${ownerId}`,
+  categoriesByStore: (storeId: string) => `categories:store:${storeId}`,
   storeSettings: (ownerId: string) => `store_settings:${ownerId}`,
+  store: (userId: string) => `store:${userId}`,
   orders: (ownerId: string, page: number) => `orders:${ownerId}:${page}`,
   statistics: (ownerId: string, range: string) => `stats:${ownerId}:${range}`,
   tenantMeta: (slug: string) => `tenant-meta:${slug}`,

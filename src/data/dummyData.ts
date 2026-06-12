@@ -6,13 +6,20 @@ import { mapDbProduct } from "@/mappers/productMapper";
 
 /** @deprecated Use `@/services/productService` for new imports. */
 
-// --- Internal owner ID helper ---
+// --- Internal owner / store helpers ---
 
 let _currentOwnerId: string | null = null;
+let _currentStoreId: string | null = null;
 
 export const setCurrentOwner = (ownerId: string | null) => {
   _currentOwnerId = ownerId;
 };
+
+export const setCurrentStore = (storeId: string | null) => {
+  _currentStoreId = storeId;
+};
+
+export const getCurrentStoreId = (): string | null => _currentStoreId;
 
 const getOwnerId = (): string | null => _currentOwnerId;
 
@@ -71,7 +78,7 @@ export const getCategoriesSync = (): Category[] => {
 
 // --- Products ---
 
-export const PRODUCTS_PAGE_SIZE = 50;
+export { OWNER_PRODUCTS_PAGE_SIZE as PRODUCTS_PAGE_SIZE } from '@/constants/pagination';
 
 export interface ProductsPageResult {
   products: Product[];
@@ -186,10 +193,29 @@ export const reloadProducts = async (): Promise<void> => {
   products = loaded;
 };
 
-// --- Cache Invalidation ---
+// --- Cache Invalidation (scoped — preserves tenant/public cache) ---
 
-export const invalidateCache = () => {
-  cache.flushAll();
+export const invalidateOwnerCache = (ownerId?: string | null) => {
+  if (ownerId) {
+    cache.flushByPrefix(`products:${ownerId}`);
+    cache.flushByPrefix(`categories:${ownerId}`);
+    cache.del(CacheKeys.storeSettings(ownerId));
+    cache.del(CacheKeys.store(ownerId));
+    cache.flushByPrefix(`orders:${ownerId}`);
+    cache.flushByPrefix(`stats:${ownerId}`);
+  } else {
+    invalidateProducts();
+    invalidateCategories();
+    cache.flushByPrefix('store_settings:');
+    cache.flushByPrefix('store:');
+    cache.flushByPrefix('orders:');
+    cache.flushByPrefix('stats:');
+  }
+};
+
+/** @deprecated Use invalidateOwnerCache — does NOT flush tenant storefront cache */
+export const invalidateCache = (ownerId?: string | null) => {
+  invalidateOwnerCache(ownerId);
 };
 
 export const invalidateProducts = () => {
@@ -259,7 +285,8 @@ export const addProduct = async (product: Product): Promise<{ success: boolean; 
         colors: product.colors ? JSON.parse(JSON.stringify(product.colors)) : null,
         sizes: product.sizes || null,
         variants: product.variants ? JSON.parse(JSON.stringify(product.variants)) : null,
-        owner_id: user.id
+        owner_id: user.id,
+        store_id: _currentStoreId || undefined,
       })
       .select()
       .single();

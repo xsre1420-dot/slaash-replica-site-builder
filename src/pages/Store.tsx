@@ -1,10 +1,9 @@
 import { X, ShoppingCart, Plus, Search, Heart, Star, SlidersHorizontal, ArrowUpDown, Grid3X3, List, Mic, MicOff, RefreshCw } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { getProductsByCategory, getCategories, loadProducts } from "@/data/dummyData";
+import { getProductsByCategory, getCategories, loadProducts } from "@/services/productService";
 import { Product, Category } from "@/types";
 import { useCart } from "@/context/CartContext";
-import { useStore } from "@/context/StoreContext";
 import MetaPixel from "@/components/MetaPixel";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import CartDrawer from "@/components/CartDrawer";
@@ -19,12 +18,20 @@ import StoreFilterDrawer from "@/components/store/StoreFilterDrawer";
 import StoreThemeProvider from "@/components/StoreThemeProvider";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useToast } from "@/hooks/use-toast";
-
-const PRODUCTS_PER_PAGE = 12;
+import { useStoreDisplay } from "@/hooks/useStoreDisplay";
+import { STORE_PRODUCTS_PAGE_SIZE } from "@/constants/pagination";
+import SEOHead from "@/components/seo/SEOHead";
 
 const Store = () => {
   const { username: storeSlug } = useParams();
-  const isTenantMode = !!storeSlug;
+  const {
+    isTenantMode,
+    storeName,
+    storeLogo,
+    storeSettings,
+    ownerId: displayOwnerId,
+    loading: displayLoading,
+  } = useStoreDisplay(storeSlug);
   const tenant = useTenantStore(storeSlug);
 
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -43,45 +50,29 @@ const Store = () => {
   const [sortBy, setSortBy] = useState<"default" | "price-asc" | "price-desc">("default");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isLoading, setIsLoading] = useState(true);
-  const [visibleCount, setVisibleCount] = useState(PRODUCTS_PER_PAGE);
+  const [visibleCount, setVisibleCount] = useState(STORE_PRODUCTS_PAGE_SIZE);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [filterPriceRange, setFilterPriceRange] = useState<[number, number]>([0, 0]);
   const [filterSizes, setFilterSizes] = useState<string[]>([]);
 
   const { addToCart, cartItems, cartCount, updateQuantity, cartTotal, setStoreOwner } = useCart();
-  const ownStore = useStore();
   const { trackAddToCart, trackViewContent } = useMetaPixel();
   const { favorites, toggleFavorite, isFavorite, count: favCount } = useFavorites();
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  // Derive display values from tenant or own store
-  const storeName = isTenantMode ? (tenant.storeInfo?.storeName || '') : ownStore.storeName;
-  const storeLogo = isTenantMode ? (tenant.storeInfo?.storeLogo || '') : ownStore.storeLogo;
-  const storeSettings = isTenantMode ? {
-    bannerImages: tenant.storeInfo?.bannerImages || [],
-    menuBackgroundColor: tenant.storeInfo?.menuBackgroundColor || '#ffffff',
-    menuTextColor: tenant.storeInfo?.menuTextColor || '#333333',
-    menuAccentColor: tenant.storeInfo?.menuAccentColor || '#6366f1',
-    storeFont: (tenant.storeInfo as any)?.storeFont || 'Tajawal',
-    primaryBannerIndex: tenant.storeInfo?.primaryBannerIndex || 0,
-    deliveryPrices: tenant.storeInfo?.deliveryPrices || [],
-    whatsappNumber: tenant.storeInfo?.whatsappNumber || '',
-  } : { ...ownStore.storeSettings, whatsappNumber: '' };
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const pullStartY = useRef(0);
   const categoriesRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef(0);
 
+  // Derive display values from unified hook
   useEffect(() => {
-    if (isTenantMode && tenant.storeInfo?.ownerId) {
-      setStoreOwner(tenant.storeInfo.ownerId);
-    } else if (!isTenantMode && ownStore) {
-      // owner preview uses auth context owner via loadProducts
+    if (isTenantMode && displayOwnerId) {
+      setStoreOwner(displayOwnerId);
     }
-  }, [isTenantMode, tenant.storeInfo?.ownerId, setStoreOwner]);
+  }, [isTenantMode, displayOwnerId, setStoreOwner]);
 
   useEffect(() => {
     if (isTenantMode) {
@@ -90,7 +81,7 @@ const Store = () => {
     } else {
       setAllProducts(getProductsByCategory(selectedCategory));
     }
-    setVisibleCount(PRODUCTS_PER_PAGE);
+    setVisibleCount(STORE_PRODUCTS_PAGE_SIZE);
   }, [selectedCategory, isTenantMode, tenantProducts.products, tenantProducts.loading]);
 
   const loadData = useCallback(async (force = false) => {
@@ -110,13 +101,13 @@ const Store = () => {
       setCategories([{ id: "all", name: "الكل", order: -1 }]);
     }
     setIsLoading(false);
-  }, [selectedCategory, isTenantMode]);
+  }, [selectedCategory, isTenantMode, tenant, tenantProducts]);
 
   useEffect(() => {
-    if (isTenantMode && !tenant.loading) {
+    if (isTenantMode && !displayLoading) {
       setCategories([{ id: "all", name: "الكل", order: -1 }, ...tenant.categories]);
     }
-  }, [isTenantMode, tenant.loading, tenant.categories]);
+  }, [isTenantMode, displayLoading, tenant.categories]);
 
   useEffect(() => { if (!isTenantMode) loadData(); }, [loadData, isTenantMode]);
 
@@ -177,7 +168,7 @@ const Store = () => {
         return;
       }
       if (visibleCount < displayProducts.length) {
-        setVisibleCount((prev) => Math.min(prev + PRODUCTS_PER_PAGE, displayProducts.length));
+        setVisibleCount((prev) => Math.min(prev + STORE_PRODUCTS_PAGE_SIZE, displayProducts.length));
       }
     }, { threshold: 0.1 });
     observer.observe(el);
@@ -282,6 +273,13 @@ const Store = () => {
   };
 
   return (
+    <>
+      <SEOHead
+        title={storeName ? `${storeName} — متجر إلكتروني` : 'المتجر'}
+        description={storeName ? `تسوق من ${storeName} — منتجات متنوعة بأسعار منافسة` : 'متجر إلكتروني'}
+        url={storeSlug ? `${window.location.origin}/store/${storeSlug}` : undefined}
+        storeName={storeName}
+      />
     <StoreThemeProvider colors={themeColors}>
     <div className="min-h-screen bg-background" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <MetaPixel storeOwnerId={isTenantMode ? tenant.storeInfo?.ownerId : undefined} />
@@ -514,6 +512,7 @@ const Store = () => {
       )}
     </div>
     </StoreThemeProvider>
+    </>
   );
 };
 

@@ -12,6 +12,7 @@ import platformLogo from "@/assets/platform-logo.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import OnboardingChecklist from "@/components/OnboardingChecklist";
 import { usePreloadData } from "@/hooks/usePreloadData";
+import { getProductsSync } from "@/services/productService";
 
 const dashboardCards = [
   { to: "/orders", icon: List, label: "الطلبات", desc: "إدارة الطلبات", gradient: "from-primary to-secondary" },
@@ -38,9 +39,7 @@ export default function Builder() {
     if (dismissed) setShowOnboarding(false);
 
     const steps: string[] = [];
-    // Check if products exist
-    const products = localStorage.getItem('products');
-    if (products && JSON.parse(products).length > 0) steps.push('add-product');
+    if (getProductsSync().length > 0) steps.push('add-product');
     // Check if settings configured
     if (storeName && storeName !== 'متجري') steps.push('settings');
     // Check if shared

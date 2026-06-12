@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { X, Trash2 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { getCategories, getProductById, updateProduct, getCategoriesSync, deleteProduct } from "@/data/dummyData";
+import { getCategories, getProductById, updateProduct, getCategoriesSync, deleteProduct } from "@/services/productService";
 import { useToast } from "@/hooks/use-toast";
 import { Product, Category, ColorOption } from "@/types";
 import ProductImagesManager from "@/components/ProductImagesManager";

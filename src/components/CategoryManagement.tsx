@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Category } from "@/types";
-import { addCategory, updateCategory, deleteCategory } from "@/data/dummyData";
+import { addCategory, updateCategory, deleteCategory } from "@/services/productService";
 
 interface CategoryManagementProps {
   categories: Category[];

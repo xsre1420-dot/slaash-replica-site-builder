@@ -1,7 +1,7 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { invalidateCache, setCurrentOwner } from '@/services/productService';
+import { invalidateOwnerCache, setCurrentOwner, setCurrentStore } from '@/services/productService';
 import { setObservabilityUser } from '@/lib/observability';
 
 interface User {
@@ -37,10 +37,13 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const lastUserIdRef = useRef<string | null>(null);
 
   const setUserAndOwner = (u: User | null) => {
+    if (u?.id) lastUserIdRef.current = u.id;
     setUser(u);
     setCurrentOwner(u?.id || null);
+    if (!u) setCurrentStore(null);
     setObservabilityUser(u?.id);
   };
 
@@ -49,7 +52,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { data: profile } = await (supabase as any)
         .from('profiles')
         .select('id, user_id, username, store_name')
-        .eq('user_id', userId)
+        .or(`id.eq.${userId},user_id.eq.${userId}`)
         .maybeSingle();
 
       const profileId = profile?.user_id || profile?.id || userId;
@@ -90,12 +93,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         });
 
         if (event === 'SIGNED_IN') {
-          invalidateCache();
+          invalidateOwnerCache(session.user.id);
         }
         setTimeout(() => loadProfile(session.user.id, meta), 0);
       } else if (event === 'SIGNED_OUT') {
+        const prevId = lastUserIdRef.current;
         setUserAndOwner(null);
-        invalidateCache();
+        invalidateOwnerCache(prevId);
       }
     });
 
@@ -195,7 +199,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = async () => {
-    invalidateCache();
+    const prevId = lastUserIdRef.current;
+    invalidateOwnerCache(prevId);
     await supabase.auth.signOut();
     setUserAndOwner(null);
   };

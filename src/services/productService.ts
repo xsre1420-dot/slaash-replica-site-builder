@@ -4,6 +4,8 @@
  */
 export {
   setCurrentOwner,
+  setCurrentStore,
+  getCurrentStoreId,
   getCategories,
   getCategoriesSync,
   PRODUCTS_PAGE_SIZE,
@@ -13,6 +15,7 @@ export {
   products,
   reloadProducts,
   invalidateCache,
+  invalidateOwnerCache,
   invalidateProducts,
   invalidateCategories,
   appendCachedProduct,

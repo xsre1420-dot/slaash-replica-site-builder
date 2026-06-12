@@ -57,7 +57,24 @@ export const isProductDiscountActive = (product: Product): boolean => {
   if (product.discountEndDate && new Date(product.discountEndDate).getTime() < now) {
     return false;
   }
-  return true;
+  return (product.discountValue ?? 0) > 0;
+};
+
+export const computeDiscountedPrice = (product: Product): number => {
+  const base = product.originalPrice ?? product.price;
+  const value = product.discountValue ?? 0;
+
+  if (!isProductDiscountActive(product)) return product.price;
+
+  if (product.discountType === 'percentage') {
+    return Math.max(0, Math.round(base * (1 - value / 100)));
+  }
+
+  if (product.discountType === 'amount') {
+    return Math.max(0, base - value);
+  }
+
+  return product.price;
 };
 
 export const applyActiveDiscount = (product: Product): Product => {
@@ -67,7 +84,13 @@ export const applyActiveDiscount = (product: Product): Product => {
     }
     return product;
   }
-  return product;
+
+  const originalPrice = product.originalPrice ?? product.price;
+  return {
+    ...product,
+    originalPrice,
+    price: computeDiscountedPrice({ ...product, originalPrice }),
+  };
 };
 
 export const scaleVariantsToTotal = (

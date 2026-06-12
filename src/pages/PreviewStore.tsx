@@ -1,7 +1,7 @@
 import { X, ShoppingCart, Plus, Trash2, Search, Heart, Star } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
-import { getProductsByCategory, getCategories, loadProducts } from "@/data/dummyData";
+import { getProductsByCategory, getCategories, loadProducts } from "@/services/productService";
 import { Product, Category } from "@/types";
 import { useCart } from "@/context/CartContext";
 import { useStore } from "@/context/StoreContext";
