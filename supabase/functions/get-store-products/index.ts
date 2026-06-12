@@ -7,13 +7,13 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Cache-Control': 'public, max-age=15, stale-while-revalidate=30',
+    'Cache-Control': 'public, max-age=30, stale-while-revalidate=60',
   };
 }
 
 const requestCounts = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT_WINDOW = 60000;
-const RATE_LIMIT_MAX_REQUESTS = 30;
+const RATE_LIMIT_MAX_REQUESTS = 60;
 
 function getRealIP(req: Request): string {
   return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
@@ -62,6 +62,10 @@ Deno.serve(async (req) => {
   try {
     const requestBody = await req.json();
     const slug = String(requestBody.slug || '').trim().toLowerCase();
+    const cursor = requestBody.cursor ? String(requestBody.cursor) : null;
+    const category = requestBody.category ? String(requestBody.category) : null;
+    const search = requestBody.search ? String(requestBody.search) : null;
+    const limit = Math.min(Math.max(Number(requestBody.limit) || 24, 1), 48);
 
     if (!slug || !validateSlug(slug)) {
       return new Response(JSON.stringify({ error: 'Valid slug is required' }), {
@@ -74,19 +78,64 @@ Deno.serve(async (req) => {
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    const { data: bundle, error: bundleErr } = await supabase.rpc('get_store_bundle', { p_slug: slug });
+    const fetchMeta = requestBody.metaOnly === true || !requestBody.page;
 
-    if (bundleErr || !bundle?.store) {
-      return new Response(JSON.stringify({ error: 'Store not found' }), {
-        status: 404,
+    if (fetchMeta) {
+      const { data: meta, error: metaErr } = await supabase.rpc('get_store_meta', { p_slug: slug });
+      if (metaErr || !meta?.store) {
+        return new Response(JSON.stringify({ error: 'Store not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const { data: page, error: pageErr } = await supabase.rpc('get_store_products_page', {
+        p_slug: slug,
+        p_limit: limit,
+        p_cursor: cursor,
+        p_category: category,
+        p_search: search,
+      });
+
+      if (pageErr) {
+        return new Response(JSON.stringify({ error: 'Failed to load products' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(JSON.stringify({
+        storeInfo: meta.store,
+        categories: meta.categories || [],
+        products: page?.products || [],
+        next_cursor: page?.next_cursor || null,
+        has_more: page?.has_more || false,
+        success: true,
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { data: page, error: pageErr } = await supabase.rpc('get_store_products_page', {
+      p_slug: slug,
+      p_limit: limit,
+      p_cursor: cursor,
+      p_category: category,
+      p_search: search,
+    });
+
+    if (pageErr) {
+      return new Response(JSON.stringify({ error: 'Failed to load products' }), {
+        status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     return new Response(JSON.stringify({
-      products: bundle.products || [],
-      categories: bundle.categories || [],
-      storeInfo: bundle.store,
+      products: page?.products || [],
+      next_cursor: page?.next_cursor || null,
+      has_more: page?.has_more || false,
       success: true,
     }), {
       status: 200,

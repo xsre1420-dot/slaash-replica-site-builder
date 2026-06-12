@@ -1,7 +1,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { loadProducts, getCategories } from '@/data/dummyData';
+import { loadProductsPage, getCategories } from '@/data/dummyData';
 
 export const usePreloadData = () => {
   const { user } = useAuth();
@@ -13,7 +13,7 @@ export const usePreloadData = () => {
 
     // Preload products and categories in parallel
     Promise.all([
-      loadProducts(false),
+      loadProductsPage(0, 50, false),
       getCategories(false),
     ]).catch(() => {});
 

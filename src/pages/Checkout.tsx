@@ -146,23 +146,8 @@ const Checkout = () => {
     setIsSubmitting(true);
 
     try {
-      if (isTenantMode) {
-        tenant.refetch();
-      }
-
       const productIds = cartItems.map((i) => i.product.id);
-      const freshMap = isTenantMode
-        ? new Map(
-            tenant.products
-              .filter((p) => productIds.includes(p.id))
-              .map((p) => [p.id, p])
-          )
-        : await fetchFreshProducts(ownerId, productIds);
-
-      if (isTenantMode && freshMap.size < productIds.length) {
-        const dbMap = await fetchFreshProducts(ownerId, productIds);
-        dbMap.forEach((v, k) => freshMap.set(k, v));
-      }
+      const freshMap = await fetchFreshProducts(ownerId, productIds);
 
       const validation = validateAndRefreshCart(cartItems, freshMap);
       validation.errors.forEach((msg) => toast.warning(msg));
@@ -233,7 +218,8 @@ const Checkout = () => {
       );
 
       if (isTenantMode && storeSlug) {
-        cache.del(`tenant:${storeSlug.trim().toLowerCase()}`);
+        cache.del(`tenant-meta:${storeSlug.trim().toLowerCase()}`);
+        cache.flushByPrefix(`tenant-products:${storeSlug.trim().toLowerCase()}:`);
       }
 
       setCompletedOrderId(savedOrder?.id || orderId);

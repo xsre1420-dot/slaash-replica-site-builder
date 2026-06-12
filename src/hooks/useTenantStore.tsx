@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Product, Category, ColorOption, ProductVariant } from '@/types';
-import { applyActiveDiscount } from '@/utils/inventoryUtils';
+import { Product, Category } from '@/types';
 import { cache, CacheTTL, dedup } from '@/lib/cache';
+import { cacheGet, cacheSet } from '@/utils/indexedDB';
+
+const META_IDB_TTL = 10 * 60 * 1000; // 10 min for store meta
 
 interface TenantStoreInfo {
   ownerId: string;
@@ -21,11 +23,12 @@ interface TenantStoreInfo {
   instagramUrl: string;
   returnPolicy: string;
   privacyPolicy: string;
-  paymentMethods: any;
+  paymentMethods: unknown;
 }
 
 interface TenantStoreData {
   storeInfo: TenantStoreInfo | null;
+  /** @deprecated Use useStoreProductsPage for catalog — kept empty for backward compat */
   products: Product[];
   categories: Category[];
   loading: boolean;
@@ -33,107 +36,74 @@ interface TenantStoreData {
   refetch: () => void;
 }
 
-const buildStoreInfo = (store: any, normalizedSlug: string, ownerId: string): TenantStoreInfo => ({
+const buildStoreInfo = (store: Record<string, unknown>, normalizedSlug: string, ownerId: string): TenantStoreInfo => ({
   ownerId,
-  storeName: store.store_name || '',
-  storeLogo: store.store_logo || '',
-  storeSlug: store.store_slug || normalizedSlug,
-  menuBackgroundColor: store.menu_background_color || '#ffffff',
-  menuTextColor: store.menu_text_color || '#333333',
-  menuAccentColor: store.menu_accent_color || '#6366f1',
-  storeFont: store.store_font || 'Tajawal',
-  bannerImages: store.banner_images || [],
-  primaryBannerIndex: store.primary_banner_index || 0,
-  deliveryPrices: store.delivery_prices || [],
-  whatsappNumber: store.whatsapp_number || '',
-  facebookUrl: store.facebook_url || '',
-  instagramUrl: store.instagram_url || '',
-  returnPolicy: store.return_policy || '',
-  privacyPolicy: store.privacy_policy || '',
+  storeName: String(store.store_name || ''),
+  storeLogo: String(store.store_logo || ''),
+  storeSlug: String(store.store_slug || normalizedSlug),
+  menuBackgroundColor: String(store.menu_background_color || '#ffffff'),
+  menuTextColor: String(store.menu_text_color || '#333333'),
+  menuAccentColor: String(store.menu_accent_color || '#6366f1'),
+  storeFont: String(store.store_font || 'Tajawal'),
+  bannerImages: (store.banner_images as string[]) || [],
+  primaryBannerIndex: Number(store.primary_banner_index) || 0,
+  deliveryPrices: (store.delivery_prices as { governorate: string; price: number }[]) || [],
+  whatsappNumber: String(store.whatsapp_number || ''),
+  facebookUrl: String(store.facebook_url || ''),
+  instagramUrl: String(store.instagram_url || ''),
+  returnPolicy: String(store.return_policy || ''),
+  privacyPolicy: String(store.privacy_policy || ''),
   paymentMethods: store.payment_methods,
 });
 
-async function fetchStoreFromApi(normalizedSlug: string) {
-  const { data: bundle, error: bundleErr } = await (supabase as any)
-    .rpc('get_store_bundle', { p_slug: normalizedSlug });
+async function fetchStoreMeta(normalizedSlug: string) {
+  const { data: meta, error: metaErr } = await (supabase as any).rpc('get_store_meta', {
+    p_slug: normalizedSlug,
+  });
 
-  if (!bundleErr && bundle?.store) {
-    const store = bundle.store;
-    const ownerId = store.owner_id;
+  if (!metaErr && meta?.store) {
+    const store = meta.store as Record<string, unknown>;
+    const ownerId = String(store.owner_id || '');
     if (!ownerId) throw new Error('المتجر غير صالح');
 
     return {
       storeInfo: buildStoreInfo(store, normalizedSlug, ownerId),
-      products: ((bundle.products || []) as any[]).map(formatProduct),
-      categories: ((bundle.categories || []) as any[]).map((c: any) => ({
-        id: c.id,
-        name: c.name,
-        order: c.display_order || 0,
+      categories: ((meta.categories || []) as Record<string, unknown>[]).map((c) => ({
+        id: String(c.id),
+        name: String(c.name),
+        order: Number(c.display_order) || 0,
       })),
     };
   }
 
-  const { data: storeData, error: storeErr } = await (supabase as any)
-    .rpc('get_store_by_slug', { p_slug: normalizedSlug });
+  const { data: storeData, error: storeErr } = await (supabase as any).rpc('get_store_by_slug', {
+    p_slug: normalizedSlug,
+  });
 
   if (storeErr || !storeData) throw new Error('المتجر غير موجود');
 
-  const store = Array.isArray(storeData) ? storeData[0] : storeData;
+  const store = (Array.isArray(storeData) ? storeData[0] : storeData) as Record<string, unknown>;
   if (!store?.owner_id) throw new Error('المتجر غير صالح');
 
-  const [prodsRes, catsRes] = await Promise.all([
-    (supabase as any).rpc('get_store_products_by_slug', { p_slug: normalizedSlug }),
-    (supabase as any).rpc('get_store_categories_by_slug', { p_slug: normalizedSlug }),
-  ]);
-
-  if (prodsRes.error || catsRes.error) throw new Error('فشل في تحميل بيانات المتجر');
+  const catsRes = await (supabase as any).rpc('get_store_categories_by_slug', { p_slug: normalizedSlug });
+  if (catsRes.error) throw new Error('فشل في تحميل بيانات المتجر');
 
   return {
-    storeInfo: buildStoreInfo(store, normalizedSlug, store.owner_id),
-    products: ((prodsRes.data || []) as any[]).map(formatProduct),
-    categories: ((catsRes.data || []) as any[]).map((c: any) => ({
-      id: c.id,
-      name: c.name,
-      order: c.display_order || 0,
+    storeInfo: buildStoreInfo(store, normalizedSlug, String(store.owner_id)),
+    categories: ((catsRes.data || []) as Record<string, unknown>[]).map((c) => ({
+      id: String(c.id),
+      name: String(c.name),
+      order: Number(c.display_order) || 0,
     })),
   };
 }
 
-const formatProduct = (p: any): Product => applyActiveDiscount({
-  id: p.id,
-  name: p.name,
-  description: p.description || '',
-  category: p.category,
-  price: Number(p.price),
-  image: p.image_url || '',
-  additionalImages: p.additional_images || [],
-  stockQuantity: p.stock_quantity ?? undefined,
-  sizes: Array.isArray(p.sizes) ? p.sizes as string[] : undefined,
-  colors: (() => {
-    if (!p.colors) return undefined;
-    if (Array.isArray(p.colors)) return p.colors as unknown as ColorOption[];
-    return undefined;
-  })(),
-  variants: (() => {
-    if (!p.variants) return undefined;
-    if (Array.isArray(p.variants)) return p.variants as unknown as ProductVariant[];
-    return undefined;
-  })(),
-  discountType: p.discount_type || undefined,
-  discountValue: p.discount_value != null ? Number(p.discount_value) : undefined,
-  discountStartDate: p.discount_start_date || undefined,
-  discountEndDate: p.discount_end_date || undefined,
-  originalPrice: p.original_price != null ? Number(p.original_price) : undefined,
-});
-
 /**
- * Hook to load a public store's data by slug.
- * Uses RPC functions (security definer) so no auth is needed.
- * All data is cached per-slug.
+ * Loads store metadata only (settings + categories).
+ * Product catalog: use useStoreProductsPage for paginated reads.
  */
 export const useTenantStore = (slug: string | undefined): TenantStoreData => {
   const [storeInfo, setStoreInfo] = useState<TenantStoreInfo | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -152,16 +122,30 @@ export const useTenantStore = (slug: string | undefined): TenantStoreData => {
       return;
     }
 
-    const cacheKey = `tenant:${normalizedSlug}`;
+    const cacheKey = `tenant-meta:${normalizedSlug}`;
+    const idbKey = `idb:${cacheKey}`;
 
     if (!force) {
-      const cached = cache.get<{ storeInfo: TenantStoreInfo; products: Product[]; categories: Category[] }>(
+      const idbCached = await cacheGet<{ storeInfo: TenantStoreInfo; categories: Category[] }>(
+        idbKey,
+        META_IDB_TTL
+      );
+      if (idbCached) {
+        setStoreInfo(idbCached.storeInfo);
+        setCategories(idbCached.categories);
+        setLoading(false);
+        return;
+      }
+
+      const cached = cache.get<{ storeInfo: TenantStoreInfo; categories: Category[] }>(
         cacheKey,
-        () => fetchStoreFromApi(normalizedSlug)
+        () => fetchStoreMeta(normalizedSlug).then(async (data) => {
+          await cacheSet(idbKey, data);
+          return data;
+        })
       );
       if (cached) {
         setStoreInfo(cached.storeInfo);
-        setProducts(cached.products);
         setCategories(cached.categories);
         setLoading(false);
         return;
@@ -172,14 +156,13 @@ export const useTenantStore = (slug: string | undefined): TenantStoreData => {
     setError(null);
 
     try {
-      const data = await dedup(cacheKey, () => fetchStoreFromApi(normalizedSlug));
-
+      const data = await dedup(cacheKey, () => fetchStoreMeta(normalizedSlug));
       cache.set(cacheKey, data, CacheTTL.LONG, CacheTTL.MEDIUM);
+      await cacheSet(idbKey, data);
       setStoreInfo(data.storeInfo);
-      setProducts(data.products);
       setCategories(data.categories);
-    } catch (err: any) {
-      setError(err.message || 'فشل في تحميل المتجر');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'فشل في تحميل المتجر');
     } finally {
       setLoading(false);
     }
@@ -191,7 +174,7 @@ export const useTenantStore = (slug: string | undefined): TenantStoreData => {
 
   return {
     storeInfo,
-    products,
+    products: [],
     categories,
     loading,
     error,

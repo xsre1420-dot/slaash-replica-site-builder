@@ -11,8 +11,6 @@ const withTimeout = <T>(promise: Promise<T>, ms = 10000): Promise<T> => {
 };
 
 const ORDER_LIST_COLUMNS = 'id,status,total_amount,created_at,customer_name,customer_phone';
-const PRODUCT_STATS_COLUMNS = 'id,name,price,stock_quantity';
-
 export const fetchStatisticsData = async (dateRange: string): Promise<DatabaseData> => {
   const { data: { user } } = await supabase.auth.getUser();
   const ownerId = user?.id;
@@ -31,30 +29,31 @@ export const fetchStatisticsData = async (dateRange: string): Promise<DatabaseDa
     const extendedStart = new Date(Date.now() - extendedDays * 86400000);
     const dateFilter = extendedStart.toISOString();
 
-    const [ordersRes, productsRes, kpiRes] = await withTimeout(
+    const ORDERS_STATS_CAP = 5000;
+
+    const [ordersRes, kpiRes] = await withTimeout(
       Promise.all([
         supabase.from('orders')
           .select(ORDER_LIST_COLUMNS)
           .eq('owner_id', ownerId)
-          .gte('created_at', dateFilter),
-        supabase.from('products')
-          .select(PRODUCT_STATS_COLUMNS)
-          .eq('owner_id', ownerId),
+          .gte('created_at', dateFilter)
+          .order('created_at', { ascending: false })
+          .limit(ORDERS_STATS_CAP),
         (supabase as any).rpc('get_store_statistics', { p_owner_id: ownerId, p_days: days }),
       ]),
       12000
     );
 
-    if (ordersRes.error || productsRes.error) {
-      console.error('Statistics fetch failed:', ordersRes.error || productsRes.error);
-      throw ordersRes.error || productsRes.error;
+    if (ordersRes.error) {
+      console.error('Statistics fetch failed:', ordersRes.error);
+      throw ordersRes.error;
     }
 
     const result: DatabaseData = {
       orders: ordersRes.data || [],
       orderItems: [],
       customers: [],
-      products: productsRes.data || [],
+      products: [],
       visits: [],
       kpis: kpiRes.data ?? undefined,
     };

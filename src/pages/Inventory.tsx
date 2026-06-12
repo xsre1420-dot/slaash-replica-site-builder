@@ -46,12 +46,15 @@ function Inventory() {
   const [minStockLevel, setMinStockLevel] = useState("");
   const [stockFilter, setStockFilter] = useState<StockFilter>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const PAGE_SIZE = 50;
 
   useEffect(() => {
-    if (user) fetchProducts();
+    if (user) fetchProducts(0, false);
   }, [user]);
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (pageNum = 0, append = false) => {
     if (!user?.id) {
       setProducts([]);
       setLoading(false);
@@ -59,14 +62,22 @@ function Inventory() {
     }
 
     try {
-      const { data, error } = await supabase
+      if (!append) setLoading(true);
+      const from = pageNum * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
+      const { data, error, count } = await supabase
         .from('products')
-        .select('id, name, price, category, image_url, stock_quantity, min_stock_level, variants, created_at')
+        .select('id, name, price, category, image_url, stock_quantity, min_stock_level, variants, created_at', { count: 'exact' })
         .eq('owner_id', user.id)
-        .order('name');
+        .order('name')
+        .range(from, to);
 
       if (error) throw error;
-      setProducts(data || []);
+      const rows = data || [];
+      setProducts((prev) => (append ? [...prev, ...rows] : rows));
+      setPage(pageNum);
+      setHasMore(from + rows.length < (count ?? rows.length));
     } catch (error) {
       console.error('Error fetching products:', error);
       toast.error("خطأ في تحميل المنتجات");
@@ -110,7 +121,7 @@ function Inventory() {
       }
 
       toast.success("تم تحديث المخزون بنجاح");
-      fetchProducts();
+      fetchProducts(0, false);
       setDialogOpen(false);
       setSelectedProduct(null);
       setNewQuantity("");
@@ -441,6 +452,14 @@ function Inventory() {
             )}
           </CardContent>
         </Card>
+
+        {hasMore && (
+          <div className="flex justify-center mt-4">
+            <Button variant="outline" className="rounded-xl" onClick={() => fetchProducts(page + 1, true)}>
+              تحميل المزيد
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

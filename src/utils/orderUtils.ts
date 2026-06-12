@@ -38,6 +38,19 @@ export const mapOrderError = (message: string): string => {
   return message || 'فشل في إنشاء الطلب. يرجى المحاولة مرة أخرى.';
 };
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isRetryableOrderError = (message: string): boolean => {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes('timeout') ||
+    lower.includes('lock') ||
+    lower.includes('could not be processed') ||
+    lower.includes('stock') ||
+    lower.includes('connection')
+  );
+};
+
 export const saveOrderToDatabase = async (
   order: Order,
   ownerId: string,
@@ -45,6 +58,7 @@ export const saveOrderToDatabase = async (
   couponCode?: string | null
 ) => {
   const idempotencyKey = getOrCreateIdempotencyKey(ownerId);
+  const maxAttempts = 3;
 
   const orderItems = order.items.map((item: CartItem) => ({
     product_id: item.product.id,
@@ -53,36 +67,44 @@ export const saveOrderToDatabase = async (
     selected_color: item.selectedColor || null,
   }));
 
-  const { data, error } = await (supabase as any).rpc('create_order_with_stock_deduction', {
-    p_order_id: order.id,
-    p_owner_id: ownerId,
-    p_idempotency_key: idempotencyKey,
-    p_customer_name: order.customerInfo.name,
-    p_customer_phone: order.customerInfo.phone,
-    p_customer_address: order.customerInfo.address,
-    p_total_amount: order.total,
-    p_customer_governorate: order.customerInfo.governorate || null,
-    p_notes: order.customerInfo.notes || null,
-    p_items: orderItems,
-    p_payment_method: paymentMethod,
-    p_coupon_code: couponCode || null,
-  });
+  let lastError = 'Order creation failed';
 
-  if (error) {
-    throw new Error(mapOrderError(error.message || 'Failed to create order'));
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const { data, error } = await (supabase as any).rpc('create_order_with_stock_deduction', {
+      p_order_id: order.id,
+      p_owner_id: ownerId,
+      p_idempotency_key: idempotencyKey,
+      p_customer_name: order.customerInfo.name,
+      p_customer_phone: order.customerInfo.phone,
+      p_customer_address: order.customerInfo.address,
+      p_total_amount: order.total,
+      p_customer_governorate: order.customerInfo.governorate || null,
+      p_notes: order.customerInfo.notes || null,
+      p_items: orderItems,
+      p_payment_method: paymentMethod,
+      p_coupon_code: couponCode || null,
+    });
+
+    if (!error && data?.success) {
+      clearCheckoutIdempotencyKey(ownerId);
+      return {
+        id: data.order_id,
+        ...order,
+        total: Number(data.total_amount ?? order.total),
+      };
+    }
+
+    lastError = mapOrderError(error?.message || data?.error || 'Order creation failed');
+
+    if (attempt < maxAttempts && isRetryableOrderError(lastError)) {
+      await sleep(400 * attempt);
+      continue;
+    }
+
+    throw new Error(lastError);
   }
 
-  if (!data?.success) {
-    throw new Error(mapOrderError(data?.error || 'Order creation failed'));
-  }
-
-  clearCheckoutIdempotencyKey(ownerId);
-
-  return {
-    id: data.order_id,
-    ...order,
-    total: Number(data.total_amount ?? order.total),
-  };
+  throw new Error(lastError);
 };
 
 export const updateOrderStatusInDatabase = async (orderId: string, status: string, ownerId: string) => {

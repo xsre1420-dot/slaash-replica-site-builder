@@ -1,15 +1,21 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { cache } from '@/lib/cache';
 
+const DEBOUNCE_MS = 2500;
+
 export const useRealtimeOrders = (onNewOrder?: () => void) => {
   const { user } = useAuth();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleChange = useCallback(() => {
-    cache.flushByPrefix('orders:');
-    cache.flushByPrefix('stats:');
-    onNewOrder?.();
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      cache.flushByPrefix('orders:');
+      cache.flushByPrefix('stats:');
+      onNewOrder?.();
+    }, DEBOUNCE_MS);
   }, [onNewOrder]);
 
   useEffect(() => {
@@ -30,6 +36,7 @@ export const useRealtimeOrders = (onNewOrder?: () => void) => {
       .subscribe();
 
     return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
       supabase.removeChannel(channel);
     };
   }, [user?.id, handleChange]);

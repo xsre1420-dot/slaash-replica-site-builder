@@ -9,6 +9,7 @@ import MetaPixel from "@/components/MetaPixel";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import CartDrawer from "@/components/CartDrawer";
 import { useTenantStore } from "@/hooks/useTenantStore";
+import { useStoreProductsPage } from "@/hooks/useStoreProductsPage";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import ProductCard from "@/components/store/ProductCard";
@@ -33,6 +34,12 @@ const Store = () => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebouncedValue(searchQuery, 300);
+
+  const tenantProducts = useStoreProductsPage(storeSlug, {
+    category: selectedCategory,
+    search: debouncedSearch,
+    enabled: isTenantMode,
+  });
   const [sortBy, setSortBy] = useState<"default" | "price-asc" | "price-desc">("default");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isLoading, setIsLoading] = useState(true);
@@ -76,23 +83,22 @@ const Store = () => {
     }
   }, [isTenantMode, tenant.storeInfo?.ownerId, setStoreOwner]);
 
-  // Update products when category changes (tenant vs owner mode)
   useEffect(() => {
     if (isTenantMode) {
-      setAllProducts(
-        selectedCategory === "all"
-          ? tenant.products
-          : tenant.products.filter((p) => p.category === selectedCategory)
-      );
+      setAllProducts(tenantProducts.products);
+      setIsLoading(tenantProducts.loading);
     } else {
       setAllProducts(getProductsByCategory(selectedCategory));
     }
     setVisibleCount(PRODUCTS_PER_PAGE);
-  }, [selectedCategory, isTenantMode, tenant.products]);
+  }, [selectedCategory, isTenantMode, tenantProducts.products, tenantProducts.loading]);
+
   const loadData = useCallback(async (force = false) => {
     if (isTenantMode) {
-      // Tenant mode — data comes from useTenantStore hook
-      if (force) tenant.refetch();
+      if (force) {
+        tenant.refetch();
+        tenantProducts.refetch();
+      }
       return;
     }
     setIsLoading(true);
@@ -106,16 +112,11 @@ const Store = () => {
     setIsLoading(false);
   }, [selectedCategory, isTenantMode]);
 
-  // Sync tenant data into local state
   useEffect(() => {
-    if (isTenantMode) {
-      setIsLoading(tenant.loading);
-      if (!tenant.loading) {
-        setCategories([{ id: "all", name: "الكل", order: -1 }, ...tenant.categories]);
-        setAllProducts(selectedCategory === "all" ? tenant.products : tenant.products.filter(p => p.category === selectedCategory));
-      }
+    if (isTenantMode && !tenant.loading) {
+      setCategories([{ id: "all", name: "الكل", order: -1 }, ...tenant.categories]);
     }
-  }, [isTenantMode, tenant.loading, tenant.products, tenant.categories, selectedCategory]);
+  }, [isTenantMode, tenant.loading, tenant.categories]);
 
   useEffect(() => { if (!isTenantMode) loadData(); }, [loadData, isTenantMode]);
 
@@ -148,8 +149,7 @@ const Store = () => {
   // --- Filter, search, sort ---
   const displayProducts = useMemo(() => {
     let filtered = allProducts;
-    // Search
-    if (searchQuery.trim()) {
+    if (!isTenantMode && searchQuery.trim()) {
       const q = debouncedSearch.trim().toLowerCase();
       filtered = filtered.filter(p => p.name.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q));
     }
@@ -167,18 +167,22 @@ const Store = () => {
     return filtered;
   }, [allProducts, debouncedSearch, sortBy, filterPriceRange, filterSizes, maxPrice]);
 
-  // Infinite scroll with IntersectionObserver
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && visibleCount < displayProducts.length) {
-        setVisibleCount(prev => Math.min(prev + PRODUCTS_PER_PAGE, displayProducts.length));
+      if (!entry.isIntersecting) return;
+      if (isTenantMode && tenantProducts.hasMore) {
+        tenantProducts.loadMore();
+        return;
+      }
+      if (visibleCount < displayProducts.length) {
+        setVisibleCount((prev) => Math.min(prev + PRODUCTS_PER_PAGE, displayProducts.length));
       }
     }, { threshold: 0.1 });
     observer.observe(el);
     return () => observer.disconnect();
-  }, [displayProducts.length, visibleCount]);
+  }, [displayProducts.length, visibleCount, isTenantMode, tenantProducts.hasMore, tenantProducts.loadMore]);
 
   const visibleProducts = displayProducts.slice(0, visibleCount);
 

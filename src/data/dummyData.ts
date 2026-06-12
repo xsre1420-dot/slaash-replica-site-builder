@@ -104,38 +104,105 @@ export const getCategoriesSync = (): Category[] => {
 
 // --- Products ---
 
-export const loadProducts = async (force = false): Promise<Product[]> => {
-  const ownerId = await getAuthOwnerId();
-  if (!ownerId) return [];
+export const PRODUCTS_PAGE_SIZE = 50;
 
-  const key = CacheKeys.products(ownerId);
+export interface ProductsPageResult {
+  products: Product[];
+  hasMore: boolean;
+  total: number;
+}
+
+export const loadProductsPage = async (
+  page = 0,
+  pageSize = PRODUCTS_PAGE_SIZE,
+  force = false,
+  search?: string,
+  category?: string
+): Promise<ProductsPageResult> => {
+  const ownerId = await getAuthOwnerId();
+  if (!ownerId) return { products: [], hasMore: false, total: 0 };
+
+  const key = `${CacheKeys.products(ownerId)}:p${page}:s${search || ''}:c${category || ''}`;
 
   if (!force) {
-    const cached = cache.get<Product[]>(key);
+    const cached = cache.get<ProductsPageResult>(key);
     if (cached) return cached;
   }
 
   return dedup(key, async () => {
     try {
-      const { data, error } = await supabase
+      const { data: rpcData, error: rpcError } = await (supabase as any).rpc('get_owner_products_page', {
+        p_owner_id: ownerId,
+        p_limit: pageSize,
+        p_offset: page * pageSize,
+        p_search: search || null,
+        p_category: category && category !== 'all' ? category : null,
+      });
+
+      if (!rpcError && rpcData?.products) {
+        const products = (rpcData.products as Record<string, unknown>[]).map(formatProduct);
+        const result: ProductsPageResult = {
+          products,
+          hasMore: !!rpcData.has_more,
+          total: Number(rpcData.total) || products.length,
+        };
+        cache.set(key, result, CacheTTL.MEDIUM, CacheTTL.STALE);
+        if (page === 0) {
+          cache.set(CacheKeys.products(ownerId), products, CacheTTL.MEDIUM, CacheTTL.STALE);
+          products_list = products;
+        }
+        return result;
+      }
+
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+
+      let query = supabase
         .from('products')
-        .select('id, name, description, category, price, cost, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, created_at, updated_at')
+        .select('id, name, description, category, price, cost, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, created_at, updated_at', { count: 'exact' })
         .eq('owner_id', ownerId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+      if (category && category !== 'all') {
+        query = query.eq('category', category);
+      }
+      if (search?.trim()) {
+        query = query.ilike('name', `%${search.trim()}%`);
+      }
+
+      const { data, error, count } = await query;
 
       if (error) {
-        console.error('Error loading products:', error);
-        return cache.get<Product[]>(key) || [];
+        console.error('Error loading products page:', error);
+        return cache.get<ProductsPageResult>(key) || { products: [], hasMore: false, total: 0 };
       }
 
       const products = data?.map(formatProduct) || [];
-      cache.set(key, products, CacheTTL.MEDIUM, CacheTTL.STALE);
-      return products;
+      const total = count ?? products.length;
+      const result: ProductsPageResult = {
+        products,
+        hasMore: from + products.length < total,
+        total,
+      };
+      cache.set(key, result, CacheTTL.MEDIUM, CacheTTL.STALE);
+      if (page === 0) {
+        cache.set(CacheKeys.products(ownerId), products, CacheTTL.MEDIUM, CacheTTL.STALE);
+        products_list = products;
+      }
+      return result;
     } catch (error) {
-      console.error('Error loading products:', error);
-      return cache.get<Product[]>(key) || [];
+      console.error('Error loading products page:', error);
+      return cache.get<ProductsPageResult>(key) || { products: [], hasMore: false, total: 0 };
     }
   });
+};
+
+let products_list: Product[] = [];
+
+export const loadProducts = async (force = false): Promise<Product[]> => {
+  const { products } = await loadProductsPage(0, PRODUCTS_PAGE_SIZE, force);
+  return products;
 };
 
 export const getProductsSync = (): Product[] => {
@@ -167,12 +234,29 @@ export const invalidateCategories = () => {
 };
 
 /** Patch a single product in cache after realtime UPDATE (avoids full catalog reload) */
+export const appendCachedProduct = (ownerId: string, row: Record<string, unknown>): boolean => {
+  const key = CacheKeys.products(ownerId);
+  const cached = cache.get<Product[]>(key);
+  const formatted = formatProduct(row);
+  if (!cached) {
+    cache.set(key, [formatted], CacheTTL.MEDIUM, CacheTTL.STALE);
+    products_list = [formatted];
+    return true;
+  }
+  if (cached.some((p) => p.id === formatted.id)) return patchCachedProduct(ownerId, row);
+  const updated = [formatted, ...cached].slice(0, PRODUCTS_PAGE_SIZE);
+  cache.set(key, updated, CacheTTL.MEDIUM, CacheTTL.STALE);
+  products_list = updated;
+  return true;
+};
+
 export const patchCachedProduct = (ownerId: string, row: Record<string, unknown>): boolean => {
   const key = CacheKeys.products(ownerId);
   const cached = cache.get<Product[]>(key);
   if (!cached) return false;
   const updated = cached.map((p) => (p.id === row.id ? formatProduct(row) : p));
   cache.set(key, updated, CacheTTL.MEDIUM, CacheTTL.STALE);
+  products_list = updated;
   products = updated;
   return true;
 };

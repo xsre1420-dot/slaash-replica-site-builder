@@ -9,7 +9,7 @@ interface CacheEntry<T = unknown> {
   staleWhileRevalidate: number;
 }
 
-const MAX_CACHE_ENTRIES = 500;
+const MAX_CACHE_ENTRIES = 2000;
 
 class CacheStore {
   private store = new Map<string, CacheEntry>();
@@ -99,6 +99,8 @@ export const CacheKeys = {
   storeSettings: (ownerId: string) => `store_settings:${ownerId}`,
   orders: (ownerId: string, page: number) => `orders:${ownerId}:${page}`,
   statistics: (ownerId: string, range: string) => `stats:${ownerId}:${range}`,
+  tenantMeta: (slug: string) => `tenant-meta:${slug}`,
+  tenantProducts: (slug: string, pageKey: string) => `tenant-products:${slug}:${pageKey}`,
 } as const;
 
 export const CacheTTL = {

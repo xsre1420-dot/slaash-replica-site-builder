@@ -6,7 +6,7 @@
 import { useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { invalidateProducts, loadProducts, patchCachedProduct, removeCachedProduct } from '@/data/dummyData';
+import { appendCachedProduct, patchCachedProduct, removeCachedProduct } from '@/data/dummyData';
 
 export const useRealtimeProducts = (onUpdate?: () => void) => {
   const { user } = useAuth();
@@ -27,9 +27,9 @@ export const useRealtimeProducts = (onUpdate?: () => void) => {
       return;
     }
 
-    if (payload.eventType === 'INSERT') {
-      invalidateProducts();
-      loadProducts(true).then(() => onUpdate?.());
+    if (payload.eventType === 'INSERT' && payload.new) {
+      appendCachedProduct(ownerId, payload.new);
+      onUpdate?.();
     }
   }, [user?.id, onUpdate]);
 

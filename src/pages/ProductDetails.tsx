@@ -78,10 +78,7 @@ const ProductDetails = () => {
     }
   }, [isTenantMode, tenant.storeInfo?.ownerId, setStoreOwner]);
 
-  const cachedTenantProduct = useMemo(
-    () => (productId && isTenantMode ? tenant.products.find((p) => p.id === productId) ?? null : null),
-    [productId, isTenantMode, tenant.products]
-  );
+  const cachedTenantProduct = null;
 
   const handleProductLoaded = useCallback((p: Product | null) => {
     setProduct(p);
