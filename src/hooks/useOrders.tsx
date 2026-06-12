@@ -3,6 +3,7 @@ import { Order } from "@/types";
 import { format } from "date-fns";
 import { cache, CacheKeys, CacheTTL, dedup } from "@/lib/cache";
 import { useAuth } from "@/context/AuthContext";
+import { useStoreHydration } from "@/context/StoreBootstrapContext";
 import { mapOrderError } from "@/utils/orderErrors";
 import { canTransitionOrderStatus } from "@/utils/orderStatusUtils";
 import { fetchOrdersPage, updateOrderStatus, ORDERS_PER_PAGE } from "@/services/orderService";
@@ -10,6 +11,7 @@ import { toast } from "sonner";
 
 export const useOrders = () => {
   const { user } = useAuth();
+  const { isReady, hydrationVersion } = useStoreHydration();
   const [orders, setOrders] = useState<Order[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
@@ -58,8 +60,9 @@ export const useOrders = () => {
   }, [user?.id]);
 
   useEffect(() => {
+    if (!isReady) return;
     fetchOrders(0);
-  }, [fetchOrders]);
+  }, [isReady, hydrationVersion, fetchOrders]);
 
   const filteredOrders = useMemo(() => {
     let filtered = orders;

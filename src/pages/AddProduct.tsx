@@ -3,8 +3,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Plus, Image, Type, Tag, DollarSign, Package, Palette, Save } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Plus, Image, Type, Tag, DollarSign, Package, Palette, Save } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import PageHeader from "@/components/layout/PageHeader";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { addProduct } from "@/services/productService";
 import { useToast } from "@/hooks/use-toast";
@@ -197,32 +199,26 @@ const AddProduct = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background font-arabic">
-      {/* Header */}
-      <div className="bg-card border-b border-border sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3">
-          <div className="flex justify-between items-center">
-            <Link to="/builder">
-              <Button variant="ghost" size="icon" className="rounded-xl hover:bg-muted">
-                <X className="w-5 h-5" />
-              </Button>
-            </Link>
-            <h1 className="text-xl font-bold text-foreground">إضافة منتج جديد</h1>
-            <Button
-              type="button"
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
-            >
-              <Save className="w-4 h-4" />
-              {isSubmitting ? "جاري الحفظ..." : "حفظ"}
-            </Button>
-          </div>
-        </div>
-      </div>
+    <DashboardLayout>
+      <PageHeader
+        title="إضافة منتج جديد"
+        description="أضف منتجاً جديداً إلى متجرك"
+        backTo="/products"
+        breadcrumbs={[{ label: 'المنتجات', href: '/products' }, { label: 'إضافة منتج' }]}
+        actions={
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="rounded-xl gap-1.5 min-h-[44px] shadow-brand"
+          >
+            <Save className="w-4 h-4" />
+            {isSubmitting ? "جاري الحفظ..." : "حفظ"}
+          </Button>
+        }
+      />
 
-      {/* Content */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+      <div className="ds-page max-w-6xl">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Sidebar: Progress + Preview */}
           <div className="lg:col-span-1 space-y-5 order-first lg:order-last">
@@ -402,7 +398,7 @@ const AddProduct = () => {
         open={isCategoryDialogOpen}
         onOpenChange={setIsCategoryDialogOpen}
       />
-    </div>
+    </DashboardLayout>
   );
 };
 

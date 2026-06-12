@@ -379,6 +379,34 @@ export const getProductById = (id: string): Product | undefined => {
   return all.find(product => product.id === id);
 };
 
+/** Fetch product from DB — survives empty cache after login */
+export const fetchProductById = async (productId: string): Promise<Product | null> => {
+  const cached = getProductById(productId);
+  if (cached) return cached;
+
+  const ownerId = await getAuthOwnerId();
+  if (!ownerId) return null;
+
+  const { data, error } = await supabase
+    .from('products')
+    .select('id, name, description, category, price, cost, image_url, additional_images, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, original_price, is_active, created_at, updated_at')
+    .eq('id', productId)
+    .eq('owner_id', ownerId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const product = mapDbProduct(data as Record<string, unknown>);
+  const key = CacheKeys.products(ownerId);
+  const current = cache.get<Product[]>(key) || [];
+  if (!current.some((p) => p.id === productId)) {
+    cache.set(key, [product, ...current], CacheTTL.MEDIUM, CacheTTL.STALE);
+  }
+  products_list = cache.get<Product[]>(key) || [product];
+  products = products_list;
+  return product;
+};
+
 // --- Category CRUD ---
 
 export const addCategory = async (category: Category): Promise<{ success: boolean; error?: string }> => {

@@ -1,9 +1,1 @@
-import { useStoreBootstrap } from '@/hooks/useStoreBootstrap';
-
-/** Invisible component — wires store bootstrap on auth session. */
-const StoreBootstrap = () => {
-  useStoreBootstrap();
-  return null;
-};
-
-export default StoreBootstrap;
+export { StoreBootstrapProvider, useStoreHydration } from '@/context/StoreBootstrapContext';

@@ -4,8 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Eye, CheckCircle, XCircle, Clock, ArrowLeft, Package, TrendingUp, ShoppingBag } from "lucide-react";
+import { Search, Eye, CheckCircle, XCircle, Clock, Package, TrendingUp, ShoppingBag } from "lucide-react";
 import { Link } from "react-router-dom";
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import PageHeader from "@/components/layout/PageHeader";
+import StatCard from "@/components/ui/StatCard";
+import EmptyState from "@/components/ui/EmptyState";
 import { useOrders } from "@/hooks/useOrders";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
@@ -77,52 +81,20 @@ const Orders = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background font-arabic">
-      <div className="bg-card shadow-sm border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex justify-between items-center">
-            <Link to="/builder">
-              <Button variant="ghost" className="p-2 hover:bg-muted rounded-xl">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            </Link>
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground">إدارة الطلبات</h1>
-            <div className="w-10" />
-          </div>
-        </div>
-      </div>
+    <DashboardLayout>
+      <PageHeader
+        title="إدارة الطلبات"
+        description="تابع وحدّث حالة طلبات عملائك"
+        hideBack
+        breadcrumbs={[{ label: 'لوحة التحكم', href: '/builder' }, { label: 'الطلبات' }]}
+      />
 
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
-        {/* Stats */}
+      <div className="ds-page">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          <Card className="border border-border rounded-2xl shadow-sm">
-            <CardContent className="p-4 text-center">
-              <Package className="w-5 h-5 mx-auto mb-2 text-muted-foreground" />
-              <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-              <p className="text-xs text-muted-foreground">إجمالي الطلبات</p>
-            </CardContent>
-          </Card>
-          <Card className="border border-border rounded-2xl shadow-sm">
-            <CardContent className="p-4 text-center">
-              <Clock className="w-5 h-5 mx-auto mb-2 text-yellow-500" />
-              <p className="text-2xl font-bold text-foreground">{stats.pending}</p>
-              <p className="text-xs text-muted-foreground">قيد الانتظار</p>
-            </CardContent>
-          </Card>
-          <Card className="border border-border rounded-2xl shadow-sm">
-            <CardContent className="p-4 text-center">
-              <CheckCircle className="w-5 h-5 mx-auto mb-2 text-green-500" />
-              <p className="text-2xl font-bold text-foreground">{stats.completed}</p>
-              <p className="text-xs text-muted-foreground">مكتمل</p>
-            </CardContent>
-          </Card>
-          <Card className="border border-border rounded-2xl shadow-sm">
-            <CardContent className="p-4 text-center">
-              <TrendingUp className="w-5 h-5 mx-auto mb-2 text-foreground" />
-              <p className="text-lg sm:text-2xl font-bold text-foreground truncate">{stats.totalRevenue.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground">الإيرادات (د.ع)</p>
-            </CardContent>
-          </Card>
+          <StatCard label="إجمالي الطلبات" value={stats.total} icon={Package} />
+          <StatCard label="قيد الانتظار" value={stats.pending} icon={Clock} iconClassName="bg-warning/10 [&_svg]:text-warning" />
+          <StatCard label="مكتمل" value={stats.completed} icon={CheckCircle} iconClassName="bg-success/10 [&_svg]:text-success" />
+          <StatCard label="الإيرادات (د.ع)" value={stats.totalRevenue.toLocaleString()} icon={TrendingUp} />
         </div>
 
         {/* Filters */}
@@ -242,30 +214,20 @@ const Orders = () => {
             )}
           </>
         ) : (
-          <Card className="border border-border rounded-2xl shadow-sm">
-            <CardContent className="text-center py-16">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                <ShoppingBag className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">لا توجد طلبات بعد</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                {searchQuery || statusFilter !== "all" || dateFilter !== "all"
-                  ? "لم يتم العثور على طلبات تطابق معايير البحث"
-                  : "شارك رابط متجرك مع عملائك للحصول على أول طلب"}
-              </p>
-              {!searchQuery && statusFilter === "all" && dateFilter === "all" && (
-                <Link to="/builder">
-                  <Button className="rounded-xl">
-                    <ShoppingBag className="w-4 h-4 ml-2" />
-                    العودة للوحة التحكم
-                  </Button>
-                </Link>
-              )}
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={ShoppingBag}
+            title="لا توجد طلبات بعد"
+            description={
+              searchQuery || statusFilter !== "all" || dateFilter !== "all"
+                ? "لم يتم العثور على طلبات تطابق معايير البحث"
+                : "شارك رابط متجرك مع عملائك للحصول على أول طلب"
+            }
+            actionLabel={!searchQuery && statusFilter === "all" && dateFilter === "all" ? "نسخ رابط المتجر" : undefined}
+            onAction={!searchQuery && statusFilter === "all" && dateFilter === "all" ? () => window.location.href = '/builder' : undefined}
+          />
         )}
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

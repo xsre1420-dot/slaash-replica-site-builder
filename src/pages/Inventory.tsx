@@ -1,7 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
-import { ArrowRight, Search, Package, AlertTriangle, CheckCircle, Edit, Download, Filter, XCircle } from "lucide-react";
+import { Search, Package, AlertTriangle, CheckCircle, Edit, Download, Filter, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import PageHeader from "@/components/layout/PageHeader";
+import StatCard from "@/components/ui/StatCard";
+import EmptyState from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -196,46 +199,34 @@ function Inventory() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center animate-fade-in">
-          <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4 animate-pulse" />
-          <p className="text-muted-foreground">جاري تحميل المخزون...</p>
+      <DashboardLayout>
+        <PageHeader title="إدارة المخزون" hideBack breadcrumbs={[{ label: 'لوحة التحكم', href: '/builder' }, { label: 'المخزون' }]} />
+        <div className="flex items-center justify-center py-24">
+          <div className="text-center animate-fade-in">
+            <Package className="w-12 h-12 text-primary mx-auto mb-4 animate-pulse" />
+            <p className="text-muted-foreground">جاري تحميل المخزون...</p>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background font-arabic">
-      {/* Header */}
-      <div className="bg-card border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Link to="/builder">
-                <Button variant="ghost" size="icon" className="rounded-xl">
-                  <ArrowRight className="w-5 h-5" />
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-xl font-bold text-foreground">إدارة المخزون</h1>
-                <p className="text-xs text-muted-foreground">تتبع وإدارة مخزون المنتجات</p>
-              </div>
-            </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={exportCSV}
-              className="rounded-xl border-border/30 hover:border-border/60"
-            >
-              <Download className="w-4 h-4 ml-2" />
-              تصدير
-            </Button>
-          </div>
-        </div>
-      </div>
+    <DashboardLayout>
+      <PageHeader
+        title="إدارة المخزون"
+        description="تتبع وإدارة مخزون المنتجات"
+        hideBack
+        breadcrumbs={[{ label: 'لوحة التحكم', href: '/builder' }, { label: 'المخزون' }]}
+        actions={
+          <Button variant="outline" size="sm" onClick={exportCSV} className="rounded-xl min-h-[44px]">
+            <Download className="w-4 h-4 ml-2" />
+            تصدير
+          </Button>
+        }
+      />
 
-      <div className="max-w-7xl mx-auto px-4 py-5">
+      <div className="ds-page">
         {/* Low Stock Alert */}
         {lowStockProducts.length > 0 && (
           <div className="mb-5 p-4 rounded-2xl bg-amber-500/5 border border-amber-500/15 animate-fade-in">
@@ -254,22 +245,10 @@ function Inventory() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-          {[
-            { label: "إجمالي المنتجات", value: stats.total, sub: `${stats.totalStock} وحدة`, color: "text-foreground" },
-            { label: "متوفر", value: stats.good, color: "text-emerald-600 dark:text-emerald-400" },
-            { label: "مخزون منخفض", value: stats.low, color: "text-amber-600 dark:text-amber-400" },
-            { label: "نفد المخزون", value: stats.out, color: "text-destructive" },
-          ].map((stat, i) => (
-            <div
-              key={stat.label}
-              className="bg-card/80 backdrop-blur-sm p-4 rounded-2xl border border-border/20 animate-fade-in"
-              style={{ animationDelay: `${i * 60}ms` }}
-            >
-              <p className="text-xs text-muted-foreground mb-1">{stat.label}</p>
-              <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
-              {stat.sub && <p className="text-[10px] text-muted-foreground mt-0.5">{stat.sub}</p>}
-            </div>
-          ))}
+          <StatCard label="إجمالي المنتجات" value={stats.total} icon={Package} trend={`${stats.totalStock} وحدة`} />
+          <StatCard label="متوفر" value={stats.good} icon={CheckCircle} iconClassName="bg-emerald-500/10 [&_svg]:text-emerald-600" />
+          <StatCard label="منخفض" value={stats.low} icon={AlertTriangle} iconClassName="bg-warning/10 [&_svg]:text-warning" />
+          <StatCard label="نفد" value={stats.out} icon={XCircle} iconClassName="bg-destructive/10 [&_svg]:text-destructive" />
         </div>
 
         {/* Search & Filters */}
@@ -462,7 +441,7 @@ function Inventory() {
           </div>
         )}
       </div>
-    </div>
+    </DashboardLayout>
   );
 }
 

@@ -1,13 +1,12 @@
 import { supabase } from '@/integrations/supabase/client';
 import { cache, CacheKeys, CacheTTL } from '@/lib/cache';
 import { mapDbProduct } from '@/mappers/productMapper';
-import { Category } from '@/types';
 import { defaultStoreSettings, StoreProfile, StoreSettings } from '@/types/store';
 import { DeliveryPrice } from '@/utils/deliveryUtils';
 import { logger } from '@/lib/observability';
 
 const STORE_SETTINGS_SELECT =
-  'store_name, store_logo, store_governorate, menu_background_color, menu_text_color, menu_accent_color, store_font, banner_images, primary_banner_index, delivery_prices, payment_methods';
+  'store_name, store_logo, store_governorate, menu_background_color, menu_text_color, menu_accent_color, store_font, banner_images, primary_banner_index, delivery_prices, payment_methods, store_slug, return_policy, privacy_policy, terms_conditions, whatsapp_number, whatsapp_welcome_message, whatsapp_order_confirmation';
 
 export const mapStoreSettingsRow = (data: Record<string, unknown>): StoreProfile => ({
   storeName: String(data.store_name || ''),
@@ -27,10 +26,12 @@ export const mapStoreSettingsRow = (data: Record<string, unknown>): StoreProfile
   },
 });
 
-export const fetchStoreSettings = async (ownerId: string): Promise<StoreProfile | null> => {
+export const fetchStoreSettings = async (ownerId: string, force = false): Promise<StoreProfile | null> => {
   const cacheKey = CacheKeys.storeSettings(ownerId);
-  const cached = cache.get<Record<string, unknown>>(cacheKey);
-  if (cached) return mapStoreSettingsRow(cached);
+  if (!force) {
+    const cached = cache.get<Record<string, unknown>>(cacheKey);
+    if (cached) return mapStoreSettingsRow(cached);
+  }
 
   const { data, error } = await supabase
     .from('store_settings')
@@ -145,7 +146,11 @@ export const bootstrapOwnerStore = async (userId: string): Promise<BootstrapResu
         cache.set(CacheKeys.storeSettings(userId), data.settings, CacheTTL.LONG, CacheTTL.STALE);
       }
 
-      const categories = (data.categories || []) as Category[];
+      const categories = ((data.categories || []) as Record<string, unknown>[]).map((c) => ({
+        id: String(c.id),
+        name: String(c.name),
+        order: Number(c.order ?? c.display_order ?? 0),
+      }));
       cache.set(CacheKeys.categories(userId), categories, CacheTTL.MEDIUM, CacheTTL.STALE);
 
       const products = ((data.products || []) as Record<string, unknown>[]).map(mapDbProduct);

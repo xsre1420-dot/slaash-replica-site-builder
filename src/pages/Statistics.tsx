@@ -1,8 +1,10 @@
 
 import { useState, useCallback, useMemo, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, RefreshCw, Download, AlertCircle, Loader2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { RefreshCw, Download, AlertCircle, Loader2, TrendingUp } from "lucide-react";
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import PageHeader from "@/components/layout/PageHeader";
+import StatCard from "@/components/ui/StatCard";
 import { SalesStats } from "@/components/statistics/SalesStats";
 import { DateRangeControls } from "@/components/statistics/DateRangeControls";
 import { useRealStatistics } from "@/hooks/useRealStatistics";
@@ -68,80 +70,81 @@ const Statistics = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">جاري تحميل الإحصائيات...</p>
-          <p className="text-xs text-muted-foreground/60 mt-1">يتم تحليل بيانات الطلبات والزوار</p>
+      <DashboardLayout>
+        <PageHeader title="الإحصائيات والتقارير" hideBack breadcrumbs={[{ label: 'لوحة التحكم', href: '/builder' }, { label: 'الإحصائيات' }]} />
+        <div className="flex items-center justify-center py-24">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
+            <p className="text-muted-foreground">جاري تحميل الإحصائيات...</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">يتم تحليل بيانات الطلبات والزوار</p>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="w-16 h-16 text-destructive mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-2">خطأ في تحميل الإحصائيات</h3>
-          <p className="text-muted-foreground mb-4">{error}</p>
-          <Button onClick={refetch}>إعادة المحاولة</Button>
+      <DashboardLayout>
+        <PageHeader title="الإحصائيات والتقارير" hideBack breadcrumbs={[{ label: 'لوحة التحكم', href: '/builder' }, { label: 'الإحصائيات' }]} />
+        <div className="flex items-center justify-center py-24">
+          <div className="text-center">
+            <AlertCircle className="w-16 h-16 text-destructive mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">خطأ في تحميل الإحصائيات</h3>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={refetch} className="rounded-xl">إعادة المحاولة</Button>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   if (!stats) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-2">لا توجد بيانات</h3>
-          <p className="text-muted-foreground">لا توجد إحصائيات لعرضها حالياً</p>
+      <DashboardLayout>
+        <PageHeader title="الإحصائيات والتقارير" hideBack breadcrumbs={[{ label: 'لوحة التحكم', href: '/builder' }, { label: 'الإحصائيات' }]} />
+        <div className="flex items-center justify-center py-24">
+          <div className="text-center">
+            <AlertCircle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">لا توجد بيانات</h3>
+            <p className="text-muted-foreground">لا توجد إحصائيات لعرضها حالياً</p>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background font-arabic">
-      {/* Header */}
-      <div className="bg-card shadow-sm border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex justify-between items-center">
-            <Link to="/builder">
-              <Button variant="ghost" size="icon" className="rounded-xl">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            </Link>
-            <h1 className="text-xl font-bold text-foreground">الإحصائيات والتقارير</h1>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="rounded-xl" onClick={exportCSV}>
-                <Download className="w-4 h-4 ml-1" />
-                تصدير
-              </Button>
-              <Button variant="outline" size="sm" className="rounded-xl" onClick={refetch}>
-                <RefreshCw className="w-4 h-4 ml-1" />
-                تحديث
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+    <DashboardLayout>
+      <PageHeader
+        title="الإحصائيات والتقارير"
+        description="تابع أداء متجرك ومبيعاتك"
+        hideBack
+        breadcrumbs={[{ label: 'لوحة التحكم', href: '/builder' }, { label: 'الإحصائيات' }]}
+        actions={
+          <>
+            <Button variant="outline" size="sm" className="rounded-xl min-h-[44px]" onClick={exportCSV}>
+              <Download className="w-4 h-4 ml-1" />
+              تصدير
+            </Button>
+            <Button variant="outline" size="sm" className="rounded-xl min-h-[44px]" onClick={refetch}>
+              <RefreshCw className="w-4 h-4 ml-1" />
+              تحديث
+            </Button>
+          </>
+        }
+      />
 
-      <div className="max-w-7xl mx-auto p-4 sm:p-6">
-        {/* Quick Summary */}
-        <div className="grid grid-cols-3 gap-3 mb-6 animate-fade-in">
+      <div className="ds-page">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6 animate-fade-in">
           {summaryItems.map((item) => (
-            <div key={item.label} className="bg-card border border-border rounded-xl p-3 text-center">
-              <p className="text-xs text-muted-foreground mb-1">{item.label}</p>
-              <p className="text-lg font-bold text-foreground">{item.value}</p>
-              {item.growth !== 0 && (
-                <p className={`text-xs font-medium mt-1 ${item.growth >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                  {item.growth >= 0 ? '↑' : '↓'} {Math.abs(item.growth).toFixed(1)}%
-                </p>
-              )}
-            </div>
+            <StatCard
+              key={item.label}
+              label={item.label}
+              value={item.value}
+              icon={TrendingUp}
+              trend={item.growth !== 0 ? `${item.growth >= 0 ? '↑' : '↓'} ${Math.abs(item.growth).toFixed(1)}%` : undefined}
+            />
           ))}
         </div>
 
@@ -193,7 +196,7 @@ const Statistics = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

@@ -4,6 +4,7 @@ import { Edit, Plus, Star, MessageSquare, GripVertical, Copy, Zap } from "lucide
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
 import { loadProducts, addProduct } from "@/services/productService";
+import { useStoreHydration } from "@/context/StoreBootstrapContext";
 import { Product } from "@/types";
 import { toast } from "sonner";
 import React from "react";
@@ -27,10 +28,13 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
   const [quickEditProduct, setQuickEditProduct] = useState<Product | null>(null);
   const [quickEditOpen, setQuickEditOpen] = useState(false);
   const navigate = useNavigate();
+  const { isReady, hydrationVersion } = useStoreHydration();
 
   useEffect(() => {
+    if (!isReady) return;
+
     const loadProductsData = async () => {
-      const productsData = await loadProducts();
+      const productsData = await loadProducts(true);
       const savedOrder = localStorage.getItem('products_display_order');
       if (savedOrder) {
         try {
@@ -52,7 +56,7 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
     };
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [onProductsLoaded]);
+  }, [isReady, hydrationVersion, onProductsLoaded]);
 
   // Use filteredProducts if provided, otherwise use all
   const products = filteredProducts ?? allProducts;

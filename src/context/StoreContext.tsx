@@ -1,5 +1,6 @@
 import { createContext, useState, useContext, ReactNode, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "./AuthContext";
+import { useStoreHydration } from "./StoreBootstrapContext";
 import {
   defaultStoreSettings,
   fetchStoreSettings,
@@ -21,26 +22,27 @@ const StoreContext = createContext<StoreContextType | null>(null);
 
 export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
+  const { isReady, hydrationVersion } = useStoreHydration();
   const [storeName, setStoreName] = useState("");
   const [storeLogo, setStoreLogo] = useState("");
   const [storeGovernorate, setStoreGovernorate] = useState("");
   const [storeSettings, setStoreSettings] = useState<StoreSettings>(defaultStoreSettings());
 
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && isReady) {
       loadStoreSettings();
-    } else {
+    } else if (!user?.id) {
       setStoreName("");
       setStoreLogo("");
       setStoreGovernorate("");
       setStoreSettings(defaultStoreSettings());
     }
-  }, [user?.id]);
+  }, [user?.id, isReady, hydrationVersion]);
 
   const loadStoreSettings = async () => {
     if (!user?.id) return;
 
-    const profile = await fetchStoreSettings(user.id);
+    const profile = await fetchStoreSettings(user.id, true);
     if (profile) {
       setStoreName(profile.storeName);
       setStoreLogo(profile.storeLogo);

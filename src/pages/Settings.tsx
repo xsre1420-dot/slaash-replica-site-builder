@@ -5,7 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStore } from "@/context/StoreContext";
 import { toast } from "sonner";
 import { Store, Truck, FileText, MessageCircle, Globe } from "lucide-react";
-import SettingsHeader from "@/components/settings/SettingsHeader";
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import PageHeader from "@/components/layout/PageHeader";
 import StoreInfoTab from "@/components/settings/StoreInfoTab";
 import DeliveryTab from "@/components/settings/DeliveryTab";
 import PoliciesTab from "@/components/settings/PoliciesTab";
@@ -45,38 +46,32 @@ const Settings = () => {
   });
 
   useEffect(() => {
-    // Load extra settings from localStorage + slug from DB
-    try {
-      const saved = localStorage.getItem("extra_store_settings");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setSettings(prev => ({ ...prev, ...parsed }));
-      }
-    } catch {}
+    // Load all settings from database (single source of truth)
+    if (!user?.id) return;
 
-    // Load slug from database
-    if (user?.id) {
-      (supabase as any)
-        .from('store_settings')
-        .select('store_slug, return_policy, privacy_policy, whatsapp_number, payment_methods')
-        .eq('owner_id', user.id)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (data) {
-            const methods = Array.isArray(data.payment_methods) ? data.payment_methods as string[] : [];
-            setSettings(prev => ({
-              ...prev,
-              storeSlug: data.store_slug || prev.storeSlug,
-              returnPolicy: data.return_policy || prev.returnPolicy,
-              privacyPolicy: data.privacy_policy || prev.privacyPolicy,
-              whatsappNumber: data.whatsapp_number || prev.whatsappNumber,
-              paymentCashOnDelivery: methods.length === 0 || methods.includes('cash_on_delivery'),
-              paymentCreditCard: methods.includes('credit_card'),
-              paymentEwallet: methods.includes('digital_wallet'),
-            }));
-          }
-        });
-    }
+    (supabase as any)
+      .from('store_settings')
+      .select('store_slug, return_policy, privacy_policy, terms_conditions, whatsapp_number, whatsapp_welcome_message, whatsapp_order_confirmation, payment_methods')
+      .eq('owner_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          const methods = Array.isArray(data.payment_methods) ? data.payment_methods as string[] : [];
+          setSettings(prev => ({
+            ...prev,
+            storeSlug: data.store_slug || prev.storeSlug,
+            returnPolicy: data.return_policy || prev.returnPolicy,
+            termsConditions: data.terms_conditions || prev.termsConditions,
+            privacyPolicy: data.privacy_policy || prev.privacyPolicy,
+            whatsappNumber: data.whatsapp_number || prev.whatsappNumber,
+            whatsappWelcomeMessage: data.whatsapp_welcome_message || prev.whatsappWelcomeMessage,
+            whatsappOrderConfirmation: data.whatsapp_order_confirmation || prev.whatsappOrderConfirmation,
+            paymentCashOnDelivery: methods.length === 0 || methods.includes('cash_on_delivery'),
+            paymentCreditCard: methods.includes('credit_card'),
+            paymentEwallet: methods.includes('digital_wallet'),
+          }));
+        }
+      });
   }, [user?.id]);
 
   useEffect(() => {
@@ -110,15 +105,17 @@ const Settings = () => {
         primaryBannerIndex: settings.primaryBannerIndex,
         deliveryPrices: settings.deliveryPrices
       });
-      // Save slug to database
-      if (user?.id && settings.storeSlug) {
+      if (user?.id) {
         await (supabase as any)
           .from('store_settings')
           .update({
             store_slug: settings.storeSlug,
             return_policy: settings.returnPolicy || null,
             privacy_policy: settings.privacyPolicy || null,
+            terms_conditions: settings.termsConditions || null,
             whatsapp_number: settings.whatsappNumber || null,
+            whatsapp_welcome_message: settings.whatsappWelcomeMessage || null,
+            whatsapp_order_confirmation: settings.whatsappOrderConfirmation || null,
             payment_methods: [
               settings.paymentCashOnDelivery ? 'cash_on_delivery' : null,
               settings.paymentCreditCard ? 'credit_card' : null,
@@ -127,17 +124,6 @@ const Settings = () => {
           })
           .eq('owner_id', user.id);
       }
-      localStorage.setItem("extra_store_settings", JSON.stringify({
-        returnPolicy: settings.returnPolicy,
-        termsConditions: settings.termsConditions,
-        privacyPolicy: settings.privacyPolicy,
-        whatsappNumber: settings.whatsappNumber,
-        whatsappWelcomeMessage: settings.whatsappWelcomeMessage,
-        whatsappOrderConfirmation: settings.whatsappOrderConfirmation,
-        paymentCashOnDelivery: settings.paymentCashOnDelivery,
-        paymentCreditCard: settings.paymentCreditCard,
-        paymentEwallet: settings.paymentEwallet,
-      }));
       
       lastSavedRef.current = settingsHash;
       toast.success("تم الحفظ", { duration: 1500, id: "settings-save" });
@@ -175,10 +161,15 @@ const Settings = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background font-arabic relative">
-      <SettingsHeader />
+    <DashboardLayout>
+      <PageHeader
+        title="الإعدادات"
+        description="خصّص متجرك، التوصيل، الدفع، والسياسات"
+        hideBack
+        breadcrumbs={[{ label: 'لوحة التحكم', href: '/builder' }, { label: 'الإعدادات' }]}
+      />
 
-      <div className="max-w-5xl mx-auto p-4 sm:p-6">
+      <div className="ds-page max-w-5xl">
         <Tabs defaultValue="store" className="w-full">
           <TabsList className="flex w-full bg-muted rounded-xl p-1 h-auto gap-1 mb-6">
             {tabItems.map((tab) => {
@@ -223,7 +214,7 @@ const Settings = () => {
           <p className="text-xs text-muted-foreground">يتم الحفظ تلقائياً عند إجراء أي تغيير</p>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

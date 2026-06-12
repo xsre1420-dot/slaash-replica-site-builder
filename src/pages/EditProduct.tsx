@@ -4,10 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Trash2 } from "lucide-react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Trash2, Save } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import PageHeader from "@/components/layout/PageHeader";
 import { useState, useEffect } from "react";
-import { getCategories, getProductById, updateProduct, getCategoriesSync, deleteProduct } from "@/services/productService";
+import { getCategories, fetchProductById, updateProduct, getCategoriesSync, deleteProduct } from "@/services/productService";
+import { useStoreHydration } from "@/context/StoreBootstrapContext";
 import { useToast } from "@/hooks/use-toast";
 import { Product, Category, ColorOption } from "@/types";
 import ProductImagesManager from "@/components/ProductImagesManager";
@@ -31,6 +34,8 @@ const EditProduct = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { isReady, hydrationVersion } = useStoreHydration();
+  const [loadingProduct, setLoadingProduct] = useState(true);
 
   // Load categories on mount
   useEffect(() => {
@@ -42,8 +47,11 @@ const EditProduct = () => {
   }, []);
 
   useEffect(() => {
-    if (productId) {
-      const product = getProductById(productId);
+    if (!productId || !isReady) return;
+
+    const loadProduct = async () => {
+      setLoadingProduct(true);
+      const product = await fetchProductById(productId);
       if (product) {
         setName(product.name);
         setDescription(product.description);
@@ -59,10 +67,23 @@ const EditProduct = () => {
           description: "المنتج غير موجود",
           variant: "destructive"
         });
-        navigate('/builder');
+        navigate('/products');
       }
-    }
-  }, [productId, navigate, toast]);
+      setLoadingProduct(false);
+    };
+
+    loadProduct();
+  }, [productId, isReady, hydrationVersion, navigate, toast]);
+
+  if (loadingProduct) {
+    return (
+      <DashboardLayout>
+        <div className="min-h-[40vh] flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   const handleImagesChange = (newMainImage: string | null, newAdditionalImages: string[]) => {
     setMainImage(newMainImage);
@@ -182,19 +203,22 @@ const EditProduct = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white text-gray-800 p-4 flex justify-between items-center border-b border-gray-100">
-        <Link to="/builder">
-          <X className="w-6 h-6" />
-        </Link>
-        <h1 className="text-xl font-bold text-black">تعديل المنتج</h1>
-        <div className="w-6" /> {/* Spacer for alignment */}
-      </div>
+    <DashboardLayout>
+      <PageHeader
+        title="تعديل المنتج"
+        description={name || 'تحديث بيانات المنتج'}
+        backTo="/products"
+        breadcrumbs={[{ label: 'المنتجات', href: '/products' }, { label: 'تعديل' }]}
+        actions={
+          <Button type="submit" form="edit-product-form" className="rounded-xl min-h-[44px] shadow-brand">
+            <Save className="w-4 h-4" />
+            حفظ
+          </Button>
+        }
+      />
 
-      {/* Form */}
-      <div className="max-w-xl mx-auto p-4">
-        <form className="bg-white rounded-xl p-6 shadow-sm space-y-6" onSubmit={handleSubmit}>
+      <div className="ds-page max-w-2xl">
+        <form id="edit-product-form" className="ds-card p-6 space-y-6" onSubmit={handleSubmit}>
           {/* Image Upload */}
           <ProductImagesManager 
             mainImage={mainImage}
@@ -204,10 +228,10 @@ const EditProduct = () => {
 
           {/* Name */}
           <div className="space-y-2 text-right">
-            <Label htmlFor="name" className="block text-black">اسم المنتج</Label>
+            <Label htmlFor="name" className="block text-foreground">اسم المنتج</Label>
             <Input 
               id="name" 
-              className="text-right text-black focus:border-blue-500 focus:ring-blue-500"
+              className="text-right ds-input"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -215,10 +239,10 @@ const EditProduct = () => {
 
           {/* Description */}
           <div className="space-y-2 text-right">
-            <Label htmlFor="description" className="block text-black">الوصف</Label>
+            <Label htmlFor="description" className="block text-foreground">الوصف</Label>
             <Textarea 
               id="description" 
-              className="text-right text-black focus:border-blue-500 focus:ring-blue-500"
+              className="text-right rounded-xl border-border focus-visible:ring-primary/20"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
@@ -226,11 +250,11 @@ const EditProduct = () => {
 
           {/* Price */}
           <div className="space-y-2 text-right">
-            <Label htmlFor="price" className="block text-black">السعر (دينار عراقي)</Label>
+            <Label htmlFor="price" className="block text-foreground">السعر (دينار عراقي)</Label>
             <Input 
               id="price" 
               type="text" 
-              className="text-right text-black focus:border-blue-500 focus:ring-blue-500" 
+              className="text-right ds-input"
               value={formatDisplayPrice(price)}
               onChange={(e) => handlePriceChange(e.target.value)}
               placeholder="أدخل السعر"
@@ -288,7 +312,7 @@ const EditProduct = () => {
           </div>
         </form>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

@@ -1,7 +1,9 @@
 
 import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
-import { ArrowLeft, MessageSquare, Lightbulb, Download, Plus, Package, AlertTriangle, XCircle, DollarSign, Search } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
+import { MessageSquare, Lightbulb, Download, Plus, Package, AlertTriangle, XCircle, DollarSign, Search } from "lucide-react";
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -119,23 +121,23 @@ const Products = () => {
   }), [loadedProducts, debouncedSearch, categoryFilter, stockFilter]);
 
   return (
-    <div className="min-h-screen bg-background font-arabic">
-      {/* Header */}
-      <div className="bg-card shadow-sm border-b border-border">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex justify-between items-center">
-            <Link to="/builder">
-              <Button variant="ghost" className="p-2 hover:bg-muted rounded-xl">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            </Link>
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground">إدارة المنتجات</h1>
-            <div className="w-10" />
-          </div>
-        </div>
-      </div>
+    <DashboardLayout>
+      <PageHeader
+        title="إدارة المنتجات"
+        description="أضف وعدّل وتابع منتجات متجرك"
+        hideBack
+        breadcrumbs={[{ label: 'لوحة التحكم', href: '/builder' }, { label: 'المنتجات' }]}
+        actions={
+          <Link to="/add-product">
+            <Button size="sm" className="rounded-xl min-h-[44px]">
+              <Plus className="w-4 h-4" />
+              إضافة
+            </Button>
+          </Link>
+        }
+      />
 
-      <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-4">
+      <div className="ds-page max-w-6xl">
         {selectedProduct ? (
           <div className="bg-card rounded-3xl shadow-sm border border-border p-4 sm:p-8 space-y-6">
             <div className="flex justify-start items-center">
@@ -288,7 +290,7 @@ const Products = () => {
           </>
         )}
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

@@ -55,13 +55,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         .or(`id.eq.${userId},user_id.eq.${userId}`)
         .maybeSingle();
 
-      const profileId = profile?.user_id || profile?.id || userId;
-
       if (profile) {
         setUserAndOwner({
-          id: profileId,
-          username: profile.username || 'مستخدم',
-          store_name: profile.store_name || undefined,
+          id: userId,
+          username: profile.username || fallbackMeta?.username || 'مستخدم',
+          store_name: profile.store_name || fallbackMeta?.store_name,
         });
       } else if (fallbackMeta) {
         setUserAndOwner({
@@ -92,9 +90,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           store_name: meta.store_name,
         });
 
-        if (event === 'SIGNED_IN') {
-          invalidateOwnerCache(session.user.id);
-        }
         setTimeout(() => loadProfile(session.user.id, meta), 0);
       } else if (event === 'SIGNED_OUT') {
         const prevId = lastUserIdRef.current;

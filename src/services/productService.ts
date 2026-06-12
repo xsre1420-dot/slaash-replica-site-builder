@@ -26,6 +26,7 @@ export {
   deleteProduct,
   getProductsByCategory,
   getProductById,
+  fetchProductById,
   addCategory,
   updateCategory,
   deleteCategory,

@@ -14,7 +14,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 import OfflineBanner from "./components/OfflineBanner";
 import RecoveryBanner from "./components/RecoveryBanner";
-import StoreBootstrap from "./components/StoreBootstrap";
+import { StoreBootstrapProvider } from "./components/StoreBootstrap";
 import SubdomainRouter from "./components/SubdomainRouter";
 
 // Lazy load ALL pages
@@ -77,8 +77,8 @@ const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <StoreBootstrapProvider>
         <StoreProvider>
-          <StoreBootstrap />
           <TooltipProvider>
             <CartProvider>
               <OfflineBanner />
@@ -118,6 +118,7 @@ const App = () => (
             </CartProvider>
           </TooltipProvider>
         </StoreProvider>
+        </StoreBootstrapProvider>
       </AuthProvider>
     </QueryClientProvider>
   </ErrorBoundary>

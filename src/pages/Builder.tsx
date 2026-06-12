@@ -1,58 +1,45 @@
 
 import { Link } from "react-router-dom";
-import { Eye, List, Plus, Settings, BarChart3, Copy, Check, Package, Archive, TrendingUp, Share2 } from "lucide-react";
-
+import { List, Plus, Settings, BarChart3, Copy, Check, Package, Archive, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import StoreHeader from "@/components/StoreHeader";
 import { useStore } from "@/context/StoreContext";
 import { useAuth } from "@/context/AuthContext";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import platformLogo from "@/assets/platform-logo.png";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import OnboardingChecklist from "@/components/OnboardingChecklist";
 import { usePreloadData } from "@/hooks/usePreloadData";
 import { getProductsSync } from "@/services/productService";
+import DashboardLayout from "@/components/layout/DashboardLayout";
 
 const dashboardCards = [
-  { to: "/orders", icon: List, label: "الطلبات", desc: "إدارة الطلبات", gradient: "from-primary to-secondary" },
-  { to: "/products", icon: Package, label: "المنتجات", desc: "إدارة المنتجات", gradient: "from-amber-500 to-orange-500" },
-  { to: "/settings", icon: Settings, label: "الإعدادات", desc: "إعدادات المتجر", gradient: "from-cyan-500 to-teal-500" },
-  { to: "/statistics", icon: BarChart3, label: "الإحصائيات", desc: "تقارير وإحصاءات", gradient: "from-blue-500 to-indigo-600" },
-  { to: "/marketing", icon: TrendingUp, label: "التسويق", desc: "كوبونات وإعلانات", gradient: "from-pink-500 to-rose-500" },
-  { to: "/inventory", icon: Archive, label: "المخزون", desc: "إدارة المخزون", gradient: "from-emerald-500 to-green-600" },
+  { to: "/orders", icon: List, label: "الطلبات", desc: "إدارة الطلبات" },
+  { to: "/products", icon: Package, label: "المنتجات", desc: "إدارة المنتجات" },
+  { to: "/settings", icon: Settings, label: "الإعدادات", desc: "إعدادات المتجر" },
+  { to: "/statistics", icon: BarChart3, label: "الإحصائيات", desc: "تقارير وإحصاءات" },
+  { to: "/marketing", icon: TrendingUp, label: "التسويق", desc: "كوبونات وإعلانات" },
+  { to: "/inventory", icon: Archive, label: "المخزون", desc: "إدارة المخزون" },
 ];
 
 export default function Builder() {
-  const { storeName, storeLogo, updateStore } = useStore();
+  const { storeName } = useStore();
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
 
-  // Suggestion #6: Preload critical data after login
   usePreloadData();
 
-  // Check completed onboarding steps
   useEffect(() => {
     const dismissed = localStorage.getItem('onboarding_dismissed');
     if (dismissed) setShowOnboarding(false);
 
     const steps: string[] = [];
     if (getProductsSync().length > 0) steps.push('add-product');
-    // Check if settings configured
     if (storeName && storeName !== 'متجري') steps.push('settings');
-    // Check if shared
-    const shared = localStorage.getItem('store_shared');
-    if (shared) steps.push('share');
-    
+    if (localStorage.getItem('store_shared')) steps.push('share');
     setCompletedSteps(steps);
   }, [storeName]);
-
-  const handleDismissOnboarding = () => {
-    setShowOnboarding(false);
-    localStorage.setItem('onboarding_dismissed', 'true');
-  };
 
   const handleCopyLink = async () => {
     if (user) {
@@ -62,97 +49,64 @@ export default function Builder() {
         localStorage.setItem('store_shared', 'true');
         toast.success("تم نسخ الرابط بنجاح!");
         setTimeout(() => setCopied(false), 2000);
-      } catch (error) {
+      } catch {
         toast.error("فشل في نسخ الرابط");
       }
     }
   };
 
   return (
-    <div className="min-h-screen bg-background font-arabic">
-      {/* Header */}
-      <div className="bg-card border-b border-border">
-        <div className="flex items-center justify-between px-4 py-2">
-          <ThemeToggle />
-          <StoreHeader 
-            storeName={storeName} 
-            storeLogo={storeLogo} 
-            onUpdateStore={updateStore} 
-          />
-        </div>
-      </div>
-      
-      {/* Main Content */}
-      <div className="p-4 sm:p-6 max-w-6xl mx-auto">
-        {/* Onboarding Checklist */}
+    <DashboardLayout isHome>
+      <div className="ds-page max-w-5xl">
         {showOnboarding && (
-          <OnboardingChecklist 
+          <OnboardingChecklist
             completedSteps={completedSteps}
-            onDismiss={handleDismissOnboarding}
+            onDismiss={() => {
+              setShowOnboarding(false);
+              localStorage.setItem('onboarding_dismissed', 'true');
+            }}
           />
         )}
 
-        {/* Store Link Card */}
-        <div className="bg-card rounded-3xl p-6 sm:p-8 mb-6 max-w-3xl mx-auto border border-border/50 shadow-sm animate-fade-in">
-          <div className="text-center mb-6">
-            <div className="w-32 h-32 sm:w-40 sm:h-40 flex items-center justify-center mx-auto">
-              <img src={platformLogo} alt="بداية" className="w-full h-full object-contain" />
-            </div>
+        <div className="ds-card p-6 sm:p-8 text-center shadow-brand animate-fade-in">
+          <div className="w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-5">
+            <img src={platformLogo} alt="بداية" className="w-full h-full object-contain" />
           </div>
-          
-          <div className="flex flex-col items-center gap-3 max-w-xl mx-auto">
-            <Button 
+          <h2 className="text-2xl font-bold text-foreground mb-1">{storeName || 'متجري'}</h2>
+          <p className="text-sm text-muted-foreground mb-6">لوحة تحكم متجرك — كل شيء في مكان واحد</p>
+
+          <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+            <Button
               size="lg"
-              className={`w-full transition-all duration-300 rounded-2xl px-6 py-5 text-sm sm:text-base shadow-sm ${
-                copied 
-                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white' 
-                  : 'bg-card hover:bg-muted text-foreground border border-border hover:border-primary/40'
-              }`}
+              variant={copied ? 'default' : 'outline'}
+              className={`flex-1 rounded-xl min-h-[48px] ${copied ? 'bg-emerald-600 hover:bg-emerald-700 border-emerald-600' : ''}`}
               onClick={handleCopyLink}
             >
-              {copied ? (
-                <><Check className="w-4 h-4 ml-2" />تم النسخ بنجاح</>
-              ) : (
-                <><Copy className="w-4 h-4 ml-2" />نسخ رابط المتجر</>
-              )}
+              {copied ? <><Check className="w-4 h-4" />تم النسخ</> : <><Copy className="w-4 h-4" />نسخ رابط المتجر</>}
             </Button>
-            
-            <div className="grid grid-cols-2 gap-3 w-full">
-              <Link to="/preview" className="w-full">
-                <Button variant="outline" className="w-full h-12 text-sm bg-card hover:bg-muted text-foreground border-border hover:border-primary/40 rounded-2xl transition-all">
-                  <Eye className="w-4 h-4 ml-2" />
-                  معاينة المتجر
-                </Button>
-              </Link>
-              <Link to="/add-product" className="w-full">
-                <Button className="w-full h-12 text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl shadow-md transition-all">
-                  <Plus className="w-4 h-4 ml-2" />
-                  إضافة منتج
-                </Button>
-              </Link>
-            </div>
+            <Link to="/add-product" className="flex-1">
+              <Button size="lg" className="w-full rounded-xl min-h-[48px] shadow-brand">
+                <Plus className="w-4 h-4" />
+                إضافة منتج
+              </Button>
+            </Link>
           </div>
         </div>
 
-        {/* Dashboard Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-24 md:mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {dashboardCards.map((card, i) => (
             <Link key={card.to} to={card.to} className="group">
-              <div 
-                className="bg-card/80 backdrop-blur-sm p-5 sm:p-6 rounded-2xl border border-border/20 hover:border-primary/30 hover:bg-primary/[0.03] shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_6px_16px_hsl(var(--primary)/0.08)] transition-all duration-300 group-hover:-translate-y-1 animate-fade-in"
-                style={{ animationDelay: `${i * 80}ms` }}
-              >
-                <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br ${card.gradient} flex items-center justify-center mb-3 sm:mb-4 shadow-[0_2px_8px_rgba(0,0,0,0.1)]`}>
-                  <card.icon className="w-[22px] h-[22px] sm:w-6 sm:h-6 text-white" strokeWidth={1.8} />
+              <div className="ds-card card-hover p-5 sm:p-6 animate-fade-in" style={{ animationDelay: `${i * 60}ms` }}>
+                <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-3">
+                  <card.icon className="w-5 h-5" strokeWidth={1.75} />
                 </div>
                 <h3 className="font-bold text-foreground text-sm sm:text-base mb-0.5">{card.label}</h3>
-                <p className="text-xs sm:text-sm text-muted-foreground">{card.desc}</p>
+                <p className="text-xs text-muted-foreground">{card.desc}</p>
               </div>
             </Link>
           ))}
         </div>
       </div>
-
-    </div>
+    </DashboardLayout>
   );
 }

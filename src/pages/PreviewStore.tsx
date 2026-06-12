@@ -2,6 +2,7 @@ import { X, ShoppingCart, Plus, Trash2, Search, Heart, Star } from "lucide-react
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
 import { getProductsByCategory, getCategories, loadProducts } from "@/services/productService";
+import { useStoreHydration } from "@/context/StoreBootstrapContext";
 import { Product, Category } from "@/types";
 import { useCart } from "@/context/CartContext";
 import { useStore } from "@/context/StoreContext";
@@ -20,6 +21,7 @@ const PreviewStore = () => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
   const { user } = useAuth();
+  const { isReady, hydrationVersion } = useStoreHydration();
   const { addToCart, cartItems, setStoreOwner } = useCart();
   const { storeName, storeLogo, storeSettings } = useStore();
   const { trackAddToCart, trackViewContent } = useMetaPixel();
@@ -41,11 +43,11 @@ const PreviewStore = () => {
 
   // Load categories from Supabase
   useEffect(() => {
+    if (!isReady) return;
+
     const loadCategoriesData = async () => {
       try {
-        console.log('PreviewStore: تحميل الفئات من Supabase...');
-        const categoriesData = await getCategories();
-        console.log('PreviewStore: تم تحميل', categoriesData.length, 'فئة');
+        const categoriesData = await getCategories(true);
         const allCategories = [
           { id: "all", name: "الكل", order: -1 },
           ...categoriesData
@@ -68,18 +70,20 @@ const PreviewStore = () => {
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, []);
+  }, [isReady, hydrationVersion]);
 
   const bannerImages = storeSettings.bannerImages || [];
 
   // Load products when category changes only (search is client-side)
   useEffect(() => {
+    if (!isReady) return;
+
     const loadProductsData = async () => {
-      await loadProducts();
+      await loadProducts(true);
       setAllProducts(getProductsByCategory(selectedCategory));
     };
     loadProductsData();
-  }, [selectedCategory]);
+  }, [selectedCategory, isReady, hydrationVersion]);
 
   const handleAddToCart = (product: Product) => {
     addToCart(product);
