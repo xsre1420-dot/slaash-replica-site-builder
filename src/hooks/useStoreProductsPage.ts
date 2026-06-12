@@ -1,30 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Product, ColorOption, ProductVariant } from '@/types';
-import { applyActiveDiscount } from '@/utils/inventoryUtils';
+import { Product } from '@/types';
+import { mapStorefrontProduct } from '@/mappers/productMapper';
 import { cache, CacheTTL, dedup } from '@/lib/cache';
 
 const PAGE_SIZE = 24;
-
-const formatStorefrontProduct = (p: Record<string, unknown>): Product =>
-  applyActiveDiscount({
-    id: String(p.id),
-    name: String(p.name),
-    description: String(p.description || ''),
-    category: String(p.category || ''),
-    price: Number(p.price),
-    image: String(p.image_url || ''),
-    additionalImages: (p.additional_images as string[]) || undefined,
-    stockQuantity: p.stock_quantity != null ? Number(p.stock_quantity) : undefined,
-    sizes: Array.isArray(p.sizes) ? (p.sizes as string[]) : undefined,
-    colors: Array.isArray(p.colors) ? (p.colors as ColorOption[]) : undefined,
-    variants: Array.isArray(p.variants) ? (p.variants as ProductVariant[]) : undefined,
-    discountType: p.discount_type as Product['discountType'],
-    discountValue: p.discount_value != null ? Number(p.discount_value) : undefined,
-    discountStartDate: p.discount_start_date as string | undefined,
-    discountEndDate: p.discount_end_date as string | undefined,
-    originalPrice: p.original_price != null ? Number(p.original_price) : undefined,
-  });
 
 interface UseStoreProductsPageOptions {
   category?: string;
@@ -85,7 +65,7 @@ export const useStoreProductsPage = (
 
         if (requestKeyRef.current !== reqKey) return;
 
-        const mapped = (result.products || []).map(formatStorefrontProduct);
+        const mapped = (result.products || []).map(mapStorefrontProduct);
         cache.set(cacheKey, result, CacheTTL.SHORT, CacheTTL.STALE);
 
         setProducts((prev) => (append ? [...prev, ...mapped] : mapped));

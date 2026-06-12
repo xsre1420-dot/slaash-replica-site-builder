@@ -1,8 +1,9 @@
 import { useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
-import { Product, ColorOption, ProductVariant } from "@/types";
-import { loadProducts, getProductById } from "@/data/dummyData";
+import { Product } from "@/types";
+import { loadProducts, getProductById } from "@/services/productService";
 import { supabase } from "@/integrations/supabase/client";
+import { mapStorefrontProduct } from "@/mappers/productMapper";
 
 interface ProductDataProps {
   productId: string | undefined;
@@ -11,36 +12,8 @@ interface ProductDataProps {
   onProductLoaded: (product: Product | null) => void;
 }
 
-export const formatRpcProduct = (p: Record<string, unknown>): Product => ({
-  id: p.id as string,
-  name: p.name as string,
-  description: (p.description as string) || '',
-  category: p.category as string,
-  price: Number(p.price),
-  image: (p.image_url as string) || '',
-  additionalImages: (p.additional_images as string[]) || [],
-  stockQuantity: p.stock_quantity != null ? Number(p.stock_quantity) : undefined,
-  sizes: Array.isArray(p.sizes) ? p.sizes as string[] : undefined,
-  colors: (() => {
-    if (!p.colors) return undefined;
-    if (typeof p.colors === 'string') {
-      try { return JSON.parse(p.colors) as ColorOption[]; } catch { return undefined; }
-    }
-    if (Array.isArray(p.colors)) return p.colors as unknown as ColorOption[];
-    return undefined;
-  })(),
-  variants: (() => {
-    if (!p.variants) return undefined;
-    if (typeof p.variants === 'string') {
-      try { return JSON.parse(p.variants) as ProductVariant[]; } catch { return undefined; }
-    }
-    if (Array.isArray(p.variants)) return p.variants as unknown as ProductVariant[];
-    return undefined;
-  })(),
-  discountType: p.discount_type as Product['discountType'],
-  discountValue: p.discount_value ? Number(p.discount_value) : undefined,
-  originalPrice: p.original_price ? Number(p.original_price) : undefined,
-});
+/** @deprecated Use mapStorefrontProduct from @/mappers */
+export const formatRpcProduct = mapStorefrontProduct;
 
 const ProductData = ({ productId, initialProduct, onProductLoaded }: ProductDataProps) => {
   const { username: storeSlug } = useParams<{ username?: string }>();
@@ -63,7 +36,7 @@ const ProductData = ({ productId, initialProduct, onProductLoaded }: ProductData
       });
 
       if (!error && data) {
-        onProductLoaded(formatRpcProduct(data));
+        onProductLoaded(mapStorefrontProduct(data as Record<string, unknown>));
         return;
       }
 

@@ -1,43 +1,10 @@
 
-import { Product, Category, ColorOption, ProductVariant } from "@/types";
+import { Product, Category } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { cache, CacheKeys, CacheTTL, dedup } from "@/lib/cache";
+import { mapDbProduct } from "@/mappers/productMapper";
 
-// --- Formatters ---
-
-const formatProduct = (product: any): Product => ({
-  id: product.id,
-  name: product.name,
-  description: product.description || '',
-  category: product.category,
-  price: Number(product.price),
-  cost: Number(product.cost) || undefined,
-  image: product.image_url || '',
-  additionalImages: product.additional_images || [],
-  stockQuantity: product.stock_quantity ?? undefined,
-  sizes: Array.isArray(product.sizes) ? product.sizes as string[] : undefined,
-  colors: (() => {
-    if (!product.colors) return undefined;
-    if (typeof product.colors === 'string') {
-      try { return JSON.parse(product.colors) as ColorOption[]; } catch { return undefined; }
-    }
-    if (Array.isArray(product.colors)) return product.colors as unknown as ColorOption[];
-    return undefined;
-  })(),
-  variants: (() => {
-    if (!product.variants) return undefined;
-    if (typeof product.variants === 'string') {
-      try { return JSON.parse(product.variants) as ProductVariant[]; } catch { return undefined; }
-    }
-    if (Array.isArray(product.variants)) return product.variants as unknown as ProductVariant[];
-    return undefined;
-  })(),
-  discountType: product.discount_type as 'none' | 'percentage' | 'amount' | undefined,
-  discountValue: product.discount_value ? Number(product.discount_value) : undefined,
-  discountStartDate: product.discount_start_date || undefined,
-  discountEndDate: product.discount_end_date || undefined,
-  originalPrice: product.original_price ? Number(product.original_price) : undefined,
-});
+/** @deprecated Use `@/services/productService` for new imports. */
 
 // --- Internal owner ID helper ---
 
@@ -140,7 +107,7 @@ export const loadProductsPage = async (
       });
 
       if (!rpcError && rpcData?.products) {
-        const products = (rpcData.products as Record<string, unknown>[]).map(formatProduct);
+        const products = (rpcData.products as Record<string, unknown>[]).map((row) => mapDbProduct(row));
         const result: ProductsPageResult = {
           products,
           hasMore: !!rpcData.has_more,
@@ -178,7 +145,7 @@ export const loadProductsPage = async (
         return cache.get<ProductsPageResult>(key) || { products: [], hasMore: false, total: 0 };
       }
 
-      const products = data?.map(formatProduct) || [];
+      const products = data?.map((row) => mapDbProduct(row as Record<string, unknown>)) || [];
       const total = count ?? products.length;
       const result: ProductsPageResult = {
         products,
@@ -237,7 +204,7 @@ export const invalidateCategories = () => {
 export const appendCachedProduct = (ownerId: string, row: Record<string, unknown>): boolean => {
   const key = CacheKeys.products(ownerId);
   const cached = cache.get<Product[]>(key);
-  const formatted = formatProduct(row);
+  const formatted = mapDbProduct(row);
   if (!cached) {
     cache.set(key, [formatted], CacheTTL.MEDIUM, CacheTTL.STALE);
     products_list = [formatted];
@@ -254,7 +221,7 @@ export const patchCachedProduct = (ownerId: string, row: Record<string, unknown>
   const key = CacheKeys.products(ownerId);
   const cached = cache.get<Product[]>(key);
   if (!cached) return false;
-  const updated = cached.map((p) => (p.id === row.id ? formatProduct(row) : p));
+  const updated = cached.map((p) => (p.id === row.id ? mapDbProduct(row) : p));
   cache.set(key, updated, CacheTTL.MEDIUM, CacheTTL.STALE);
   products_list = updated;
   products = updated;
@@ -302,7 +269,7 @@ export const addProduct = async (product: Product): Promise<{ success: boolean; 
     if (data) {
       const key = CacheKeys.products(user.id);
       const current = cache.get<Product[]>(key) || [];
-      cache.set(key, [formatProduct(data), ...current], CacheTTL.MEDIUM, CacheTTL.STALE);
+      cache.set(key, [mapDbProduct(data as Record<string, unknown>), ...current], CacheTTL.MEDIUM, CacheTTL.STALE);
       products = cache.get<Product[]>(key) || [];
     }
 

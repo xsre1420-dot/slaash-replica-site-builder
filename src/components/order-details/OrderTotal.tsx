@@ -6,14 +6,15 @@ interface OrderTotalProps {
   selectedGovernorate?: string;
   discountAmount?: number;
   couponCode?: string;
+  deliveryFee?: number;
 }
 
-const OrderTotal = ({ total, selectedGovernorate, discountAmount = 0, couponCode }: OrderTotalProps) => {
+const OrderTotal = ({ total, selectedGovernorate, discountAmount = 0, couponCode, deliveryFee }: OrderTotalProps) => {
   const { storeSettings } = useStore();
 
-  const deliveryPrice = storeSettings.deliveryPrices?.find(
+  const deliveryPrice = deliveryFee ?? storeSettings.deliveryPrices?.find(
     (d) => d.governorate === selectedGovernorate
-  )?.price || storeSettings.deliveryPrices?.[0]?.price || 0;
+  )?.price ?? storeSettings.deliveryPrices?.[0]?.price ?? 0;
 
   const grandTotal = total;
   const productSubtotal = grandTotal - deliveryPrice + discountAmount;

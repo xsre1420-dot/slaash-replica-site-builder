@@ -2,12 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { Tag, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
+import { AppliedCoupon, validateCoupon } from "@/services/couponService";
 
-export interface AppliedCoupon {
-  code: string;
-  discountAmount: number;
-}
+export type { AppliedCoupon };
 
 interface CouponInputProps {
   ownerId: string;
@@ -33,35 +30,12 @@ const CouponInput = ({ ownerId, storeSlug, subtotal, appliedCoupon, onApply }: C
     const revalidate = async () => {
       setLoading(true);
       try {
-        let data: Record<string, unknown> | null = null;
-        let rpcError: { message: string } | null = null;
-
-        if (storeSlug) {
-          const res = await (supabase as any).rpc("validate_store_coupon_by_slug", {
-            p_slug: storeSlug.trim().toLowerCase(),
-            p_code: appliedCoupon.code,
-            p_subtotal: subtotal,
-          });
-          data = res.data;
-          rpcError = res.error;
-        } else {
-          const res = await (supabase as any).rpc("validate_store_coupon", {
-            p_owner_id: ownerId,
-            p_code: appliedCoupon.code,
-            p_subtotal: subtotal,
-          });
-          data = res.data;
-          rpcError = res.error;
-        }
-
-        if (rpcError || !data?.valid) {
+        const result = await validateCoupon(ownerId, appliedCoupon.code, subtotal, storeSlug);
+        if (!result) {
           onApply(null);
           setError("كود الخصم لم يعد ينطبق على المجموع الحالي");
         } else {
-          onApply({
-            code: String(data.code || appliedCoupon.code),
-            discountAmount: Number(data.discount_amount) || 0,
-          });
+          onApply(result);
         }
       } catch {
         onApply(null);
@@ -82,33 +56,14 @@ const CouponInput = ({ ownerId, storeSlug, subtotal, appliedCoupon, onApply }: C
     setError("");
 
     try {
-      let data: any;
-      let rpcError: any;
-
-      if (storeSlug) {
-        ({ data, error: rpcError } = await (supabase as any).rpc("validate_store_coupon_by_slug", {
-          p_slug: storeSlug.trim().toLowerCase(),
-          p_code: trimmed,
-          p_subtotal: subtotal,
-        }));
-      } else {
-        ({ data, error: rpcError } = await (supabase as any).rpc("validate_store_coupon", {
-          p_owner_id: ownerId,
-          p_code: trimmed,
-          p_subtotal: subtotal,
-        }));
-      }
-
-      if (rpcError || !data?.valid) {
+      const result = await validateCoupon(ownerId, trimmed, subtotal, storeSlug);
+      if (!result) {
         setError("كود الخصم غير صالح أو منتهي");
         onApply(null);
         return;
       }
 
-      onApply({
-        code: data.code || trimmed.toUpperCase(),
-        discountAmount: Number(data.discount_amount) || 0,
-      });
+      onApply(result);
       setError("");
     } catch {
       setError("تعذر التحقق من الكوبون");

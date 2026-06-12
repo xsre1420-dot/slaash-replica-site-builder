@@ -11,11 +11,12 @@ interface DeliveryFormProps {
   selectedGovernorate: string;
   onGovernorateChange: (v: string) => void;
   deliveryPrices?: { governorate: string; price: number }[];
+  deliveryFee?: number;
   formErrors: Record<string, string>;
 }
 
 const DeliveryForm = ({
-  customerInfo, onInputChange, selectedGovernorate, onGovernorateChange, deliveryPrices, formErrors,
+  customerInfo, onInputChange, selectedGovernorate, onGovernorateChange, deliveryPrices, deliveryFee = 0, formErrors,
 }: DeliveryFormProps) => {
   const fieldClass = (field: string) =>
     cn(
@@ -45,10 +46,20 @@ const DeliveryForm = ({
             </SelectTrigger>
             <SelectContent>
               {deliveryPrices.map((d, i) => (
-                <SelectItem key={i} value={d.governorate}>{d.governorate}</SelectItem>
+                <SelectItem key={i} value={d.governorate}>
+                  <span className="flex w-full justify-between gap-4">
+                    <span>{d.governorate}</span>
+                    <span className="text-muted-foreground text-xs">{d.price.toLocaleString()} د.ع</span>
+                  </span>
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {selectedGovernorate && deliveryFee > 0 && (
+            <p className="text-xs text-muted-foreground mt-1.5 text-right">
+              رسوم التوصيل: {deliveryFee.toLocaleString()} د.ع
+            </p>
+          )}
         </IconField>
       )}
 

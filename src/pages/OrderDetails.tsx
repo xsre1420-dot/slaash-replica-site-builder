@@ -6,12 +6,15 @@ import OrderDetailsPageHeader from "@/components/order-details/OrderDetailsPageH
 import OrderDetailsCard from "@/components/order-details/OrderDetailsCard";
 import OrderNotFound from "@/components/order-details/OrderNotFound";
 import { fetchOrderPaymentSummary, OrderPaymentSummary } from "@/services/paymentService";
+import { fetchOrderShipment, OrderShipmentData } from "@/services/deliveryService";
+import { DeliveryStatus } from "@/utils/deliveryUtils";
 
 const OrderDetails = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const { order, loading } = useOrderData(orderId);
   const { user } = useAuth();
   const [paymentSummary, setPaymentSummary] = useState<OrderPaymentSummary | null>(null);
+  const [shipmentData, setShipmentData] = useState<OrderShipmentData | null>(null);
 
   const loadPaymentSummary = useCallback(async () => {
     if (!orderId || !user?.id) return;
@@ -19,9 +22,16 @@ const OrderDetails = () => {
     setPaymentSummary(summary);
   }, [orderId, user?.id]);
 
+  const loadShipmentData = useCallback(async () => {
+    if (!orderId || !user?.id) return;
+    const data = await fetchOrderShipment(orderId, user.id);
+    setShipmentData(data);
+  }, [orderId, user?.id]);
+
   useEffect(() => {
     loadPaymentSummary();
-  }, [loadPaymentSummary]);
+    loadShipmentData();
+  }, [loadPaymentSummary, loadShipmentData]);
 
   if (loading) {
     return (
@@ -35,6 +45,13 @@ const OrderDetails = () => {
     return <OrderNotFound />;
   }
 
+  const shipmentDisplay: OrderShipmentData = shipmentData ?? {
+    shipment: null,
+    deliveryFee: order.deliveryFee ?? 0,
+    deliveryStatus: (order.deliveryStatus || 'pending') as DeliveryStatus,
+    events: [],
+  };
+
   return (
     <div className="min-h-screen bg-background" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <OrderDetailsPageHeader orderId={order.id} />
@@ -42,7 +59,9 @@ const OrderDetails = () => {
         <OrderDetailsCard
           order={order}
           paymentSummary={paymentSummary}
+          shipmentData={shipmentDisplay}
           onPaymentUpdated={loadPaymentSummary}
+          onShipmentUpdated={loadShipmentData}
         />
       </div>
     </div>

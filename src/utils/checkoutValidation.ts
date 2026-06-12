@@ -1,33 +1,8 @@
 import { supabase } from '@/integrations/supabase/client';
-import { CartItem, Product, ColorOption, ProductVariant } from '@/types';
-import { getAvailableQty, applyActiveDiscount } from './inventoryUtils';
-import { AppliedCoupon } from '@/components/checkout/CouponInput';
-
-const mapDbProduct = (row: Record<string, unknown>): Product => {
-  const colors = row.colors as ColorOption[] | undefined;
-  const variants = row.variants as ProductVariant[] | undefined;
-
-  const product: Product = {
-    id: String(row.id),
-    name: String(row.name),
-    description: String(row.description || ''),
-    category: String(row.category || ''),
-    price: Number(row.price),
-    image: String(row.image_url || ''),
-    additionalImages: (row.additional_images as string[]) || undefined,
-    stockQuantity: row.stock_quantity != null ? Number(row.stock_quantity) : undefined,
-    sizes: Array.isArray(row.sizes) ? (row.sizes as string[]) : undefined,
-    colors: Array.isArray(colors) ? colors : undefined,
-    variants: Array.isArray(variants) ? variants : undefined,
-    discountType: row.discount_type as Product['discountType'],
-    discountValue: row.discount_value != null ? Number(row.discount_value) : undefined,
-    discountStartDate: row.discount_start_date as string | undefined,
-    discountEndDate: row.discount_end_date as string | undefined,
-    originalPrice: row.original_price != null ? Number(row.original_price) : undefined,
-  };
-
-  return applyActiveDiscount(product);
-};
+import { CartItem, Product } from '@/types';
+import { getAvailableQty } from './inventoryUtils';
+import { AppliedCoupon, validateCoupon } from '@/services/couponService';
+import { mapDbProduct } from '@/mappers/productMapper';
 
 export async function fetchFreshProducts(
   ownerId: string,
@@ -46,7 +21,12 @@ export async function fetchFreshProducts(
 
   if (error || !data) return new Map();
 
-  return new Map(data.map((row) => [String(row.id), mapDbProduct(row as Record<string, unknown>)]));
+  return new Map(
+    data.map((row) => [
+      String(row.id),
+      mapDbProduct(row as Record<string, unknown>, { applyDiscount: true }),
+    ])
+  );
 }
 
 export interface CartValidationResult {
@@ -105,37 +85,13 @@ export async function revalidateCoupon(
   storeSlug?: string
 ): Promise<AppliedCoupon | null> {
   try {
-    let data: Record<string, unknown> | null = null;
-    let rpcError: { message: string } | null = null;
-
-    if (storeSlug) {
-      const res = await (supabase as any).rpc('validate_store_coupon_by_slug', {
-        p_slug: storeSlug.trim().toLowerCase(),
-        p_code: code,
-        p_subtotal: subtotal,
-      });
-      data = res.data;
-      rpcError = res.error;
-    } else {
-      const res = await (supabase as any).rpc('validate_store_coupon', {
-        p_owner_id: ownerId,
-        p_code: code,
-        p_subtotal: subtotal,
-      });
-      data = res.data;
-      rpcError = res.error;
-    }
-
-    if (rpcError || !data?.valid) return null;
-
-    return {
-      code: String(data.code || code),
-      discountAmount: Number(data.discount_amount) || 0,
-    };
+    return await validateCoupon(ownerId, code, subtotal, storeSlug);
   } catch {
     return null;
   }
 }
+
+export type { AppliedCoupon };
 
 export function buildCartFingerprint(items: CartItem[]): string {
   const payload = items

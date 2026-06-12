@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Eye, CheckCircle, XCircle, Clock, ArrowLeft, Package, TrendingUp, ShoppingBag } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useOrders } from "@/components/orders/useOrders";
+import { useOrders } from "@/hooks/useOrders";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
 import {

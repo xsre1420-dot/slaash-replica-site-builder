@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { invalidateCache, setCurrentOwner } from '@/data/dummyData';
+import { invalidateCache, setCurrentOwner } from '@/services/productService';
 
 interface User {
   id: string;

@@ -47,6 +47,8 @@ export interface CartItem {
   selectedColor?: string;
 }
 
+export type { StoreSettings, StoreProfile } from './store';
+
 export interface Category {
   id: string;
   name: string;
@@ -74,4 +76,6 @@ export interface Order {
   discountAmount?: number;
   paymentMethod?: PaymentMethodId | string;
   paymentStatus?: string;
+  deliveryFee?: number;
+  deliveryStatus?: string;
 }

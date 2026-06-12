@@ -9,15 +9,25 @@ import OrderItems from "./OrderItems";
 import OrderTotal from "./OrderTotal";
 import OrderHeader from "./OrderHeader";
 import OrderPaymentCard from "./OrderPaymentCard";
+import OrderShipmentCard from "./OrderShipmentCard";
 import { OrderPaymentSummary } from "@/services/paymentService";
+import { OrderShipmentData } from "@/services/deliveryService";
 
 interface OrderDetailsCardProps {
   order: Order;
   paymentSummary?: OrderPaymentSummary | null;
+  shipmentData?: OrderShipmentData | null;
   onPaymentUpdated?: () => void;
+  onShipmentUpdated?: () => void;
 }
 
-const OrderDetailsCard = ({ order, paymentSummary, onPaymentUpdated }: OrderDetailsCardProps) => {
+const OrderDetailsCard = ({
+  order,
+  paymentSummary,
+  shipmentData,
+  onPaymentUpdated,
+  onShipmentUpdated,
+}: OrderDetailsCardProps) => {
   return (
     <Card className="mb-6 border-0 shadow-lg bg-card rounded-3xl overflow-visible">
       <CardHeader 
@@ -47,6 +57,13 @@ const OrderDetailsCard = ({ order, paymentSummary, onPaymentUpdated }: OrderDeta
             <OrderItems items={order.items} />
           </div>
 
+          {shipmentData && (
+            <OrderShipmentCard
+              data={shipmentData}
+              onUpdated={() => onShipmentUpdated?.()}
+            />
+          )}
+
           {paymentSummary && (
             <OrderPaymentCard
               order={order}
@@ -61,6 +78,7 @@ const OrderDetailsCard = ({ order, paymentSummary, onPaymentUpdated }: OrderDeta
             selectedGovernorate={order.customerInfo.governorate}
             discountAmount={order.discountAmount}
             couponCode={order.couponCode}
+            deliveryFee={order.deliveryFee ?? shipmentData?.deliveryFee}
           />
         </div>
       </CardContent>

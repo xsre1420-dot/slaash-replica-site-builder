@@ -1,0 +1,47 @@
+import { Product, ColorOption, ProductVariant } from '@/types';
+import { applyActiveDiscount } from '@/utils/inventoryUtils';
+
+export const parseJsonField = <T>(value: unknown): T | undefined => {
+  if (value == null) return undefined;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return undefined;
+    }
+  }
+  if (Array.isArray(value)) return value as T;
+  return undefined;
+};
+
+/** Maps a database/RPC product row to domain `Product`. */
+export const mapDbProduct = (
+  row: Record<string, unknown>,
+  options: { applyDiscount?: boolean } = {}
+): Product => {
+  const product: Product = {
+    id: String(row.id),
+    name: String(row.name),
+    description: String(row.description || ''),
+    category: String(row.category || ''),
+    price: Number(row.price),
+    cost: row.cost != null ? Number(row.cost) : undefined,
+    image: String(row.image_url || row.image || ''),
+    additionalImages: (row.additional_images as string[]) || undefined,
+    stockQuantity: row.stock_quantity != null ? Number(row.stock_quantity) : undefined,
+    sizes: Array.isArray(row.sizes) ? (row.sizes as string[]) : undefined,
+    colors: parseJsonField<ColorOption[]>(row.colors),
+    variants: parseJsonField<ProductVariant[]>(row.variants),
+    discountType: row.discount_type as Product['discountType'],
+    discountValue: row.discount_value != null ? Number(row.discount_value) : undefined,
+    discountStartDate: row.discount_start_date as string | undefined,
+    discountEndDate: row.discount_end_date as string | undefined,
+    originalPrice: row.original_price != null ? Number(row.original_price) : undefined,
+  };
+
+  return options.applyDiscount ? applyActiveDiscount(product) : product;
+};
+
+/** Storefront listing — always applies active discounts. */
+export const mapStorefrontProduct = (row: Record<string, unknown>): Product =>
+  mapDbProduct(row, { applyDiscount: true });
