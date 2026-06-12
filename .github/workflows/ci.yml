@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint, Typecheck & Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Validate environment (CI)
+        run: node scripts/check-env.mjs
+        env:
+          CI: true
+          VITE_SUPABASE_URL: https://placeholder-project.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder-anon-key-for-ci-build-only
+
+      - name: Production build
+        run: npm run build
+        env:
+          CI: true
+          VITE_APP_ENV: production
+          VITE_SUPABASE_URL: https://placeholder-project.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder-anon-key-for-ci-build-only
+
+  docker:
+    name: Docker build
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build container image
+        run: |
+          docker build \
+            --build-arg VITE_SUPABASE_URL=https://placeholder-project.supabase.co \
+            --build-arg VITE_SUPABASE_PUBLISHABLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder-anon-key-for-ci-build-only \
+            --build-arg VITE_APP_ENV=production \
+            -t slaash-storefront:ci \
+            .
+
+      - name: Smoke test container
+        run: |
+          docker run -d --name app -p 8080:80 slaash-storefront:ci
+          sleep 3
+          curl -fsS http://localhost:8080/health.json
+          docker stop app
+
+  migrations:
+    name: SQL migration sanity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check migration filenames are unique
+        run: |
+          cd supabase/migrations
+          COUNT=$(ls -1 *.sql 2>/dev/null | wc -l)
+          UNIQUE=$(ls -1 *.sql 2>/dev/null | sort | uniq -d | wc -l)
+          echo "Migrations: $COUNT"
+          if [ "$UNIQUE" -gt 0 ]; then
+            echo "Duplicate migration filenames detected"
+            ls -1 *.sql | sort | uniq -d
+            exit 1
+          fi
+
+      - name: Scan for destructive SQL without guard
+        run: |
+          # Fail if DROP TABLE without IF EXISTS in new migrations (20260612*)
+          BAD=$(grep -l "DROP TABLE" supabase/migrations/20260612*.sql 2>/dev/null | xargs -r grep -L "IF EXISTS" || true)
+          if [ -n "$BAD" ]; then
+            echo "Unsafe DROP TABLE found in: $BAD"
+            exit 1
+          fi
+          echo "Migration scan OK"

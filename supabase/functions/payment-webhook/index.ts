@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
+import { isProduction, requireInProduction } from '../_shared/env.ts';
 
 const STRIPE_WEBHOOK_SECRET = Deno.env.get('STRIPE_WEBHOOK_SECRET') || '';
 
@@ -46,17 +47,23 @@ Deno.serve(async (req) => {
     return new Response('Method not allowed', { status: 405 });
   }
 
+  const webhookSecret = requireInProduction('STRIPE_WEBHOOK_SECRET', STRIPE_WEBHOOK_SECRET);
+  if (isProduction() && !webhookSecret) {
+    return new Response(JSON.stringify({ error: 'Webhook not configured' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const rawBody = await req.text();
   const signature = req.headers.get('stripe-signature') || '';
 
-  if (STRIPE_WEBHOOK_SECRET) {
-    const valid = await verifyStripeSignature(rawBody, signature, STRIPE_WEBHOOK_SECRET);
+  if (webhookSecret) {
+    const valid = await verifyStripeSignature(rawBody, signature, webhookSecret);
     if (!valid) {
       console.error('Invalid webhook signature');
       return new Response(JSON.stringify({ error: 'Invalid signature' }), { status: 401 });
     }
-  } else {
-    console.warn('STRIPE_WEBHOOK_SECRET not set — webhook validation disabled');
   }
 
   let event: { id?: string; type?: string; data?: unknown };

@@ -1,14 +1,27 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
+import { isProduction } from '../_shared/env.ts';
 
 const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') || '').split(',').map(s => s.trim()).filter(Boolean);
 
-function getCorsHeaders(origin: string | null): Record<string, string> {
-  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : (ALLOWED_ORIGINS[0] || '*');
-  return {
-    'Access-Control-Allow-Origin': allowedOrigin,
+function getCorsHeaders(origin: string | null): Record<string, string> | null {
+  const base = {
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
     'Cache-Control': 'public, max-age=30, stale-while-revalidate=60',
   };
+
+  if (isProduction()) {
+    if (ALLOWED_ORIGINS.length === 0) {
+      console.error('[security] ALLOWED_ORIGINS must be set in production');
+      return null;
+    }
+    if (!origin || !ALLOWED_ORIGINS.includes(origin)) {
+      return null;
+    }
+    return { ...base, 'Access-Control-Allow-Origin': origin };
+  }
+
+  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : (ALLOWED_ORIGINS[0] || '*');
+  return { ...base, 'Access-Control-Allow-Origin': allowedOrigin };
 }
 
 const requestCounts = new Map<string, { count: number; resetTime: number }>();
@@ -40,6 +53,13 @@ Deno.serve(async (req) => {
   const origin = req.headers.get('origin');
   const corsHeaders = getCorsHeaders(origin);
   const clientIP = getRealIP(req);
+
+  if (!corsHeaders) {
+    return new Response(JSON.stringify({ error: 'Origin not allowed' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });

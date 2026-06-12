@@ -1,0 +1,56 @@
+#!/usr/bin/env node
+/**
+ * Validates required Vite env vars before production builds.
+ * CI sets CI=true — local builds use ENV_STRICT=true to enforce.
+ */
+
+const REQUIRED = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY'];
+const PLACEHOLDER_PATTERNS = [
+  /^your-/i,
+  /^placeholder/i,
+  /^changeme/i,
+  /^example/i,
+  /^xxx+$/i,
+];
+
+const strict = process.env.CI === 'true' || process.env.ENV_STRICT === 'true';
+const mode = process.env.NODE_ENV || process.env.MODE || 'production';
+
+if (!strict && mode !== 'production') {
+  console.log('[check-env] Skipped (set ENV_STRICT=true or CI=true to enforce)');
+  process.exit(0);
+}
+
+const missing = [];
+const invalid = [];
+
+for (const key of REQUIRED) {
+  const value = process.env[key]?.trim();
+  if (!value) {
+    missing.push(key);
+    continue;
+  }
+  if (PLACEHOLDER_PATTERNS.some((p) => p.test(value))) {
+    invalid.push(`${key} still has placeholder value`);
+  }
+  if (key === 'VITE_SUPABASE_URL') {
+    try {
+      const url = new URL(value);
+      if (!url.hostname.includes('supabase')) {
+        invalid.push(`${key} hostname does not look like Supabase`);
+      }
+    } catch {
+      invalid.push(`${key} is not a valid URL`);
+    }
+  }
+}
+
+if (missing.length || invalid.length) {
+  console.error('[check-env] Environment validation failed');
+  missing.forEach((k) => console.error(`  Missing: ${k}`));
+  invalid.forEach((m) => console.error(`  Invalid: ${m}`));
+  console.error('\nCopy .env.example to .env and configure Supabase credentials.');
+  process.exit(1);
+}
+
+console.log('[check-env] OK');
