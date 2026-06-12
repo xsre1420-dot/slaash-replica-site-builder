@@ -61,6 +61,8 @@ export interface CustomerInfo {
   governorate?: string;
 }
 
+export type PaymentMethodId = 'cash_on_delivery' | 'credit_card' | 'digital_wallet';
+
 export interface Order {
   id: string;
   items: CartItem[];
@@ -70,5 +72,6 @@ export interface Order {
   status: 'pending' | 'completed' | 'cancelled';
   couponCode?: string;
   discountAmount?: number;
-  paymentMethod?: string;
+  paymentMethod?: PaymentMethodId | string;
+  paymentStatus?: string;
 }

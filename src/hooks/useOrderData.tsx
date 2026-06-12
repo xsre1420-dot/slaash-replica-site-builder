@@ -42,6 +42,7 @@ const mapDbOrder = (row: any): Order => {
     couponCode: row.coupon_code || undefined,
     discountAmount: row.discount_amount != null ? Number(row.discount_amount) : undefined,
     paymentMethod: row.payment_method || undefined,
+    paymentStatus: row.payment_status || undefined,
   };
 };
 
@@ -67,7 +68,7 @@ export const useOrderData = (orderId: string | undefined) => {
 
       const { data, error } = await supabase
         .from('orders')
-        .select('id, status, total_amount, created_at, customer_name, customer_phone, customer_address, customer_governorate, notes, coupon_code, discount_amount, payment_method, order_items(id, product_id, product_name, product_price, quantity, subtotal, variant_metadata)')
+        .select('id, status, total_amount, created_at, customer_name, customer_phone, customer_address, customer_governorate, notes, coupon_code, discount_amount, payment_method, payment_status, order_items(id, product_id, product_name, product_price, quantity, subtotal, variant_metadata)')
         .eq('id', orderId)
         .eq('owner_id', user.id)
         .maybeSingle();

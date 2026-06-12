@@ -58,17 +58,21 @@ const Settings = () => {
     if (user?.id) {
       (supabase as any)
         .from('store_settings')
-        .select('store_slug, return_policy, privacy_policy, whatsapp_number')
+        .select('store_slug, return_policy, privacy_policy, whatsapp_number, payment_methods')
         .eq('owner_id', user.id)
         .maybeSingle()
         .then(({ data }) => {
           if (data) {
+            const methods = Array.isArray(data.payment_methods) ? data.payment_methods as string[] : [];
             setSettings(prev => ({
               ...prev,
               storeSlug: data.store_slug || prev.storeSlug,
               returnPolicy: data.return_policy || prev.returnPolicy,
               privacyPolicy: data.privacy_policy || prev.privacyPolicy,
               whatsappNumber: data.whatsapp_number || prev.whatsappNumber,
+              paymentCashOnDelivery: methods.length === 0 || methods.includes('cash_on_delivery'),
+              paymentCreditCard: methods.includes('credit_card'),
+              paymentEwallet: methods.includes('digital_wallet'),
             }));
           }
         });

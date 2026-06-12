@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Order, CartItem } from '@/types';
+import { mapPaymentError } from '@/utils/paymentUtils';
 
 const getOrCreateIdempotencyKey = (ownerId: string): string => {
   const storageKey = `checkout-idempotency:${ownerId}`;
@@ -34,6 +35,9 @@ export const mapOrderError = (message: string): string => {
   }
   if (lower.includes('could not be processed')) {
     return 'تعذر معالجة الطلب. تحقق من المخزون والأسعار وحاول مرة أخرى.';
+  }
+  if (lower.includes('payment_method')) {
+    return mapPaymentError(message);
   }
   return message || 'فشل في إنشاء الطلب. يرجى المحاولة مرة أخرى.';
 };

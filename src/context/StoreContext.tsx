@@ -16,6 +16,7 @@ interface StoreSettings {
   bannerImages: string[];
   primaryBannerIndex: number;
   deliveryPrices: DeliveryPrice[];
+  paymentMethods: string[];
 }
 
 interface StoreContextType {
@@ -34,7 +35,8 @@ const defaultSettings: StoreSettings = {
   storeFont: "Tajawal",
   bannerImages: [],
   primaryBannerIndex: 0,
-  deliveryPrices: []
+  deliveryPrices: [],
+  paymentMethods: ['cash_on_delivery'],
 };
 
 const StoreContext = createContext<StoreContextType | null>(null);
@@ -71,7 +73,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { data, error } = await supabase
         .from('store_settings')
-        .select('store_name, store_logo, store_governorate, menu_background_color, menu_text_color, menu_accent_color, store_font, banner_images, primary_banner_index, delivery_prices')
+        .select('store_name, store_logo, store_governorate, menu_background_color, menu_text_color, menu_accent_color, store_font, banner_images, primary_banner_index, delivery_prices, payment_methods')
         .eq('owner_id', user.id)
         .maybeSingle();
 
@@ -101,7 +103,8 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
       storeFont: data.store_font || "Tajawal",
       bannerImages: data.banner_images || [],
       primaryBannerIndex: data.primary_banner_index || 0,
-      deliveryPrices: (data.delivery_prices as unknown as DeliveryPrice[]) || []
+      deliveryPrices: (data.delivery_prices as unknown as DeliveryPrice[]) || [],
+      paymentMethods: Array.isArray(data.payment_methods) ? data.payment_methods as string[] : ['cash_on_delivery'],
     });
   };
 

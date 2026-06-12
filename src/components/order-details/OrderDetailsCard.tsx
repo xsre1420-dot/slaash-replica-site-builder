@@ -8,12 +8,16 @@ import CustomerInfo from "./CustomerInfo";
 import OrderItems from "./OrderItems";
 import OrderTotal from "./OrderTotal";
 import OrderHeader from "./OrderHeader";
+import OrderPaymentCard from "./OrderPaymentCard";
+import { OrderPaymentSummary } from "@/services/paymentService";
 
 interface OrderDetailsCardProps {
   order: Order;
+  paymentSummary?: OrderPaymentSummary | null;
+  onPaymentUpdated?: () => void;
 }
 
-const OrderDetailsCard = ({ order }: OrderDetailsCardProps) => {
+const OrderDetailsCard = ({ order, paymentSummary, onPaymentUpdated }: OrderDetailsCardProps) => {
   return (
     <Card className="mb-6 border-0 shadow-lg bg-card rounded-3xl overflow-visible">
       <CardHeader 
@@ -42,6 +46,14 @@ const OrderDetailsCard = ({ order }: OrderDetailsCardProps) => {
             <h3 className="text-lg font-semibold text-foreground mb-4 text-right">تفاصيل الطلب</h3>
             <OrderItems items={order.items} />
           </div>
+
+          {paymentSummary && (
+            <OrderPaymentCard
+              order={order}
+              summary={paymentSummary}
+              onUpdated={() => onPaymentUpdated?.()}
+            />
+          )}
 
           {/* Order Total */}
           <OrderTotal

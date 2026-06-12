@@ -23,6 +23,12 @@ import DeliveryForm from "@/components/checkout/DeliveryForm";
 import GuaranteesBar from "@/components/checkout/GuaranteesBar";
 import OrderSuccessModal from "@/components/checkout/OrderSuccessModal";
 import CouponInput, { AppliedCoupon } from "@/components/checkout/CouponInput";
+import PaymentMethodSelector from "@/components/checkout/PaymentMethodSelector";
+import {
+  buildPaymentMethodOptions,
+  parseEnabledPaymentMethods,
+  PaymentMethodId,
+} from "@/utils/paymentUtils";
 import { cache } from "@/lib/cache";
 
 const COUPON_STORAGE_KEY = (ownerId: string) => `checkout-coupon:${ownerId}`;
@@ -55,6 +61,21 @@ const Checkout = () => {
   const [customerInfo, setCustomerInfo] = useState({ name: "", phone: "", address: "", notes: "" });
   const [selectedGovernorate, setSelectedGovernorate] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethodId>("cash_on_delivery");
+
+  const paymentMethodOptions = useMemo(() => {
+    const raw = isTenantMode
+      ? tenant.storeInfo?.paymentMethods
+      : storeSettings.paymentMethods;
+    return buildPaymentMethodOptions(parseEnabledPaymentMethods(raw));
+  }, [isTenantMode, tenant.storeInfo?.paymentMethods, storeSettings.paymentMethods]);
+
+  useEffect(() => {
+    const firstAvailable = paymentMethodOptions.find((m) => m.available);
+    if (firstAvailable) {
+      setSelectedPaymentMethod(firstAvailable.id);
+    }
+  }, [paymentMethodOptions]);
 
   const deliveryPrices = useMemo(() => {
     if (isTenantMode && tenant.storeInfo?.deliveryPrices?.length) {
@@ -143,6 +164,12 @@ const Checkout = () => {
       return;
     }
 
+    const selectedOption = paymentMethodOptions.find((m) => m.id === selectedPaymentMethod);
+    if (!selectedOption?.available) {
+      toast.error("يرجى اختيار طريقة دفع متاحة");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -207,13 +234,13 @@ const Checkout = () => {
         status: "pending",
         couponCode: couponToApply?.code,
         discountAmount: finalDiscount,
-        paymentMethod: "cash_on_delivery",
+        paymentMethod: selectedPaymentMethod,
       };
 
       const savedOrder = await saveOrderToDatabase(
         orderToSave,
         ownerId,
-        "cash_on_delivery",
+        selectedPaymentMethod,
         couponToApply?.code
       );
 
@@ -310,6 +337,17 @@ const Checkout = () => {
                     <span>الخصم ({appliedCoupon?.code})</span>
                   </div>
                 )}
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal delay={150}>
+              <div className="bg-card rounded-2xl border border-border/50 p-4 mt-4">
+                <h2 className="text-lg font-bold mb-3 text-right text-foreground">طريقة الدفع</h2>
+                <PaymentMethodSelector
+                  methods={paymentMethodOptions}
+                  selected={selectedPaymentMethod}
+                  onSelect={setSelectedPaymentMethod}
+                />
               </div>
             </ScrollReveal>
 
