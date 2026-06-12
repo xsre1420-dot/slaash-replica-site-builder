@@ -12,7 +12,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<{ error?: string }>;
-  register: (email: string, password: string, username: string, storeName?: string) => Promise<{ error?: string }>;
+  register: (email: string, password: string, username: string, storeName?: string, selectedPlanId?: string) => Promise<{ error?: string }>;
   resetPassword: (email: string) => Promise<{ error?: string; success?: boolean }>;
   updatePassword: (newPassword: string) => Promise<{ error?: string }>;
   logout: () => void;
@@ -139,7 +139,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const register = async (email: string, password: string, username: string, storeName?: string) => {
+  const register = async (
+    email: string,
+    password: string,
+    username: string,
+    storeName?: string,
+    selectedPlanId?: string
+  ) => {
     try {
       const { error } = await supabase.auth.signUp({
         email,
@@ -149,6 +155,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           data: {
             username,
             store_name: storeName || 'متجري',
+            selected_plan: selectedPlanId || 'free',
           },
         },
       });

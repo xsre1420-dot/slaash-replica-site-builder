@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Tag, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,58 @@ const CouponInput = ({ ownerId, storeSlug, subtotal, appliedCoupon, onApply }: C
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const lastSubtotalRef = useRef(subtotal);
+
+  useEffect(() => {
+    if (!appliedCoupon || subtotal === lastSubtotalRef.current) {
+      lastSubtotalRef.current = subtotal;
+      return;
+    }
+    lastSubtotalRef.current = subtotal;
+
+    const revalidate = async () => {
+      setLoading(true);
+      try {
+        let data: Record<string, unknown> | null = null;
+        let rpcError: { message: string } | null = null;
+
+        if (storeSlug) {
+          const res = await (supabase as any).rpc("validate_store_coupon_by_slug", {
+            p_slug: storeSlug.trim().toLowerCase(),
+            p_code: appliedCoupon.code,
+            p_subtotal: subtotal,
+          });
+          data = res.data;
+          rpcError = res.error;
+        } else {
+          const res = await (supabase as any).rpc("validate_store_coupon", {
+            p_owner_id: ownerId,
+            p_code: appliedCoupon.code,
+            p_subtotal: subtotal,
+          });
+          data = res.data;
+          rpcError = res.error;
+        }
+
+        if (rpcError || !data?.valid) {
+          onApply(null);
+          setError("كود الخصم لم يعد ينطبق على المجموع الحالي");
+        } else {
+          onApply({
+            code: String(data.code || appliedCoupon.code),
+            discountAmount: Number(data.discount_amount) || 0,
+          });
+        }
+      } catch {
+        onApply(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    revalidate();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subtotal, appliedCoupon?.code, ownerId, storeSlug]);
 
   const handleApply = async () => {
     const trimmed = code.trim();

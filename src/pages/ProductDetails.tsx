@@ -7,6 +7,12 @@ import { useTenantStore } from "@/hooks/useTenantStore";
 import { Truck, Shield, RotateCcw, Eye, Check } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import {
+  getAvailableQty,
+  validateVariantSelection,
+  applyActiveDiscount,
+  isProductDiscountActive,
+} from "@/utils/inventoryUtils";
 
 import ProductHeader from "@/components/product-details/ProductHeader";
 import ProductImages from "@/components/product-details/ProductImages";
@@ -89,16 +95,35 @@ const ProductDetails = () => {
   // Social proof (simulated)
   const viewerCount = useMemo(() => Math.floor(Math.random() * 8) + 3, []);
 
+  const activeProduct = product ? applyActiveDiscount(product) : null;
+
+  const variantAvailable = activeProduct
+    ? getAvailableQty(activeProduct, selectedSize || undefined, selectedColor || undefined)
+    : 0;
+
   const handleAddToCart = () => {
-    if (product && !isAdding) {
-      if (product.stockQuantity !== undefined && product.stockQuantity <= 0) {
+    if (activeProduct && !isAdding) {
+      const selection = validateVariantSelection(
+        activeProduct,
+        selectedSize || undefined,
+        selectedColor || undefined
+      );
+      if (!selection.valid) {
+        toast.error(selection.message || "يرجى اختيار خيارات المنتج");
+        return;
+      }
+      if (variantAvailable <= 0) {
         toast.error("المنتج غير متوفر في المخزون");
         return;
       }
+      if (quantity > variantAvailable) {
+        toast.error(`الكمية المتاحة ${variantAvailable} فقط`);
+        return;
+      }
       setIsAdding(true);
-      addToCart(product, selectedSize, selectedColor, quantity);
+      addToCart(activeProduct, selectedSize || undefined, selectedColor || undefined, quantity);
       
-      toast.success(`تمت إضافة "${product.name}" إلى السلة`, {
+      toast.success(`تمت إضافة "${activeProduct.name}" إلى السلة`, {
         description: [
           selectedSize && `المقاس: ${selectedSize}`,
           selectedColor && `اللون محدد`,
@@ -117,9 +142,9 @@ const ProductDetails = () => {
   const isNew = product && (product as any).created_at 
     ? (Date.now() - new Date((product as any).created_at).getTime()) < 7 * 24 * 60 * 60 * 1000 
     : false;
-  const isLowStock = product?.stockQuantity !== undefined && product.stockQuantity > 0 && product.stockQuantity <= 3;
-  const isOutOfStock = product?.stockQuantity !== undefined && product.stockQuantity === 0;
-  const hasDiscount = product?.discountType && product.discountType !== 'none';
+  const isLowStock = activeProduct ? variantAvailable > 0 && variantAvailable <= 3 : false;
+  const isOutOfStock = activeProduct ? variantAvailable <= 0 : false;
+  const hasDiscount = activeProduct && isProductDiscountActive(activeProduct);
   const discountPercent = hasDiscount && product?.discountType === 'percentage' ? product.discountValue : undefined;
 
   if (!product) {
@@ -257,8 +282,8 @@ const ProductDetails = () => {
               <div className="flex items-center justify-between">
                 <ProductQuantity
                   quantity={quantity}
-                  onIncrement={() => setQuantity(prev => product.stockQuantity ? Math.min(prev + 1, product.stockQuantity) : prev + 1)}
-                  onDecrement={() => setQuantity(prev => Math.max(1, prev - 1))}
+                  onIncrement={() => setQuantity((prev) => Math.min(prev + 1, Math.max(variantAvailable, 1)))}
+                  onDecrement={() => setQuantity((prev) => Math.max(1, prev - 1))}
                 />
                 <h3 className="text-sm font-semibold text-foreground">الكمية</h3>
               </div>

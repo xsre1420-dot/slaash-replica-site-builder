@@ -5,6 +5,9 @@ import { mapDbOrder } from "@/hooks/useOrderData";
 import { format } from "date-fns";
 import { cache, CacheKeys, CacheTTL, dedup } from "@/lib/cache";
 import { useAuth } from "@/context/AuthContext";
+import { mapOrderError } from "@/utils/orderUtils";
+import { canTransitionOrderStatus } from "@/utils/orderStatusUtils";
+import { toast } from "sonner";
 
 const ORDERS_PER_PAGE = 50;
 
@@ -106,6 +109,12 @@ export const useOrders = () => {
     const ownerId = user?.id;
     if (!ownerId) return;
 
+    const order = orders.find((o) => o.id === orderId);
+    if (order && !canTransitionOrderStatus(order.status, 'cancelled')) {
+      toast.error('لا يمكن إلغاء هذا الطلب');
+      return;
+    }
+
     const { error } = await supabase
       .from('orders')
       .update({ status: 'cancelled' })
@@ -113,14 +122,22 @@ export const useOrders = () => {
       .eq('owner_id', ownerId);
 
     if (!error) {
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' as const } : o));
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: 'cancelled' as const } : o)));
       cache.flushByPrefix('orders:');
+    } else {
+      toast.error(mapOrderError(error.message));
     }
   };
 
   const updateOrderStatus = async (orderId: string, newStatus: "pending" | "completed" | "cancelled") => {
     const ownerId = user?.id;
     if (!ownerId) return;
+
+    const order = orders.find((o) => o.id === orderId);
+    if (order && !canTransitionOrderStatus(order.status, newStatus)) {
+      toast.error('لا يمكن تغيير حالة الطلب بهذه الطريقة');
+      return;
+    }
 
     const { error } = await supabase
       .from('orders')
@@ -129,10 +146,11 @@ export const useOrders = () => {
       .eq('owner_id', ownerId);
 
     if (!error) {
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-      // Invalidate orders & statistics cache on status change
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o)));
       cache.flushByPrefix('orders:');
       cache.flushByPrefix('stats:');
+    } else {
+      toast.error(mapOrderError(error.message));
     }
   };
 

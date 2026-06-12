@@ -44,7 +44,12 @@ const OrderDetailsCard = ({ order }: OrderDetailsCardProps) => {
           </div>
 
           {/* Order Total */}
-          <OrderTotal total={order.total} selectedGovernorate={order.customerInfo.governorate} />
+          <OrderTotal
+            total={order.total}
+            selectedGovernorate={order.customerInfo.governorate}
+            discountAmount={order.discountAmount}
+            couponCode={order.couponCode}
+          />
         </div>
       </CardContent>
     </Card>

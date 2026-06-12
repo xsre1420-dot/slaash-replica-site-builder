@@ -15,6 +15,27 @@ const getOrCreateIdempotencyKey = (ownerId: string): string => {
 
 export const clearCheckoutIdempotencyKey = (ownerId: string) => {
   sessionStorage.removeItem(`checkout-idempotency:${ownerId}`);
+  sessionStorage.removeItem(`checkout-fingerprint:${ownerId}`);
+};
+
+export const mapOrderError = (message: string): string => {
+  const lower = message.toLowerCase();
+  if (lower.includes('stock') || lower.includes('مخزون') || lower.includes('insufficient')) {
+    return 'بعض المنتجات غير متوفرة بالكمية المطلوبة. يرجى مراجعة السلة.';
+  }
+  if (lower.includes('total') || lower.includes('amount') || lower.includes('mismatch')) {
+    return 'تغيّر سعر الطلب. يرجى مراجعة السلة والمحاولة مرة أخرى.';
+  }
+  if (lower.includes('coupon') || lower.includes('خصم')) {
+    return 'كود الخصم غير صالح أو لم يعد ينطبق على هذا الطلب.';
+  }
+  if (lower.includes('invalid_status') || lower.includes('status_transition')) {
+    return 'لا يمكن تغيير حالة الطلب بهذه الطريقة.';
+  }
+  if (lower.includes('could not be processed')) {
+    return 'تعذر معالجة الطلب. تحقق من المخزون والأسعار وحاول مرة أخرى.';
+  }
+  return message || 'فشل في إنشاء الطلب. يرجى المحاولة مرة أخرى.';
 };
 
 export const saveOrderToDatabase = async (
@@ -48,11 +69,11 @@ export const saveOrderToDatabase = async (
   });
 
   if (error) {
-    throw new Error(error.message || 'Failed to create order');
+    throw new Error(mapOrderError(error.message || 'Failed to create order'));
   }
 
   if (!data?.success) {
-    throw new Error(data?.error || 'Order creation failed');
+    throw new Error(mapOrderError(data?.error || 'Order creation failed'));
   }
 
   clearCheckoutIdempotencyKey(ownerId);

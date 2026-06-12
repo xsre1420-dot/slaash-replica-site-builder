@@ -6,11 +6,13 @@ import OptimizedImage from "@/components/OptimizedImage";
 interface CartItemCardProps {
   item: CartItem;
   index: number;
+  maxQuantity?: number;
   onRemove: (productId: string, size?: string, color?: string) => void;
   onUpdateQuantity: (productId: string, qty: number, size?: string, color?: string) => void;
 }
 
-const CartItemCard = memo(({ item, index, onRemove, onUpdateQuantity }: CartItemCardProps) => {
+const CartItemCard = memo(({ item, index, maxQuantity, onRemove, onUpdateQuantity }: CartItemCardProps) => {
+  const atMax = maxQuantity !== undefined && item.quantity >= maxQuantity;
   const [removing, setRemoving] = useState(false);
 
   const handleRemove = () => {
@@ -68,7 +70,8 @@ const CartItemCard = memo(({ item, index, onRemove, onUpdateQuantity }: CartItem
                 <span className="w-6 text-center text-foreground font-semibold text-sm">{item.quantity}</span>
                 <button
                   onClick={() => onUpdateQuantity(item.product.id, item.quantity + 1, item.selectedSize, item.selectedColor)}
-                  className="rounded-full w-6 h-6 flex items-center justify-center bg-primary text-primary-foreground text-xs hover:opacity-80 transition-opacity"
+                  disabled={atMax}
+                  className="rounded-full w-6 h-6 flex items-center justify-center bg-primary text-primary-foreground text-xs hover:opacity-80 transition-opacity disabled:opacity-40"
                 >
                   <Plus className="w-3 h-3" />
                 </button>

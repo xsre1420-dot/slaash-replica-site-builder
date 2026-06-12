@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Product, Category, ColorOption, ProductVariant } from '@/types';
+import { applyActiveDiscount } from '@/utils/inventoryUtils';
 import { cache, CacheTTL, dedup } from '@/lib/cache';
 
 interface TenantStoreInfo {
@@ -98,7 +99,7 @@ async function fetchStoreFromApi(normalizedSlug: string) {
   };
 }
 
-const formatProduct = (p: any): Product => ({
+const formatProduct = (p: any): Product => applyActiveDiscount({
   id: p.id,
   name: p.name,
   description: p.description || '',
@@ -118,6 +119,11 @@ const formatProduct = (p: any): Product => ({
     if (Array.isArray(p.variants)) return p.variants as unknown as ProductVariant[];
     return undefined;
   })(),
+  discountType: p.discount_type || undefined,
+  discountValue: p.discount_value != null ? Number(p.discount_value) : undefined,
+  discountStartDate: p.discount_start_date || undefined,
+  discountEndDate: p.discount_end_date || undefined,
+  originalPrice: p.original_price != null ? Number(p.original_price) : undefined,
 });
 
 /**

@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { ArrowLeft, User, Lock, Mail, Store, Eye, EyeOff, Check, Shield, Zap, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -31,7 +31,10 @@ const Signup = () => {
 
   const { register, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+
+  const selectedPlan = (location.state as { selectedPlan?: { id: string; name: string; price: string } })?.selectedPlan;
 
   useEffect(() => {
     if (user) navigate("/builder");
@@ -76,7 +79,13 @@ const Signup = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await register(email, password, username, storeName || 'متجري');
+      const result = await register(
+        email,
+        password,
+        username,
+        storeName || 'متجري',
+        selectedPlan?.id
+      );
       if (result.error) {
         if (result.error.includes('already registered')) setError("هذا البريد الإلكتروني مسجل بالفعل");
         else if (result.error.includes('Password should be at least')) setError("كلمة المرور ضعيفة جداً");
@@ -188,6 +197,11 @@ const Signup = () => {
                 </div>
                 <h2 className="text-3xl font-bold text-foreground mb-2">إنشاء حساب جديد</h2>
                 <p className="text-muted-foreground text-sm">أنشئ متجرك الإلكتروني في 60 ثانية</p>
+                {selectedPlan && (
+                  <p className="text-xs text-primary mt-2 font-medium">
+                    الباقة المختارة: {selectedPlan.name} ({selectedPlan.price})
+                  </p>
+                )}
               </div>
 
               {/* Step indicator */}

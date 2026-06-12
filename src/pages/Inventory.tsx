@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { ProductVariant } from "@/types";
+import { scaleVariantsToTotal } from "@/utils/inventoryUtils";
 
 interface Product {
   id: string;
@@ -20,6 +22,7 @@ interface Product {
   image_url?: string;
   stock_quantity?: number;
   min_stock_level?: number;
+  variants?: ProductVariant[];
   created_at: string;
 }
 
@@ -58,7 +61,7 @@ function Inventory() {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, price, category, image_url, stock_quantity, min_stock_level, created_at')
+        .select('id, name, price, category, image_url, stock_quantity, min_stock_level, variants, created_at')
         .eq('owner_id', user.id)
         .order('name');
 
@@ -75,9 +78,18 @@ function Inventory() {
   const updateStock = async (productId: string, quantity: number, minLevel?: number) => {
     try {
       if (!user?.id) throw new Error('Not authenticated');
-      const updateData: Record<string, number> = { stock_quantity: quantity };
+
+      const current = products.find((p) => p.id === productId);
+      const previousQty = current?.stock_quantity || 0;
+      const delta = quantity - previousQty;
+
+      const updateData: Record<string, unknown> = { stock_quantity: quantity };
       if (minLevel !== undefined) {
         updateData.min_stock_level = minLevel;
+      }
+
+      if (current?.variants?.length) {
+        updateData.variants = scaleVariantsToTotal(current.variants, quantity);
       }
 
       const { error } = await (supabase as any)
@@ -87,7 +99,16 @@ function Inventory() {
         .eq('owner_id', user.id);
 
       if (error) throw error;
-      
+
+      if (delta !== 0) {
+        await (supabase as any).from('inventory_movements').insert({
+          product_id: productId,
+          owner_id: user.id,
+          quantity_delta: delta,
+          reason: 'manual_adjustment',
+        });
+      }
+
       toast.success("تم تحديث المخزون بنجاح");
       fetchProducts();
       setDialogOpen(false);

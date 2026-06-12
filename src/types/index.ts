@@ -68,4 +68,7 @@ export interface Order {
   total: number;
   date: string;
   status: 'pending' | 'completed' | 'cancelled';
+  couponCode?: string;
+  discountAmount?: number;
+  paymentMethod?: string;
 }

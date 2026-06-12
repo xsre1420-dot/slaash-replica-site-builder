@@ -1,13 +1,14 @@
 
 import { useState } from "react";
 import { Check, X, Loader2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getAllowedNextStatuses, canTransitionOrderStatus } from "@/utils/orderStatusUtils";
+import { toast } from "sonner";
 
 interface StatusChangeDropdownProps {
   currentStatus: 'pending' | 'completed' | 'cancelled';
@@ -17,15 +18,16 @@ interface StatusChangeDropdownProps {
 
 const StatusChangeDropdown = ({ currentStatus, orderId, onStatusChange }: StatusChangeDropdownProps) => {
   const [isUpdating, setIsUpdating] = useState(false);
-  
+  const allowedNext = getAllowedNextStatuses(currentStatus);
+
   const handleStatusChange = async (newStatus: 'pending' | 'completed' | 'cancelled') => {
+    if (!canTransitionOrderStatus(currentStatus, newStatus)) {
+      toast.error('لا يمكن تغيير حالة الطلب بهذه الطريقة');
+      return;
+    }
     setIsUpdating(true);
     await onStatusChange(orderId, newStatus);
     setIsUpdating(false);
-  };
-
-  const handleDropdownClick = () => {
-    console.log('Dropdown clicked');
   };
 
   const getStatusDisplay = (status: string) => {
@@ -58,43 +60,41 @@ const StatusChangeDropdown = ({ currentStatus, orderId, onStatusChange }: Status
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button 
-          onClick={handleDropdownClick}
-          disabled={isUpdating}
-          className={`${statusDisplay.className} ${isUpdating ? 'opacity-70' : ''} transition-all duration-300 ease-in-out flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transform hover:scale-105 active:scale-95`}
+        <button
+          disabled={isUpdating || allowedNext.length === 0}
+          className={`${statusDisplay.className} ${isUpdating || allowedNext.length === 0 ? 'opacity-70 cursor-default' : ''} transition-all duration-300 ease-in-out flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transform hover:scale-105 active:scale-95`}
         >
           <Icon className={`w-4 h-4 ${currentStatus === 'pending' || isUpdating ? 'animate-spin' : ''}`} />
           {isUpdating ? 'جاري التحديث...' : statusDisplay.label}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent 
-        align="end" 
-        side="bottom"
-        className="bg-white shadow-lg border rounded-lg z-[9999] min-w-[120px]"
-        sideOffset={5}
-      >
-        <DropdownMenuItem 
-          onClick={() => handleStatusChange("completed")}
-          className="cursor-pointer hover:bg-green-50 flex items-center gap-2"
+      {allowedNext.length > 0 && (
+        <DropdownMenuContent
+          align="end"
+          side="bottom"
+          className="bg-white shadow-lg border rounded-lg z-[9999] min-w-[120px]"
+          sideOffset={5}
         >
-          <Check className="w-4 h-4 text-green-600" />
-          <span>مكتمل</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          onClick={() => handleStatusChange("pending")}
-          className="cursor-pointer hover:bg-yellow-50 flex items-center gap-2"
-        >
-          <Loader2 className="w-4 h-4 text-yellow-600" />
-          <span>قيد الانتظار</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          onClick={() => handleStatusChange("cancelled")}
-          className="cursor-pointer hover:bg-red-50 flex items-center gap-2"
-        >
-          <X className="w-4 h-4 text-red-600" />
-          <span>ملغي</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
+          {allowedNext.includes('completed') && (
+            <DropdownMenuItem
+              onClick={() => handleStatusChange("completed")}
+              className="cursor-pointer hover:bg-green-50 flex items-center gap-2"
+            >
+              <Check className="w-4 h-4 text-green-600" />
+              <span>مكتمل</span>
+            </DropdownMenuItem>
+          )}
+          {allowedNext.includes('cancelled') && (
+            <DropdownMenuItem
+              onClick={() => handleStatusChange("cancelled")}
+              className="cursor-pointer hover:bg-red-50 flex items-center gap-2"
+            >
+              <X className="w-4 h-4 text-red-600" />
+              <span>ملغي</span>
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      )}
     </DropdownMenu>
   );
 };

@@ -1,6 +1,8 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from "react";
 import { CartItem, Product } from "@/types";
+import { getAvailableQty } from "@/utils/inventoryUtils";
+import { toast } from "sonner";
 
 interface CartContextType {
   cartItems: CartItem[];
@@ -9,20 +11,31 @@ interface CartContextType {
   addToCart: (product: Product, selectedSize?: string, selectedColor?: string, quantity?: number) => void;
   removeFromCart: (productId: string, selectedSize?: string, selectedColor?: string) => void;
   updateQuantity: (productId: string, quantity: number, selectedSize?: string, selectedColor?: string) => void;
+  replaceCartItems: (items: CartItem[]) => void;
   clearCart: () => void;
   cartTotal: number;
   cartCount: number;
+  getMaxQuantity: (product: Product, selectedSize?: string, selectedColor?: string) => number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 const cartStorageKey = (ownerId: string) => `cart:${ownerId}`;
+const CART_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 const loadStoredCart = (ownerId: string | null): CartItem[] => {
   if (!ownerId) return [];
   try {
     const raw = sessionStorage.getItem(cartStorageKey(ownerId));
-    return raw ? JSON.parse(raw) : [];
+    if (raw) return JSON.parse(raw);
+
+    const backupRaw = localStorage.getItem(`${cartStorageKey(ownerId)}:backup`);
+    if (backupRaw) {
+      const parsed = JSON.parse(backupRaw);
+      if (parsed.expiresAt > Date.now()) return parsed.items || [];
+      localStorage.removeItem(`${cartStorageKey(ownerId)}:backup`);
+    }
+    return [];
   } catch {
     return [];
   }
@@ -31,10 +44,30 @@ const loadStoredCart = (ownerId: string | null): CartItem[] => {
 const persistCart = (ownerId: string | null, items: CartItem[]) => {
   if (!ownerId) return;
   try {
-    sessionStorage.setItem(cartStorageKey(ownerId), JSON.stringify(items));
+    const serialized = JSON.stringify(items);
+    sessionStorage.setItem(cartStorageKey(ownerId), serialized);
+    localStorage.setItem(
+      `${cartStorageKey(ownerId)}:backup`,
+      JSON.stringify({ items, expiresAt: Date.now() + CART_TTL_MS })
+    );
   } catch {
     /* ignore quota errors */
   }
+};
+
+const getCartQtyForVariant = (
+  items: CartItem[],
+  productId: string,
+  size?: string,
+  color?: string
+): number => {
+  const item = items.find(
+    (i) =>
+      i.product.id === productId &&
+      i.selectedSize === size &&
+      i.selectedColor === color
+  );
+  return item?.quantity ?? 0;
 };
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
@@ -56,10 +89,30 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     persistCart(storeOwnerId, cartItems);
   }, [cartItems, storeOwnerId]);
 
+  const getMaxQuantity = useCallback(
+    (product: Product, selectedSize?: string, selectedColor?: string) =>
+      getAvailableQty(product, selectedSize, selectedColor),
+    []
+  );
+
   const addToCart = useCallback((product: Product, selectedSize?: string, selectedColor?: string, quantity = 1) => {
     if (quantity <= 0) return;
 
     setCartItems((prevItems) => {
+      const available = getAvailableQty(product, selectedSize, selectedColor);
+      if (available <= 0) {
+        toast.error("المنتج غير متوفر في المخزون");
+        return prevItems;
+      }
+
+      const existingQty = getCartQtyForVariant(prevItems, product.id, selectedSize, selectedColor);
+      const newQty = existingQty + quantity;
+
+      if (newQty > available) {
+        toast.error(`الكمية المتاحة ${available} فقط`);
+        return prevItems;
+      }
+
       const existingItem = prevItems.find(
         (item) =>
           item.product.id === product.id &&
@@ -72,7 +125,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           item.product.id === product.id &&
           item.selectedSize === selectedSize &&
           item.selectedColor === selectedColor
-            ? { ...item, quantity: item.quantity + quantity }
+            ? { ...item, quantity: newQty, product }
             : item
         );
       }
@@ -109,21 +162,43 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    setCartItems((prevItems) =>
-      prevItems.map((item) =>
-        item.product.id === productId &&
-        item.selectedSize === selectedSize &&
-        item.selectedColor === selectedColor
-          ? { ...item, quantity }
-          : item
-      )
-    );
+    setCartItems((prevItems) => {
+      const item = prevItems.find(
+        (i) =>
+          i.product.id === productId &&
+          i.selectedSize === selectedSize &&
+          i.selectedColor === selectedColor
+      );
+      if (!item) return prevItems;
+
+      const available = getAvailableQty(item.product, selectedSize, selectedColor);
+      const capped = Math.min(quantity, available);
+
+      if (capped < quantity) {
+        toast.error(`الكمية المتاحة ${available} فقط`);
+      }
+
+      return prevItems.map((i) =>
+        i.product.id === productId &&
+        i.selectedSize === selectedSize &&
+        i.selectedColor === selectedColor
+          ? { ...i, quantity: capped }
+          : i
+      );
+    });
+  }, []);
+
+  const replaceCartItems = useCallback((items: CartItem[]) => {
+    setCartItems(items);
   }, []);
 
   const clearCart = useCallback(() => {
     setCartItems([]);
     setStoreOwnerId((prev) => {
-      if (prev) sessionStorage.removeItem(cartStorageKey(prev));
+      if (prev) {
+        sessionStorage.removeItem(cartStorageKey(prev));
+        localStorage.removeItem(`${cartStorageKey(prev)}:backup`);
+      }
       return prev;
     });
   }, []);
@@ -146,11 +221,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       addToCart,
       removeFromCart,
       updateQuantity,
+      replaceCartItems,
       clearCart,
       cartTotal,
       cartCount,
+      getMaxQuantity,
     }),
-    [cartItems, storeOwnerId, setStoreOwner, addToCart, removeFromCart, updateQuantity, clearCart, cartTotal, cartCount]
+    [cartItems, storeOwnerId, setStoreOwner, addToCart, removeFromCart, updateQuantity, replaceCartItems, clearCart, cartTotal, cartCount, getMaxQuantity]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
