@@ -56,20 +56,29 @@ const AddProduct = () => {
     });
   }, []);
 
-  // --- Progress ---
+  // --- Progress (required fields only for completion %) ---
   const progressSteps = useMemo(() => [
-    { label: "الصورة", icon: <Image className="w-3.5 h-3.5" />, completed: !!mainImage },
-    { label: "الاسم", icon: <Type className="w-3.5 h-3.5" />, completed: !!name.trim() },
-    { label: "الفئة", icon: <Tag className="w-3.5 h-3.5" />, completed: !!category },
-    { label: "السعر", icon: <DollarSign className="w-3.5 h-3.5" />, completed: !!price && isValidPrice(price) },
-    { label: "الكمية", icon: <Package className="w-3.5 h-3.5" />, completed: !!stockQuantity },
-    { label: "الألوان/القياسات", icon: <Palette className="w-3.5 h-3.5" />, completed: colors.length > 0 || sizes.length > 0 },
+    { label: "صورة المنتج", icon: <Image className="w-3.5 h-3.5" />, completed: !!mainImage, required: true },
+    { label: "اسم المنتج", icon: <Type className="w-3.5 h-3.5" />, completed: !!name.trim(), required: true },
+    { label: "الفئة", icon: <Tag className="w-3.5 h-3.5" />, completed: !!category, required: true },
+    { label: "السعر", icon: <DollarSign className="w-3.5 h-3.5" />, completed: !!price && isValidPrice(price), required: true },
+    { label: "الكمية", icon: <Package className="w-3.5 h-3.5" />, completed: !!stockQuantity, required: false },
+    { label: "القياسات والألوان", icon: <Palette className="w-3.5 h-3.5" />, completed: colors.length > 0 || sizes.length > 0, required: false },
   ], [mainImage, name, category, price, stockQuantity, colors, sizes]);
 
   const completionPercentage = useMemo(() => {
-    const done = progressSteps.filter(s => s.completed).length;
-    return Math.round((done / progressSteps.length) * 100);
+    const required = progressSteps.filter(s => s.required !== false);
+    const done = required.filter(s => s.completed).length;
+    return Math.round((done / required.length) * 100);
   }, [progressSteps]);
+
+  const scrollToFirstError = (errors: Record<string, string>) => {
+    const order = ['image', 'name', 'category', 'price'];
+    const first = order.find(k => errors[k]);
+    if (!first) return;
+    const el = document.getElementById(first === 'image' ? 'product-images' : first);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
 
   // --- Variants ---
   useEffect(() => {
@@ -139,6 +148,7 @@ const AddProduct = () => {
   const handleImagesChange = (newMain: string | null, newAdditional: string[]) => {
     setMainImage(newMain);
     setAdditionalImages(newAdditional);
+    if (newMain) setFieldErrors(p => { const n = { ...p }; delete n.image; return n; });
   };
 
   const handlePriceChange = (v: string) => { const f = formatPriceInput(v); setPrice(f); validateField("price", f); };
@@ -158,11 +168,22 @@ const AddProduct = () => {
     if (!user) { toast({ title: "خطأ", description: "يجب تسجيل الدخول أولاً", variant: "destructive" }); return; }
 
     const errors: Record<string, string> = {};
-    if (!name.trim()) errors.name = "اسم المنتج مطلوب";
-    if (!category) errors.category = "اختر فئة المنتج";
-    if (!price || !isValidPrice(price)) errors.price = "سعر صحيح مطلوب";
-    if (!mainImage) errors.image = "أضف صورة رئيسية";
-    if (Object.keys(errors).length) { setFieldErrors(errors); toast({ title: "تحقق من البيانات", description: "يرجى ملء الحقول المطلوبة", variant: "destructive" }); return; }
+    if (!mainImage) errors.image = "أضف صورة رئيسية — العملاء يحتاجون لرؤية المنتج";
+    if (!name.trim()) errors.name = "اسم المنتج مطلوب — مثال: قميص قطني أبيض";
+    if (!category) errors.category = categories.length === 0
+      ? "أنشئ فئة أولاً بالضغط على + بجانب القائمة"
+      : "اختر فئة لتسهيل تصفّح العملاء للمنتج";
+    if (!price || !isValidPrice(price)) errors.price = "أدخل سعراً صحيحاً أكبر من صفر";
+    if (Object.keys(errors).length) {
+      setFieldErrors(errors);
+      scrollToFirstError(errors);
+      toast({
+        title: "يرجى إكمال الحقول المطلوبة",
+        description: `${Object.keys(errors).length} حقول تحتاج انتباهك`,
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Suggestion #1: Validate image URLs before saving
     const imageValidation = await validateProductImages(mainImage, additionalImages);
@@ -178,21 +199,32 @@ const AddProduct = () => {
     setIsSubmitting(true);
     try {
       const numericPrice = parseFloat(price.replace(/,/g, ''));
-      const numericCost = cost ? parseFloat(cost.replace(/,/g, '')) : null;
-      const { error } = await supabase.from('products').insert([{
-        owner_id: user.id, name: name.trim(), description: description.trim(), category,
-        price: numericPrice, cost: numericCost,
-        image_url: mainImage, additional_images: additionalImages.length > 0 ? additionalImages : null,
-        sizes: sizes.length > 0 ? sizes : null, colors: colors.length > 0 ? JSON.stringify(colors) : null,
-        stock_quantity: stockQuantity ? parseInt(stockQuantity) : 0,
-        variants: variants.length > 0 ? JSON.stringify(variants) : null,
-      }]);
-      if (error) throw error;
-      toast({ title: "تم بنجاح", description: "تمت إضافة منتج جديد" });
-      navigate('/products');
+      const numericCost = cost ? parseFloat(cost.replace(/,/g, '')) : undefined;
+      const newProduct: Product = {
+        id: '',
+        name: name.trim(),
+        description: description.trim(),
+        category,
+        price: numericPrice,
+        cost: numericCost,
+        image: mainImage!,
+        additionalImages,
+        sizes: sizes.length > 0 ? sizes : undefined,
+        colors: colors.length > 0 ? colors : undefined,
+        stockQuantity: stockQuantity ? parseInt(stockQuantity) : 0,
+        variants: variants.length > 0 ? variants : undefined,
+      };
+
+      const result = await addProduct(newProduct);
+      if (result.success) {
+        toast({ title: "تم بنجاح", description: "تمت إضافة المنتج — يمكن للعملاء رؤيته الآن" });
+        navigate('/products');
+      } else {
+        toast({ title: "خطأ", description: result.error || "فشل في إضافة المنتج", variant: "destructive" });
+      }
     } catch (error) {
       console.error('Error adding product:', error);
-      toast({ title: "خطأ", description: "فشل في إضافة المنتج", variant: "destructive" });
+      toast({ title: "خطأ", description: "فشل في إضافة المنتج — تحقق من اتصالك وحاول مجدداً", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -202,18 +234,19 @@ const AddProduct = () => {
     <DashboardLayout>
       <PageHeader
         title="إضافة منتج جديد"
-        description="أضف منتجاً جديداً إلى متجرك"
+        description="4 حقول مطلوبة فقط: صورة، اسم، فئة، وسعر — الباقي اختياري"
         backTo="/products"
+        backLabel="العودة للمنتجات"
         breadcrumbs={[{ label: 'المنتجات', href: '/products' }, { label: 'إضافة منتج' }]}
         actions={
           <Button
-            type="button"
-            onClick={handleSubmit}
+            type="submit"
+            form="add-product-form"
             disabled={isSubmitting}
             className="rounded-xl gap-1.5 min-h-[44px] shadow-brand"
           >
             <Save className="w-4 h-4" />
-            {isSubmitting ? "جاري الحفظ..." : "حفظ"}
+            {isSubmitting ? "جاري الحفظ..." : "حفظ المنتج"}
           </Button>
         }
       />
@@ -230,36 +263,47 @@ const AddProduct = () => {
 
           {/* Main form */}
           <div className="lg:col-span-2 space-y-5">
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="rounded-xl border border-primary/15 bg-primary/5 p-4 text-sm text-muted-foreground leading-relaxed">
+              <strong className="text-foreground">نصيحة:</strong> ابدأ بالحقول المطلوبة (★) — يمكنك إضافة الوصف والمخزون لاحقاً من صفحة التعديل.
+            </div>
+
+            <form id="add-product-form" onSubmit={handleSubmit} className="space-y-5">
               {/* Images */}
-              <FormSection icon={<Image className="w-4 h-4" />} title="صور المنتج">
-                <ProductImagesManager mainImage={mainImage} additionalImages={additionalImages} onImagesChange={handleImagesChange} />
-                {fieldErrors.image && <p className="text-destructive text-xs mt-1">{fieldErrors.image}</p>}
+              <FormSection icon={<Image className="w-4 h-4" />} title="صور المنتج ★">
+                <div id="product-images">
+                  <ProductImagesManager mainImage={mainImage} additionalImages={additionalImages} onImagesChange={handleImagesChange} />
+                </div>
+                {fieldErrors.image && <p className="text-destructive text-xs mt-2" role="alert">{fieldErrors.image}</p>}
+                {!fieldErrors.image && !mainImage && (
+                  <p className="text-xs text-muted-foreground mt-2">ارفع صورة واضحة — أول ما يراه العميل</p>
+                )}
               </FormSection>
 
               {/* Basic Info */}
               <FormSection icon={<Type className="w-4 h-4" />} title="المعلومات الأساسية">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div className="space-y-2">
-                    <Label htmlFor="name" className="text-foreground text-right block">اسم المنتج *</Label>
+                    <Label htmlFor="name" className="text-foreground text-right block">اسم المنتج ★</Label>
                     <Input
                       id="name"
-                      className={`text-right rounded-xl border-border focus:border-ring ${fieldErrors.name ? 'border-destructive' : ''}`}
+                      className={`text-right ds-input ${fieldErrors.name ? 'border-destructive focus-visible:ring-destructive/20' : ''}`}
                       value={name}
                       onChange={(e) => { setName(e.target.value); validateField("name", e.target.value); }}
-                      placeholder="أدخل اسم المنتج"
+                      placeholder="مثال: ساعة ذكية سوداء"
+                      aria-invalid={!!fieldErrors.name}
+                      aria-describedby={fieldErrors.name ? 'name-error' : undefined}
                     />
-                    {fieldErrors.name && <p className="text-destructive text-xs">{fieldErrors.name}</p>}
+                    {fieldErrors.name && <p id="name-error" className="text-destructive text-xs" role="alert">{fieldErrors.name}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="category" className="text-foreground text-right block">الفئة *</Label>
+                    <Label htmlFor="category" className="text-foreground text-right block">الفئة ★</Label>
                     <div className="flex gap-2">
-                      <Button type="button" variant="outline" size="icon" onClick={() => setIsCategoryDialogOpen(true)} className="rounded-xl border-border hover:bg-accent flex-shrink-0">
+                      <Button type="button" variant="outline" size="icon" onClick={() => setIsCategoryDialogOpen(true)} className="rounded-xl border-border hover:bg-accent flex-shrink-0" aria-label="إضافة فئة جديدة">
                         <Plus className="w-4 h-4 text-primary" />
                       </Button>
                       <Select value={category} onValueChange={(v) => { setCategory(v); setFieldErrors(p => { const n = { ...p }; delete n.category; return n; }); }}>
-                        <SelectTrigger className={`w-full text-right rounded-xl border-border ${fieldErrors.category ? 'border-destructive' : ''}`}>
-                          <SelectValue placeholder="اختر فئة" />
+                        <SelectTrigger id="category" className={`w-full text-right ds-input ${fieldErrors.category ? 'border-destructive' : ''}`}>
+                          <SelectValue placeholder={categories.length === 0 ? 'أنشئ فئة أولاً' : 'اختر فئة'} />
                         </SelectTrigger>
                         <SelectContent className="rounded-xl">
                           {categories.map(cat => (
@@ -268,7 +312,10 @@ const AddProduct = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    {fieldErrors.category && <p className="text-destructive text-xs">{fieldErrors.category}</p>}
+                    {fieldErrors.category && <p className="text-destructive text-xs" role="alert">{fieldErrors.category}</p>}
+                    {categories.length === 0 && !fieldErrors.category && (
+                      <p className="text-xs text-muted-foreground">لا توجد فئات — اضغط + لإنشاء فئة مثل "ملابس" أو "إلكترونيات"</p>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -287,16 +334,18 @@ const AddProduct = () => {
               <FormSection icon={<DollarSign className="w-4 h-4" />} title="التسعير">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div className="space-y-2">
-                    <Label htmlFor="price" className="text-foreground text-right block">سعر البيع (د.ع) *</Label>
+                    <Label htmlFor="price" className="text-foreground text-right block">سعر البيع (د.ع) ★</Label>
                     <Input
                       id="price"
                       type="text"
-                      className={`text-right rounded-xl border-border ${fieldErrors.price ? 'border-destructive' : ''}`}
+                      inputMode="numeric"
+                      className={`text-right ds-input ${fieldErrors.price ? 'border-destructive focus-visible:ring-destructive/20' : ''}`}
                       value={formatDisplayPrice(price)}
                       onChange={(e) => handlePriceChange(e.target.value)}
-                      placeholder="أدخل سعر البيع"
+                      placeholder="مثال: 25,000"
+                      aria-invalid={!!fieldErrors.price}
                     />
-                    {fieldErrors.price && <p className="text-destructive text-xs">{fieldErrors.price}</p>}
+                    {fieldErrors.price && <p className="text-destructive text-xs" role="alert">{fieldErrors.price}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="cost" className="text-foreground text-right block">التكلفة (د.ع) - اختياري</Label>
@@ -313,7 +362,7 @@ const AddProduct = () => {
               </FormSection>
 
               {/* Stock */}
-              <FormSection icon={<Package className="w-4 h-4" />} title="المخزون">
+              <FormSection icon={<Package className="w-4 h-4" />} title="المخزون (اختياري)">
                 <div className="space-y-2">
                   <Label htmlFor="stockQuantity" className="text-foreground text-right block">الكمية الإجمالية</Label>
                   <Input
@@ -335,7 +384,7 @@ const AddProduct = () => {
               </FormSection>
 
               {/* Sizes & Colors */}
-              <FormSection icon={<Palette className="w-4 h-4" />} title="القياسات والألوان">
+              <FormSection icon={<Palette className="w-4 h-4" />} title="القياسات والألوان (اختياري)">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                   <div className="bg-muted rounded-xl p-4">
                     <SizesManager sizes={sizes} onSizesChange={setSizes} />

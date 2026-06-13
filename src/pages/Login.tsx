@@ -3,8 +3,7 @@ import { useState, useEffect } from "react";
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, ShoppingBag, BarChart3, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -21,22 +20,27 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const { login, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from || "/builder";
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user) navigate("/builder");
-  }, [user, navigate]);
+    if (user) navigate(from, { replace: true });
+  }, [user, navigate, from]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
       setError("يرجى إدخال البريد الإلكتروني وكلمة المرور");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError("يرجى إدخال بريد إلكتروني صحيح");
       return;
     }
     setIsLoading(true);
@@ -47,7 +51,7 @@ const Login = () => {
         setError(result.error);
       } else {
         toast({ title: "تم تسجيل الدخول بنجاح", description: "مرحباً بك مرة أخرى" });
-        navigate("/builder");
+        navigate(from, { replace: true });
       }
     } catch {
       setError("حدث خطأ غير متوقع");
@@ -179,19 +183,6 @@ const Login = () => {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                </div>
-
-                <div className="flex items-center justify-end gap-2.5">
-                  <label htmlFor="remember-me" className="text-sm text-muted-foreground cursor-pointer select-none">
-                    تذكرني
-                  </label>
-                  <Checkbox
-                    id="remember-me"
-                    checked={rememberMe}
-                    onCheckedChange={(checked) => setRememberMe(checked === true)}
-                    disabled={isLoading}
-                    className="border-border/60"
-                  />
                 </div>
 
                 <Button

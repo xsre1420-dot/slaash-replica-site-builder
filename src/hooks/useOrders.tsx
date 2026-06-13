@@ -114,14 +114,14 @@ export const useOrders = () => {
   const updateOrderStatusLocal = async (
     orderId: string,
     newStatus: "pending" | "completed" | "cancelled"
-  ) => {
+  ): Promise<boolean> => {
     const ownerId = user?.id;
-    if (!ownerId) return;
+    if (!ownerId) return false;
 
     const order = orders.find((o) => o.id === orderId);
     if (order && !canTransitionOrderStatus(order.status, newStatus)) {
       toast.error('لا يمكن تغيير حالة الطلب بهذه الطريقة');
-      return;
+      return false;
     }
 
     const result = await updateOrderStatus(orderId, ownerId, newStatus);
@@ -130,9 +130,11 @@ export const useOrders = () => {
       setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o)));
       cache.flushByPrefix('orders:');
       cache.flushByPrefix('stats:');
-    } else {
-      toast.error(mapOrderError(result.error || 'فشل التحديث'));
+      return true;
     }
+
+    toast.error(mapOrderError(result.error || 'فشل التحديث'));
+    return false;
   };
 
   const clearDateFilter = () => setDateFilter(undefined);

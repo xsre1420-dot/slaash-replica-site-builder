@@ -1,8 +1,10 @@
 
 import { useMemo } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, ShoppingBag } from "lucide-react";
 
 interface SalesChartProps {
   orders: Array<{
@@ -10,6 +12,7 @@ interface SalesChartProps {
     total_amount: number | string;
   }>;
   dateRange: string;
+  metric?: string;
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -28,19 +31,17 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export const SalesChart = ({ orders, dateRange }: SalesChartProps) => {
   const chartData = useMemo(() => {
     if (!orders || orders.length === 0) return [];
-    
+
     const days = parseInt(dateRange) || 7;
     const grouped: { [key: string]: { revenue: number; orders: number } } = {};
-    
-    // Create date buckets
+
     for (let i = days - 1; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
       const key = date.toLocaleDateString('ar-IQ', { month: 'short', day: 'numeric' });
       grouped[key] = { revenue: 0, orders: 0 };
     }
-    
-    // Fill with data
+
     orders.forEach(order => {
       const date = new Date(order.created_at);
       const key = date.toLocaleDateString('ar-IQ', { month: 'short', day: 'numeric' });
@@ -57,52 +58,66 @@ export const SalesChart = ({ orders, dateRange }: SalesChartProps) => {
     }));
   }, [orders, dateRange]);
 
-  if (chartData.length === 0) {
-    return null;
+  if (chartData.every(d => d.revenue === 0 && d.orders === 0)) {
+    return (
+      <div className="ds-card p-8 text-center mb-8">
+        <ShoppingBag className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+        <h3 className="text-sm font-semibold text-foreground mb-1">لا توجد مبيعات في هذه الفترة</h3>
+        <p className="text-xs text-muted-foreground mb-4 max-w-sm mx-auto leading-relaxed">
+          عندما تبدأ بالبيع، سيظهر الرسم البياني هنا تلقائياً.
+        </p>
+        <Link to="/orders">
+          <Button variant="outline" size="sm" className="rounded-xl">عرض الطلبات</Button>
+        </Link>
+      </div>
+    );
   }
 
   return (
-    <div className="mb-8 animate-fade-in" style={{ animationDelay: '100ms' }}>
+    <div className="mb-8 animate-fade-in">
       <div className="flex items-center gap-3 mb-5">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10">
           <BarChart3 className="w-5 h-5 text-primary" />
         </div>
-        <h2 className="text-xl font-bold text-foreground">حركة المبيعات</h2>
+        <div>
+          <h2 className="text-lg font-bold text-foreground">حركة المبيعات</h2>
+          <p className="text-xs text-muted-foreground">الخط المتصل: الإيرادات · المتقطع: عدد الطلبات</p>
+        </div>
       </div>
-      
-      <Card className="border border-border shadow-sm rounded-2xl bg-card">
+
+      <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-right text-foreground text-base">المبيعات خلال الفترة المحددة</CardTitle>
+          <CardTitle className="text-right text-foreground text-base">المبيعات اليومية</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 13%, 91%)" />
-                <XAxis 
-                  dataKey="date" 
-                  tick={{ fontSize: 11 }} 
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 11 }}
                   stroke="hsl(220, 9%, 46%)"
                   reversed
                 />
-                <YAxis 
-                  tick={{ fontSize: 11 }} 
+                <YAxis
+                  tick={{ fontSize: 11 }}
                   stroke="hsl(220, 9%, 46%)"
                   orientation="right"
                 />
                 <Tooltip content={<CustomTooltip />} />
-                <Line 
-                  type="monotone" 
-                  dataKey="revenue" 
-                  stroke="hsl(248, 53%, 58%)" 
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="hsl(239, 84%, 67%)"
                   strokeWidth={2}
-                  dot={{ r: 3, fill: "hsl(248, 53%, 58%)" }}
+                  dot={{ r: 3, fill: "hsl(239, 84%, 67%)" }}
                   activeDot={{ r: 5 }}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="orders" 
-                  stroke="hsl(220, 9%, 46%)" 
+                <Line
+                  type="monotone"
+                  dataKey="orders"
+                  stroke="hsl(220, 9%, 46%)"
                   strokeWidth={1.5}
                   strokeDasharray="5 5"
                   dot={false}

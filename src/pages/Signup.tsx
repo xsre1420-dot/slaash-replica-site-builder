@@ -63,6 +63,11 @@ const Signup = () => {
       setError("يرجى إدخال بريد إلكتروني صحيح");
       return false;
     }
+    const normalizedUsername = username.trim().toLowerCase();
+    if (!/^[a-z0-9_-]{3,30}$/.test(normalizedUsername)) {
+      setError("اسم المستخدم: 3-30 حرف، أحرف إنجليزية صغيرة وأرقام و _ - فقط");
+      return false;
+    }
     setError(null);
     return true;
   };

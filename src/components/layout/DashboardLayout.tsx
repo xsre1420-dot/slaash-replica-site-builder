@@ -9,158 +9,395 @@ import {
   TrendingUp,
   Eye,
   Menu,
+  PanelRightClose,
+  PanelRightOpen,
+  ExternalLink,
+  LogOut,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useStore } from '@/context/StoreContext';
 import { useAuth } from '@/context/AuthContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
-const navItems = [
-  { to: '/builder', icon: LayoutDashboard, label: 'لوحة التحكم' },
+const navGroups = [
+  {
+    label: 'الرئيسية',
+    items: [
+      { to: '/builder', icon: LayoutDashboard, label: 'لوحة التحكم' },
+      { to: '/orders', icon: ShoppingBag, label: 'الطلبات' },
+      { to: '/products', icon: Package, label: 'المنتجات' },
+    ],
+  },
+  {
+    label: 'الإدارة',
+    items: [
+      { to: '/inventory', icon: Archive, label: 'المخزون' },
+      { to: '/marketing', icon: TrendingUp, label: 'التسويق' },
+      { to: '/statistics', icon: BarChart3, label: 'الإحصائيات' },
+    ],
+  },
+  {
+    label: 'الحساب',
+    items: [
+      { to: '/settings', icon: Settings, label: 'الإعدادات' },
+    ],
+  },
+];
+
+const allNavItems = navGroups.flatMap((g) => g.items);
+const mobilePrimaryNav = [
+  { to: '/builder', icon: LayoutDashboard, label: 'الرئيسية' },
   { to: '/orders', icon: ShoppingBag, label: 'الطلبات' },
   { to: '/products', icon: Package, label: 'المنتجات' },
-  { to: '/inventory', icon: Archive, label: 'المخزون' },
-  { to: '/marketing', icon: TrendingUp, label: 'التسويق' },
-  { to: '/statistics', icon: BarChart3, label: 'الإحصائيات' },
   { to: '/settings', icon: Settings, label: 'الإعدادات' },
 ];
 
-const mobileNavItems = navItems.slice(0, 5);
-
 interface DashboardLayoutProps {
   children: React.ReactNode;
-  /** Hide sidebar/back on dashboard home */
   isHome?: boolean;
 }
 
 const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { storeName, storeLogo } = useStore();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    return localStorage.getItem('sidebar_collapsed') === 'true';
+  });
 
-  const NavLink = ({ to, icon: Icon, label }: { to: string; icon: typeof LayoutDashboard; label: string }) => {
-    const active = location.pathname === to || (to !== '/builder' && location.pathname.startsWith(to));
-    return (
+  useEffect(() => {
+    localStorage.setItem('sidebar_collapsed', String(collapsed));
+  }, [collapsed]);
+
+  const isActive = (to: string) => {
+    if (to === '/products') {
+      return (
+        location.pathname === to ||
+        location.pathname.startsWith('/add-product') ||
+        location.pathname.startsWith('/edit-product')
+      );
+    }
+    if (to === '/orders') {
+      return location.pathname === to || location.pathname.startsWith('/orders/');
+    }
+    return location.pathname === to || (to !== '/builder' && location.pathname.startsWith(to));
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
+  const NavLink = ({
+    to,
+    icon: Icon,
+    label,
+    collapsed: isCollapsed,
+  }: {
+    to: string;
+    icon: typeof LayoutDashboard;
+    label: string;
+    collapsed?: boolean;
+  }) => {
+    const active = isActive(to);
+    const link = (
       <Link
         to={to}
         onClick={() => setMenuOpen(false)}
         className={cn(
-          'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all min-h-[44px]',
+          'group flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200 min-h-[44px]',
+          isCollapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5',
           active
-            ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
-            : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+            ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/25'
+            : 'text-muted-foreground hover:text-foreground hover:bg-sidebar-accent'
         )}
         aria-current={active ? 'page' : undefined}
       >
-        <Icon className="w-5 h-5 shrink-0" strokeWidth={active ? 2 : 1.75} />
-        <span>{label}</span>
+        <Icon
+          className={cn('shrink-0 transition-transform', isCollapsed ? 'w-5 h-5' : 'w-[18px] h-[18px]')}
+          strokeWidth={active ? 2.25 : 1.75}
+        />
+        {!isCollapsed && <span className="truncate">{label}</span>}
       </Link>
     );
+
+    if (isCollapsed) {
+      return (
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>{link}</TooltipTrigger>
+          <TooltipContent side="left" className="font-arabic text-xs">
+            {label}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+    return link;
   };
 
+  const sidebarWidth = collapsed ? 'lg:w-[72px]' : 'lg:w-[260px]';
+  const mainOffset = collapsed ? 'lg:mr-[72px]' : 'lg:mr-[260px]';
+
   return (
-    <div className="min-h-screen bg-background font-arabic flex" dir="rtl">
-      {/* Desktop sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 border-l border-border/60 bg-card/50 backdrop-blur-sm fixed inset-y-0 right-0 z-40">
-        <div className="p-5 border-b border-border/60">
-          <Link to="/builder" className="flex items-center gap-3 group">
-            {storeLogo ? (
-              <img src={storeLogo} alt="" className="w-10 h-10 rounded-xl object-cover ring-2 ring-primary/10" />
-            ) : (
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <LayoutDashboard className="w-5 h-5 text-primary" />
-              </div>
-            )}
-            <div className="min-w-0">
-              <p className="font-bold text-foreground truncate text-sm">{storeName || 'متجري'}</p>
-              <p className="text-xs text-muted-foreground truncate">{user?.username || 'لوحة التاجر'}</p>
-            </div>
-          </Link>
-        </div>
-
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto" aria-label="القائمة الرئيسية">
-          {navItems.map((item) => (
-            <NavLink key={item.to} {...item} />
-          ))}
-        </nav>
-
-        <div className="p-3 border-t border-border/60 space-y-2">
-          <Link to="/preview">
-            <Button variant="outline" className="w-full rounded-xl justify-start gap-2 min-h-[44px] border-primary/20 hover:bg-primary/5 hover:text-primary">
-              <Eye className="w-4 h-4" />
-              معاينة المتجر
-            </Button>
-          </Link>
-          <div className="flex items-center justify-between px-2">
-            <span className="text-xs text-muted-foreground">المظهر</span>
-            <ThemeToggle />
-          </div>
-        </div>
-      </aside>
-
-      {/* Main content */}
-      <div className="flex-1 lg:mr-64 flex flex-col min-h-screen">
-        {/* Mobile top bar */}
-        <header className="lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3 border-b border-border/60 bg-card/90 backdrop-blur-md">
-          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-xl min-h-[44px] min-w-[44px]" aria-label="فتح القائمة">
-                <Menu className="w-5 h-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-72 p-0 font-arabic">
-              <div className="p-5 border-b border-border">
-                <p className="font-bold text-foreground">{storeName || 'متجري'}</p>
-                <p className="text-xs text-muted-foreground">{user?.username}</p>
-              </div>
-              <nav className="p-3 space-y-1">
-                {navItems.map((item) => (
-                  <NavLink key={item.to} {...item} />
-                ))}
-              </nav>
-            </SheetContent>
-          </Sheet>
-
-          <Link to="/builder" className="font-bold text-foreground text-sm truncate max-w-[50%]">
-            {isHome ? (storeName || 'لوحة التحكم') : storeName || 'متجري'}
-          </Link>
-
-          <ThemeToggle />
-        </header>
-
-        <main className="flex-1 pb-20 lg:pb-0">{children}</main>
-
-        {/* Mobile bottom nav */}
-        <nav
-          className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-md border-t border-border/60 safe-area-bottom"
-          aria-label="التنقل السريع"
+    <TooltipProvider>
+      <div className="min-h-screen bg-background font-arabic flex" dir="rtl">
+        {/* Desktop sidebar */}
+        <aside
+          className={cn(
+            'hidden lg:flex flex-col border-l border-sidebar-border bg-sidebar fixed inset-y-0 right-0 z-40 transition-all duration-300 ease-in-out',
+            sidebarWidth
+          )}
         >
-          <div className="flex items-stretch justify-around px-1 py-1">
-            {mobileNavItems.map(({ to, icon: Icon, label }) => {
-              const active = location.pathname === to || (to !== '/builder' && location.pathname.startsWith(to));
-              return (
-                <Link
-                  key={to}
-                  to={to}
-                  className={cn(
-                    'flex flex-col items-center justify-center gap-0.5 flex-1 py-2 min-h-[52px] rounded-lg transition-colors',
-                    active ? 'text-primary' : 'text-muted-foreground'
-                  )}
-                  aria-current={active ? 'page' : undefined}
-                >
-                  <Icon className="w-5 h-5" strokeWidth={active ? 2.25 : 1.75} />
-                  <span className="text-[10px] font-medium">{label}</span>
-                </Link>
-              );
-            })}
+          <div className={cn('border-b border-sidebar-border', collapsed ? 'p-3' : 'p-4')}>
+            <Link
+              to="/builder"
+              className={cn(
+                'flex items-center group',
+                collapsed ? 'justify-center' : 'gap-3'
+              )}
+            >
+              {storeLogo ? (
+                <img
+                  src={storeLogo}
+                  alt=""
+                  className="w-9 h-9 rounded-xl object-cover ring-2 ring-primary/10 shrink-0"
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <LayoutDashboard className="w-[18px] h-[18px] text-primary" />
+                </div>
+              )}
+              {!collapsed && (
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-sidebar-foreground truncate text-sm leading-tight">
+                    {storeName || 'متجري'}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                    {user?.username || 'لوحة التاجر'}
+                  </p>
+                </div>
+              )}
+            </Link>
           </div>
-        </nav>
+
+          <nav className="flex-1 overflow-y-auto scrollbar-hide py-3" aria-label="القائمة الرئيسية">
+            {navGroups.map((group) => (
+              <div key={group.label} className={cn('mb-4', collapsed ? 'px-2' : 'px-3')}>
+                {!collapsed && (
+                  <p className="ds-section-title px-3 mb-2">{group.label}</p>
+                )}
+                <div className="space-y-0.5">
+                  {group.items.map((item) => (
+                    <NavLink key={item.to} {...item} collapsed={collapsed} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </nav>
+
+          <div className={cn('border-t border-sidebar-border space-y-2', collapsed ? 'p-2' : 'p-3')}>
+            {collapsed ? (
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Link to="/preview">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="w-full rounded-xl border-primary/20 hover:bg-primary/5 hover:text-primary hover:border-primary/30"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="font-arabic text-xs">
+                  معاينة المتجر
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Link to="/preview">
+                <Button
+                  variant="outline"
+                  className="w-full rounded-xl justify-start gap-2 min-h-[44px] border-primary/20 hover:bg-primary/5 hover:text-primary hover:border-primary/30"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  معاينة المتجر
+                </Button>
+              </Link>
+            )}
+
+            <div
+              className={cn(
+                'flex items-center',
+                collapsed ? 'flex-col gap-2' : 'justify-between px-1'
+              )}
+            >
+              {!collapsed && <span className="text-xs text-muted-foreground">المظهر</span>}
+              <ThemeToggle />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setCollapsed(!collapsed)}
+                className="rounded-xl h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent shrink-0"
+                aria-label={collapsed ? 'توسيع القائمة' : 'طي القائمة'}
+              >
+                {collapsed ? (
+                  <PanelRightClose className="w-4 h-4" />
+                ) : (
+                  <PanelRightOpen className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+
+            {collapsed ? (
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleLogout}
+                    className="w-full rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    aria-label="تسجيل الخروج"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="font-arabic text-xs">تسجيل الخروج</TooltipContent>
+              </Tooltip>
+            ) : (
+              <Button
+                variant="ghost"
+                onClick={handleLogout}
+                className="w-full rounded-xl justify-start gap-2 min-h-[44px] text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              >
+                <LogOut className="w-4 h-4" />
+                تسجيل الخروج
+              </Button>
+            )}
+          </div>
+        </aside>
+
+        {/* Main content */}
+        <div className={cn('flex-1 flex flex-col min-h-screen transition-all duration-300', mainOffset)}>
+          {/* Mobile top bar */}
+          <header className="lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card/95 backdrop-blur-xl">
+            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-xl min-h-[44px] min-w-[44px] hover:bg-muted"
+                  aria-label="فتح القائمة"
+                >
+                  <Menu className="w-5 h-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-72 p-0 font-arabic bg-sidebar border-sidebar-border">
+                <div className="p-5 border-b border-sidebar-border">
+                  <div className="flex items-center gap-3">
+                    {storeLogo ? (
+                      <img src={storeLogo} alt="" className="w-10 h-10 rounded-xl object-cover" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <LayoutDashboard className="w-5 h-5 text-primary" />
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-semibold text-foreground">{storeName || 'متجري'}</p>
+                      <p className="text-xs text-muted-foreground">{user?.username}</p>
+                    </div>
+                  </div>
+                </div>
+                <nav className="py-3 overflow-y-auto">
+                  {navGroups.map((group) => (
+                    <div key={group.label} className="px-3 mb-4">
+                      <p className="ds-section-title px-3 mb-2">{group.label}</p>
+                      <div className="space-y-0.5">
+                        {group.items.map((item) => (
+                          <NavLink key={item.to} {...item} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </nav>
+                <div className="absolute bottom-0 inset-x-0 p-4 border-t border-sidebar-border bg-sidebar space-y-2">
+                  <Link to="/preview" onClick={() => setMenuOpen(false)}>
+                    <Button variant="outline" className="w-full rounded-xl gap-2">
+                      <Eye className="w-4 h-4" />
+                      معاينة المتجر
+                    </Button>
+                  </Link>
+                  <Button
+                    variant="ghost"
+                    onClick={() => { setMenuOpen(false); handleLogout(); }}
+                    className="w-full rounded-xl gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    تسجيل الخروج
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            <Link to="/builder" className="font-semibold text-foreground text-sm truncate max-w-[50%]">
+              {isHome ? storeName || 'لوحة التحكم' : storeName || 'متجري'}
+            </Link>
+
+            <ThemeToggle />
+          </header>
+
+          <main className="flex-1 pb-20 lg:pb-0">{children}</main>
+
+          {/* Mobile bottom nav */}
+          <nav
+            className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border/50 safe-area-bottom shadow-[0_-4px_24px_-4px_rgb(0_0_0/0.06)]"
+            aria-label="التنقل السريع"
+          >
+            <div className="flex items-stretch justify-around px-1 py-1">
+              {mobilePrimaryNav.map(({ to, icon: Icon, label }) => {
+                const active = isActive(to);
+                return (
+                  <Link
+                    key={to}
+                    to={to}
+                    className={cn(
+                      'relative flex flex-col items-center justify-center gap-0.5 flex-1 py-2 min-h-[52px] rounded-xl transition-all duration-200',
+                      active ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                    )}
+                    aria-current={active ? 'page' : undefined}
+                  >
+                    {active && (
+                      <span className="absolute top-1.5 w-1 h-1 rounded-full bg-primary" />
+                    )}
+                    <Icon className="w-5 h-5" strokeWidth={active ? 2.25 : 1.75} />
+                    <span className="text-[10px] font-medium">{label}</span>
+                  </Link>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setMenuOpen(true)}
+                className="relative flex flex-col items-center justify-center gap-0.5 flex-1 py-2 min-h-[52px] rounded-xl transition-all duration-200 text-muted-foreground hover:text-foreground"
+                aria-label="المزيد من القوائم"
+              >
+                <Menu className="w-5 h-5" strokeWidth={1.75} />
+                <span className="text-[10px] font-medium">المزيد</span>
+              </button>
+            </div>
+          </nav>
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 };
 

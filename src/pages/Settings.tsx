@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStore } from "@/context/StoreContext";
 import { toast } from "sonner";
-import { Store, Truck, FileText, MessageCircle, Globe } from "lucide-react";
+import { Store, Truck, FileText, MessageCircle, Globe, Loader2, CheckCircle2 } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/layout/PageHeader";
 import StoreInfoTab from "@/components/settings/StoreInfoTab";
@@ -20,7 +20,9 @@ const Settings = () => {
   const { storeName, storeLogo, storeGovernorate, storeSettings, updateStore, updateStoreSettings } = useStore();
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstRender = useRef(true);
+  const isDbLoaded = useRef(false);
   const lastSavedRef = useRef<string>("");
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'pending' | 'saving' | 'saved' | 'error'>('idle');
   
   const [settings, setSettings] = useState({
     storeName: storeName,
@@ -71,6 +73,8 @@ const Settings = () => {
             paymentEwallet: methods.includes('digital_wallet'),
           }));
         }
+        isDbLoaded.current = true;
+        lastSavedRef.current = JSON.stringify(settings);
       });
   }, [user?.id]);
 
@@ -93,7 +97,16 @@ const Settings = () => {
   const performSave = useCallback(async () => {
     const settingsHash = JSON.stringify(settings);
     if (settingsHash === lastSavedRef.current) return;
-    
+
+    const hasPaymentMethod =
+      settings.paymentCashOnDelivery || settings.paymentCreditCard || settings.paymentEwallet;
+    if (!hasPaymentMethod) {
+      setSaveStatus('error');
+      toast.error("يجب تفعيل طريقة دفع واحدة على الأقل", { id: "settings-payment-error" });
+      return;
+    }
+
+    setSaveStatus('saving');
     try {
       await updateStore(settings.storeLogo, settings.storeName, settings.storeGovernorate);
       await updateStoreSettings({
@@ -126,18 +139,22 @@ const Settings = () => {
       }
       
       lastSavedRef.current = settingsHash;
+      setSaveStatus('saved');
       toast.success("تم الحفظ", { duration: 1500, id: "settings-save" });
     } catch (error) {
       console.error('Error saving settings:', error);
+      setSaveStatus('error');
       toast.error("فشل في حفظ الإعدادات", { id: "settings-error" });
     }
-  }, [settings, updateStore, updateStoreSettings]);
+  }, [settings, updateStore, updateStoreSettings, user?.id]);
 
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
+    if (isFirstRender.current || !isDbLoaded.current) {
+      if (isFirstRender.current) isFirstRender.current = false;
       return;
     }
+
+    setSaveStatus('pending');
 
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -150,7 +167,7 @@ const Settings = () => {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [settings]);
+  }, [settings, performSave]);
 
   const tabItems = [
     { value: "store", label: "المتجر", icon: Store },
@@ -164,21 +181,39 @@ const Settings = () => {
     <DashboardLayout>
       <PageHeader
         title="الإعدادات"
-        description="خصّص متجرك، التوصيل، الدفع، والسياسات"
+        description="خصّص متجرك، التوصيل، الدفع، والسياسات — يتم الحفظ تلقائياً"
         hideBack
         breadcrumbs={[{ label: 'لوحة التحكم', href: '/builder' }, { label: 'الإعدادات' }]}
+        actions={
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-h-[44px]">
+            {saveStatus === 'pending' && <span>سيتم الحفظ...</span>}
+            {saveStatus === 'saving' && (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>جاري الحفظ...</span>
+              </>
+            )}
+            {saveStatus === 'saved' && (
+              <>
+                <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                <span className="text-success">تم الحفظ</span>
+              </>
+            )}
+            {saveStatus === 'error' && <span className="text-destructive">خطأ في الحفظ</span>}
+          </div>
+        }
       />
 
       <div className="ds-page max-w-5xl">
         <Tabs defaultValue="store" className="w-full">
-          <TabsList className="flex w-full bg-muted rounded-xl p-1 h-auto gap-1 mb-6">
+          <TabsList className="flex w-full overflow-x-auto scrollbar-hide rounded-xl p-1 h-auto gap-1 mb-6 lg:mb-8">
             {tabItems.map((tab) => {
               const Icon = tab.icon;
               return (
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
-                  className="rounded-lg text-foreground data-[state=active]:bg-card data-[state=active]:shadow-sm flex items-center gap-1.5 text-xs sm:text-sm px-3 sm:px-5 py-2.5 flex-1"
+                  className="flex items-center gap-1.5 text-xs sm:text-sm px-3 sm:px-4 py-2.5 flex-1 min-w-0"
                 >
                   <Icon className="w-4 h-4 shrink-0" />
                   <span className="truncate">{tab.label}</span>

@@ -1,13 +1,14 @@
 
 import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { MessageSquare, Lightbulb, Download, Plus, Package, AlertTriangle, XCircle, DollarSign, Search } from "lucide-react";
+import { MessageSquare, Lightbulb, Download, Plus, Package, AlertTriangle, XCircle, DollarSign, Search, ArrowRight } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import StatCard from "@/components/ui/StatCard";
 import { ProductsList } from "@/components/ProductsList";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Product } from "@/types";
@@ -139,14 +140,15 @@ const Products = () => {
 
       <div className="ds-page max-w-6xl">
         {selectedProduct ? (
-          <div className="bg-card rounded-3xl shadow-sm border border-border p-4 sm:p-8 space-y-6">
+          <div className="ds-card p-4 sm:p-8 space-y-6">
             <div className="flex justify-start items-center">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={handleBackToList}
-                className="flex items-center gap-2 hover:bg-muted rounded-xl border-border text-foreground"
+                className="flex items-center gap-2 rounded-xl border-border/60 hover:bg-primary/5 hover:text-primary hover:border-primary/30"
               >
-                ← العودة
+                <ArrowRight className="w-4 h-4" />
+                العودة
               </Button>
             </div>
 
@@ -184,39 +186,15 @@ const Products = () => {
         ) : (
           <>
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <Card className="border border-border rounded-2xl shadow-sm">
-                <CardContent className="p-4 text-center">
-                  <Package className="w-5 h-5 mx-auto mb-1.5 text-muted-foreground" />
-                  <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-                  <p className="text-xs text-muted-foreground">إجمالي المنتجات</p>
-                </CardContent>
-              </Card>
-              <Card className="border border-border rounded-2xl shadow-sm">
-                <CardContent className="p-4 text-center">
-                  <AlertTriangle className="w-5 h-5 mx-auto mb-1.5 text-yellow-500" />
-                  <p className="text-2xl font-bold text-foreground">{stats.lowStock}</p>
-                  <p className="text-xs text-muted-foreground">منخفض المخزون</p>
-                </CardContent>
-              </Card>
-              <Card className="border border-border rounded-2xl shadow-sm">
-                <CardContent className="p-4 text-center">
-                  <XCircle className="w-5 h-5 mx-auto mb-1.5 text-red-500" />
-                  <p className="text-2xl font-bold text-foreground">{stats.outOfStock}</p>
-                  <p className="text-xs text-muted-foreground">نفد المخزون</p>
-                </CardContent>
-              </Card>
-              <Card className="border border-border rounded-2xl shadow-sm">
-                <CardContent className="p-4 text-center">
-                  <DollarSign className="w-5 h-5 mx-auto mb-1.5 text-foreground" />
-                  <p className="text-lg sm:text-2xl font-bold text-foreground truncate">{stats.totalValue.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">القيمة (د.ع)</p>
-                </CardContent>
-              </Card>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+              <StatCard label="إجمالي المنتجات" value={stats.total} icon={Package} />
+              <StatCard label="منخفض المخزون" value={stats.lowStock} icon={AlertTriangle} iconClassName="bg-warning/10 [&_svg]:text-warning" />
+              <StatCard label="نفد المخزون" value={stats.outOfStock} icon={XCircle} iconClassName="bg-destructive/10 [&_svg]:text-destructive" />
+              <StatCard label="القيمة (د.ع)" value={stats.totalValue.toLocaleString()} icon={DollarSign} />
             </div>
 
             {/* Filters & Actions */}
-            <Card className="border border-border rounded-2xl shadow-sm">
+            <Card>
               <CardContent className="p-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                   <div className="relative lg:col-span-2">
@@ -280,7 +258,7 @@ const Products = () => {
             </Card>
 
             {/* Products List */}
-            <div className="bg-card rounded-3xl shadow-sm border border-border p-4 sm:p-6">
+            <div className="ds-card p-4 sm:p-6">
               <ProductsList 
                 onProductSelect={handleProductSelect} 
                 onProductsLoaded={setLoadedProducts}

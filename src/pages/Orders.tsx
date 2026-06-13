@@ -10,7 +10,9 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/layout/PageHeader";
 import StatCard from "@/components/ui/StatCard";
 import EmptyState from "@/components/ui/EmptyState";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useOrders } from "@/hooks/useOrders";
+import { useAuth } from "@/context/AuthContext";
 import { format } from "date-fns";
 import { useState, useMemo } from "react";
 import {
@@ -24,19 +26,32 @@ import { toast } from "sonner";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
 
 const Orders = () => {
+  const { user } = useAuth();
   const { filteredOrders, searchQuery, setSearchQuery, updateOrderStatus, loading, hasMore, loadMore, refetch } = useOrders();
   useRealtimeOrders(refetch);
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
 
-  const handleStatusChange = (orderId: string, newStatus: "pending" | "completed" | "cancelled") => {
-    updateOrderStatus(orderId, newStatus);
-    const statusMessages = {
-      completed: "تم تحديث حالة الطلب إلى مكتمل",
-      pending: "تم تحديث حالة الطلب إلى قيد الانتظار",
-      cancelled: "تم تحديث حالة الطلب إلى ملغي"
-    };
-    toast.success(statusMessages[newStatus], { duration: 2000 });
+  const handleStatusChange = async (orderId: string, newStatus: "pending" | "completed" | "cancelled") => {
+    const success = await updateOrderStatus(orderId, newStatus);
+    if (success) {
+      const statusMessages = {
+        completed: "تم تحديث حالة الطلب إلى مكتمل",
+        pending: "تم تحديث حالة الطلب إلى قيد الانتظار",
+        cancelled: "تم تحديث حالة الطلب إلى ملغي",
+      };
+      toast.success(statusMessages[newStatus], { duration: 2000 });
+    }
+  };
+
+  const handleCopyStoreLink = async () => {
+    if (!user) return;
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/store/${user.username}`);
+      toast.success("تم نسخ رابط المتجر — شاركه مع عملائك!");
+    } catch {
+      toast.error("فشل في نسخ الرابط");
+    }
   };
 
   const displayedOrders = useMemo(() => {
@@ -98,8 +113,8 @@ const Orders = () => {
         </div>
 
         {/* Filters */}
-        <Card className="border border-border rounded-2xl shadow-sm">
-          <CardContent className="p-4">
+        <Card>
+          <CardContent className="p-4 sm:p-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="relative">
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -132,14 +147,27 @@ const Orders = () => {
         </Card>
 
         {/* Orders */}
-        {displayedOrders.length > 0 ? (
+        {loading && filteredOrders.length === 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <Card key={i}>
+                <CardContent className="p-5 space-y-3">
+                  <Skeleton className="h-6 w-24" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-10 w-full rounded-xl mt-2" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : displayedOrders.length > 0 ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {displayedOrders.map((order) => {
                 const config = statusConfig[order.status as keyof typeof statusConfig];
                 const StatusIcon = config.icon;
                 return (
-                  <Card key={order.id} className="border border-border rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+                  <Card key={order.id} className="overflow-hidden hover:shadow-brand transition-all duration-200">
                     <CardHeader className="pb-3 px-5 pt-5">
                       <div className="flex justify-between items-start gap-2">
                         <DropdownMenu>
@@ -222,8 +250,12 @@ const Orders = () => {
                 ? "لم يتم العثور على طلبات تطابق معايير البحث"
                 : "شارك رابط متجرك مع عملائك للحصول على أول طلب"
             }
-            actionLabel={!searchQuery && statusFilter === "all" && dateFilter === "all" ? "نسخ رابط المتجر" : undefined}
-            onAction={!searchQuery && statusFilter === "all" && dateFilter === "all" ? () => window.location.href = '/builder' : undefined}
+            actionLabel={!searchQuery && statusFilter === "all" && dateFilter === "all" ? "نسخ رابط المتجر" : "مسح الفلاتر"}
+            onAction={
+              !searchQuery && statusFilter === "all" && dateFilter === "all"
+                ? handleCopyStoreLink
+                : () => { setStatusFilter("all"); setDateFilter("all"); setSearchQuery(""); }
+            }
           />
         )}
       </div>

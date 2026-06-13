@@ -2,9 +2,11 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { useOrderData } from "@/hooks/useOrderData";
 import { useAuth } from "@/context/AuthContext";
-import OrderDetailsPageHeader from "@/components/order-details/OrderDetailsPageHeader";
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import PageHeader from "@/components/layout/PageHeader";
 import OrderDetailsCard from "@/components/order-details/OrderDetailsCard";
 import OrderNotFound from "@/components/order-details/OrderNotFound";
+import { Skeleton } from "@/components/ui/skeleton";
 import { fetchOrderPaymentSummary, OrderPaymentSummary } from "@/services/paymentService";
 import { fetchOrderShipment, OrderShipmentData } from "@/services/deliveryService";
 import { DeliveryStatus } from "@/utils/deliveryUtils";
@@ -35,14 +37,31 @@ const OrderDetails = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">جاري التحميل...</p>
-      </div>
+      <DashboardLayout>
+        <PageHeader
+          title="تفاصيل الطلب"
+          description="جاري تحميل بيانات الطلب..."
+          backTo="/orders"
+          breadcrumbs={[
+            { label: 'لوحة التحكم', href: '/builder' },
+            { label: 'الطلبات', href: '/orders' },
+            { label: 'التفاصيل' },
+          ]}
+        />
+        <div className="ds-page max-w-4xl space-y-4">
+          <Skeleton className="h-32 rounded-2xl" />
+          <Skeleton className="h-64 rounded-2xl" />
+        </div>
+      </DashboardLayout>
     );
   }
 
   if (!order) {
-    return <OrderNotFound />;
+    return (
+      <DashboardLayout>
+        <OrderNotFound />
+      </DashboardLayout>
+    );
   }
 
   const shipmentDisplay: OrderShipmentData = shipmentData ?? {
@@ -53,9 +72,19 @@ const OrderDetails = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      <OrderDetailsPageHeader orderId={order.id} />
-      <div className="max-w-4xl mx-auto p-6">
+    <DashboardLayout>
+      <PageHeader
+        title={`طلب #${order.id.slice(0, 8)}`}
+        description={`${order.customerInfo.name} · ${order.total.toLocaleString()} د.ع`}
+        backTo="/orders"
+        backLabel="العودة للطلبات"
+        breadcrumbs={[
+          { label: 'لوحة التحكم', href: '/builder' },
+          { label: 'الطلبات', href: '/orders' },
+          { label: `#${order.id.slice(0, 8)}` },
+        ]}
+      />
+      <div className="ds-page max-w-4xl">
         <OrderDetailsCard
           order={order}
           paymentSummary={paymentSummary}
@@ -64,7 +93,7 @@ const OrderDetails = () => {
           onShipmentUpdated={loadShipmentData}
         />
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 
