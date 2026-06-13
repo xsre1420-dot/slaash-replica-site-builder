@@ -59,22 +59,31 @@ const Settings = () => {
       .then(({ data }) => {
         if (data) {
           const methods = Array.isArray(data.payment_methods) ? data.payment_methods as string[] : [];
-          setSettings(prev => ({
-            ...prev,
-            storeSlug: data.store_slug || prev.storeSlug,
-            returnPolicy: data.return_policy || prev.returnPolicy,
-            termsConditions: data.terms_conditions || prev.termsConditions,
-            privacyPolicy: data.privacy_policy || prev.privacyPolicy,
-            whatsappNumber: data.whatsapp_number || prev.whatsappNumber,
-            whatsappWelcomeMessage: data.whatsapp_welcome_message || prev.whatsappWelcomeMessage,
-            whatsappOrderConfirmation: data.whatsapp_order_confirmation || prev.whatsappOrderConfirmation,
-            paymentCashOnDelivery: methods.length === 0 || methods.includes('cash_on_delivery'),
-            paymentCreditCard: methods.includes('credit_card'),
-            paymentEwallet: methods.includes('digital_wallet'),
-          }));
+          setSettings(prev => {
+            const merged = {
+              ...prev,
+              storeSlug: data.store_slug || prev.storeSlug,
+              returnPolicy: data.return_policy || prev.returnPolicy,
+              termsConditions: data.terms_conditions || prev.termsConditions,
+              privacyPolicy: data.privacy_policy || prev.privacyPolicy,
+              whatsappNumber: data.whatsapp_number || prev.whatsappNumber,
+              whatsappWelcomeMessage: data.whatsapp_welcome_message || prev.whatsappWelcomeMessage,
+              whatsappOrderConfirmation: data.whatsapp_order_confirmation || prev.whatsappOrderConfirmation,
+              paymentCashOnDelivery: methods.length === 0 || methods.includes('cash_on_delivery'),
+              paymentCreditCard: methods.includes('credit_card'),
+              paymentEwallet: methods.includes('digital_wallet'),
+            };
+            lastSavedRef.current = JSON.stringify(merged);
+            return merged;
+          });
+        } else {
+          isDbLoaded.current = true;
+          setSettings(prev => {
+            lastSavedRef.current = JSON.stringify(prev);
+            return prev;
+          });
         }
         isDbLoaded.current = true;
-        lastSavedRef.current = JSON.stringify(settings);
       });
   }, [user?.id]);
 
@@ -97,6 +106,14 @@ const Settings = () => {
   const performSave = useCallback(async () => {
     const settingsHash = JSON.stringify(settings);
     if (settingsHash === lastSavedRef.current) return;
+
+    const hasBlobUrls =
+      settings.storeLogo?.startsWith('blob:') ||
+      settings.bannerImages.some((url: string) => url.startsWith('blob:'));
+    if (hasBlobUrls) {
+      setSaveStatus('pending');
+      return;
+    }
 
     const hasPaymentMethod =
       settings.paymentCashOnDelivery || settings.paymentCreditCard || settings.paymentEwallet;

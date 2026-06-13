@@ -243,8 +243,9 @@ const Signup = () => {
                     exit={{ opacity: 0, x: -20 }}
                     className="space-y-4"
                   >
-                    <FieldWrapper label="البريد الإلكتروني *" icon={Mail}>
+                    <FieldWrapper id="signup-email" label="البريد الإلكتروني *" icon={Mail}>
                       <Input
+                        id="signup-email"
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
@@ -256,8 +257,9 @@ const Signup = () => {
                       />
                     </FieldWrapper>
 
-                    <FieldWrapper label="اسم المستخدم *" icon={User}>
+                    <FieldWrapper id="signup-username" label="اسم المستخدم *" icon={User}>
                       <Input
+                        id="signup-username"
                         type="text"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
@@ -269,8 +271,9 @@ const Signup = () => {
                       />
                     </FieldWrapper>
 
-                    <FieldWrapper label="اسم المتجر (اختياري)" icon={Store}>
+                    <FieldWrapper id="signup-store" label="اسم المتجر (اختياري)" icon={Store}>
                       <Input
+                        id="signup-store"
                         type="text"
                         value={storeName}
                         onChange={(e) => setStoreName(e.target.value)}
@@ -300,9 +303,10 @@ const Signup = () => {
                     className="space-y-4"
                   >
                     <div>
-                      <label className="block text-right text-foreground mb-2 font-medium text-sm">كلمة المرور *</label>
+                      <label htmlFor="signup-password" className="block text-right text-foreground mb-2 font-medium text-sm">كلمة المرور *</label>
                       <div className="relative group">
                         <Input
+                          id="signup-password"
                           type={showPassword ? "text" : "password"}
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
@@ -314,7 +318,12 @@ const Signup = () => {
                           minLength={8}
                         />
                         <Lock className="absolute left-11 top-1/2 -translate-y-1/2 text-muted-foreground h-4.5 w-4.5 group-focus-within:text-primary transition-colors" />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                          aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+                        >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                       </div>
@@ -333,9 +342,10 @@ const Signup = () => {
                     </div>
 
                     <div>
-                      <label className="block text-right text-foreground mb-2 font-medium text-sm">تأكيد كلمة المرور *</label>
+                      <label htmlFor="signup-confirm-password" className="block text-right text-foreground mb-2 font-medium text-sm">تأكيد كلمة المرور *</label>
                       <div className="relative group">
                         <Input
+                          id="signup-confirm-password"
                           type={showConfirm ? "text" : "password"}
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
@@ -346,7 +356,12 @@ const Signup = () => {
                           required
                         />
                         <Lock className="absolute left-11 top-1/2 -translate-y-1/2 text-muted-foreground h-4.5 w-4.5 group-focus-within:text-primary transition-colors" />
-                        <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirm(!showConfirm)}
+                          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                          aria-label={showConfirm ? "إخفاء تأكيد كلمة المرور" : "إظهار تأكيد كلمة المرور"}
+                        >
                           {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                       </div>
@@ -419,9 +434,9 @@ const Signup = () => {
   );
 };
 
-const FieldWrapper = ({ label, icon: Icon, children }: { label: string; icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) => (
+const FieldWrapper = ({ id, label, icon: Icon, children }: { id: string; label: string; icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) => (
   <div>
-    <label className="block text-right text-foreground mb-2 font-medium text-sm">{label}</label>
+    <label htmlFor={id} className="block text-right text-foreground mb-2 font-medium text-sm">{label}</label>
     <div className="relative group">
       {children}
       <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground h-4.5 w-4.5 group-focus-within:text-primary transition-colors" />

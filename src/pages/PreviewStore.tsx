@@ -29,6 +29,8 @@ const PreviewStore = () => {
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
+  const [productsLoading, setProductsLoading] = useState(true);
   const debouncedSearch = useDebouncedValue(searchQuery, 300);
 
   const products = useMemo(() => {
@@ -79,8 +81,13 @@ const PreviewStore = () => {
     if (!isReady) return;
 
     const loadProductsData = async () => {
-      await loadProducts(true);
-      setAllProducts(getProductsByCategory(selectedCategory));
+      setProductsLoading(true);
+      try {
+        await loadProducts(true);
+        setAllProducts(getProductsByCategory(selectedCategory));
+      } finally {
+        setProductsLoading(false);
+      }
     };
     loadProductsData();
   }, [selectedCategory, isReady, hydrationVersion]);
@@ -137,32 +144,49 @@ const PreviewStore = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background font-arabic" dir="rtl">
       <MetaPixel storeOwnerId={user?.id} />
       
       {/* Header with Logo and Store Name */}
       <div className="bg-background sticky top-0 z-40 border-b border-border">
         <div className="px-4 py-3">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
+          <div className="flex justify-between items-center gap-3">
+            <div className="flex items-center gap-2 min-w-0">
               {storeLogo && (
-                <img src={storeLogo} alt={storeName} className="w-10 h-10 rounded-full object-cover" />
+                <img src={storeLogo} alt={storeName} className="w-10 h-10 rounded-full object-cover shrink-0" />
               )}
-              <div className="flex items-center gap-1">
-                <span className="font-bold text-foreground text-base">{storeName}</span>
-                <svg className="w-4 h-4 text-primary" viewBox="0 0 24 24" fill="currentColor">
+              <div className="flex items-center gap-1 min-w-0">
+                <span className="font-bold text-foreground text-base truncate">{storeName}</span>
+                <svg className="w-4 h-4 text-primary shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
                 </svg>
               </div>
             </div>
             
             <button 
-              onClick={() => setSearchQuery("")}
-              className="p-2"
+              type="button"
+              onClick={() => setShowSearch((v) => !v)}
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl hover:bg-muted transition-colors shrink-0"
+              aria-label={showSearch ? "إخفاء البحث" : "البحث عن منتج"}
+              aria-expanded={showSearch}
             >
               <Search className="w-5 h-5 text-muted-foreground" />
             </button>
           </div>
+
+          {showSearch && (
+            <div className="relative mt-3">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="ابحث عن منتج..."
+                className="w-full h-11 pr-10 pl-4 rounded-xl bg-muted/70 border border-transparent text-right text-sm placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/30 focus:bg-card focus:border-primary/30 transition-all text-foreground"
+                autoFocus
+              />
+            </div>
+          )}
         </div>
         
         {/* Categories Row */}
@@ -197,7 +221,7 @@ const PreviewStore = () => {
           >
             <img
               src={bannerImages[currentImageIndex]}
-              alt="Store Banner"
+              alt="بانر المتجر"
               className="w-full h-full object-cover"
               loading="lazy"
             />
@@ -223,26 +247,44 @@ const PreviewStore = () => {
 
       {/* Product Count */}
       <div className="px-4 py-4">
-        <span className="text-sm font-medium text-foreground">{products.length} منتجات</span>
+        <span className="text-sm font-medium text-foreground">
+          {productsLoading ? 'جاري التحميل...' : `${products.length} منتجات`}
+        </span>
       </div>
 
       {/* Products Grid */}
       <div className="px-4 pb-28">
-        {products.length === 0 ? (
+        {!isReady || productsLoading ? (
+          <div className="grid grid-cols-2 gap-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-card rounded-xl overflow-hidden animate-pulse">
+                <div className="aspect-square bg-muted" />
+                <div className="p-3 space-y-2">
+                  <div className="h-4 bg-muted rounded" />
+                  <div className="h-4 bg-muted rounded w-2/3 mr-auto" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : products.length === 0 ? (
           <div className="text-center py-16">
             <div className="w-20 h-20 mx-auto mb-6 bg-muted rounded-full flex items-center justify-center">
               <div className="text-4xl">🛍️</div>
             </div>
             <h3 className="text-xl font-bold mb-2 text-foreground">
-              لا توجد منتجات بعد
+              {searchQuery.trim() ? 'لا توجد نتائج للبحث' : 'لا توجد منتجات بعد'}
             </h3>
-            <p className="text-muted-foreground mb-6">ابدأ بإضافة منتجاتك من قسم البناء</p>
-            <Link to="/add-product">
-              <Button className="rounded-full px-8">
-                <Plus className="w-4 h-4 ml-2" />
-                إضافة أول منتج
-              </Button>
-            </Link>
+            <p className="text-muted-foreground mb-6">
+              {searchQuery.trim() ? 'جرّب كلمة بحث أخرى' : 'ابدأ بإضافة منتجاتك من قسم المنتجات'}
+            </p>
+            {!searchQuery.trim() && (
+              <Link to="/add-product">
+                <Button className="rounded-full px-8 min-h-[44px]">
+                  <Plus className="w-4 h-4 ml-2" />
+                  إضافة أول منتج
+                </Button>
+              </Link>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
@@ -278,15 +320,15 @@ const PreviewStore = () => {
                     {product.discountType && product.discountType !== 'none' && product.originalPrice ? (
                       <div className="flex flex-col items-end gap-0.5">
                         <span className="text-xs text-muted-foreground line-through">
-                          IQD {product.originalPrice.toLocaleString()}
+                          {product.originalPrice.toLocaleString()} د.ع
                         </span>
                         <span className="text-sm font-bold text-red-600">
-                          IQD {product.price.toLocaleString()}
+                          {product.price.toLocaleString()} د.ع
                         </span>
                       </div>
                     ) : (
                       <div className="text-sm font-bold text-foreground">
-                        IQD {product.price.toLocaleString()}
+                        {product.price.toLocaleString()} د.ع
                       </div>
                     )}
                   </div>
@@ -312,14 +354,14 @@ const PreviewStore = () => {
                   </div>
                   <div className="text-left">
                     <div className="text-xs text-white/70">المبلغ الكلي</div>
-                    <div className="text-lg font-bold text-white" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-                      IQD {cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0).toLocaleString()}
+                    <div className="text-lg font-bold text-white">
+                      {cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0).toLocaleString()} د.ع
                     </div>
                   </div>
                 </div>
                 
                 <div className="flex items-center gap-2 text-white font-bold text-base">
-                  <span style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>عرض السلة</span>
+                  <span>عرض السلة</span>
                   <svg className="w-5 h-5 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>

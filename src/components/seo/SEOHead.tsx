@@ -43,7 +43,7 @@ const SEOHead = ({
   url,
   type = 'website',
   price,
-  currency = 'EGP',
+  currency = 'IQD',
   storeName,
 }: SEOHeadProps) => {
   useEffect(() => {

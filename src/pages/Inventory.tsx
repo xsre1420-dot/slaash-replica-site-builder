@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { Search, Package, AlertTriangle, CheckCircle, Edit, Download, Filter, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -337,7 +338,7 @@ function Inventory() {
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-xs text-muted-foreground">{product.category}</span>
                             <span className="text-xs text-muted-foreground">•</span>
-                            <span className="text-xs font-medium text-foreground">{product.price} ر.س</span>
+                            <span className="text-xs font-medium text-foreground">{Number(product.price).toLocaleString()} د.ع</span>
                           </div>
                         </div>
                       </div>
@@ -369,7 +370,8 @@ function Inventory() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="rounded-xl h-9 w-9"
+                              className="rounded-xl min-h-[44px] min-w-[44px]"
+                              aria-label={`تحديث مخزون ${product.name}`}
                               onClick={() => {
                                 setSelectedProduct(product);
                                 setNewQuantity(String(product.stock_quantity || 0));

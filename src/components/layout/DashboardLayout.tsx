@@ -152,6 +152,12 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-background font-arabic flex" dir="rtl">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:right-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-xl focus:outline-none"
+        >
+          تخطي إلى المحتوى
+        </a>
         {/* Desktop sidebar */}
         <aside
           className={cn(
@@ -214,7 +220,8 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
                     <Button
                       variant="outline"
                       size="icon"
-                      className="w-full rounded-xl border-primary/20 hover:bg-primary/5 hover:text-primary hover:border-primary/30"
+                      className="w-full rounded-xl border-primary/20 hover:bg-primary/5 hover:text-primary hover:border-primary/30 min-h-[44px] min-w-[44px]"
+                      aria-label="معاينة المتجر"
                     >
                       <Eye className="w-4 h-4" />
                     </Button>
@@ -356,7 +363,7 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
             <ThemeToggle />
           </header>
 
-          <main className="flex-1 pb-20 lg:pb-0">{children}</main>
+          <main id="main-content" className="flex-1 pb-20 lg:pb-0">{children}</main>
 
           {/* Mobile bottom nav */}
           <nav

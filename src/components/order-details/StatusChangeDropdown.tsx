@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getAllowedNextStatuses, canTransitionOrderStatus } from "@/utils/orderStatusUtils";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface StatusChangeDropdownProps {
   currentStatus: 'pending' | 'completed' | 'cancelled';
@@ -30,66 +31,53 @@ const StatusChangeDropdown = ({ currentStatus, orderId, onStatusChange }: Status
     setIsUpdating(false);
   };
 
-  const getStatusDisplay = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return {
-          label: "مكتمل",
-          icon: Check,
-          className: "bg-green-500 text-white hover:bg-green-600 cursor-pointer border-green-500"
-        };
-      case 'cancelled':
-        return {
-          label: "ملغي",
-          icon: X,
-          className: "bg-red-500 text-white hover:bg-red-600 cursor-pointer border-red-500"
-        };
-      case 'pending':
-      default:
-        return {
-          label: "قيد الانتظار",
-          icon: Loader2,
-          className: "bg-yellow-500 text-white hover:bg-yellow-600 cursor-pointer border-yellow-500"
-        };
-    }
+  const statusStyles = {
+    completed: "bg-success text-success-foreground hover:bg-success/90 border-success/30",
+    cancelled: "bg-destructive text-destructive-foreground hover:bg-destructive/90 border-destructive/30",
+    pending: "bg-warning text-warning-foreground hover:bg-warning/90 border-warning/30",
   };
 
-  const statusDisplay = getStatusDisplay(currentStatus);
-  const Icon = statusDisplay.icon;
+  const statusLabels = {
+    completed: "مكتمل",
+    cancelled: "ملغي",
+    pending: "قيد الانتظار",
+  };
+
+  const StatusIcon = currentStatus === 'completed' ? Check : currentStatus === 'cancelled' ? X : Loader2;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           disabled={isUpdating || allowedNext.length === 0}
-          className={`${statusDisplay.className} ${isUpdating || allowedNext.length === 0 ? 'opacity-70 cursor-default' : ''} transition-all duration-300 ease-in-out flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transform hover:scale-105 active:scale-95`}
+          aria-label="تغيير حالة الطلب"
+          className={cn(
+            statusStyles[currentStatus],
+            "transition-all duration-200 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border min-h-[44px]",
+            (isUpdating || allowedNext.length === 0) && "opacity-70 cursor-default"
+          )}
         >
-          <Icon className={`w-4 h-4 ${currentStatus === 'pending' || isUpdating ? 'animate-spin' : ''}`} />
-          {isUpdating ? 'جاري التحديث...' : statusDisplay.label}
+          <StatusIcon className={cn("w-4 h-4", (currentStatus === 'pending' || isUpdating) && "animate-spin")} />
+          {isUpdating ? 'جاري التحديث...' : statusLabels[currentStatus]}
         </button>
       </DropdownMenuTrigger>
       {allowedNext.length > 0 && (
-        <DropdownMenuContent
-          align="end"
-          side="bottom"
-          className="bg-white shadow-lg border rounded-lg z-[9999] min-w-[120px]"
-          sideOffset={5}
-        >
+        <DropdownMenuContent align="end" side="bottom" className="min-w-[140px]" sideOffset={5}>
           {allowedNext.includes('completed') && (
             <DropdownMenuItem
               onClick={() => handleStatusChange("completed")}
-              className="cursor-pointer hover:bg-green-50 flex items-center gap-2"
+              className="cursor-pointer flex items-center gap-2"
             >
-              <Check className="w-4 h-4 text-green-600" />
+              <Check className="w-4 h-4 text-success" />
               <span>مكتمل</span>
             </DropdownMenuItem>
           )}
           {allowedNext.includes('cancelled') && (
             <DropdownMenuItem
               onClick={() => handleStatusChange("cancelled")}
-              className="cursor-pointer hover:bg-red-50 flex items-center gap-2"
+              className="cursor-pointer flex items-center gap-2"
             >
-              <X className="w-4 h-4 text-red-600" />
+              <X className="w-4 h-4 text-destructive" />
               <span>ملغي</span>
             </DropdownMenuItem>
           )}

@@ -11,10 +11,17 @@ const withTimeout = <T>(promise: Promise<T>, ms = 10000): Promise<T> => {
 };
 
 const ORDER_LIST_COLUMNS = 'id,status,total_amount,created_at,customer_name,customer_phone';
-export const fetchStatisticsData = async (dateRange: string): Promise<DatabaseData> => {
+export const fetchStatisticsData = async (
+  dateRange: string,
+  customStart?: string,
+  customEnd?: string
+): Promise<DatabaseData> => {
   const { data: { user } } = await supabase.auth.getUser();
   const ownerId = user?.id;
-  const cacheKey = CacheKeys.statistics(ownerId || 'anon', dateRange);
+  const cacheKey = CacheKeys.statistics(
+    ownerId || 'anon',
+    dateRange === 'custom' ? `${customStart}_${customEnd}` : dateRange
+  );
 
   if (!ownerId) {
     return { orders: [], orderItems: [], customers: [], products: [], visits: [] };
@@ -24,9 +31,20 @@ export const fetchStatisticsData = async (dateRange: string): Promise<DatabaseDa
   if (cached) return cached;
 
   return dedup(cacheKey, async () => {
-    const days = parseInt(dateRange) || 7;
-    const extendedDays = days * 2;
-    const extendedStart = new Date(Date.now() - extendedDays * 86400000);
+    let days: number;
+    let extendedStart: Date;
+
+    if (dateRange === 'custom' && customStart && customEnd) {
+      const start = new Date(customStart);
+      const end = new Date(customEnd);
+      end.setHours(23, 59, 59, 999);
+      days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86400000));
+      extendedStart = new Date(start.getTime() - days * 86400000);
+    } else {
+      days = parseInt(dateRange) || 7;
+      extendedStart = new Date(Date.now() - days * 2 * 86400000);
+    }
+
     const dateFilter = extendedStart.toISOString();
 
     const ORDERS_STATS_CAP = 5000;

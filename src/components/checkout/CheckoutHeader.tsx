@@ -3,9 +3,10 @@ import { Link } from "react-router-dom";
 
 interface CheckoutHeaderProps {
   cartCount: number;
+  backTo?: string;
 }
 
-const CheckoutHeader = ({ cartCount }: CheckoutHeaderProps) => (
+const CheckoutHeader = ({ cartCount, backTo = "/preview" }: CheckoutHeaderProps) => (
   <div className="sticky top-0 z-40 bg-card/90 backdrop-blur-xl border-b border-border/50">
     <div className="flex justify-between items-center p-3 max-w-xl mx-auto">
       <div className="flex items-center gap-2 w-20">
@@ -20,7 +21,11 @@ const CheckoutHeader = ({ cartCount }: CheckoutHeaderProps) => (
       </div>
       <h1 className="text-base font-bold text-foreground">إتمام الطلب</h1>
       <div className="w-20 flex justify-end">
-        <Link to="/preview" className="w-10 h-10 rounded-full bg-muted hover:bg-muted/70 flex items-center justify-center transition-colors">
+        <Link
+          to={backTo}
+          aria-label="العودة للمتجر"
+          className="min-h-[44px] min-w-[44px] rounded-full bg-muted hover:bg-muted/70 flex items-center justify-center transition-colors"
+        >
           <ArrowRight className="w-5 h-5 text-foreground" />
         </Link>
       </div>

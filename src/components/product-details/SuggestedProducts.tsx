@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 
@@ -94,10 +93,6 @@ const SuggestedProducts = ({ currentProductId, storeSlug, category }: SuggestedP
                       {product.name}
                     </h3>
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-0.5">
-                        <Star className="w-3 h-3 text-amber-400 fill-current" />
-                        <span className="text-[10px] text-muted-foreground">4.5</span>
-                      </div>
                       <span className="text-sm font-bold text-foreground">{product.price.toLocaleString()} د.ع</span>
                     </div>
                   </div>

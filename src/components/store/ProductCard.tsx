@@ -76,10 +76,11 @@ const ProductCard = memo(({
             )}
           </div>
           <button
-            className={`absolute top-1.5 left-1.5 w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-md transition-all ${
+            className={`absolute top-1.5 left-1.5 min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center backdrop-blur-md transition-all ${
               isFavorite ? 'bg-destructive text-destructive-foreground scale-110' : 'bg-card/80 text-muted-foreground hover:text-destructive'
             }`}
             onClick={(e) => { e.stopPropagation(); onToggleFavorite(product.id); }}
+            aria-label={isFavorite ? "إزالة من المفضلة" : "إضافة للمفضلة"}
           >
             <Heart className={`w-3.5 h-3.5 ${isFavorite ? 'fill-current' : ''}`} />
           </button>
@@ -90,13 +91,17 @@ const ProductCard = memo(({
             <h3 className="font-semibold text-sm text-right line-clamp-1 text-foreground">{product.name}</h3>
             <p className="text-xs text-muted-foreground text-right line-clamp-1 mt-0.5">{product.description}</p>
             <div className="flex items-center justify-end gap-1 mt-1.5">
-              <span className="text-[10px] text-muted-foreground">{product.rating?.toFixed(1) || '4.5'}</span>
-              <Star className="w-3 h-3 text-amber-400 fill-current" />
+              {product.rating != null && product.rating > 0 && (
+                <>
+                  <span className="text-[10px] text-muted-foreground">{product.rating.toFixed(1)}</span>
+                  <Star className="w-3 h-3 text-amber-400 fill-current" />
+                </>
+              )}
             </div>
           </div>
           <div className="flex items-center justify-between mt-2">
             <div className="flex items-center gap-1.5">
-              <button onClick={handleShare} className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
+              <button onClick={handleShare} aria-label="مشاركة المنتج" className="min-h-[44px] min-w-[44px] rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
                 <Share2 className="w-3 h-3" />
               </button>
               {cartQuantity > 0 ? (
@@ -163,16 +168,18 @@ const ProductCard = memo(({
         {/* Favorite & Share */}
         <div className="absolute top-2 left-2 flex flex-col gap-1.5 z-10">
           <button
-            className={`w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md transition-all shadow-sm ${
+            className={`min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center backdrop-blur-md transition-all shadow-sm ${
               isFavorite ? 'bg-destructive text-destructive-foreground scale-110' : 'bg-card/85 text-muted-foreground hover:text-destructive hover:scale-110'
             }`}
             onClick={(e) => { e.stopPropagation(); onToggleFavorite(product.id); }}
+            aria-label={isFavorite ? "إزالة من المفضلة" : "إضافة للمفضلة"}
           >
             <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
           </button>
           <button
-            className="w-8 h-8 rounded-full bg-card/85 backdrop-blur-md text-muted-foreground hover:text-primary hover:scale-110 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 shadow-sm"
+            className="min-h-[44px] min-w-[44px] rounded-full bg-card/85 backdrop-blur-md text-muted-foreground hover:text-primary hover:scale-110 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 shadow-sm"
             onClick={handleShare}
+            aria-label="مشاركة المنتج"
           >
             <Share2 className="w-3.5 h-3.5" />
           </button>
@@ -183,10 +190,14 @@ const ProductCard = memo(({
         <h3 className="font-semibold text-sm text-right line-clamp-1 text-foreground">{product.name}</h3>
 
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-0.5 bg-amber-50 dark:bg-amber-500/10 px-1.5 py-0.5 rounded-md">
-            <Star className="w-3 h-3 text-amber-500 fill-current" />
-            <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-400">{product.rating?.toFixed(1) || '4.5'}</span>
-          </div>
+          {product.rating != null && product.rating > 0 ? (
+            <div className="flex items-center gap-0.5 bg-amber-50 dark:bg-amber-500/10 px-1.5 py-0.5 rounded-md">
+              <Star className="w-3 h-3 text-amber-500 fill-current" />
+              <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-400">{product.rating.toFixed(1)}</span>
+            </div>
+          ) : (
+            <span />
+          )}
           <PriceBlock size="md" />
         </div>
 

@@ -46,7 +46,7 @@ const steps = [
 const Index = () => {
   const navigate = useNavigate();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [billingType, setBillingType] = useState<'monthly' | 'annual'>('monthly');
+  const [billingType, setBillingType] = useState<'monthly' | 'semiannual'>('monthly');
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -277,9 +277,9 @@ const Index = () => {
                   شهري
                 </button>
                 <button
-                  onClick={() => setBillingType('annual')}
+                  onClick={() => setBillingType('semiannual')}
                   className={`px-8 py-3 rounded-xl font-semibold text-sm transition-all duration-300 relative ${
-                    billingType === 'annual'
+                    billingType === 'semiannual'
                       ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
@@ -364,7 +364,7 @@ const Index = () => {
             </FadeUp>
           )}
 
-          {billingType === 'annual' && (
+          {billingType === 'semiannual' && (
             <FadeUp>
               <div className="max-w-lg mx-auto">
                 <div

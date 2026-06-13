@@ -20,10 +20,12 @@ interface ProductsListProps {
   onProductSelect?: (product: {id: string, name: string}) => void;
   onProductsLoaded?: (products: Product[]) => void;
   filteredProducts?: Product[];
+  onClearFilters?: () => void;
 }
 
-export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProducts }: ProductsListProps = {}) => {
+export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProducts, onClearFilters }: ProductsListProps = {}) => {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isDragEnabled, setIsDragEnabled] = useState(false);
   const [quickEditProduct, setQuickEditProduct] = useState<Product | null>(null);
   const [quickEditOpen, setQuickEditOpen] = useState(false);
@@ -34,16 +36,21 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
     if (!isReady) return;
 
     const loadProductsData = async () => {
-      const productsData = await loadProducts(true);
-      const savedOrder = localStorage.getItem('products_display_order');
-      if (savedOrder) {
-        try {
-          const orderMap: Record<string, number> = JSON.parse(savedOrder);
-          productsData.sort((a, b) => (orderMap[a.id] ?? 999) - (orderMap[b.id] ?? 999));
-        } catch {}
+      setIsLoading(true);
+      try {
+        const productsData = await loadProducts(true);
+        const savedOrder = localStorage.getItem('products_display_order');
+        if (savedOrder) {
+          try {
+            const orderMap: Record<string, number> = JSON.parse(savedOrder);
+            productsData.sort((a, b) => (orderMap[a.id] ?? 999) - (orderMap[b.id] ?? 999));
+          } catch {}
+        }
+        setAllProducts(productsData);
+        onProductsLoaded?.(productsData);
+      } finally {
+        setIsLoading(false);
       }
-      setAllProducts(productsData);
-      onProductsLoaded?.(productsData);
     };
     loadProductsData();
 
@@ -93,6 +100,22 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
     }
   };
 
+  if (!isReady || isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div key={i} className="bg-card rounded-2xl border border-border overflow-hidden animate-pulse">
+            <div className="h-48 bg-muted" />
+            <div className="p-4 space-y-2">
+              <div className="h-4 bg-muted rounded" />
+              <div className="h-4 bg-muted rounded w-2/3 mr-auto" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   if (allProducts.length === 0) {
     return (
       <div className="text-center py-16">
@@ -113,8 +136,13 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
 
   if (products.length === 0) {
     return (
-      <div className="text-center py-12">
+      <div className="text-center py-12 space-y-4">
         <p className="text-muted-foreground">لا توجد منتجات تطابق معايير البحث</p>
+        {onClearFilters && (
+          <Button variant="outline" className="rounded-xl min-h-[44px]" onClick={onClearFilters}>
+            مسح الفلاتر
+          </Button>
+        )}
       </div>
     );
   }
@@ -145,23 +173,29 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
         <div className="absolute top-4 right-4 flex gap-1.5" onClick={(e) => e.stopPropagation()}>
           <Link to={`/edit-product/${product.id}`}>
             <Button 
-              size="sm"
-              className="w-9 h-9 p-0 bg-background/90 backdrop-blur-sm hover:bg-background text-foreground rounded-lg shadow-md"
+              size="icon"
+              variant="secondary"
+              className="min-h-[44px] min-w-[44px] bg-background/90 backdrop-blur-sm hover:bg-background text-foreground rounded-xl shadow-md"
+              aria-label={`تعديل ${product.name}`}
             >
               <Edit className="w-4 h-4" />
             </Button>
           </Link>
           <Button 
-            size="sm"
-            className="w-9 h-9 p-0 bg-background/90 backdrop-blur-sm hover:bg-background text-foreground rounded-lg shadow-md"
+            size="icon"
+            variant="secondary"
+            className="min-h-[44px] min-w-[44px] bg-background/90 backdrop-blur-sm hover:bg-background text-foreground rounded-xl shadow-md"
             onClick={() => { setQuickEditProduct(product); setQuickEditOpen(true); }}
+            aria-label={`تعديل سريع ${product.name}`}
           >
             <Zap className="w-4 h-4" />
           </Button>
           <Button 
-            size="sm"
-            className="w-9 h-9 p-0 bg-background/90 backdrop-blur-sm hover:bg-background text-foreground rounded-lg shadow-md"
+            size="icon"
+            variant="secondary"
+            className="min-h-[44px] min-w-[44px] bg-background/90 backdrop-blur-sm hover:bg-background text-foreground rounded-xl shadow-md"
             onClick={() => handleDuplicate(product)}
+            aria-label={`تكرار ${product.name}`}
           >
             <Copy className="w-4 h-4" />
           </Button>
@@ -181,10 +215,14 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
       
       <div className="p-4">
         <div className="flex items-center justify-between mb-1.5">
-          <div className="flex items-center gap-1">
-            <Star className="w-3.5 h-3.5 text-yellow-400 fill-current" />
-            <span className="text-xs font-medium text-muted-foreground">{product.rating ?? 4.5}</span>
-          </div>
+          {product.rating != null && product.rating > 0 ? (
+            <div className="flex items-center gap-1">
+              <Star className="w-3.5 h-3.5 text-yellow-400 fill-current" />
+              <span className="text-xs font-medium text-muted-foreground">{product.rating.toFixed(1)}</span>
+            </div>
+          ) : (
+            <span />
+          )}
           <h3 className="text-sm font-bold text-foreground text-right truncate flex-1 mr-2">{product.name}</h3>
         </div>
         

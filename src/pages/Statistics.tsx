@@ -54,7 +54,11 @@ const Statistics = () => {
   const [selectedMetric, setSelectedMetric] = useState("revenue");
   const [activeTab, setActiveTab] = useState("overview");
 
-  const { stats, rawOrders, loading, error, refetch } = useRealStatistics(dateRange);
+  const { stats, rawOrders, loading, error, refetch } = useRealStatistics(
+    dateRange,
+    startDate,
+    endDate
+  );
 
   const exportCSV = useCallback(() => {
     if (!stats) return;

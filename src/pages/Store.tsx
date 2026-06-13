@@ -338,7 +338,9 @@ const Store = () => {
             />
             <button
               onClick={toggleVoiceSearch}
-              className={`absolute left-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-colors ${isListening ? 'text-destructive animate-pulse bg-destructive/10' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+              type="button"
+              aria-label={isListening ? "إيقاف البحث الصوتي" : "البحث الصوتي"}
+              className={`absolute left-1 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full transition-colors ${isListening ? 'text-destructive animate-pulse bg-destructive/10' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
             >
               {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             </button>

@@ -142,15 +142,17 @@ const CategoryDialog = ({ categories, onCategoryChange, onAddLocalCategory, open
                   {categories.map((category) => (
                     <div key={category.id} className="flex justify-between items-center p-3 bg-muted border border-border rounded-xl hover:bg-accent transition-colors">
                       <div className="flex items-center gap-1">
-                        <Button type="button" variant="ghost" size="sm"
+                        <Button type="button" variant="ghost" size="icon"
                           onClick={() => { setDeletingCategory(category); setIsDeleteDialogOpen(true); }}
-                          className="hover:bg-destructive/10 hover:text-destructive rounded-lg p-1 h-8 w-8"
+                          aria-label={`حذف فئة ${category.name}`}
+                          className="hover:bg-destructive/10 hover:text-destructive rounded-lg min-h-[44px] min-w-[44px]"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
-                        <Button type="button" variant="ghost" size="sm"
+                        <Button type="button" variant="ghost" size="icon"
                           onClick={() => { setEditingCategory(category); setIsEditDialogOpen(true); }}
-                          className="hover:bg-accent rounded-lg p-1 h-8 w-8"
+                          aria-label={`تعديل فئة ${category.name}`}
+                          className="hover:bg-accent rounded-lg min-h-[44px] min-w-[44px]"
                         >
                           <Edit className="w-4 h-4" />
                         </Button>

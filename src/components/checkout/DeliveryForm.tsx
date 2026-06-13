@@ -15,6 +15,14 @@ interface DeliveryFormProps {
   formErrors: Record<string, string>;
 }
 
+const fieldIds = {
+  name: "delivery-name",
+  phone: "delivery-phone",
+  governorate: "delivery-governorate",
+  address: "delivery-address",
+  notes: "delivery-notes",
+} as const;
+
 const DeliveryForm = ({
   customerInfo, onInputChange, selectedGovernorate, onGovernorateChange, deliveryPrices, deliveryFee = 0, formErrors,
 }: DeliveryFormProps) => {
@@ -28,20 +36,46 @@ const DeliveryForm = ({
 
   return (
     <div className="space-y-4">
-      <IconField icon={User} label="الاسم" error={formErrors.name}>
-        <Input name="name" value={customerInfo.name} onChange={onInputChange}
-          className={fieldClass("name")} placeholder="أدخل اسمك الكامل" autoComplete="name" />
+      <IconField id={fieldIds.name} icon={User} label="الاسم" error={formErrors.name}>
+        <Input
+          id={fieldIds.name}
+          name="name"
+          value={customerInfo.name}
+          onChange={onInputChange}
+          className={fieldClass("name")}
+          placeholder="أدخل اسمك الكامل"
+          autoComplete="name"
+          aria-invalid={!!formErrors.name}
+          aria-describedby={formErrors.name ? `${fieldIds.name}-error` : undefined}
+        />
       </IconField>
 
-      <IconField icon={Phone} label="رقم الهاتف" error={formErrors.phone}>
-        <Input name="phone" type="tel" inputMode="tel" value={customerInfo.phone} onChange={onInputChange}
-          className={cn(fieldClass("phone"), "pl-10 pr-3")} placeholder="07xx xxx xxxx" autoComplete="tel" dir="ltr" />
+      <IconField id={fieldIds.phone} icon={Phone} label="رقم الهاتف" error={formErrors.phone}>
+        <Input
+          id={fieldIds.phone}
+          name="phone"
+          type="tel"
+          inputMode="tel"
+          value={customerInfo.phone}
+          onChange={onInputChange}
+          className={cn(fieldClass("phone"), "pl-10 pr-3")}
+          placeholder="07xx xxx xxxx"
+          autoComplete="tel"
+          dir="ltr"
+          aria-invalid={!!formErrors.phone}
+          aria-describedby={formErrors.phone ? `${fieldIds.phone}-error` : undefined}
+        />
       </IconField>
 
       {deliveryPrices && deliveryPrices.length > 0 && (
-        <IconField icon={MapPin} label="المحافظة" error={formErrors.governorate}>
+        <IconField id={fieldIds.governorate} icon={MapPin} label="المحافظة" error={formErrors.governorate}>
           <Select value={selectedGovernorate} onValueChange={onGovernorateChange}>
-            <SelectTrigger className={cn("text-right rounded-xl pr-10", formErrors.governorate ? "border-destructive" : "border-border")}>
+            <SelectTrigger
+              id={fieldIds.governorate}
+              className={cn("text-right rounded-xl pr-10", formErrors.governorate ? "border-destructive" : "border-border")}
+              aria-invalid={!!formErrors.governorate}
+              aria-describedby={formErrors.governorate ? `${fieldIds.governorate}-error` : undefined}
+            >
               <SelectValue placeholder="اختر المحافظة" />
             </SelectTrigger>
             <SelectContent>
@@ -63,23 +97,38 @@ const DeliveryForm = ({
         </IconField>
       )}
 
-      <IconField icon={Home} label="العنوان" error={formErrors.address}>
-        <Input name="address" value={customerInfo.address} onChange={onInputChange}
-          className={fieldClass("address")} placeholder="أدخل عنوانك بالتفصيل" autoComplete="street-address" />
+      <IconField id={fieldIds.address} icon={Home} label="العنوان" error={formErrors.address}>
+        <Input
+          id={fieldIds.address}
+          name="address"
+          value={customerInfo.address}
+          onChange={onInputChange}
+          className={fieldClass("address")}
+          placeholder="أدخل عنوانك بالتفصيل"
+          autoComplete="street-address"
+          aria-invalid={!!formErrors.address}
+          aria-describedby={formErrors.address ? `${fieldIds.address}-error` : undefined}
+        />
       </IconField>
 
-      <IconField icon={FileText} label="ملاحظات (اختياري)" required={false}>
-        <Textarea name="notes" value={customerInfo.notes} onChange={onInputChange}
+      <IconField id={fieldIds.notes} icon={FileText} label="ملاحظات (اختياري)" required={false}>
+        <Textarea
+          id={fieldIds.notes}
+          name="notes"
+          value={customerInfo.notes}
+          onChange={onInputChange}
           className="text-right border-2 border-border rounded-xl text-foreground bg-muted/30 pr-10 focus:border-primary transition-all duration-200"
-          placeholder="أي ملاحظات خاصة بالطلب" />
+          placeholder="أي ملاحظات خاصة بالطلب"
+        />
       </IconField>
     </div>
   );
 };
 
 const IconField = ({
-  icon: Icon, label, error, required = true, children,
+  id, icon: Icon, label, error, required = true, children,
 }: {
+  id: string;
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   error?: string;
@@ -87,7 +136,7 @@ const IconField = ({
   children: React.ReactNode;
 }) => (
   <div className="text-right">
-    <Label className="block mb-1.5 text-foreground text-sm">
+    <Label htmlFor={id} className="block mb-1.5 text-foreground text-sm">
       {label} {required && <span className="text-destructive">*</span>}
     </Label>
     <div className="relative">
@@ -96,7 +145,11 @@ const IconField = ({
       </div>
       {children}
     </div>
-    {error && <p className="text-destructive text-xs mt-1 animate-fade-in">{error}</p>}
+    {error && (
+      <p id={`${id}-error`} role="alert" className="text-destructive text-xs mt-1 animate-fade-in">
+        {error}
+      </p>
+    )}
   </div>
 );
 

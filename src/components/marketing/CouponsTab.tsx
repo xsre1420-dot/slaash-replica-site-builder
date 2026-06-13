@@ -30,6 +30,7 @@ interface Coupon {
 export default function CouponsTab() {
   const { user } = useAuth();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -47,6 +48,7 @@ export default function CouponsTab() {
 
   const loadCoupons = useCallback(async () => {
     if (!user) return;
+    setInitialLoading(true);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any)
       .from('marketing_coupons')
@@ -55,6 +57,7 @@ export default function CouponsTab() {
       .order('created_at', { ascending: false });
 
     if (!error) setCoupons((data || []) as Coupon[]);
+    setInitialLoading(false);
   }, [user]);
 
   useEffect(() => { loadCoupons(); }, [loadCoupons]);
@@ -171,7 +174,13 @@ export default function CouponsTab() {
       {/* Coupons List */}
       <Card className="border-border/20 rounded-2xl bg-card/80 backdrop-blur-sm">
         <CardContent className="p-0">
-          {filteredCoupons.length === 0 ? (
+          {initialLoading ? (
+            <div className="p-6 space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-24 bg-muted/50 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : filteredCoupons.length === 0 ? (
             <div className="text-center py-12">
               <Gift className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
               <p className="text-sm text-muted-foreground mb-4">
@@ -190,7 +199,7 @@ export default function CouponsTab() {
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-2">
                       <Switch checked={coupon.is_active} onCheckedChange={() => handleToggle(coupon.id, coupon.is_active)} />
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(coupon.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl h-8 w-8">
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(coupon.id)} aria-label={`حذف كوبون ${coupon.code}`} className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl min-h-[44px] min-w-[44px]">
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
@@ -200,7 +209,7 @@ export default function CouponsTab() {
                           {coupon.is_active ? "مفعل" : "موقف"}
                         </Badge>
                         <div className="flex items-center gap-1">
-                          <button onClick={() => handleCopyCode(coupon.code, coupon.id)} className="p-1 rounded-md hover:bg-muted transition-colors">
+                          <button type="button" onClick={() => handleCopyCode(coupon.code, coupon.id)} aria-label={`نسخ كود ${coupon.code}`} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md hover:bg-muted transition-colors">
                             {copiedId === coupon.id ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
                           </button>
                           <code className="text-sm font-bold bg-muted px-2 py-0.5 rounded-lg">{coupon.code}</code>

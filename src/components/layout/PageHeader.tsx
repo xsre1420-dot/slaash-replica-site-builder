@@ -31,7 +31,7 @@ const PageHeader = ({
 }: PageHeaderProps) => (
   <header
     className={cn(
-      'border-b border-border/50 bg-card/80 backdrop-blur-xl sticky top-0 z-30',
+      'border-b border-border/50 bg-card/80 backdrop-blur-xl lg:sticky lg:top-0 z-30',
       className
     )}
   >

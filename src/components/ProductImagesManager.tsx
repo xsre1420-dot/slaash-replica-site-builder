@@ -202,14 +202,14 @@ const ProductImagesManager = ({
                   {index === 0 && mainImage ? (
                     <CheckCircle className="w-5 h-5 text-primary" />
                   ) : (
-                    <Button variant="ghost" size="icon" className="h-6 w-6 p-0" onClick={() => setAsMain(index)} title="تعيين كصورة رئيسية">
+                    <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] p-0" onClick={() => setAsMain(index)} aria-label="تعيين كصورة رئيسية">
                       <CheckCircle className="w-5 h-5 text-muted-foreground hover:text-primary" />
                     </Button>
                   )}
                 </div>
                 
                 <div className="absolute top-0 left-0 p-1">
-                  <Button variant="ghost" size="icon" className="h-6 w-6 bg-card/80 backdrop-blur-sm rounded-full p-0 hover:bg-destructive/10" onClick={() => removeImage(index)}>
+                  <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] bg-card/80 backdrop-blur-sm rounded-full p-0 hover:bg-destructive/10" onClick={() => removeImage(index)} aria-label="حذف الصورة">
                     <X className="w-4 h-4 text-destructive" />
                   </Button>
                 </div>

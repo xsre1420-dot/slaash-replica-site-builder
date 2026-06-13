@@ -82,7 +82,7 @@ const CouponInput = ({ ownerId, storeSlug, subtotal, appliedCoupon, onApply }: C
   if (appliedCoupon) {
     return (
       <div className="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-xl p-3">
-        <Button type="button" variant="ghost" size="icon" onClick={handleRemove} className="h-8 w-8">
+        <Button type="button" variant="ghost" size="icon" onClick={handleRemove} aria-label="إزالة كود الخصم" className="min-h-[44px] min-w-[44px]">
           <X className="w-4 h-4" />
         </Button>
         <div className="text-right flex-1 mr-2">

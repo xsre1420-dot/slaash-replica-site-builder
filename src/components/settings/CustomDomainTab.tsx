@@ -125,7 +125,8 @@ const CustomDomainTab = ({ storeSlug }: CustomDomainTabProps) => {
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0"
+            className="min-h-[44px] min-w-[44px] shrink-0"
+            aria-label="نسخ رابط المتجر"
             onClick={() => copyToClipboard(defaultStoreUrl, 'current')}
           >
             {copied === 'current' ? <Check className="w-4 h-4 text-primary" /> : <Copy className="w-4 h-4" />}

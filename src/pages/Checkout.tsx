@@ -58,7 +58,7 @@ const Checkout = () => {
 
   return (
     <div className="min-h-screen bg-background font-arabic" dir="rtl">
-      <CheckoutHeader cartCount={cartCount} />
+      <CheckoutHeader cartCount={cartCount} backTo={storeHomePath} />
 
       <div className="max-w-xl mx-auto px-4 pb-32">
         {cartItems.length === 0 ? (

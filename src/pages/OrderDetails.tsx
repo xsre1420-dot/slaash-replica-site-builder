@@ -59,7 +59,19 @@ const OrderDetails = () => {
   if (!order) {
     return (
       <DashboardLayout>
-        <OrderNotFound />
+        <PageHeader
+          title="تفاصيل الطلب"
+          description="الطلب غير موجود"
+          backTo="/orders"
+          breadcrumbs={[
+            { label: 'لوحة التحكم', href: '/builder' },
+            { label: 'الطلبات', href: '/orders' },
+            { label: 'غير موجود' },
+          ]}
+        />
+        <div className="ds-page max-w-4xl">
+          <OrderNotFound />
+        </div>
       </DashboardLayout>
     );
   }

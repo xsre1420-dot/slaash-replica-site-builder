@@ -81,8 +81,23 @@ const EditProduct = () => {
   if (loadingProduct) {
     return (
       <DashboardLayout>
-        <div className="min-h-[40vh] flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <PageHeader
+          title="تعديل المنتج"
+          description="جاري تحميل بيانات المنتج..."
+          backTo="/products"
+          breadcrumbs={[
+            { label: 'لوحة التحكم', href: '/builder' },
+            { label: 'المنتجات', href: '/products' },
+            { label: 'تعديل' },
+          ]}
+        />
+        <div className="ds-page max-w-3xl space-y-4">
+          <div className="ds-card p-6 space-y-4 animate-pulse">
+            <div className="h-48 bg-muted rounded-xl" />
+            <div className="h-10 bg-muted rounded-xl" />
+            <div className="h-10 bg-muted rounded-xl" />
+            <div className="h-24 bg-muted rounded-xl" />
+          </div>
         </div>
       </DashboardLayout>
     );

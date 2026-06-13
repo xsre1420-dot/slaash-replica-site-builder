@@ -105,6 +105,12 @@ const Products = () => {
     totalValue: loadedProducts.reduce((sum, p) => sum + p.price * (p.stockQuantity ?? 1), 0),
   }), [loadedProducts]);
 
+  const clearFilters = () => {
+    setSearchQuery("");
+    setCategoryFilter("all");
+    setStockFilter("all");
+  };
+
   const filteredProducts = useMemo(() => loadedProducts.filter(p => {
     const matchesSearch = !debouncedSearch || 
       p.name.includes(debouncedSearch) || 
@@ -240,18 +246,12 @@ const Products = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="rounded-xl border-border text-foreground text-xs"
+                      className="rounded-xl border-border text-foreground text-xs min-h-[44px]"
                       onClick={handleExport}
                     >
                       <Download className="w-3.5 h-3.5 ml-1" />
                       تصدير
                     </Button>
-                    <Link to="/add-product">
-                      <Button size="sm" className="rounded-xl text-xs">
-                        <Plus className="w-3.5 h-3.5 ml-1" />
-                        إضافة
-                      </Button>
-                    </Link>
                   </div>
                 </div>
               </CardContent>
@@ -263,6 +263,7 @@ const Products = () => {
                 onProductSelect={handleProductSelect} 
                 onProductsLoaded={setLoadedProducts}
                 filteredProducts={filteredProducts}
+                onClearFilters={clearFilters}
               />
             </div>
           </>

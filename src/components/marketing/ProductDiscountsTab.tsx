@@ -33,6 +33,7 @@ export default function ProductDiscountsTab() {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [discountForm, setDiscountForm] = useState({
     discount_type: 'none' as 'none' | 'percentage' | 'amount',
@@ -43,6 +44,7 @@ export default function ProductDiscountsTab() {
 
   const loadProducts = useCallback(async () => {
     if (!user) return;
+    setInitialLoading(true);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any)
       .from('products')
@@ -50,6 +52,7 @@ export default function ProductDiscountsTab() {
       .eq('owner_id', user.id)
       .order('name', { ascending: true });
     if (!error) setProducts((data || []) as Product[]);
+    setInitialLoading(false);
   }, [user]);
 
   useEffect(() => { loadProducts(); }, [loadProducts]);
@@ -151,7 +154,13 @@ export default function ProductDiscountsTab() {
       {/* Discounted Products */}
       <Card className="border-border/20 rounded-2xl bg-card/80 backdrop-blur-sm">
         <CardContent className="p-0">
-          {discountedProducts.length === 0 ? (
+          {initialLoading ? (
+            <div className="p-6 space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-20 bg-muted/50 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : discountedProducts.length === 0 ? (
             <div className="text-center py-12">
               <Tag className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
               <p className="text-sm text-muted-foreground mb-4">لا توجد خصومات على المنتجات</p>
@@ -165,10 +174,10 @@ export default function ProductDiscountsTab() {
                 <div key={product.id} className="p-4 hover:bg-muted/30 transition-colors animate-fade-in" style={{ animationDelay: `${i * 40}ms` }}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => removeDiscount(product)} className="text-destructive hover:bg-destructive/10 rounded-xl h-8 w-8">
+                      <Button variant="ghost" size="icon" onClick={() => removeDiscount(product)} aria-label={`إزالة خصم ${product.name}`} className="text-destructive hover:bg-destructive/10 rounded-xl min-h-[44px] min-w-[44px]">
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => openDialog(product)} className="rounded-xl h-8 w-8">
+                      <Button variant="ghost" size="icon" onClick={() => openDialog(product)} aria-label={`تعديل خصم ${product.name}`} className="rounded-xl min-h-[44px] min-w-[44px]">
                         <Edit className="w-3.5 h-3.5" />
                       </Button>
                     </div>

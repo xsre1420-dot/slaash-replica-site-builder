@@ -30,12 +30,7 @@ const OrderDetailsCard = ({
 }: OrderDetailsCardProps) => {
   return (
     <Card className="mb-6 border-0 shadow-lg bg-card rounded-3xl overflow-visible">
-      <CardHeader 
-        className="rounded-t-3xl overflow-hidden accent-gradient text-white"
-        style={{ 
-          fontFamily: 'system-ui, -apple-system, sans-serif'
-        }}
-      >
+      <CardHeader className="rounded-t-3xl overflow-hidden accent-gradient text-white">
         <OrderHeader 
           orderId={order.id} 
           date={order.date} 
@@ -43,7 +38,7 @@ const OrderDetailsCard = ({
           governorate={order.customerInfo.governorate}
         />
       </CardHeader>
-      <CardContent className="bg-card rounded-b-3xl p-8" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      <CardContent className="bg-card rounded-b-3xl p-8">
         <div className="space-y-8">
           {/* Customer Info */}
           <div className="bg-muted rounded-2xl p-6">
