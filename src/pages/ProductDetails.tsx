@@ -161,7 +161,7 @@ const ProductDetails = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <ProductHeader productId={product.id} productName={product.name} />
+      <ProductHeader productId={product.id} productName={product.name} storeSlug={storeSlug} />
 
       <div className="max-w-md mx-auto bg-card">
         {/* Product Images with Parallax */}

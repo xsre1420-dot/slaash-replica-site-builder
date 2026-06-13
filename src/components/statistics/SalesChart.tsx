@@ -10,8 +10,10 @@ interface SalesChartProps {
   orders: Array<{
     created_at: string;
     total_amount: number | string;
+    status?: string;
   }>;
-  dateRange: string;
+  chartStart: Date;
+  chartEnd: Date;
   metric?: string;
 }
 
@@ -28,35 +30,43 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export const SalesChart = ({ orders, dateRange }: SalesChartProps) => {
+const dayKey = (date: Date) =>
+  date.toLocaleDateString('ar-IQ', { month: 'short', day: 'numeric' });
+
+export const SalesChart = ({ orders, chartStart, chartEnd }: SalesChartProps) => {
   const chartData = useMemo(() => {
     if (!orders || orders.length === 0) return [];
 
-    const days = parseInt(dateRange) || 7;
-    const grouped: { [key: string]: { revenue: number; orders: number } } = {};
+    const grouped: { [key: string]: { revenue: number; orders: number; sortKey: number } } = {};
+    const cursor = new Date(chartStart);
+    cursor.setHours(0, 0, 0, 0);
+    const end = new Date(chartEnd);
+    end.setHours(23, 59, 59, 999);
 
-    for (let i = days - 1; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const key = date.toLocaleDateString('ar-IQ', { month: 'short', day: 'numeric' });
-      grouped[key] = { revenue: 0, orders: 0 };
+    while (cursor <= end) {
+      const key = dayKey(cursor);
+      grouped[key] = { revenue: 0, orders: 0, sortKey: cursor.getTime() };
+      cursor.setDate(cursor.getDate() + 1);
     }
 
     orders.forEach(order => {
+      if (order.status === 'cancelled') return;
       const date = new Date(order.created_at);
-      const key = date.toLocaleDateString('ar-IQ', { month: 'short', day: 'numeric' });
+      const key = dayKey(date);
       if (grouped[key]) {
         grouped[key].revenue += parseFloat(String(order.total_amount || 0));
         grouped[key].orders += 1;
       }
     });
 
-    return Object.entries(grouped).map(([date, data]) => ({
-      date,
-      revenue: Math.round(data.revenue),
-      orders: data.orders,
-    }));
-  }, [orders, dateRange]);
+    return Object.entries(grouped)
+      .sort(([, a], [, b]) => a.sortKey - b.sortKey)
+      .map(([date, data]) => ({
+        date,
+        revenue: Math.round(data.revenue),
+        orders: data.orders,
+      }));
+  }, [orders, chartStart, chartEnd]);
 
   if (chartData.every(d => d.revenue === 0 && d.orders === 0)) {
     return (

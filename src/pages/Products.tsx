@@ -36,9 +36,11 @@ const Products = () => {
   // Suggestion #17: Scroll & filter persistence
   useScrollPersistence('products');
 
-  // Suggestion #11: Realtime subscriptions
-  const handleRealtimeUpdate = useCallback(() => {
-    // Products will be reloaded by the hook
+  // Realtime subscriptions
+  const handleRealtimeUpdate = useCallback(async () => {
+    invalidateProducts();
+    const data = await reloadProductsData(true);
+    setLoadedProducts(data);
   }, []);
   useRealtimeProducts(handleRealtimeUpdate);
 

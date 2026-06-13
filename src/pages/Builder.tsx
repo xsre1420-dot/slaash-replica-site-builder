@@ -6,6 +6,7 @@ import { useStore } from "@/context/StoreContext";
 import { useAuth } from "@/context/AuthContext";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { copyStorePublicUrl } from "@/lib/storeUrl";
 import platformLogo from "@/assets/platform-logo.png";
 import OnboardingChecklist from "@/components/OnboardingChecklist";
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
@@ -43,17 +44,20 @@ export default function Builder() {
   }, [storeName, storeLogo]);
 
   const handleCopyLink = async () => {
-    if (user) {
-      try {
-        await navigator.clipboard.writeText(`${window.location.origin}/store/${user.username}`);
-        setCopied(true);
-        localStorage.setItem('store_shared', 'true');
-        setCompletedSteps((prev) => (prev.includes('share') ? prev : [...prev, 'share']));
-        toast.success("تم نسخ الرابط — شاركه مع عملائك الآن!");
-        setTimeout(() => setCopied(false), 2000);
-      } catch {
-        toast.error("فشل في نسخ الرابط");
+    if (!user?.id) return;
+    try {
+      const url = await copyStorePublicUrl(user.id, user.username);
+      if (!url) {
+        toast.error("حدّد رابط المتجر (slug) من الإعدادات أولاً");
+        return;
       }
+      setCopied(true);
+      localStorage.setItem('store_shared', 'true');
+      setCompletedSteps((prev) => (prev.includes('share') ? prev : [...prev, 'share']));
+      toast.success("تم نسخ الرابط — شاركه مع عملائك الآن!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("فشل في نسخ الرابط");
     }
   };
 

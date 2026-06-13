@@ -6,6 +6,7 @@ import { Upload, X, ChevronLeft, ChevronRight, Star, ImageIcon, Store, Loader2 }
 import { supabase } from "@/integrations/supabase/client";
 import { uploadImage } from "@/utils/imageUpload";
 import { toast } from "sonner";
+import { normalizeStoreSlugInput, validateStoreSlug } from "@/lib/storeSlug";
 
 interface StoreInfoTabProps {
   settings: {
@@ -120,7 +121,7 @@ const StoreInfoTab = ({ settings, setSettings }: StoreInfoTabProps) => {
               id="store-slug"
               value={settings.storeSlug || ''}
               onChange={(e) => {
-                const slug = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                const slug = normalizeStoreSlugInput(e.target.value);
                 setSettings((prev: any) => ({ ...prev, storeSlug: slug }));
               }}
               className="text-left rounded-xl border-border/60 font-mono text-sm"
@@ -132,6 +133,9 @@ const StoreInfoTab = ({ settings, setSettings }: StoreInfoTabProps) => {
             <p className="text-xs text-muted-foreground text-right">
               رابط متجرك: {window.location.origin}/store/{settings.storeSlug}
             </p>
+          )}
+          {settings.storeSlug && validateStoreSlug(settings.storeSlug) && (
+            <p className="text-xs text-destructive text-right">{validateStoreSlug(settings.storeSlug)}</p>
           )}
         </div>
 

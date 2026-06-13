@@ -21,12 +21,13 @@ import { toast } from "sonner";
 
 interface OrderShipmentCardProps {
   data: OrderShipmentData;
-  onUpdated: () => void;
+  onUpdated: () => void | Promise<void>;
 }
 
 const OrderShipmentCard = ({ data, onUpdated }: OrderShipmentCardProps) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState(data.shipment?.tracking_number || '');
   const [carrier, setCarrier] = useState(data.shipment?.carrier || 'internal');
   const [status, setStatus] = useState<DeliveryStatus>(data.deliveryStatus);
@@ -74,6 +75,15 @@ const OrderShipmentCard = ({ data, onUpdated }: OrderShipmentCardProps) => {
       onUpdated();
     } else {
       toast.error(result.error || 'فشلت إعادة المحاولة');
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await onUpdated();
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -209,6 +219,22 @@ const OrderShipmentCard = ({ data, onUpdated }: OrderShipmentCardProps) => {
               إعادة محاولة التوصيل
             </Button>
           )}
+        </div>
+      )}
+
+      {!shipmentId && (
+        <div className="pt-3 border-t border-border/50 text-center text-sm text-muted-foreground">
+          <p>لم يُنشأ سجل شحن لهذا الطلب بعد.</p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3 rounded-xl"
+            disabled={refreshing}
+            onClick={() => void handleRefresh()}
+          >
+            {refreshing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4 ml-2" />}
+            إعادة تحميل بيانات الشحن
+          </Button>
         </div>
       )}
     </div>

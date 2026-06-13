@@ -112,3 +112,13 @@ export const CacheTTL = {
   LONG: 300_000,
   STALE: 15_000,
 } as const;
+
+/** Invalidate cached merchant data for a single tenant (avoids cross-tenant flush). */
+export function flushOwnerCache(ownerId: string): void {
+  cache.flushByPrefix(`orders:${ownerId}:`);
+  cache.flushByPrefix(`stats:${ownerId}:`);
+  cache.del(CacheKeys.products(ownerId));
+  cache.del(CacheKeys.categories(ownerId));
+  cache.del(CacheKeys.storeSettings(ownerId));
+  cache.del(CacheKeys.store(ownerId));
+}

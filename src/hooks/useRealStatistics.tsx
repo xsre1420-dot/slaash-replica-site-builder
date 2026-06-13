@@ -1,8 +1,8 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { RealStatistics } from "@/types/statistics";
 import { calculateStatistics, getDefaultStatistics } from "@/utils/statisticsCalculator";
-import { fetchStatisticsData } from "@/services/statisticsService";
+import { fetchStatisticsData, getStatisticsDateBounds } from "@/services/statisticsService";
 
 export const useRealStatistics = (
   dateRange: string = "7",
@@ -13,6 +13,11 @@ export const useRealStatistics = (
   const [rawOrders, setRawOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const dateBounds = useMemo(
+    () => getStatisticsDateBounds(dateRange, startDate, endDate),
+    [dateRange, startDate, endDate]
+  );
 
   const fetchRealStatistics = useCallback(async () => {
     if (dateRange === 'custom' && (!startDate || !endDate)) {
@@ -25,20 +30,16 @@ export const useRealStatistics = (
 
     try {
       const data = await fetchStatisticsData(dateRange, startDate, endDate);
-      const calculatedStats = calculateStatistics(data, dateRange === 'custom' ? String(
-        Math.max(1, Math.ceil((new Date(endDate!).getTime() - new Date(startDate!).getTime()) / 86400000))
-      ) : dateRange);
+      const bounds = data.dateBounds || dateBounds;
+      const calculatedStats = calculateStatistics(data, bounds);
       setStats(calculatedStats);
 
-      let cutoff: Date;
-      if (dateRange === 'custom' && startDate) {
-        cutoff = new Date(startDate);
-        cutoff.setHours(0, 0, 0, 0);
-      } else {
-        const days = parseInt(dateRange) || 7;
-        cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-      }
-      setRawOrders(data.orders.filter(o => new Date(o.created_at) >= cutoff));
+      setRawOrders(
+        data.orders.filter(o => {
+          const d = new Date(o.created_at);
+          return d >= bounds.start && d <= bounds.end;
+        })
+      );
     } catch (err) {
       console.error('Error fetching statistics:', err);
       setStats(getDefaultStatistics());
@@ -47,11 +48,11 @@ export const useRealStatistics = (
     } finally {
       setLoading(false);
     }
-  }, [dateRange, startDate, endDate]);
+  }, [dateRange, startDate, endDate, dateBounds]);
 
   useEffect(() => {
     fetchRealStatistics();
   }, [fetchRealStatistics]);
 
-  return { stats, rawOrders, loading, error, refetch: fetchRealStatistics };
+  return { stats, rawOrders, loading, error, refetch: fetchRealStatistics, dateBounds };
 };

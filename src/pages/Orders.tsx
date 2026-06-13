@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { copyStorePublicUrl } from "@/lib/storeUrl";
 
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
 
@@ -45,9 +46,13 @@ const Orders = () => {
   };
 
   const handleCopyStoreLink = async () => {
-    if (!user) return;
+    if (!user?.id) return;
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/store/${user.username}`);
+      const url = await copyStorePublicUrl(user.id, user.username);
+      if (!url) {
+        toast.error("حدّد رابط المتجر (slug) من الإعدادات أولاً");
+        return;
+      }
       toast.success("تم نسخ رابط المتجر — شاركه مع عملائك!");
     } catch {
       toast.error("فشل في نسخ الرابط");

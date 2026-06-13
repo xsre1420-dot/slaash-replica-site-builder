@@ -46,7 +46,7 @@ describe('orderService integration', () => {
     expect(result.id).toBe('order-1');
     expect(mockRpc).toHaveBeenCalledWith(
       'create_order_with_stock_deduction',
-      expect.objectContaining({ p_owner_id: 'owner-1' })
+      expect.objectContaining({ p_owner_id: 'owner-1', p_store_slug: null })
     );
   });
 

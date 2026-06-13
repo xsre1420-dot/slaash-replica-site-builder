@@ -97,7 +97,8 @@ export const createOrder = async (
   order: Order,
   ownerId: string,
   paymentMethod = 'cash_on_delivery',
-  couponCode?: string | null
+  couponCode?: string | null,
+  storeSlug?: string | null
 ): Promise<Order> => {
   return instrumentAsync('order.create', async () => {
     const idempotencyKey = getOrCreateIdempotencyKey(ownerId);
@@ -126,6 +127,7 @@ export const createOrder = async (
         p_items: orderItems,
         p_payment_method: paymentMethod,
         p_coupon_code: couponCode || null,
+        p_store_slug: storeSlug?.trim().toLowerCase() || null,
       });
 
       if (!error && data?.success) {

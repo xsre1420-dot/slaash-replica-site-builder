@@ -33,6 +33,13 @@ export interface RealStatistics {
   }>;
 }
 
+export interface StatisticsDateBounds {
+  start: Date;
+  end: Date;
+  days: number;
+  previousStart: Date;
+}
+
 export interface DatabaseData {
   orders: any[];
   orderItems: any[];
@@ -40,4 +47,5 @@ export interface DatabaseData {
   products: any[];
   visits: any[];
   kpis?: Record<string, unknown>;
+  dateBounds?: StatisticsDateBounds;
 }

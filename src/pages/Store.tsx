@@ -58,7 +58,7 @@ const Store = () => {
 
   const { addToCart, cartItems, cartCount, updateQuantity, cartTotal, setStoreOwner } = useCart();
   const { trackAddToCart, trackViewContent } = useMetaPixel();
-  const { favorites, toggleFavorite, isFavorite, count: favCount } = useFavorites();
+  const { favorites, toggleFavorite, isFavorite, count: favCount } = useFavorites(storeSlug);
   const { toast } = useToast();
   const navigate = useNavigate();
 

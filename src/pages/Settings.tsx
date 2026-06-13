@@ -14,6 +14,7 @@ import WhatsAppTab from "@/components/settings/WhatsAppTab";
 import PaymentTab from "@/components/settings/PaymentTab";
 import DesignTab from "@/components/settings/DesignTab";
 import CustomDomainTab from "@/components/settings/CustomDomainTab";
+import { validateStoreSlug, normalizeStoreSlugInput } from "@/lib/storeSlug";
 
 const Settings = () => {
   const { user } = useAuth();
@@ -123,6 +124,14 @@ const Settings = () => {
       return;
     }
 
+    const normalizedSlug = normalizeStoreSlugInput(settings.storeSlug);
+    const slugError = validateStoreSlug(normalizedSlug);
+    if (slugError) {
+      setSaveStatus('error');
+      toast.error(slugError, { id: "settings-slug-error" });
+      return;
+    }
+
     setSaveStatus('saving');
     try {
       await updateStore(settings.storeLogo, settings.storeName, settings.storeGovernorate);
@@ -136,10 +145,10 @@ const Settings = () => {
         deliveryPrices: settings.deliveryPrices
       });
       if (user?.id) {
-        await (supabase as any)
+        const { error: slugError } = await (supabase as any)
           .from('store_settings')
           .update({
-            store_slug: settings.storeSlug,
+            store_slug: normalizedSlug,
             return_policy: settings.returnPolicy || null,
             privacy_policy: settings.privacyPolicy || null,
             terms_conditions: settings.termsConditions || null,
@@ -153,6 +162,14 @@ const Settings = () => {
             ].filter(Boolean),
           })
           .eq('owner_id', user.id);
+
+        if (slugError) {
+          const message =
+            slugError.code === '23505' || slugError.message?.includes('unique')
+              ? 'رابط المتجر مستخدم بالفعل — اختر رابطاً آخر'
+              : slugError.message || 'فشل في حفظ رابط المتجر';
+          throw new Error(message);
+        }
       }
       
       lastSavedRef.current = settingsHash;
@@ -161,7 +178,8 @@ const Settings = () => {
     } catch (error) {
       console.error('Error saving settings:', error);
       setSaveStatus('error');
-      toast.error("فشل في حفظ الإعدادات", { id: "settings-error" });
+      const message = error instanceof Error ? error.message : 'فشل في حفظ الإعدادات';
+      toast.error(message, { id: "settings-error" });
     }
   }, [settings, updateStore, updateStoreSettings, user?.id]);
 
@@ -182,9 +200,24 @@ const Settings = () => {
     }, 2000);
 
     return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
     };
   }, [settings, performSave]);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+      if (isDbLoaded.current) {
+        void performSave();
+      }
+    };
+  }, [performSave]);
 
   const tabItems = [
     { value: "store", label: "المتجر", icon: Store },

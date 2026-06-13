@@ -44,6 +44,7 @@ const SuggestedProducts = ({ currentProductId, storeSlug, category }: SuggestedP
           .from('suggested_products')
           .select('suggested_product_id')
           .eq('product_id', currentProductId)
+          .eq('owner_id', user.id)
           .limit(10);
 
         if (suggestedError || !suggestedData?.length) return;

@@ -7,11 +7,12 @@ import { toast } from "sonner";
 interface ProductHeaderProps {
   productId?: string;
   productName?: string;
+  storeSlug?: string;
 }
 
-const ProductHeader = ({ productId, productName }: ProductHeaderProps) => {
+const ProductHeader = ({ productId, productName, storeSlug }: ProductHeaderProps) => {
   const navigate = useNavigate();
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { isFavorite, toggleFavorite } = useFavorites(storeSlug);
   const isFav = productId ? isFavorite(productId) : false;
 
   const handleShare = async () => {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Order } from "@/types";
 import { format } from "date-fns";
-import { cache, CacheKeys, CacheTTL, dedup } from "@/lib/cache";
+import { cache, CacheKeys, CacheTTL, dedup, flushOwnerCache } from "@/lib/cache";
 import { useAuth } from "@/context/AuthContext";
 import { useStoreHydration } from "@/context/StoreBootstrapContext";
 import { mapOrderError } from "@/utils/orderErrors";
@@ -105,7 +105,7 @@ export const useOrders = () => {
 
     if (result.success) {
       setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: 'cancelled' as const } : o)));
-      cache.flushByPrefix('orders:');
+      if (ownerId) flushOwnerCache(ownerId);
     } else {
       toast.error(mapOrderError(result.error || 'فشل التحديث'));
     }
@@ -128,8 +128,7 @@ export const useOrders = () => {
 
     if (result.success) {
       setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o)));
-      cache.flushByPrefix('orders:');
-      cache.flushByPrefix('stats:');
+      if (ownerId) flushOwnerCache(ownerId);
       return true;
     }
 
@@ -140,9 +139,9 @@ export const useOrders = () => {
   const clearDateFilter = () => setDateFilter(undefined);
 
   const refetch = useCallback(() => {
-    cache.flushByPrefix('orders:');
+    if (user?.id) flushOwnerCache(user.id);
     fetchOrders(0);
-  }, [fetchOrders]);
+  }, [fetchOrders, user?.id]);
 
   return {
     orders,

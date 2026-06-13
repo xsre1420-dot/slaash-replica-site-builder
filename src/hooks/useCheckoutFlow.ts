@@ -15,7 +15,7 @@ import {
   buildCartFingerprint,
 } from "@/utils/checkoutValidation";
 import { AppliedCoupon } from "@/services/couponService";
-import { fetchDeliveryFee } from "@/services/deliveryService";
+import { fetchDeliveryFee, fetchDeliveryFeeBySlug } from "@/services/deliveryService";
 import { calculateDeliveryFeeFromPrices, computeOrderTotal } from "@/utils/deliveryUtils";
 import {
   buildPaymentMethodOptions,
@@ -110,7 +110,11 @@ export const useCheckoutFlow = () => {
     let cancelled = false;
     const localFee = calculateDeliveryFeeFromPrices(deliveryPrices, selectedGovernorate);
 
-    fetchDeliveryFee(ownerId, selectedGovernorate)
+    const feePromise = isTenantMode && storeSlug
+      ? fetchDeliveryFeeBySlug(storeSlug, selectedGovernorate)
+      : fetchDeliveryFee(ownerId, selectedGovernorate);
+
+    feePromise
       .then((fee) => {
         if (!cancelled) setDeliveryFee(fee > 0 ? fee : localFee);
       })
@@ -119,7 +123,7 @@ export const useCheckoutFlow = () => {
       });
 
     return () => { cancelled = true; };
-  }, [selectedGovernorate, ownerId, deliveryPrices]);
+  }, [selectedGovernorate, ownerId, deliveryPrices, isTenantMode, storeSlug]);
 
   const discountAmount = appliedCoupon?.discountAmount || 0;
   const totalWithDelivery = computeOrderTotal(cartTotal, deliveryFee, discountAmount);
@@ -179,7 +183,13 @@ export const useCheckoutFlow = () => {
 
     try {
       const productIds = cartItems.map((i) => i.product.id);
-      const freshMap = await fetchFreshProducts(ownerId, productIds);
+      let freshMap: Map<string, import('@/types').Product>;
+      try {
+        freshMap = await fetchFreshProducts(ownerId, productIds);
+      } catch {
+        toast.error("تعذر التحقق من المنتجات. تحقق من الاتصال وحاول مرة أخرى.");
+        return;
+      }
 
       const validation = validateAndRefreshCart(cartItems, freshMap);
       validation.errors.forEach((msg) => toast.warning(msg));
@@ -217,10 +227,16 @@ export const useCheckoutFlow = () => {
       }
 
       const finalDiscount = couponToApply?.discountAmount || 0;
-      const feeForOrder = ownerId && selectedGovernorate
-        ? await fetchDeliveryFee(ownerId, selectedGovernorate).catch(() =>
-            calculateDeliveryFeeFromPrices(deliveryPrices, selectedGovernorate)
-          )
+      const feeForOrder = selectedGovernorate
+        ? isTenantMode && storeSlug
+          ? await fetchDeliveryFeeBySlug(storeSlug, selectedGovernorate).catch(() =>
+              calculateDeliveryFeeFromPrices(deliveryPrices, selectedGovernorate)
+            )
+          : ownerId
+            ? await fetchDeliveryFee(ownerId, selectedGovernorate).catch(() =>
+                calculateDeliveryFeeFromPrices(deliveryPrices, selectedGovernorate)
+              )
+            : calculateDeliveryFeeFromPrices(deliveryPrices, selectedGovernorate)
         : 0;
       const computedTotal = computeOrderTotal(validation.subtotal, feeForOrder, finalDiscount);
 
@@ -252,7 +268,8 @@ export const useCheckoutFlow = () => {
         orderToSave,
         ownerId,
         selectedPaymentMethod,
-        couponToApply?.code
+        couponToApply?.code,
+        isTenantMode ? storeSlug : null
       );
 
       if (isTenantMode && storeSlug) {

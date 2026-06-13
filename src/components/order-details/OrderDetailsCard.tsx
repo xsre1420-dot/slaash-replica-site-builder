@@ -19,6 +19,7 @@ interface OrderDetailsCardProps {
   shipmentData?: OrderShipmentData | null;
   onPaymentUpdated?: () => void;
   onShipmentUpdated?: () => void;
+  onOrderStatusUpdated?: (status: Order['status']) => void;
 }
 
 const OrderDetailsCard = ({
@@ -27,6 +28,7 @@ const OrderDetailsCard = ({
   shipmentData,
   onPaymentUpdated,
   onShipmentUpdated,
+  onOrderStatusUpdated,
 }: OrderDetailsCardProps) => {
   return (
     <Card className="mb-6 border-0 shadow-lg bg-card rounded-3xl overflow-visible">
@@ -36,6 +38,7 @@ const OrderDetailsCard = ({
           date={order.date} 
           status={order.status}
           governorate={order.customerInfo.governorate}
+          onStatusUpdated={onOrderStatusUpdated}
         />
       </CardHeader>
       <CardContent className="bg-card rounded-b-3xl p-8">

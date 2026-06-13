@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from "react";
 import { CartItem, Product } from "@/types";
 import { getAvailableQty } from "@/utils/inventoryUtils";
 import { toast } from "sonner";
@@ -73,16 +73,28 @@ const getCartQtyForVariant = (
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [storeOwnerId, setStoreOwnerId] = useState<string | null>(null);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const storeOwnerIdRef = useRef<string | null>(null);
+  const cartItemsRef = useRef<CartItem[]>([]);
+
+  useEffect(() => {
+    storeOwnerIdRef.current = storeOwnerId;
+  }, [storeOwnerId]);
+
+  useEffect(() => {
+    cartItemsRef.current = cartItems;
+  }, [cartItems]);
 
   const setStoreOwner = useCallback((ownerId: string) => {
-    setStoreOwnerId((prev) => {
-      if (prev && prev !== ownerId) {
-        persistCart(prev, []);
-      }
-      const stored = loadStoredCart(ownerId);
-      setCartItems(stored);
-      return ownerId;
-    });
+    const prev = storeOwnerIdRef.current;
+    if (prev === ownerId) return;
+
+    if (prev) {
+      persistCart(prev, cartItemsRef.current);
+    }
+
+    const stored = loadStoredCart(ownerId);
+    setStoreOwnerId(ownerId);
+    setCartItems(stored);
   }, []);
 
   useEffect(() => {

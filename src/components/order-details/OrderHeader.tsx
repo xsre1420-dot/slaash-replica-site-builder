@@ -14,13 +14,18 @@ interface OrderHeaderProps {
   date: string;
   status: 'pending' | 'completed' | 'cancelled';
   governorate?: string;
+  onStatusUpdated?: (status: 'pending' | 'completed' | 'cancelled') => void;
 }
 
-const OrderHeader = ({ orderId, date, status: initialStatus, governorate }: OrderHeaderProps) => {
+const OrderHeader = ({ orderId, date, status: initialStatus, governorate, onStatusUpdated }: OrderHeaderProps) => {
   const { storeGovernorate } = useStore();
   const { user } = useAuth();
   const [currentStatus, setCurrentStatus] = useState(initialStatus);
   const { toast } = useToast();
+
+  useEffect(() => {
+    setCurrentStatus(initialStatus);
+  }, [initialStatus]);
   
   const handleStatusChange = async (orderId: string, newStatus: 'pending' | 'completed' | 'cancelled') => {
     try {
@@ -29,6 +34,7 @@ const OrderHeader = ({ orderId, date, status: initialStatus, governorate }: Orde
       if (!result.success) throw new Error(result.error);
 
       setCurrentStatus(newStatus);
+      onStatusUpdated?.(newStatus);
       
       const statusMessages = {
         completed: "تم تحديث حالة الطلب إلى مكتمل",

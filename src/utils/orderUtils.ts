@@ -8,8 +8,9 @@ export const saveOrderToDatabase = (
   order: Order,
   ownerId: string,
   paymentMethod = 'cash_on_delivery',
-  couponCode?: string | null
-) => createOrder(order, ownerId, paymentMethod, couponCode);
+  couponCode?: string | null,
+  storeSlug?: string | null
+) => createOrder(order, ownerId, paymentMethod, couponCode, storeSlug);
 
 export const updateOrderStatusInDatabase = async (
   orderId: string,

@@ -14,12 +14,16 @@ export async function fetchFreshProducts(
   const { data, error } = await supabase
     .from('products')
     .select(
-      'id, name, description, category, price, image_url, additional_images, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, original_price'
+      'id, name, description, category, price, image_url, additional_images, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, original_price, is_active'
     )
     .eq('owner_id', ownerId)
     .in('id', uniqueIds)
+    .or('is_active.eq.true,is_active.is.null');
 
-  if (error || !data) return new Map();
+  if (error) {
+    throw new Error(error.message || 'FETCH_FAILED');
+  }
+  if (!data) return new Map();
 
   return new Map(
     data.map((row) => [

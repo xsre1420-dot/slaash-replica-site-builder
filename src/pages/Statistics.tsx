@@ -11,6 +11,7 @@ import { DateRangeControls, periodLabels } from "@/components/statistics/DateRan
 import { useRealStatistics } from "@/hooks/useRealStatistics";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import { copyStorePublicUrl } from "@/lib/storeUrl";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const SalesChart = lazy(() => import("@/components/statistics/SalesChart").then(m => ({ default: m.SalesChart })));
@@ -54,7 +55,7 @@ const Statistics = () => {
   const [selectedMetric, setSelectedMetric] = useState("revenue");
   const [activeTab, setActiveTab] = useState("overview");
 
-  const { stats, rawOrders, loading, error, refetch } = useRealStatistics(
+  const { stats, rawOrders, loading, error, refetch, dateBounds } = useRealStatistics(
     dateRange,
     startDate,
     endDate
@@ -87,9 +88,13 @@ const Statistics = () => {
   }, [stats, dateRange]);
 
   const handleCopyStoreLink = async () => {
-    if (!user) return;
+    if (!user?.id) return;
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/store/${user.username}`);
+      const url = await copyStorePublicUrl(user.id, user.username);
+      if (!url) {
+        toast.error("لم يتم العثور على رابط المتجر — حدّد slug في الإعدادات");
+        return;
+      }
       toast.success("تم نسخ رابط المتجر");
     } catch {
       toast.error("فشل في نسخ الرابط");
@@ -248,7 +253,7 @@ const Statistics = () => {
 
             <TabsContent value="overview">
               <Suspense fallback={<TabLoader />}>
-                <SalesChart orders={rawOrders} dateRange={dateRange} metric={selectedMetric} />
+                <SalesChart orders={rawOrders} chartStart={dateBounds.start} chartEnd={dateBounds.end} metric={selectedMetric} />
               </Suspense>
             </TabsContent>
 

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Product } from "@/types";
+import { invalidateProducts } from "@/services/productService";
 
 interface QuickEditDialogProps {
   product: Product | null;
@@ -58,6 +59,7 @@ export const QuickEditDialog = ({ product, open, onOpenChange, onSaved }: QuickE
     if (error) {
       toast.error("فشل في حفظ التغييرات");
     } else {
+      invalidateProducts();
       toast.success("تم حفظ التغييرات");
       onSaved();
       onOpenChange(false);

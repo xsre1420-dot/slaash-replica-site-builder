@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { cache } from '@/lib/cache';
+import { flushOwnerCache } from '@/lib/cache';
 
 const DEBOUNCE_MS = 2500;
 
@@ -12,11 +12,10 @@ export const useRealtimeOrders = (onNewOrder?: () => void) => {
   const handleChange = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
-      cache.flushByPrefix('orders:');
-      cache.flushByPrefix('stats:');
+      if (user?.id) flushOwnerCache(user.id);
       onNewOrder?.();
     }, DEBOUNCE_MS);
-  }, [onNewOrder]);
+  }, [onNewOrder, user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;

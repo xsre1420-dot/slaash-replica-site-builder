@@ -13,7 +13,7 @@ import { DeliveryStatus } from "@/utils/deliveryUtils";
 
 const OrderDetails = () => {
   const { orderId } = useParams<{ orderId: string }>();
-  const { order, loading } = useOrderData(orderId);
+  const { order, loading, patchOrderStatus } = useOrderData(orderId);
   const { user } = useAuth();
   const [paymentSummary, setPaymentSummary] = useState<OrderPaymentSummary | null>(null);
   const [shipmentData, setShipmentData] = useState<OrderShipmentData | null>(null);
@@ -103,6 +103,7 @@ const OrderDetails = () => {
           shipmentData={shipmentDisplay}
           onPaymentUpdated={loadPaymentSummary}
           onShipmentUpdated={loadShipmentData}
+          onOrderStatusUpdated={patchOrderStatus}
         />
       </div>
     </DashboardLayout>
