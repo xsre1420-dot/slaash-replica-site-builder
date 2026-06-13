@@ -59,7 +59,7 @@ const Store = () => {
   const [filterSizes, setFilterSizes] = useState<string[]>([]);
 
   const { addToCart, cartItems, cartCount, updateQuantity, cartTotal, setStoreOwner } = useCart();
-  const { trackAddToCart, trackViewContent } = useMetaPixel();
+  const { trackAddToCart } = useMetaPixel();
   const { favorites, toggleFavorite, isFavorite, count: favCount } = useFavorites(storeSlug);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -224,11 +224,9 @@ const Store = () => {
   }, [updateQuantity]);
 
   const handleViewProduct = useCallback((productId: string) => {
-    const p = allProducts.find((x) => x.id === productId);
-    if (p) trackViewContent(p.id, p.name, p.price);
     const path = isTenantMode ? `/store/${storeSlug}/product/${productId}` : `/product-details/${productId}`;
     navigate(path);
-  }, [allProducts, isTenantMode, storeSlug, trackViewContent, navigate]);
+  }, [isTenantMode, storeSlug, navigate]);
 
   // --- Share ---
   const handleShare = async (product: Product) => {

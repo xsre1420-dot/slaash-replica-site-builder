@@ -28,6 +28,7 @@ import RatingSection from "@/components/product-details/RatingSection";
 import SuggestedProducts from "@/components/product-details/SuggestedProducts";
 import ScrollReveal from "@/components/product-details/ScrollReveal";
 import { useStoreVisitTracking } from "@/hooks/useStoreVisitTracking";
+import { useProductViewTracking } from "@/hooks/useProductViewTracking";
 
 // Skeleton loading component
 const ProductDetailsSkeleton = () => (
@@ -72,6 +73,7 @@ const ProductDetails = () => {
   const { trackViewContent, trackAddToCart } = useMetaPixel();
   const viewTrackedRef = useRef<string | null>(null);
   useStoreVisitTracking(isTenantMode ? storeSlug : undefined);
+  useProductViewTracking(isTenantMode ? storeSlug : undefined, productId);
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string>("");

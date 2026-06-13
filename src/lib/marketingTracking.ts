@@ -123,6 +123,12 @@ export function resetMarketingTrackingInit(): void {
   initPromise = null;
 }
 
+export function disableMarketingTracking(): void {
+  trackingEnabled = false;
+  trackingOwnerId = null;
+  initPromise = null;
+}
+
 export interface MetaEventPayload {
   content_ids?: string[];
   content_type?: string;

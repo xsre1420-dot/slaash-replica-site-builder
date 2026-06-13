@@ -20,6 +20,8 @@ export const getDefaultStatistics = (): RealStatistics => {
     averageDeliveryTime: 0,
     cancelledOrdersRate: 0,
     topProducts: [],
+    topViewedProducts: [],
+    campaignAttribution: [],
     paymentMethods: [
       { name: "الدفع عند الاستلام", value: 0, color: "hsl(248, 53%, 58%)" },
       { name: "بطاقة ائتمان", value: 0, color: "hsl(248, 53%, 68%)" },
@@ -83,8 +85,10 @@ export const calculateStatistics = (
   const totalVisitors = kpiUniqueVisitors ?? clientUniqueVisitors;
   const totalProducts = kpiProductCount ?? products.length;
   const completedCount = completedOrders.length;
+  const kpiCompletedOrderCount = num(kpis?.completed_order_count);
+  const completedCountForConversion = kpiCompletedOrderCount ?? completedOrders.length;
   const averageOrderValue = completedCount > 0 ? totalRevenue / completedCount : 0;
-  const conversionRate = totalVisitors > 0 ? (totalOrders / totalVisitors) * 100 : 0;
+  const conversionRate = totalVisitors > 0 ? (completedCountForConversion / totalVisitors) * 100 : 0;
 
   const newCustomers = kpiNewCustomers ?? (() => {
     const phones = new Map<string, number>();
@@ -153,6 +157,36 @@ export const calculateStatistics = (
       percentage: totalRevenue > 0 ? (product.revenue / totalRevenue) * 100 : 0
     }));
 
+  const rawTopViewed = Array.isArray(kpis?.top_viewed_products) ? kpis.top_viewed_products : [];
+  const topViewedProducts = (rawTopViewed as Array<{ product_id?: string; product_name?: string; view_count?: number }>)
+    .map((row) => ({
+      productId: String(row.product_id || ''),
+      name: String(row.product_name || 'منتج'),
+      views: Number(row.view_count || 0),
+      percentage: 0,
+    }))
+    .filter((p) => p.productId && p.views > 0);
+
+  const totalViews = topViewedProducts.reduce((sum, p) => sum + p.views, 0);
+  topViewedProducts.forEach((p) => {
+    p.percentage = totalViews > 0 ? (p.views / totalViews) * 100 : 0;
+  });
+
+  const rawCampaigns = Array.isArray(kpis?.campaign_attribution) ? kpis.campaign_attribution : [];
+  const campaignAttribution = (rawCampaigns as Array<{
+    source?: string;
+    medium?: string;
+    campaign?: string;
+    orders?: number;
+    revenue?: number;
+  }>).map((row) => ({
+    source: String(row.source || '(direct)'),
+    medium: String(row.medium || '(none)'),
+    campaign: String(row.campaign || '(none)'),
+    orders: Number(row.orders || 0),
+    revenue: Number(row.revenue || 0),
+  }));
+
   const paymentMethodCounts: { [key: string]: number } = {};
   periodOrders.filter(o => o.status !== 'cancelled').forEach(order => {
     const method = order.payment_method || 'cash_on_delivery';
@@ -198,6 +232,8 @@ export const calculateStatistics = (
     averageDeliveryTime: 0,
     cancelledOrdersRate,
     topProducts,
+    topViewedProducts,
+    campaignAttribution,
     paymentMethods,
     peakTimes
   };

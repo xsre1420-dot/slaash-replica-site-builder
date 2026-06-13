@@ -21,6 +21,19 @@ export interface RealStatistics {
     revenue: number;
     percentage: number;
   }>;
+  topViewedProducts: Array<{
+    productId: string;
+    name: string;
+    views: number;
+    percentage: number;
+  }>;
+  campaignAttribution: Array<{
+    source: string;
+    medium: string;
+    campaign: string;
+    orders: number;
+    revenue: number;
+  }>;
   paymentMethods: Array<{
     name: string;
     value: number;

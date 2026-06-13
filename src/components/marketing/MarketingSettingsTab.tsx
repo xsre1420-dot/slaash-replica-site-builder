@@ -20,6 +20,7 @@ interface MarketingSettings {
 
 export default function MarketingSettingsTab() {
   const { user } = useAuth();
+  const [storeSlug, setStoreSlug] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState<MarketingSettings>({
     meta_pixel_id: '',
@@ -38,6 +39,14 @@ export default function MarketingSettingsTab() {
       .select('meta_pixel_id, google_analytics_id, marketing_enabled, email_marketing_enabled, sms_marketing_enabled')
       .eq('owner_id', user.id)
       .single();
+
+    const { data: storeData } = await (supabase as any)
+      .from('store_settings')
+      .select('store_slug')
+      .eq('owner_id', user.id)
+      .maybeSingle();
+
+    setStoreSlug(storeData?.store_slug || null);
 
     if (data) {
       setSettings({
@@ -75,7 +84,7 @@ export default function MarketingSettingsTab() {
 
     if (error) toast.error("فشل في حفظ الإعدادات");
     else {
-      invalidateStoreMarketingCache(undefined, user.id);
+      invalidateStoreMarketingCache(storeSlug || undefined, user.id);
       toast.success("تم حفظ إعدادات التسويق بنجاح");
     }
     setLoading(false);

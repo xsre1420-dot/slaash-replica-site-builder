@@ -14,6 +14,7 @@ import CouponInput from "@/components/checkout/CouponInput";
 import PaymentMethodSelector from "@/components/checkout/PaymentMethodSelector";
 import { useCheckoutFlow } from "@/hooks/useCheckoutFlow";
 import MarketingScripts from "@/components/MarketingScripts";
+import { useStoreVisitTracking } from "@/hooks/useStoreVisitTracking";
 
 const Checkout = () => {
   const { removeFromCart, updateQuantity, getMaxQuantity } = useCart();
@@ -48,6 +49,8 @@ const Checkout = () => {
     handleGovernorateChange,
     handleSubmitOrder,
   } = useCheckoutFlow();
+
+  useStoreVisitTracking(isTenantMode ? storeSlug : undefined);
 
   if (isTenantMode && tenantLoading) {
     return (

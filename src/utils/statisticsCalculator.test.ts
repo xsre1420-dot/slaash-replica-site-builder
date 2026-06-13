@@ -27,12 +27,15 @@ describe('calculateStatistics', () => {
       visits: [{ id: 'v1', created_at: '2026-06-02T10:00:00Z', visitor_ip: '1.2.3.4' }],
       kpis: {
         order_count: 2,
+        completed_order_count: 1,
         completed_revenue: 100,
         refund_total: 10,
         unique_visitors: 1,
         product_count: 2,
         new_customers: 1,
         returning_customers: 0,
+        top_viewed_products: [{ product_id: 'p1', product_name: 'Widget', view_count: 42 }],
+        campaign_attribution: [{ source: 'facebook', medium: 'cpc', campaign: 'summer', orders: 3, revenue: 250 }],
       },
       previousKpis: {
         order_count: 1,
@@ -47,9 +50,13 @@ describe('calculateStatistics', () => {
     expect(stats.totalOrders).toBe(2);
     expect(stats.totalRevenue).toBe(90);
     expect(stats.totalVisitors).toBe(1);
-    expect(stats.conversionRate).toBe(200);
+    expect(stats.conversionRate).toBe(100);
     expect(stats.topProducts).toHaveLength(1);
     expect(stats.topProducts[0].name).toBe('A');
+    expect(stats.topViewedProducts).toHaveLength(1);
+    expect(stats.topViewedProducts[0].views).toBe(42);
+    expect(stats.campaignAttribution).toHaveLength(1);
+    expect(stats.campaignAttribution[0].source).toBe('facebook');
     expect(stats.newCustomers).toBe(1);
   });
 

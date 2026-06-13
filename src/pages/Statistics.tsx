@@ -2,7 +2,7 @@
 import { useState, useCallback, useMemo, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Download, AlertCircle, TrendingUp, Users, BarChart3, Package, Copy, Plus } from "lucide-react";
+import { RefreshCw, Download, AlertCircle, TrendingUp, Users, BarChart3, Package, Copy, Plus, CreditCard, Megaphone } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/layout/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,7 +18,10 @@ const SalesChart = lazy(() => import("@/components/statistics/SalesChart").then(
 const CustomerStats = lazy(() => import("@/components/statistics/CustomerStats").then(m => ({ default: m.CustomerStats })));
 const PerformanceStats = lazy(() => import("@/components/statistics/PerformanceStats").then(m => ({ default: m.PerformanceStats })));
 const TimeBasedStats = lazy(() => import("@/components/statistics/TimeBasedStats").then(m => ({ default: m.TimeBasedStats })));
+const PaymentStats = lazy(() => import("@/components/statistics/PaymentStats").then(m => ({ default: m.PaymentStats })));
 const TopProductsSection = lazy(() => import("@/components/statistics/TopProductsSection").then(m => ({ default: m.TopProductsSection })));
+const TopViewedProductsSection = lazy(() => import("@/components/statistics/TopViewedProductsSection").then(m => ({ default: m.TopViewedProductsSection })));
+const CampaignAttributionSection = lazy(() => import("@/components/statistics/CampaignAttributionSection").then(m => ({ default: m.CampaignAttributionSection })));
 
 const TabLoader = () => (
   <div className="space-y-4 py-4">
@@ -251,6 +254,14 @@ const Statistics = () => {
                 <TrendingUp className="w-4 h-4" />
                 الأداء
               </TabsTrigger>
+              <TabsTrigger value="campaigns" className="gap-1.5 shrink-0">
+                <Megaphone className="w-4 h-4" />
+                الحملات
+              </TabsTrigger>
+              <TabsTrigger value="payments" className="gap-1.5 shrink-0">
+                <CreditCard className="w-4 h-4" />
+                طرق الدفع
+              </TabsTrigger>
               <TabsTrigger value="products" className="gap-1.5 shrink-0">
                 <Package className="w-4 h-4" />
                 المنتجات
@@ -278,9 +289,24 @@ const Statistics = () => {
               </Suspense>
             </TabsContent>
 
+            <TabsContent value="campaigns">
+              <Suspense fallback={<TabLoader />}>
+                <CampaignAttributionSection campaigns={stats.campaignAttribution} />
+              </Suspense>
+            </TabsContent>
+
+            <TabsContent value="payments">
+              <Suspense fallback={<TabLoader />}>
+                <PaymentStats paymentMethods={stats.paymentMethods} />
+              </Suspense>
+            </TabsContent>
+
             <TabsContent value="products">
               <Suspense fallback={<TabLoader />}>
-                <TopProductsSection topProducts={stats.topProducts} />
+                <div className="space-y-6">
+                  <TopProductsSection topProducts={stats.topProducts} />
+                  <TopViewedProductsSection topViewedProducts={stats.topViewedProducts} />
+                </div>
               </Suspense>
             </TabsContent>
           </Tabs>

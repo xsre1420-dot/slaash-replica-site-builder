@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { fetchStoreMarketingConfig } from '@/services/marketingService';
 import { captureMarketingAttribution } from '@/lib/attribution';
-import { ensureMarketingTracking, resetMarketingTrackingInit } from '@/lib/marketingTracking';
+import { ensureMarketingTracking, resetMarketingTrackingInit, disableMarketingTracking } from '@/lib/marketingTracking';
 
 interface MarketingScriptsProps {
   storeSlug?: string | null;
@@ -12,9 +12,12 @@ interface MarketingScriptsProps {
 
 const MarketingScripts = ({ storeSlug, storeOwnerId, disabled }: MarketingScriptsProps) => {
   useEffect(() => {
-    if (disabled) return;
+    if (disabled) {
+      disableMarketingTracking();
+      return;
+    }
 
-    captureMarketingAttribution();
+    captureMarketingAttribution(storeSlug);
     resetMarketingTrackingInit();
 
     void ensureMarketingTracking({

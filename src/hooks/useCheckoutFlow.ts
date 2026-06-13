@@ -283,7 +283,7 @@ export const useCheckoutFlow = () => {
         selectedPaymentMethod,
         couponToApply?.code,
         isTenantMode ? storeSlug : null,
-        getStoredMarketingAttribution()
+        getStoredMarketingAttribution(isTenantMode ? storeSlug : null)
       );
 
       trackPurchase(
@@ -291,7 +291,7 @@ export const useCheckoutFlow = () => {
         validation.updatedItems.map((item) => item.product.id),
         savedOrder?.id || orderId
       );
-      clearMarketingAttribution();
+      clearMarketingAttribution(isTenantMode ? storeSlug : null);
 
       if (isTenantMode && storeSlug) {
         cache.del(`tenant-meta:${storeSlug.trim().toLowerCase()}`);

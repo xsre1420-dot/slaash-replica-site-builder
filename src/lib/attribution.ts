@@ -1,7 +1,7 @@
 /**
- * Client-side marketing attribution (UTM + referrer). Persisted for checkout.
+ * Client-side marketing attribution (UTM + referrer). Persisted per store slug for checkout.
  */
-const STORAGE_KEY = 'marketing_attribution';
+const STORAGE_PREFIX = 'marketing_attribution';
 
 export interface MarketingAttribution {
   utm_source?: string;
@@ -15,6 +15,11 @@ export interface MarketingAttribution {
   landing_path?: string;
   captured_at: string;
 }
+
+const storageKey = (storeSlug?: string | null): string => {
+  const slug = storeSlug?.trim().toLowerCase();
+  return slug ? `${STORAGE_PREFIX}:${slug}` : STORAGE_PREFIX;
+};
 
 const readParams = (): MarketingAttribution | null => {
   if (typeof window === 'undefined') return null;
@@ -43,34 +48,35 @@ const readParams = (): MarketingAttribution | null => {
   };
 };
 
-/** First-touch: keep earliest attribution in session. */
-export function captureMarketingAttribution(): MarketingAttribution | null {
+/** First-touch per store: keep earliest attribution in session for this slug. */
+export function captureMarketingAttribution(storeSlug?: string | null): MarketingAttribution | null {
   try {
-    const existing = sessionStorage.getItem(STORAGE_KEY);
+    const key = storageKey(storeSlug);
+    const existing = sessionStorage.getItem(key);
     if (existing) return JSON.parse(existing) as MarketingAttribution;
 
     const fresh = readParams();
     if (!fresh) return null;
 
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
+    sessionStorage.setItem(key, JSON.stringify(fresh));
     return fresh;
   } catch {
     return null;
   }
 }
 
-export function getStoredMarketingAttribution(): MarketingAttribution | null {
+export function getStoredMarketingAttribution(storeSlug?: string | null): MarketingAttribution | null {
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
+    const raw = sessionStorage.getItem(storageKey(storeSlug));
     return raw ? (JSON.parse(raw) as MarketingAttribution) : null;
   } catch {
     return null;
   }
 }
 
-export function clearMarketingAttribution(): void {
+export function clearMarketingAttribution(storeSlug?: string | null): void {
   try {
-    sessionStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(storageKey(storeSlug));
   } catch {
     /* ignore */
   }

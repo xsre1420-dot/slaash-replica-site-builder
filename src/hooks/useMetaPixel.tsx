@@ -38,7 +38,7 @@ export const useMetaPixel = () => {
   }, [trackEvent]);
 
   const trackPurchase = useCallback((value: number, orderItems: string[], orderId?: string) => {
-    trackEvent('Purchase', {
+    trackMetaEvent('Purchase', {
       content_ids: orderItems,
       content_type: 'product',
       value,
@@ -52,7 +52,7 @@ export const useMetaPixel = () => {
       currency: 'IQD',
       items: orderItems.map((id) => ({ item_id: id })),
     });
-  }, [trackEvent]);
+  }, []);
 
   return {
     trackEvent,

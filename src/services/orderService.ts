@@ -143,6 +143,27 @@ export const createOrder = async (
           });
         }
 
+        if (storeSlug?.trim()) {
+          void (supabase as any).functions
+            .invoke('meta-conversions', {
+              body: {
+                store_slug: storeSlug.trim().toLowerCase(),
+                order_id: orderId,
+                value: Number(data.total_amount ?? order.total),
+                currency: 'IQD',
+                content_ids: order.items.map((item) => item.product.id),
+                customer_phone: order.customerInfo.phone || null,
+                event_source_url: typeof window !== 'undefined' ? window.location.href : null,
+              },
+            })
+            .catch((err: unknown) => {
+              logger.warn('meta-conversions.invoke.failed', {
+                orderId,
+                message: err instanceof Error ? err.message : String(err),
+              });
+            });
+        }
+
         clearCheckoutIdempotencyKey(ownerId);
         logger.info('order.create.success', { orderId, ownerId, attempt });
         return {

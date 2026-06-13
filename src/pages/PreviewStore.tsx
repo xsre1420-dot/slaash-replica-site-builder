@@ -9,7 +9,6 @@ import { useStore } from "@/context/StoreContext";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import MarketingScripts from "@/components/MarketingScripts";
-import { useMetaPixel } from "@/hooks/useMetaPixel";
 import OptimizedImage from "@/components/OptimizedImage";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
@@ -24,7 +23,6 @@ const PreviewStore = () => {
   const { isReady, hydrationVersion } = useStoreHydration();
   const { addToCart, cartItems, setStoreOwner } = useCart();
   const { storeName, storeLogo, storeSettings } = useStore();
-  const { trackAddToCart, trackViewContent } = useMetaPixel();
   const navigate = useNavigate();
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -94,14 +92,9 @@ const PreviewStore = () => {
 
   const handleAddToCart = (product: Product) => {
     addToCart(product);
-    trackAddToCart(product.id, product.name, product.price);
   };
 
   const handleViewProduct = (productId: string) => {
-    const product = products.find(p => p.id === productId);
-    if (product) {
-      trackViewContent(product.id, product.name, product.price);
-    }
     navigate(`/product-details/${productId}`);
   };
 
