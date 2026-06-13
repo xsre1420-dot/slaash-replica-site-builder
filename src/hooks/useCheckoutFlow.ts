@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
 import { useStore } from "@/context/StoreContext";
@@ -8,6 +8,8 @@ import { Order } from "@/types";
 import { saveOrderToDatabase, clearCheckoutIdempotencyKey } from "@/utils/orderUtils";
 import { mapOrderError } from "@/utils/orderErrors";
 import { logger, metrics, reportError, alertOnError } from "@/lib/observability";
+import { getStoredMarketingAttribution, clearMarketingAttribution } from "@/lib/attribution";
+import { useMetaPixel } from "@/hooks/useMetaPixel";
 import {
   fetchFreshProducts,
   validateAndRefreshCart,
@@ -135,6 +137,17 @@ export const useCheckoutFlow = () => {
   }, [customerInfo.name, customerInfo.phone, selectedGovernorate, deliveryPrices.length]);
 
   const storeHomePath = isTenantMode ? `/store/${storeSlug}` : "/preview";
+  const { trackInitiateCheckout, trackPurchase } = useMetaPixel();
+  const checkoutTrackedRef = useRef(false);
+
+  useEffect(() => {
+    if (cartItems.length === 0 || checkoutTrackedRef.current) return;
+    checkoutTrackedRef.current = true;
+    trackInitiateCheckout(
+      totalWithDelivery,
+      cartItems.map((item) => item.product.id)
+    );
+  }, [cartItems, totalWithDelivery, trackInitiateCheckout]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -269,8 +282,16 @@ export const useCheckoutFlow = () => {
         ownerId,
         selectedPaymentMethod,
         couponToApply?.code,
-        isTenantMode ? storeSlug : null
+        isTenantMode ? storeSlug : null,
+        getStoredMarketingAttribution()
       );
+
+      trackPurchase(
+        computedTotal,
+        validation.updatedItems.map((item) => item.product.id),
+        savedOrder?.id || orderId
+      );
+      clearMarketingAttribution();
 
       if (isTenantMode && storeSlug) {
         cache.del(`tenant-meta:${storeSlug.trim().toLowerCase()}`);
@@ -312,6 +333,7 @@ export const useCheckoutFlow = () => {
     clearCart,
     navigate,
     storeHomePath,
+    trackPurchase,
   ]);
 
   return {

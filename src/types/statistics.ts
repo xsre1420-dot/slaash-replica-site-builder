@@ -47,5 +47,7 @@ export interface DatabaseData {
   products: any[];
   visits: any[];
   kpis?: Record<string, unknown>;
+  previousKpis?: Record<string, unknown>;
+  truncated?: boolean;
   dateBounds?: StatisticsDateBounds;
 }

@@ -69,8 +69,12 @@ export const fetchStatisticsData = async (
   return dedup(cacheKey, async () => {
     const fetchFrom = bounds.previousStart.toISOString();
     const fetchTo = bounds.end.toISOString();
+    const periodStart = bounds.start.toISOString();
+    const periodEnd = bounds.end.toISOString();
+    const previousEnd = new Date(bounds.start.getTime() - 1);
+    previousEnd.setHours(23, 59, 59, 999);
 
-    const [ordersRes, kpiRes, visitsRes, productsRes] = await withTimeout(
+    const [ordersRes, kpiRes, prevKpiRes, visitsRes, productsRes] = await withTimeout(
       Promise.all([
         supabase.from('orders')
           .select(ORDER_LIST_COLUMNS)
@@ -79,9 +83,18 @@ export const fetchStatisticsData = async (
           .lte('created_at', fetchTo)
           .order('created_at', { ascending: false })
           .limit(ORDERS_STATS_CAP),
-        (supabase as any).rpc('get_store_statistics', { p_owner_id: ownerId, p_days: bounds.days }),
+        (supabase as any).rpc('get_store_statistics', {
+          p_owner_id: ownerId,
+          p_start: periodStart,
+          p_end: periodEnd,
+        }),
+        (supabase as any).rpc('get_store_statistics', {
+          p_owner_id: ownerId,
+          p_start: bounds.previousStart.toISOString(),
+          p_end: previousEnd.toISOString(),
+        }),
         supabase.from('store_visits')
-          .select('id, created_at')
+          .select('id, created_at, visitor_ip')
           .eq('owner_id', ownerId)
           .gte('created_at', fetchFrom)
           .lte('created_at', fetchTo)
@@ -97,6 +110,10 @@ export const fetchStatisticsData = async (
     if (ordersRes.error) {
       console.error('Statistics fetch failed:', ordersRes.error);
       throw ordersRes.error;
+    }
+    if (kpiRes.error) {
+      console.error('Statistics KPI fetch failed:', kpiRes.error);
+      throw kpiRes.error;
     }
 
     const orders = ordersRes.data || [];
@@ -117,6 +134,8 @@ export const fetchStatisticsData = async (
       }
     }
 
+    const truncated = orders.length >= ORDERS_STATS_CAP || (visitsRes.data?.length ?? 0) >= ORDERS_STATS_CAP;
+
     const result: DatabaseData = {
       orders,
       orderItems,
@@ -124,6 +143,8 @@ export const fetchStatisticsData = async (
       products: productsRes.count != null ? Array(productsRes.count).fill(null) : [],
       visits: visitsRes.data || [],
       kpis: kpiRes.data ?? undefined,
+      previousKpis: prevKpiRes.data ?? undefined,
+      truncated,
       dateBounds: bounds,
     };
 

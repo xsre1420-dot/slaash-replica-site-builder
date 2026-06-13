@@ -4,6 +4,7 @@ import { mapDbOrder } from '@/mappers/orderMapper';
 import { clearCheckoutIdempotencyKey, getOrCreateIdempotencyKey } from '@/utils/checkoutSession';
 import { mapOrderError } from '@/utils/orderErrors';
 import { instrumentAsync, instrumentQuery, logger, metrics } from '@/lib/observability';
+import type { MarketingAttribution } from '@/lib/attribution';
 
 export const ORDERS_PER_PAGE = 50;
 
@@ -98,7 +99,8 @@ export const createOrder = async (
   ownerId: string,
   paymentMethod = 'cash_on_delivery',
   couponCode?: string | null,
-  storeSlug?: string | null
+  storeSlug?: string | null,
+  marketingAttribution?: MarketingAttribution | null
 ): Promise<Order> => {
   return instrumentAsync('order.create', async () => {
     const idempotencyKey = getOrCreateIdempotencyKey(ownerId);
@@ -131,10 +133,20 @@ export const createOrder = async (
       });
 
       if (!error && data?.success) {
+        const orderId = data.order_id as string;
+
+        if (marketingAttribution && storeSlug?.trim()) {
+          await (supabase as any).rpc('attach_order_marketing_attribution', {
+            p_order_id: orderId,
+            p_store_slug: storeSlug.trim().toLowerCase(),
+            p_attribution: marketingAttribution,
+          });
+        }
+
         clearCheckoutIdempotencyKey(ownerId);
-        logger.info('order.create.success', { orderId: data.order_id, ownerId, attempt });
+        logger.info('order.create.success', { orderId, ownerId, attempt });
         return {
-          id: data.order_id,
+          id: orderId,
           ...order,
           total: Number(data.total_amount ?? order.total),
         };

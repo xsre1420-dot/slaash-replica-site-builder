@@ -34,43 +34,19 @@ const inPeriod = (createdAt: string, start: Date, end: Date) => {
   return d >= start && d <= end;
 };
 
-const calculateGrowthRate = (
-  orders: any[],
-  visits: any[],
-  bounds: StatisticsDateBounds
-) => {
-  const { start, end, previousStart } = bounds;
+const num = (value: unknown): number | null =>
+  value != null && value !== '' ? Number(value) : null;
 
-  const currentOrders = orders.filter(o => inPeriod(o.created_at, start, end));
-  const previousOrders = orders.filter(o => inPeriod(o.created_at, previousStart, start));
-
-  const currentRevenue = currentOrders
-    .filter(o => o.status === 'completed')
-    .reduce((s, o) => s + parseFloat(o.total_amount || 0), 0);
-  const previousRevenue = previousOrders
-    .filter(o => o.status === 'completed')
-    .reduce((s, o) => s + parseFloat(o.total_amount || 0), 0);
-
-  const currentVisits = visits.filter(v => inPeriod(v.created_at, start, end)).length;
-  const previousVisits = visits.filter(v => inPeriod(v.created_at, previousStart, start)).length;
-
-  const growthCalc = (current: number, previous: number) => {
-    if (previous === 0) return current > 0 ? 100 : 0;
-    return ((current - previous) / previous) * 100;
-  };
-
-  return {
-    revenueGrowth: growthCalc(currentRevenue, previousRevenue),
-    ordersGrowth: growthCalc(currentOrders.length, previousOrders.length),
-    visitorsGrowth: growthCalc(currentVisits, previousVisits),
-  };
+const growthCalc = (current: number, previous: number) => {
+  if (previous === 0) return current > 0 ? 100 : 0;
+  return ((current - previous) / previous) * 100;
 };
 
 export const calculateStatistics = (
   data: DatabaseData,
   bounds?: StatisticsDateBounds
 ): RealStatistics => {
-  const { orders, orderItems, products, visits, kpis } = data;
+  const { orders, orderItems, products, visits, kpis, previousKpis } = data;
   const periodBounds = bounds || data.dateBounds;
 
   if (!periodBounds) {
@@ -80,40 +56,84 @@ export const calculateStatistics = (
   const { start, end } = periodBounds;
   const periodOrders = orders.filter(o => inPeriod(o.created_at, start, end));
   const periodVisits = visits.filter(v => inPeriod(v.created_at, start, end));
-  const periodOrderIds = new Set(periodOrders.map(o => o.id));
-  const periodItems = orderItems.filter(i => periodOrderIds.has(i.order_id));
-
-  if (periodOrders.length === 0 && periodItems.length === 0 && periodVisits.length === 0) {
-    return getDefaultStatistics();
-  }
-
-  const kpiRevenue = kpis?.completed_revenue != null ? Number(kpis.completed_revenue) : null;
-  const kpiOrderCount = kpis?.order_count != null ? Number(kpis.order_count) : null;
-  const kpiProductCount = kpis?.product_count != null ? Number(kpis.product_count) : null;
-
   const completedOrders = periodOrders.filter(o => o.status === 'completed');
-  const totalOrders = kpiOrderCount ?? periodOrders.filter(o => o.status !== 'cancelled').length;
-  const totalRevenue = kpiRevenue ?? completedOrders.reduce(
+  const completedOrderIds = new Set(completedOrders.map(o => o.id));
+  const periodItems = orderItems.filter(i => completedOrderIds.has(i.order_id));
+
+  const kpiOrderCount = num(kpis?.order_count);
+  const kpiRevenue = num(kpis?.completed_revenue);
+  const kpiRefunds = num(kpis?.refund_total) ?? 0;
+  const kpiUniqueVisitors = num(kpis?.unique_visitors);
+  const kpiProductCount = num(kpis?.product_count);
+  const kpiNewCustomers = num(kpis?.new_customers);
+  const kpiReturningCustomers = num(kpis?.returning_customers);
+
+  const clientOrderCount = periodOrders.filter(o => o.status !== 'cancelled').length;
+  const clientRevenue = completedOrders.reduce(
     (sum, order) => sum + parseFloat(order.total_amount || 0),
     0
   );
-  const totalVisitors = periodVisits.length;
+  const clientUniqueVisitors = new Set(
+    periodVisits.map(v => v.visitor_ip).filter(Boolean)
+  ).size;
+
+  const totalOrders = kpiOrderCount ?? clientOrderCount;
+  const grossRevenue = kpiRevenue ?? clientRevenue;
+  const totalRevenue = Math.max(0, grossRevenue - kpiRefunds);
+  const totalVisitors = kpiUniqueVisitors ?? clientUniqueVisitors;
   const totalProducts = kpiProductCount ?? products.length;
-  const averageOrderValue = completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0;
+  const completedCount = completedOrders.length;
+  const averageOrderValue = completedCount > 0 ? totalRevenue / completedCount : 0;
   const conversionRate = totalVisitors > 0 ? (totalOrders / totalVisitors) * 100 : 0;
 
-  const customerPhones = new Map<string, number>();
-  periodOrders.forEach(o => {
-    const phone = o.customer_phone;
-    if (phone) customerPhones.set(phone, (customerPhones.get(phone) || 0) + 1);
-  });
-  const newCustomers = [...customerPhones.values()].filter(c => c === 1).length;
-  const returningCustomers = [...customerPhones.values()].filter(c => c > 1).length;
+  const newCustomers = kpiNewCustomers ?? (() => {
+    const phones = new Map<string, number>();
+    periodOrders.forEach(o => {
+      if (o.customer_phone) phones.set(o.customer_phone, (phones.get(o.customer_phone) || 0) + 1);
+    });
+    return [...phones.values()].filter(c => c === 1).length;
+  })();
+
+  const returningCustomers = kpiReturningCustomers ?? (() => {
+    const phones = new Map<string, number>();
+    periodOrders.forEach(o => {
+      if (o.customer_phone) phones.set(o.customer_phone, (phones.get(o.customer_phone) || 0) + 1);
+    });
+    return [...phones.values()].filter(c => c > 1).length;
+  })();
 
   const cancelledOrders = periodOrders.filter(o => o.status === 'cancelled').length;
   const cancelledOrdersRate = periodOrders.length > 0 ? (cancelledOrders / periodOrders.length) * 100 : 0;
 
-  const growth = calculateGrowthRate(orders, visits, periodBounds);
+  const prevOrderCount = num(previousKpis?.order_count);
+  const prevRevenue = num(previousKpis?.completed_revenue);
+  const prevRefunds = num(previousKpis?.refund_total) ?? 0;
+  const prevVisitors = num(previousKpis?.unique_visitors);
+
+  const previousPeriodOrders = orders.filter(o => inPeriod(o.created_at, periodBounds.previousStart, start));
+  const previousCompletedRevenue = previousPeriodOrders
+    .filter(o => o.status === 'completed')
+    .reduce((s, o) => s + parseFloat(o.total_amount || 0), 0);
+  const previousOrderCountClient = previousPeriodOrders.filter(o => o.status !== 'cancelled').length;
+  const previousVisitorsClient = new Set(
+    visits
+      .filter(v => inPeriod(v.created_at, periodBounds.previousStart, start))
+      .map(v => v.visitor_ip)
+      .filter(Boolean)
+  ).size;
+
+  const revenueGrowth = growthCalc(
+    totalRevenue,
+    prevRevenue != null ? Math.max(0, prevRevenue - prevRefunds) : previousCompletedRevenue
+  );
+  const ordersGrowth = growthCalc(
+    totalOrders,
+    prevOrderCount ?? previousOrderCountClient
+  );
+  const visitorsGrowth = growthCalc(
+    totalVisitors,
+    prevVisitors ?? previousVisitorsClient
+  );
 
   const productSales: { [key: string]: { name: string; orders: number; revenue: number } } = {};
   periodItems.forEach(item => {
@@ -134,19 +154,20 @@ export const calculateStatistics = (
     }));
 
   const paymentMethodCounts: { [key: string]: number } = {};
-  periodOrders.forEach(order => {
+  periodOrders.filter(o => o.status !== 'cancelled').forEach(order => {
     const method = order.payment_method || 'cash_on_delivery';
     paymentMethodCounts[method] = (paymentMethodCounts[method] || 0) + 1;
   });
 
+  const paymentOrders = totalOrders || 1;
   const paymentMethods = [
-    { name: "الدفع عند الاستلام", value: totalOrders > 0 ? Math.round(((paymentMethodCounts.cash_on_delivery || 0) / totalOrders) * 100) : 0, color: "hsl(248, 53%, 58%)" },
-    { name: "بطاقة ائتمان", value: totalOrders > 0 ? Math.round(((paymentMethodCounts.credit_card || 0) / totalOrders) * 100) : 0, color: "hsl(248, 53%, 68%)" },
-    { name: "محفظة رقمية", value: totalOrders > 0 ? Math.round(((paymentMethodCounts.digital_wallet || 0) / totalOrders) * 100) : 0, color: "hsl(220, 9%, 46%)" },
+    { name: "الدفع عند الاستلام", value: totalOrders > 0 ? Math.round(((paymentMethodCounts.cash_on_delivery || 0) / paymentOrders) * 100) : 0, color: "hsl(248, 53%, 58%)" },
+    { name: "بطاقة ائتمان", value: totalOrders > 0 ? Math.round(((paymentMethodCounts.credit_card || 0) / paymentOrders) * 100) : 0, color: "hsl(248, 53%, 68%)" },
+    { name: "محفظة رقمية", value: totalOrders > 0 ? Math.round(((paymentMethodCounts.digital_wallet || 0) / paymentOrders) * 100) : 0, color: "hsl(220, 9%, 46%)" },
   ];
 
   const hourCounts: { [key: number]: number } = {};
-  periodOrders.forEach(order => {
+  completedOrders.forEach(order => {
     const hour = new Date(order.created_at).getHours();
     hourCounts[hour] = (hourCounts[hour] || 0) + 1;
   });
@@ -155,7 +176,7 @@ export const calculateStatistics = (
     .map(([hour, count]) => ({
       time: `${hour}:00 - ${parseInt(hour, 10) + 1}:00`,
       orders: count,
-      percentage: periodOrders.length > 0 ? (count / periodOrders.length) * 100 : 0
+      percentage: completedCount > 0 ? (count / completedCount) * 100 : 0
     }))
     .sort((a, b) => b.orders - a.orders)
     .slice(0, 1);
@@ -167,9 +188,9 @@ export const calculateStatistics = (
     totalProducts,
     averageOrderValue,
     conversionRate,
-    visitorsGrowth: growth.visitorsGrowth,
-    ordersGrowth: growth.ordersGrowth,
-    revenueGrowth: growth.revenueGrowth,
+    visitorsGrowth,
+    ordersGrowth,
+    revenueGrowth,
     productsGrowth: 0,
     newCustomers,
     returningCustomers,

@@ -50,7 +50,7 @@ export const SalesChart = ({ orders, chartStart, chartEnd }: SalesChartProps) =>
     }
 
     orders.forEach(order => {
-      if (order.status === 'cancelled') return;
+      if (order.status !== 'completed') return;
       const date = new Date(order.created_at);
       const key = dayKey(date);
       if (grouped[key]) {

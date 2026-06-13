@@ -29,7 +29,7 @@ export const PerformanceStats = ({ stats }: PerformanceStatsProps) => {
           delay={0}
         />
         <StatCard
-          title="زوار المتجر"
+          title="زوار فريدون"
           value={stats.totalVisitors.toLocaleString()}
           growth={stats.visitorsGrowth}
           icon={Eye}

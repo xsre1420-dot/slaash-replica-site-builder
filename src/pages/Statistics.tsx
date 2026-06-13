@@ -55,7 +55,7 @@ const Statistics = () => {
   const [selectedMetric, setSelectedMetric] = useState("revenue");
   const [activeTab, setActiveTab] = useState("overview");
 
-  const { stats, rawOrders, loading, error, refetch, dateBounds } = useRealStatistics(
+  const { stats, rawOrders, loading, error, refetch, dateBounds, truncated } = useRealStatistics(
     dateRange,
     startDate,
     endDate
@@ -69,7 +69,7 @@ const Statistics = () => {
       ["إجمالي المبيعات", `${stats.totalRevenue} د.ع`],
       ["إجمالي الطلبات", String(stats.totalOrders)],
       ["متوسط قيمة الطلب", `${stats.averageOrderValue.toFixed(0)} د.ع`],
-      ["زوار المتجر", String(stats.totalVisitors)],
+      ["زوار فريدون", String(stats.totalVisitors)],
       ["معدل التحويل", `${stats.conversionRate.toFixed(1)}%`],
       ["عملاء جدد", String(stats.newCustomers)],
       ["عملاء عائدون", String(stats.returningCustomers)],
@@ -192,6 +192,12 @@ const Statistics = () => {
           selectedMetric={selectedMetric}
           setSelectedMetric={setSelectedMetric}
         />
+
+        {truncated && (
+          <div className="rounded-xl border border-warning/30 bg-warning/5 p-3 mb-6 text-xs text-muted-foreground text-right">
+            تم عرض عينة من البيانات (حد أقصى 5,000 سجل). للمتاجر كثيرة النشاط، قد تختلف بعض التفاصيل عن الإجماليات المعروضة في المؤشرات الرئيسية.
+          </div>
+        )}
 
         {/* 2. Smart insight — tells user what the numbers mean */}
         {insightMessage && (

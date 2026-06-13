@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { invalidateStoreMarketingCache } from "@/services/marketingService";
 
 interface MarketingSettings {
   meta_pixel_id: string;
@@ -73,7 +74,10 @@ export default function MarketingSettingsTab() {
       .upsert(payload, { onConflict: ['owner_id'] });
 
     if (error) toast.error("فشل في حفظ الإعدادات");
-    else toast.success("تم حفظ إعدادات التسويق بنجاح");
+    else {
+      invalidateStoreMarketingCache(undefined, user.id);
+      toast.success("تم حفظ إعدادات التسويق بنجاح");
+    }
     setLoading(false);
   };
 

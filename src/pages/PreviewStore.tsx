@@ -8,7 +8,7 @@ import { useCart } from "@/context/CartContext";
 import { useStore } from "@/context/StoreContext";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
-import MetaPixel from "@/components/MetaPixel";
+import MarketingScripts from "@/components/MarketingScripts";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import OptimizedImage from "@/components/OptimizedImage";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -145,7 +145,7 @@ const PreviewStore = () => {
 
   return (
     <div className="min-h-screen bg-background font-arabic" dir="rtl">
-      <MetaPixel storeOwnerId={user?.id} />
+      <MarketingScripts storeOwnerId={user?.id} disabled />
       
       {/* Header with Logo and Store Name */}
       <div className="bg-background sticky top-0 z-40 border-b border-border">

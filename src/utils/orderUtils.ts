@@ -1,5 +1,6 @@
 import { Order } from '@/types';
 import { createOrder, updateOrderStatus as updateOrderStatusInDb } from '@/services/orderService';
+import type { MarketingAttribution } from '@/lib/attribution';
 
 export { mapOrderError } from '@/utils/orderErrors';
 export { clearCheckoutIdempotencyKey } from '@/utils/checkoutSession';
@@ -9,8 +10,9 @@ export const saveOrderToDatabase = (
   ownerId: string,
   paymentMethod = 'cash_on_delivery',
   couponCode?: string | null,
-  storeSlug?: string | null
-) => createOrder(order, ownerId, paymentMethod, couponCode, storeSlug);
+  storeSlug?: string | null,
+  marketingAttribution?: MarketingAttribution | null
+) => createOrder(order, ownerId, paymentMethod, couponCode, storeSlug, marketingAttribution);
 
 export const updateOrderStatusInDatabase = async (
   orderId: string,

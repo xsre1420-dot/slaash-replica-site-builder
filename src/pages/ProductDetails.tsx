@@ -1,5 +1,8 @@
 import { useParams } from "react-router-dom";
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useAuth } from "@/context/AuthContext";
+import MarketingScripts from "@/components/MarketingScripts";
+import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { Product } from "@/types";
 import { useCart } from "@/context/CartContext";
 import { useStore } from "@/context/StoreContext";
@@ -24,6 +27,7 @@ import ExpandableSection from "@/components/product-details/ExpandableSection";
 import RatingSection from "@/components/product-details/RatingSection";
 import SuggestedProducts from "@/components/product-details/SuggestedProducts";
 import ScrollReveal from "@/components/product-details/ScrollReveal";
+import { useStoreVisitTracking } from "@/hooks/useStoreVisitTracking";
 
 // Skeleton loading component
 const ProductDetailsSkeleton = () => (
@@ -64,6 +68,10 @@ const ProductDetails = () => {
   const { productId, username: storeSlug } = useParams<{ productId: string; username?: string }>();
   const isTenantMode = !!storeSlug;
   const tenant = useTenantStore(storeSlug);
+  const { user } = useAuth();
+  const { trackViewContent, trackAddToCart } = useMetaPixel();
+  const viewTrackedRef = useRef<string | null>(null);
+  useStoreVisitTracking(isTenantMode ? storeSlug : undefined);
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string>("");
@@ -94,6 +102,13 @@ const ProductDetails = () => {
 
   const activeProduct = product ? applyActiveDiscount(product) : null;
 
+  useEffect(() => {
+    if (!activeProduct) return;
+    if (viewTrackedRef.current === activeProduct.id) return;
+    viewTrackedRef.current = activeProduct.id;
+    trackViewContent(activeProduct.id, activeProduct.name, activeProduct.price);
+  }, [activeProduct, trackViewContent]);
+
   const variantAvailable = activeProduct
     ? getAvailableQty(activeProduct, selectedSize || undefined, selectedColor || undefined)
     : 0;
@@ -119,6 +134,7 @@ const ProductDetails = () => {
       }
       setIsAdding(true);
       addToCart(activeProduct, selectedSize || undefined, selectedColor || undefined, quantity);
+      trackAddToCart(activeProduct.id, activeProduct.name, activeProduct.price * quantity);
       
       toast.success(`تمت إضافة "${activeProduct.name}" إلى السلة`, {
         description: [
@@ -147,6 +163,11 @@ const ProductDetails = () => {
   if (!product) {
     return (
       <>
+        <MarketingScripts
+          storeSlug={isTenantMode ? storeSlug : undefined}
+          storeOwnerId={isTenantMode ? tenant.storeInfo?.ownerId : user?.id}
+          disabled={!isTenantMode}
+        />
         <ProductData
           productId={productId}
           initialProduct={cachedTenantProduct}
@@ -161,6 +182,11 @@ const ProductDetails = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <MarketingScripts
+        storeSlug={isTenantMode ? storeSlug : undefined}
+        storeOwnerId={isTenantMode ? tenant.storeInfo?.ownerId : user?.id}
+        disabled={!isTenantMode}
+      />
       <ProductHeader productId={product.id} productName={product.name} storeSlug={storeSlug} />
 
       <div className="max-w-md mx-auto bg-card">

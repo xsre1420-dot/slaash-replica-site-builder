@@ -11,6 +11,7 @@ export const useRealStatistics = (
 ) => {
   const [stats, setStats] = useState<RealStatistics | null>(getDefaultStatistics());
   const [rawOrders, setRawOrders] = useState<any[]>([]);
+  const [truncated, setTruncated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,6 +34,7 @@ export const useRealStatistics = (
       const bounds = data.dateBounds || dateBounds;
       const calculatedStats = calculateStatistics(data, bounds);
       setStats(calculatedStats);
+      setTruncated(Boolean(data.truncated));
 
       setRawOrders(
         data.orders.filter(o => {
@@ -44,6 +46,7 @@ export const useRealStatistics = (
       console.error('Error fetching statistics:', err);
       setStats(getDefaultStatistics());
       setRawOrders([]);
+      setTruncated(false);
       setError('تعذر تحميل الإحصائيات. يرجى المحاولة مرة أخرى.');
     } finally {
       setLoading(false);
@@ -54,5 +57,5 @@ export const useRealStatistics = (
     fetchRealStatistics();
   }, [fetchRealStatistics]);
 
-  return { stats, rawOrders, loading, error, refetch: fetchRealStatistics, dateBounds };
+  return { stats, rawOrders, loading, error, refetch: fetchRealStatistics, dateBounds, truncated };
 };

@@ -4,8 +4,9 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { getProductsByCategory, getCategories, loadProducts } from "@/services/productService";
 import { Product, Category } from "@/types";
 import { useCart } from "@/context/CartContext";
-import MetaPixel from "@/components/MetaPixel";
+import MarketingScripts from "@/components/MarketingScripts";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
+import { useStoreVisitTracking } from "@/hooks/useStoreVisitTracking";
 import CartDrawer from "@/components/CartDrawer";
 import { useTenantStore } from "@/hooks/useTenantStore";
 import { useStoreProductsPage } from "@/hooks/useStoreProductsPage";
@@ -33,6 +34,7 @@ const Store = () => {
     loading: displayLoading,
   } = useStoreDisplay(storeSlug);
   const tenant = useTenantStore(storeSlug);
+  useStoreVisitTracking(isTenantMode ? storeSlug : undefined);
 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [allProducts, setAllProducts] = useState<Product[]>([]);
@@ -282,7 +284,10 @@ const Store = () => {
       />
     <StoreThemeProvider colors={themeColors}>
     <div className="min-h-screen bg-background" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-      <MetaPixel storeOwnerId={isTenantMode ? tenant.storeInfo?.ownerId : undefined} />
+      <MarketingScripts
+        storeSlug={isTenantMode ? storeSlug : undefined}
+        storeOwnerId={isTenantMode ? tenant.storeInfo?.ownerId : undefined}
+      />
 
       {/* Pull to refresh indicator */}
       {isRefreshing && (
