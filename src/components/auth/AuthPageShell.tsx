@@ -5,62 +5,71 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface AuthPageShellProps {
   children: ReactNode;
-  panelTitle: string;
-  panelSubtitle: string;
-  panelContent: ReactNode;
   footer?: ReactNode;
 }
 
 export const AuthLoadingScreen = () => (
   <div className="min-h-screen bg-background flex items-center justify-center font-arabic" dir="rtl">
     <div className="flex flex-col items-center gap-3 text-muted-foreground">
-      <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      <p className="text-sm">جاري التحميل…</p>
+      <Loader2 className="w-7 h-7 animate-spin text-primary" />
+      <p className="text-sm font-medium">جاري التحميل…</p>
     </div>
   </div>
 );
 
-export const AuthPageShell = ({
-  children,
-  panelTitle,
-  panelSubtitle,
-  panelContent,
-  footer,
-}: AuthPageShellProps) => (
+export const AuthPageShell = ({ children, footer }: AuthPageShellProps) => (
   <div className="min-h-screen bg-background font-arabic" dir="rtl">
     <div className="flex min-h-screen">
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-primary">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-secondary" />
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:50px_50px]" />
-        <div className="absolute top-1/4 right-1/4 w-[400px] h-[400px] bg-white/5 rounded-full blur-[100px]" />
-        <div className="relative z-10 flex flex-col justify-center p-16 text-primary-foreground">
+      {/* Premium side panel — visual only, no marketing copy */}
+      <aside
+        className="relative hidden lg:flex lg:w-[44%] xl:w-1/2 flex-col items-center justify-center overflow-hidden bg-primary"
+        aria-hidden
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-primary/90" />
+        <div
+          className="absolute inset-0 opacity-[0.07]"
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)',
+            backgroundSize: '48px 48px',
+          }}
+        />
+        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-white/[0.06]" />
+        <div className="absolute -bottom-32 -left-16 h-96 w-96 rounded-full bg-white/[0.04]" />
+
+        <div className="relative z-10 flex flex-col items-center justify-center px-12 py-16">
           <img
             src="/lovable-uploads/f51ae0c5-1208-4965-a0c7-85a6d908ceb1.png"
             alt="بداية"
-            className="h-12 w-auto mb-12 brightness-0 invert"
+            className="h-11 w-auto brightness-0 invert"
           />
-          <h1 className="text-4xl font-bold mb-4 leading-tight">{panelTitle}</h1>
-          <p className="text-lg text-primary-foreground/70 mb-12">{panelSubtitle}</p>
-          {panelContent}
+          <div className="mt-10 h-px w-16 bg-white/20" />
         </div>
-      </div>
+      </aside>
 
-      <div className="w-full lg:w-1/2 flex flex-col">
-        <header className="py-5 px-6 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 lg:hidden">
-            <img src="/lovable-uploads/f51ae0c5-1208-4965-a0c7-85a6d908ceb1.png" alt="بداية" className="h-8 w-auto" />
+      <div className="flex w-full flex-col lg:w-[56%] xl:w-1/2">
+        <header className="flex items-center justify-between px-5 py-4 sm:px-8 sm:py-5">
+          <Link to="/" className="flex items-center lg:hidden">
+            <img
+              src="/lovable-uploads/f51ae0c5-1208-4965-a0c7-85a6d908ceb1.png"
+              alt="بداية"
+              className="h-8 w-auto"
+            />
           </Link>
-          <Link to="/" className="hidden lg:block text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <Link
+            to="/"
+            className="hidden text-sm font-medium text-muted-foreground transition-colors hover:text-foreground lg:inline-flex"
+          >
             ← العودة للرئيسية
           </Link>
           <ThemeToggle />
         </header>
 
-        <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10">
-          <div className="w-full max-w-[420px]">{children}</div>
-        </div>
+        <main className="flex flex-1 flex-col items-center justify-center px-5 pb-6 pt-2 sm:px-8 sm:pb-10">
+          <div className="w-full max-w-[400px]">{children}</div>
+        </main>
 
-        <footer className="text-center py-5 text-muted-foreground/50 text-xs">
+        <footer className="py-4 text-center text-xs text-muted-foreground/60 sm:py-5">
           {footer ?? 'جميع الحقوق محفوظة © 2025 بداية'}
         </footer>
       </div>
