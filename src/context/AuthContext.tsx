@@ -3,20 +3,40 @@ import React, { createContext, useContext, useState, useEffect, useRef, ReactNod
 import { supabase } from '@/integrations/supabase/client';
 import { invalidateOwnerCache, setCurrentOwner, setCurrentStore } from '@/services/productService';
 import { setObservabilityUser } from '@/lib/observability';
+import {
+  mapAuthError,
+  normalizeUsername,
+  validatePassword,
+  setAuthRememberMe,
+} from '@/lib/authUtils';
 
 interface User {
   id: string;
   username: string;
   store_name?: string;
+  email?: string;
+}
+
+interface AuthResult {
+  error?: string;
+  needsEmailVerification?: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<{ error?: string }>;
-  register: (email: string, password: string, username: string, storeName?: string, selectedPlanId?: string) => Promise<{ error?: string }>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<{ error?: string; emailNotConfirmed?: boolean }>;
+  register: (
+    email: string,
+    password: string,
+    username: string,
+    storeName?: string,
+    selectedPlanId?: string
+  ) => Promise<AuthResult>;
   resetPassword: (email: string) => Promise<{ error?: string; success?: boolean }>;
   updatePassword: (newPassword: string) => Promise<{ error?: string }>;
-  logout: () => void;
+  resendVerificationEmail: (email: string) => Promise<{ error?: string; success?: boolean }>;
+  checkUsernameAvailable: (username: string) => Promise<{ available: boolean; error?: string }>;
+  logout: () => Promise<void>;
   loading: boolean;
 }
 
@@ -47,9 +67,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setObservabilityUser(u?.id);
   };
 
-  const loadProfile = async (userId: string, fallbackMeta?: any) => {
+  const loadProfile = async (userId: string, fallbackMeta?: Record<string, unknown>, email?: string) => {
     try {
-      const { data: profile } = await (supabase as any)
+      const { data: profile } = await supabase
         .from('profiles')
         .select('id, user_id, username, store_name')
         .or(`id.eq.${userId},user_id.eq.${userId}`)
@@ -58,14 +78,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (profile) {
         setUserAndOwner({
           id: userId,
-          username: profile.username || fallbackMeta?.username || 'مستخدم',
-          store_name: profile.store_name || fallbackMeta?.store_name,
+          username: profile.username || (fallbackMeta?.username as string) || 'مستخدم',
+          store_name: profile.store_name || (fallbackMeta?.store_name as string),
+          email,
         });
       } else if (fallbackMeta) {
         setUserAndOwner({
           id: userId,
-          username: fallbackMeta.username || 'مستخدم',
-          store_name: fallbackMeta.store_name,
+          username: (fallbackMeta.username as string) || 'مستخدم',
+          store_name: fallbackMeta.store_name as string | undefined,
+          email,
         });
       }
     } catch (e) {
@@ -73,8 +95,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (fallbackMeta) {
         setUserAndOwner({
           id: userId,
-          username: fallbackMeta.username || 'مستخدم',
-          store_name: fallbackMeta.store_name,
+          username: (fallbackMeta.username as string) || 'مستخدم',
+          store_name: fallbackMeta.store_name as string | undefined,
+          email,
         });
       }
     }
@@ -83,14 +106,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        const meta: any = session.user.user_metadata ?? {};
+        const meta = session.user.user_metadata ?? {};
         setUserAndOwner({
           id: session.user.id,
-          username: meta.username || session.user.email?.split('@')[0] || 'مستخدم',
-          store_name: meta.store_name,
+          username: (meta.username as string) || session.user.email?.split('@')[0] || 'مستخدم',
+          store_name: meta.store_name as string | undefined,
+          email: session.user.email,
         });
-
-        setTimeout(() => loadProfile(session.user.id, meta), 0);
+        setTimeout(() => loadProfile(session.user.id, meta, session.user.email), 0);
       } else if (event === 'SIGNED_OUT') {
         const prevId = lastUserIdRef.current;
         setUserAndOwner(null);
@@ -101,13 +124,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
         if (session?.user) {
-          const meta: any = session.user.user_metadata ?? {};
+          const meta = session.user.user_metadata ?? {};
           setUserAndOwner({
             id: session.user.id,
-            username: meta.username || session.user.email?.split('@')[0] || 'مستخدم',
-            store_name: meta.store_name,
+            username: (meta.username as string) || session.user.email?.split('@')[0] || 'مستخدم',
+            store_name: meta.store_name as string | undefined,
+            email: session.user.email,
           });
-          setTimeout(() => loadProfile(session.user.id, meta), 0);
+          setTimeout(() => loadProfile(session.user.id, meta, session.user.email), 0);
         } else {
           setUserAndOwner(null);
         }
@@ -122,21 +146,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, rememberMe = true) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      setAuthRememberMe(rememberMe);
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
       if (error) {
-        if (error.message.includes('Invalid login credentials')) {
-          return { error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' };
+        const mapped = mapAuthError(error.message);
+        if (mapped === '__EMAIL_NOT_CONFIRMED__') {
+          return { error: 'يرجى تأكيد بريدك الإلكتروني أولاً', emailNotConfirmed: true };
         }
-        if (error.message.includes('Email not confirmed')) {
-          return { error: 'يرجى تأكيد بريدك الإلكتروني أولاً' };
-        }
-        return { error: error.message };
+        return { error: mapped };
       }
       return {};
     } catch {
       return { error: 'حدث خطأ في الاتصال. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.' };
+    }
+  };
+
+  const checkUsernameAvailable = async (username: string) => {
+    try {
+      const normalized = normalizeUsername(username);
+      const { data, error } = await (supabase as unknown as { rpc: (n: string, p: object) => Promise<{ data: boolean | null; error: { message: string } | null }> }).rpc(
+        'is_username_available',
+        { p_username: normalized }
+      );
+      if (error) return { available: true };
+      return { available: data !== false };
+    } catch {
+      return { available: true };
     }
   };
 
@@ -146,26 +186,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     username: string,
     storeName?: string,
     selectedPlanId?: string
-  ) => {
+  ): Promise<AuthResult> => {
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
+      const passwordError = validatePassword(password);
+      if (passwordError) return { error: passwordError };
+
+      const normalizedUsername = normalizeUsername(username);
+      const usernameCheck = await checkUsernameAvailable(normalizedUsername);
+      if (!usernameCheck.available) {
+        return { error: 'اسم المستخدم مستخدم بالفعل — اختر اسماً آخر' };
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/builder`,
           data: {
-            username,
-            store_name: storeName || 'متجري',
+            username: normalizedUsername,
+            store_name: storeName?.trim() || 'متجري',
             selected_plan: selectedPlanId || 'free',
           },
         },
       });
 
       if (error) {
-        return { error: error.message };
+        return { error: mapAuthError(error.message) };
       }
 
-      return {};
+      return { needsEmailVerification: !data.session };
     } catch {
       return { error: 'حدث خطأ أثناء إنشاء الحساب' };
     }
@@ -173,10 +222,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const resetPassword = async (email: string) => {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo: `${window.location.origin}/reset-password`,
       });
-      if (error) return { error: error.message };
+      if (error) return { error: mapAuthError(error.message) };
       return { success: true };
     } catch {
       return { error: 'تعذر إرسال رابط إعادة التعيين' };
@@ -185,11 +234,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const updatePassword = async (newPassword: string) => {
     try {
+      const passwordError = validatePassword(newPassword);
+      if (passwordError) return { error: passwordError };
+
       const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) return { error: error.message };
+      if (error) return { error: mapAuthError(error.message) };
       return {};
     } catch {
       return { error: 'تعذر تحديث كلمة المرور' };
+    }
+  };
+
+  const resendVerificationEmail = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email.trim(),
+        options: {
+          emailRedirectTo: `${window.location.origin}/builder`,
+        },
+      });
+      if (error) return { error: mapAuthError(error.message) };
+      return { success: true };
+    } catch {
+      return { error: 'تعذر إرسال رسالة التحقق' };
     }
   };
 
@@ -206,6 +274,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     resetPassword,
     updatePassword,
+    resendVerificationEmail,
+    checkUsernameAvailable,
     logout,
     loading,
   };
