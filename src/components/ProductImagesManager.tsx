@@ -3,7 +3,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea
 import { Button } from "@/components/ui/button";
 import { ImagePlus, X, Star, GripVertical, Loader2, Upload } from "lucide-react";
 import { uploadImage, deleteImage } from "@/utils/imageUpload";
-import { supabase } from "@/integrations/supabase/client";
+import { getAuthenticatedUserId } from "@/lib/authSession";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -58,10 +58,16 @@ const ProductImagesManager = ({
       img.src = URL.createObjectURL(file);
     });
 
-  const uploadFiles = async (files: FileList | File[]) => {
-    const list = Array.from(files).filter((f) => f.type.startsWith('image/'));
+  const isImageFile = (file: File) => {
+    if (file.type.startsWith('image/')) return true;
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    return !!ext && ['jpg', 'jpeg', 'jpe', 'png', 'webp', 'gif', 'bmp'].includes(ext);
+  };
+
+  const uploadFiles = useCallback(async (files: FileList | File[]) => {
+    const list = Array.from(files).filter(isImageFile);
     if (list.length === 0) {
-      toast.error('يرجى اختيار ملفات صور فقط');
+      toast.error('يرجى اختيار ملفات صور فقط (JPG, PNG, WebP)');
       return;
     }
 
@@ -75,8 +81,8 @@ const ProductImagesManager = ({
       toast.warning(`يمكن إضافة ${remaining} صور فقط (الحد ${MAX_IMAGES})`);
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
       toast.error('يجب تسجيل الدخول أولاً');
       return;
     }
@@ -86,29 +92,36 @@ const ProductImagesManager = ({
     setUploadProgress(0);
     const uploadedUrls: string[] = [];
     let completed = 0;
+    let lastError: string | null = null;
 
     try {
       const results = await Promise.allSettled(
         toUpload.map(async (file) => {
           const processed = file.size > 2 * 1024 * 1024 ? await compressImage(file) : file;
-          const url = await uploadImage(processed, user.id);
+          const url = await uploadImage(processed, userId);
           completed++;
           setUploadProgress(Math.round((completed / toUpload.length) * 100));
           return url;
         })
       );
       results.forEach((r, i) => {
-        if (r.status === 'fulfilled') uploadedUrls.push(r.value);
-        else console.error('Upload failed:', toUpload[i]?.name, r.reason);
+        if (r.status === 'fulfilled') {
+          uploadedUrls.push(r.value);
+        } else {
+          lastError = r.reason instanceof Error ? r.reason.message : 'خطأ غير معروف';
+          console.error('Upload failed:', toUpload[i]?.name, r.reason);
+        }
       });
 
       if (uploadedUrls.length === 0) {
-        toast.error('فشل في رفع الصور');
+        toast.error(lastError || 'فشل في رفع الصور');
         return;
       }
 
       if (uploadedUrls.length < toUpload.length) {
         toast.warning(`تم رفع ${uploadedUrls.length} من ${toUpload.length}`);
+      } else {
+        toast.success(`تم رفع ${uploadedUrls.length} صورة`);
       }
 
       if (!mainImage) {
@@ -116,14 +129,14 @@ const ProductImagesManager = ({
       } else {
         onImagesChange(mainImage, [...additionalImages, ...uploadedUrls]);
       }
-    } catch {
-      toast.error('حدث خطأ أثناء رفع الصور');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'حدث خطأ أثناء رفع الصور');
     } finally {
       setIsUploading(false);
       onUploadStateChange?.(false);
       setUploadProgress(0);
     }
-  };
+  }, [allImages.length, mainImage, additionalImages, onImagesChange, onUploadStateChange]);
 
   const handleFileInput = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) void uploadFiles(event.target.files);
@@ -136,7 +149,7 @@ const ProductImagesManager = ({
       setIsDraggingFiles(false);
       if (e.dataTransfer.files?.length) void uploadFiles(e.dataTransfer.files);
     },
-    [mainImage, additionalImages]
+    [uploadFiles]
   );
 
   const removeImage = (index: number) => {
@@ -170,8 +183,8 @@ const ProductImagesManager = ({
       <input
         type="file"
         ref={fileInputRef}
-        className="hidden"
-        accept="image/*"
+        className="sr-only"
+        accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
         multiple
         onChange={handleFileInput}
       />

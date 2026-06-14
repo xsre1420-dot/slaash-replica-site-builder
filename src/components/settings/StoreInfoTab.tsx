@@ -3,7 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Upload, X, ChevronLeft, ChevronRight, Star, ImageIcon, Store, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getAuthenticatedUserId } from "@/lib/authSession";
 import { uploadImage } from "@/utils/imageUpload";
 import { toast } from "sonner";
 import { normalizeStoreSlugInput, validateStoreSlug } from "@/lib/storeSlug";
@@ -29,15 +29,15 @@ const StoreInfoTab = ({ settings, setSettings }: StoreInfoTabProps) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
       toast.error("يجب تسجيل الدخول أولاً");
       return;
     }
 
     setUploadingLogo(true);
     try {
-      const publicUrl = await uploadImage(file, user.id);
+      const publicUrl = await uploadImage(file, userId);
       setSettings((prev: any) => ({ ...prev, storeLogo: publicUrl }));
       toast.success("تم رفع الشعار بنجاح");
     } catch (err) {
@@ -52,15 +52,15 @@ const StoreInfoTab = ({ settings, setSettings }: StoreInfoTabProps) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
       toast.error("يجب تسجيل الدخول أولاً");
       return;
     }
 
     setUploadingBanner(true);
     try {
-      const publicUrl = await uploadImage(file, user.id);
+      const publicUrl = await uploadImage(file, userId);
       setSettings((prev: any) => ({
         ...prev,
         bannerImages: [...prev.bannerImages, publicUrl],
@@ -175,7 +175,14 @@ const StoreInfoTab = ({ settings, setSettings }: StoreInfoTabProps) => {
                     </>
                   )}
                 </div>
-                <input id="logo-upload" type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={uploadingLogo} />
+                <input
+                  id="logo-upload"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+                  className="sr-only"
+                  onChange={handleLogoUpload}
+                  disabled={uploadingLogo}
+                />
               </label>
             </div>
           </div>
@@ -264,7 +271,14 @@ const StoreInfoTab = ({ settings, setSettings }: StoreInfoTabProps) => {
               </>
             )}
           </div>
-          <input id="banner-upload" type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} disabled={uploadingBanner} />
+          <input
+            id="banner-upload"
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+            className="sr-only"
+            onChange={handleBannerUpload}
+            disabled={uploadingBanner}
+          />
         </label>
       </div>
     </div>

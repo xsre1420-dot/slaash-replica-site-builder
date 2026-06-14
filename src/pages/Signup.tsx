@@ -138,7 +138,7 @@ const Signup = () => {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center font-arabic p-6" dir="rtl">
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center font-arabic p-6" dir="rtl">
         <div className="w-full max-w-md text-center">
           <div className="rounded-xl border border-border bg-card p-8 sm:p-10 space-y-4">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
