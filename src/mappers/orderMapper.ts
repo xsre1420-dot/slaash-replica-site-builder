@@ -41,8 +41,8 @@ export const mapDbOrder = (row: Record<string, unknown>): Order => {
     couponCode: (row.coupon_code as string) || undefined,
     discountAmount: row.discount_amount != null ? Number(row.discount_amount) : undefined,
     paymentMethod: (row.payment_method as string) || undefined,
-    paymentStatus: (row.payment_status as string) || undefined,
+    paymentStatus: (row.payment_status as string) || 'pending_collection',
     deliveryFee: row.delivery_fee != null ? Number(row.delivery_fee) : undefined,
-    deliveryStatus: (row.delivery_status as string) || undefined,
+    deliveryStatus: (row.delivery_status as string) || 'pending',
   };
 };

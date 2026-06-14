@@ -26,6 +26,13 @@ export interface Product {
   brand?: string;
   productClassification?: string;
   sku?: string;
+  shortDescription?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  productSlug?: string;
+  tags?: string[];
+  lowStockThreshold?: number;
+  isActive?: boolean;
   freeShipping?: boolean;
   additionalProducts?: string[];
   // Rating and review features

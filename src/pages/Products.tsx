@@ -1,5 +1,6 @@
 
 import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
+import { isProductLowStock } from '@/lib/productUpdateUtils';
 import { Link, useSearchParams } from "react-router-dom";
 import { MessageSquare, Lightbulb, Download, Plus, Package, AlertTriangle, XCircle, DollarSign, Search, ArrowRight } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -102,7 +103,7 @@ const Products = () => {
   const stats = useMemo(() => ({
     total: loadedProducts.length,
     inStock: loadedProducts.filter(p => (p.stockQuantity ?? 1) > 5).length,
-    lowStock: loadedProducts.filter(p => p.stockQuantity !== undefined && p.stockQuantity > 0 && p.stockQuantity <= 5).length,
+    lowStock: loadedProducts.filter((p) => isProductLowStock(p)).length,
     outOfStock: loadedProducts.filter(p => p.stockQuantity !== undefined && p.stockQuantity === 0).length,
     totalValue: loadedProducts.reduce((sum, p) => sum + p.price * (p.stockQuantity ?? 1), 0),
   }), [loadedProducts]);
@@ -123,7 +124,7 @@ const Products = () => {
     
     let matchesStock = true;
     if (stockFilter === "in_stock") matchesStock = (p.stockQuantity ?? 1) > 5;
-    else if (stockFilter === "low") matchesStock = p.stockQuantity !== undefined && p.stockQuantity > 0 && p.stockQuantity <= 5;
+    else if (stockFilter === "low") matchesStock = isProductLowStock(p);
     else if (stockFilter === "out") matchesStock = p.stockQuantity !== undefined && p.stockQuantity === 0;
 
     return matchesSearch && matchesCategory && matchesStock;

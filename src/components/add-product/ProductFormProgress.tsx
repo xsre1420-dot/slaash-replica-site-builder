@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 interface Step {
   label: string;
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
   completed: boolean;
   required?: boolean;
 }

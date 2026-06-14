@@ -8,8 +8,8 @@ import { Trash2, Save } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/layout/PageHeader";
-import { useState, useEffect } from "react";
-import { getCategories, fetchProductById, updateProduct, getProductById, deleteProduct } from "@/services/productService";
+import { useState, useEffect, useRef } from "react";
+import { getCategories, fetchProductById, updateProduct, deleteProduct } from "@/services/productService";
 import { useStoreHydration } from "@/context/StoreBootstrapContext";
 import { useToast } from "@/hooks/use-toast";
 import { Product, Category, ColorOption } from "@/types";
@@ -35,6 +35,8 @@ const EditProduct = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isImagesUploading, setIsImagesUploading] = useState(false);
+  const loadedProductRef = useRef<Product | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isReady, hydrationVersion } = useStoreHydration();
@@ -56,6 +58,7 @@ const EditProduct = () => {
       setLoadingProduct(true);
       const product = await fetchProductById(productId);
       if (product) {
+        loadedProductRef.current = product;
         setName(product.name);
         setDescription(product.description);
         setCategory(product.category);
@@ -140,6 +143,11 @@ const EditProduct = () => {
       return;
     }
 
+    if (isImagesUploading) {
+      toast({ title: 'انتظر اكتمال رفع الصور', variant: 'destructive' });
+      return;
+    }
+
     setFieldErrors({});
     setIsSubmitting(true);
 
@@ -154,8 +162,7 @@ const EditProduct = () => {
         return;
       }
 
-      const updatedProduct: Product = {
-        id: productId,
+      const updatedProduct: Partial<Product> = {
         name,
         description,
         category,
@@ -183,9 +190,12 @@ const EditProduct = () => {
 
   const handleDeleteProduct = async () => {
     if (!productId) return;
-    
-    const product = getProductById(productId);
-    if (!product) return;
+
+    const product = loadedProductRef.current ?? (await fetchProductById(productId));
+    if (!product) {
+      toast({ title: 'خطأ', description: 'تعذر تحميل المنتج للحذف', variant: 'destructive' });
+      return;
+    }
 
     // Remove from UI immediately
     navigate('/products');
@@ -210,7 +220,7 @@ const EditProduct = () => {
         backTo="/products"
         breadcrumbs={[{ label: 'المنتجات', href: '/products' }, { label: 'تعديل' }]}
         actions={
-          <Button type="submit" form="edit-product-form" disabled={isSubmitting} className="rounded-xl min-h-[44px] shadow-brand">
+          <Button type="submit" form="edit-product-form" disabled={isSubmitting || isImagesUploading} className="rounded-xl min-h-[44px] shadow-brand">
             <Save className="w-4 h-4" />
             {isSubmitting ? 'جاري الحفظ...' : 'حفظ'}
           </Button>
@@ -224,7 +234,9 @@ const EditProduct = () => {
             mainImage={mainImage}
             additionalImages={additionalImages}
             onImagesChange={handleImagesChange}
+            onUploadStateChange={setIsImagesUploading}
           />
+          {fieldErrors.image && <p className="text-xs text-destructive text-right">{fieldErrors.image}</p>}
 
           {/* Name */}
           <div className="space-y-2 text-right">
@@ -293,7 +305,7 @@ const EditProduct = () => {
           <div className="space-y-3">
             <Button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isImagesUploading}
               className="w-full rounded-xl min-h-[48px] shadow-brand"
             >
               {isSubmitting ? 'جاري الحفظ...' : 'حفظ التغييرات'}

@@ -3,6 +3,7 @@ import { Product, Category } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { cache, CacheKeys, CacheTTL, dedup } from "@/lib/cache";
 import { mapDbProduct } from "@/mappers/productMapper";
+import { PRODUCT_DETAIL_SELECT, mergeProductForUpdate, productToDbRow } from "@/lib/productUpdateUtils";
 
 /** @deprecated Use `@/services/productService` for new imports. */
 
@@ -133,7 +134,7 @@ export const loadProductsPage = async (
 
       let query = supabase
         .from('products')
-        .select('id, name, description, category, price, cost, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, created_at, updated_at', { count: 'exact' })
+        .select('id, name, description, short_description, category, price, cost, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, sku, seo_title, seo_description, product_slug, tags, low_stock_threshold, min_stock_level, created_at, updated_at', { count: 'exact' })
         .eq('owner_id', ownerId)
         .order('created_at', { ascending: false })
         .range(from, to);
@@ -276,15 +277,25 @@ export const addProduct = async (product: Product): Promise<{ success: boolean; 
       .insert({
         name: product.name,
         description: product.description,
+        short_description: product.shortDescription || null,
         category: product.category,
         price: product.price,
         cost: product.cost || null,
+        original_price: product.originalPrice || null,
         image_url: product.image,
         additional_images: product.additionalImages || [],
-        stock_quantity: product.stockQuantity || null,
+        stock_quantity: product.stockQuantity ?? null,
         colors: product.colors ? JSON.parse(JSON.stringify(product.colors)) : null,
         sizes: product.sizes || null,
         variants: product.variants ? JSON.parse(JSON.stringify(product.variants)) : null,
+        sku: product.sku || null,
+        seo_title: product.seoTitle || null,
+        seo_description: product.seoDescription || null,
+        product_slug: product.productSlug || null,
+        tags: product.tags?.length ? product.tags : [],
+        low_stock_threshold: product.lowStockThreshold ?? 3,
+        min_stock_level: product.lowStockThreshold ?? 3,
+        is_active: product.isActive !== false,
         owner_id: user.id,
         store_id: _currentStoreId || undefined,
       })
@@ -306,34 +317,48 @@ export const addProduct = async (product: Product): Promise<{ success: boolean; 
   }
 };
 
-export const updateProduct = async (productId: string, updatedProduct: Product): Promise<{ success: boolean; error?: string }> => {
+export const updateProduct = async (productId: string, updatedProduct: Partial<Product>): Promise<{ success: boolean; error?: string }> => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, error: 'User not authenticated' };
 
-    const { error } = await supabase
+    const { data: existingRow, error: fetchError } = await supabase
       .from('products')
-      .update({
-        name: updatedProduct.name,
-        description: updatedProduct.description,
-        category: updatedProduct.category,
-        price: updatedProduct.price,
-        cost: updatedProduct.cost || null,
-        image_url: updatedProduct.image,
-        additional_images: updatedProduct.additionalImages || [],
-        stock_quantity: updatedProduct.stockQuantity || null,
-        colors: updatedProduct.colors ? JSON.parse(JSON.stringify(updatedProduct.colors)) : null,
-        sizes: updatedProduct.sizes || null,
-        variants: updatedProduct.variants ? JSON.parse(JSON.stringify(updatedProduct.variants)) : null
-      })
+      .select(PRODUCT_DETAIL_SELECT)
+      .eq('id', productId)
+      .eq('owner_id', user.id)
+      .maybeSingle();
+
+    if (fetchError) return { success: false, error: fetchError.message };
+    if (!existingRow) return { success: false, error: 'Product not found' };
+
+    const existing = mapDbProduct(existingRow as Record<string, unknown>);
+    const merged = mergeProductForUpdate(existing, updatedProduct);
+
+    let updateQuery = supabase
+      .from('products')
+      .update(productToDbRow(merged))
       .eq('id', productId)
       .eq('owner_id', user.id);
 
+    if (_currentStoreId) {
+      updateQuery = updateQuery.eq('store_id', _currentStoreId);
+    }
+
+    const { data, error } = await updateQuery.select(PRODUCT_DETAIL_SELECT).single();
+
     if (error) return { success: false, error: error.message };
 
-    const key = CacheKeys.products(getOwnerId());
+    const saved = mapDbProduct(data as Record<string, unknown>);
+    const key = CacheKeys.products(getOwnerId() || user.id);
     const current = cache.get<Product[]>(key) || [];
-    cache.set(key, current.map(p => p.id === productId ? { ...updatedProduct, id: productId } : p), CacheTTL.MEDIUM, CacheTTL.STALE);
+    const inCache = current.some((p) => p.id === productId);
+    cache.set(
+      key,
+      inCache ? current.map((p) => (p.id === productId ? saved : p)) : [saved, ...current],
+      CacheTTL.MEDIUM,
+      CacheTTL.STALE
+    );
     products = cache.get<Product[]>(key) || [];
 
     return { success: true };
@@ -347,11 +372,17 @@ export const deleteProduct = async (productId: string): Promise<{ success: boole
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, error: 'User not authenticated' };
 
-    const { error } = await supabase
+    let deleteQuery = supabase
       .from('products')
       .delete()
       .eq('id', productId)
       .eq('owner_id', user.id);
+
+    if (_currentStoreId) {
+      deleteQuery = deleteQuery.eq('store_id', _currentStoreId);
+    }
+
+    const { error } = await deleteQuery;
 
     if (error) return { success: false, error: error.message };
 
@@ -379,17 +410,14 @@ export const getProductById = (id: string): Product | undefined => {
   return all.find(product => product.id === id);
 };
 
-/** Fetch product from DB — survives empty cache after login */
+/** Fetch product from DB — always reads fresh row for edit/detail reliability */
 export const fetchProductById = async (productId: string): Promise<Product | null> => {
-  const cached = getProductById(productId);
-  if (cached) return cached;
-
   const ownerId = await getAuthOwnerId();
   if (!ownerId) return null;
 
   const { data, error } = await supabase
     .from('products')
-    .select('id, name, description, category, price, cost, image_url, additional_images, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, original_price, is_active, created_at, updated_at')
+    .select(PRODUCT_DETAIL_SELECT)
     .eq('id', productId)
     .eq('owner_id', ownerId)
     .maybeSingle();
@@ -399,9 +427,14 @@ export const fetchProductById = async (productId: string): Promise<Product | nul
   const product = mapDbProduct(data as Record<string, unknown>);
   const key = CacheKeys.products(ownerId);
   const current = cache.get<Product[]>(key) || [];
-  if (!current.some((p) => p.id === productId)) {
-    cache.set(key, [product, ...current], CacheTTL.MEDIUM, CacheTTL.STALE);
-  }
+  cache.set(
+    key,
+    current.some((p) => p.id === productId)
+      ? current.map((p) => (p.id === productId ? product : p))
+      : [product, ...current],
+    CacheTTL.MEDIUM,
+    CacheTTL.STALE
+  );
   products_list = cache.get<Product[]>(key) || [product];
   products = products_list;
   return product;

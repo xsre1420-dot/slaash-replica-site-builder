@@ -1,0 +1,310 @@
+import { useMemo, useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { addProduct } from '@/services/productService';
+import { useToast } from '@/hooks/use-toast';
+import { Product, Category, ColorOption, ProductVariant } from '@/types';
+import { formatPriceInput, isValidPrice, convertArabicToEnglish } from '@/utils/numberUtils';
+import { validateProductImages } from '@/utils/imageValidator';
+import { computeProfit, formatDisplayPrice, parseTagsInput, slugifyProductName } from '@/lib/productFormUtils';
+
+export function useAddProductForm() {
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const [mainImage, setMainImage] = useState<string | null>(null);
+  const [additionalImages, setAdditionalImages] = useState<string[]>([]);
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [shortDescription, setShortDescription] = useState('');
+  const [category, setCategory] = useState('');
+  const [price, setPrice] = useState('');
+  const [compareAtPrice, setCompareAtPrice] = useState('');
+  const [cost, setCost] = useState('');
+  const [sku, setSku] = useState('');
+  const [sizes, setSizes] = useState<string[]>([]);
+  const [colors, setColors] = useState<ColorOption[]>([]);
+  const [stockQuantity, setStockQuantity] = useState('');
+  const [lowStockThreshold, setLowStockThreshold] = useState('3');
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [tagsInput, setTagsInput] = useState('');
+  const [seoTitle, setSeoTitle] = useState('');
+  const [seoDescription, setSeoDescription] = useState('');
+  const [productSlug, setProductSlug] = useState('');
+  const [slugTouched, setSlugTouched] = useState(false);
+  const [isActive, setIsActive] = useState(true);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isImagesUploading, setIsImagesUploading] = useState(false);
+
+  const profitInfo = useMemo(() => {
+    const p = parseFloat(price.replace(/,/g, ''));
+    const c = cost ? parseFloat(cost.replace(/,/g, '')) : undefined;
+    if (isNaN(p)) return null;
+    return computeProfit(p, c);
+  }, [price, cost]);
+
+  useEffect(() => {
+    if (!slugTouched && name.trim()) {
+      setProductSlug(slugifyProductName(name));
+    }
+  }, [name, slugTouched]);
+
+  useEffect(() => {
+    if (colors.length === 0 && sizes.length === 0) {
+      setVariants([]);
+      return;
+    }
+    setVariants((prev) => {
+      const next: ProductVariant[] = [];
+      if (colors.length > 0 && sizes.length > 0) {
+        colors.forEach((color) =>
+          sizes.forEach((size) => {
+            const ex = prev.find((v) => v.color === color.value && v.size === size);
+            next.push({ color: color.value, size, quantity: ex?.quantity || 0 });
+          })
+        );
+      } else if (colors.length > 0) {
+        colors.forEach((color) => {
+          const ex = prev.find((v) => v.color === color.value && !v.size);
+          next.push({ color: color.value, quantity: ex?.quantity || 0 });
+        });
+      } else {
+        sizes.forEach((size) => {
+          const ex = prev.find((v) => v.size === size && !v.color);
+          next.push({ size, quantity: ex?.quantity || 0 });
+        });
+      }
+      return next;
+    });
+  }, [colors, sizes]);
+
+  const totalVariantStock = useMemo(
+    () => variants.reduce((sum, v) => sum + (v.quantity || 0), 0),
+    [variants]
+  );
+
+  useEffect(() => {
+    if (variants.length > 0) setStockQuantity(String(totalVariantStock));
+  }, [totalVariantStock, variants.length]);
+
+  const loadCategories = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('owner_id', user.id)
+        .order('display_order', { ascending: true });
+      if (error) throw error;
+      setCategories(data.map((cat) => ({ id: cat.id, name: cat.name, order: cat.display_order })));
+    } catch {
+      /* fallback */
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
+  const validateField = useCallback((field: string, value: string) => {
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      if (field === 'name' && !value.trim()) next.name = 'اسم المنتج مطلوب';
+      else if (field === 'name') delete next.name;
+      if (field === 'price' && (!value || !isValidPrice(value))) next.price = 'سعر صحيح مطلوب';
+      else if (field === 'price') delete next.price;
+      return next;
+    });
+  }, []);
+
+  const progressSteps = useMemo(
+    () => [
+      { label: 'الصور', completed: !!mainImage, required: true },
+      { label: 'الاسم', completed: !!name.trim(), required: true },
+      { label: 'الفئة', completed: !!category, required: true },
+      { label: 'السعر', completed: !!price && isValidPrice(price), required: true },
+      { label: 'المخزون', completed: !!stockQuantity, required: false },
+      { label: 'المتغيرات', completed: colors.length > 0 || sizes.length > 0, required: false },
+    ],
+    [mainImage, name, category, price, stockQuantity, colors, sizes]
+  );
+
+  const completionPercentage = useMemo(() => {
+    const required = progressSteps.filter((s) => s.required !== false);
+    return Math.round((required.filter((s) => s.completed).length / required.length) * 100);
+  }, [progressSteps]);
+
+  const handleImagesChange = (newMain: string | null, newAdditional: string[]) => {
+    setMainImage(newMain);
+    setAdditionalImages(newAdditional);
+    if (newMain) setFieldErrors((p) => { const n = { ...p }; delete n.image; return n; });
+  };
+
+  const handlePriceChange = (v: string) => {
+    const f = formatPriceInput(v);
+    setPrice(f);
+    validateField('price', f);
+  };
+
+  const handleCompareAtChange = (v: string) => setCompareAtPrice(formatPriceInput(v));
+  const handleCostChange = (v: string) => setCost(formatPriceInput(v));
+  const handleStockChange = (v: string) =>
+    setStockQuantity(convertArabicToEnglish(v).replace(/[^\d]/g, ''));
+
+  const handleVariantQuantityChange = (index: number, rawValue: string) => {
+    const quantity = parseInt(convertArabicToEnglish(rawValue).replace(/[^\d]/g, '')) || 0;
+    setVariants((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], quantity };
+      return updated;
+    });
+  };
+
+  const scrollToFirstError = (errors: Record<string, string>) => {
+    const order = ['image', 'name', 'category', 'price'];
+    const first = order.find((k) => errors[k]);
+    if (!first) return;
+    document.getElementById(first === 'image' ? 'product-media' : first)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({ title: 'خطأ', description: 'يجب تسجيل الدخول أولاً', variant: 'destructive' });
+      return;
+    }
+
+    const errors: Record<string, string> = {};
+    if (!mainImage) errors.image = 'أضف صورة رئيسية للمنتج';
+    if (!name.trim()) errors.name = 'اسم المنتج مطلوب';
+    if (!category) errors.category = categories.length === 0 ? 'أنشئ فئة أولاً' : 'اختر فئة';
+    if (!price || !isValidPrice(price)) errors.price = 'أدخل سعراً صحيحاً';
+
+    if (Object.keys(errors).length) {
+      setFieldErrors(errors);
+      scrollToFirstError(errors);
+      toast({ title: 'أكمل الحقول المطلوبة', variant: 'destructive' });
+      return;
+    }
+
+    if (isImagesUploading) {
+      toast({ title: 'انتظر اكتمال رفع الصور', description: 'جاري رفع الصور — لا يمكن الحفظ الآن', variant: 'destructive' });
+      return;
+    }
+
+    const imageValidation = await validateProductImages(mainImage, additionalImages);
+    if (imageValidation.hasBlobUrls || !imageValidation.valid) {
+      toast({ title: 'خطأ في الصور', description: 'انتظر اكتمال رفع الصور', variant: 'destructive' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const numericPrice = parseFloat(price.replace(/,/g, ''));
+      const numericCost = cost ? parseFloat(cost.replace(/,/g, '')) : undefined;
+      const numericCompare = compareAtPrice ? parseFloat(compareAtPrice.replace(/,/g, '')) : undefined;
+      const originalPrice =
+        numericCompare && numericCompare > numericPrice ? numericCompare : undefined;
+
+      const newProduct: Product = {
+        id: '',
+        name: name.trim(),
+        description: description.trim(),
+        shortDescription: shortDescription.trim() || undefined,
+        category,
+        price: numericPrice,
+        cost: numericCost,
+        originalPrice,
+        image: mainImage!,
+        additionalImages,
+        sizes: sizes.length > 0 ? sizes : undefined,
+        colors: colors.length > 0 ? colors : undefined,
+        stockQuantity: stockQuantity ? parseInt(stockQuantity) : 0,
+        variants: variants.length > 0 ? variants : undefined,
+        sku: sku.trim() || undefined,
+        seoTitle: seoTitle.trim() || name.trim(),
+        seoDescription: seoDescription.trim() || shortDescription.trim() || description.trim().slice(0, 160),
+        productSlug: productSlug.trim() || slugifyProductName(name),
+        tags: parseTagsInput(tagsInput),
+        lowStockThreshold: parseInt(lowStockThreshold) || 3,
+        isActive,
+      };
+
+      const result = await addProduct(newProduct);
+      if (result.success) {
+        toast({ title: 'تم بنجاح', description: isActive ? 'المنتج منشور في متجرك' : 'تم حفظ المنتج كمسودة' });
+        navigate('/products');
+      } else {
+        toast({ title: 'خطأ', description: result.error || 'فشل في إضافة المنتج', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'خطأ', description: 'فشل في إضافة المنتج', variant: 'destructive' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return {
+    state: {
+      mainImage,
+      additionalImages,
+      name,
+      description,
+      shortDescription,
+      category,
+      price,
+      compareAtPrice,
+      cost,
+      sku,
+      sizes,
+      colors,
+      stockQuantity,
+      lowStockThreshold,
+      variants,
+      categories,
+      tagsInput,
+      seoTitle,
+      seoDescription,
+      productSlug,
+      isActive,
+      fieldErrors,
+      isSubmitting,
+      isImagesUploading,
+      profitInfo,
+      progressSteps,
+      completionPercentage,
+      totalVariantStock,
+    },
+    actions: {
+      setName,
+      setDescription,
+      setShortDescription,
+      setCategory,
+      setSku,
+      setSizes,
+      setColors,
+      setLowStockThreshold,
+      setTagsInput,
+      setSeoTitle,
+      setSeoDescription,
+      setProductSlug,
+      setSlugTouched,
+      setIsActive,
+      handleImagesChange,
+      handlePriceChange,
+      handleCompareAtChange,
+      handleCostChange,
+      handleStockChange,
+      handleVariantQuantityChange,
+      validateField,
+      loadCategories,
+      setImagesUploading: setIsImagesUploading,
+      handleSubmit,
+      formatDisplayPrice,
+    },
+  };
+}

@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from "react";
 import { loadProducts, addProduct } from "@/services/productService";
 import { useStoreHydration } from "@/context/StoreBootstrapContext";
 import { Product } from "@/types";
+import { isProductLowStock } from '@/lib/productUpdateUtils';
 import { toast } from "sonner";
 import React from "react";
 import { QuickEditDialog } from "@/components/product-management/QuickEditDialog";
@@ -206,7 +207,7 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
             نفد المخزون
           </div>
         )}
-        {product.stockQuantity !== undefined && product.stockQuantity > 0 && product.stockQuantity <= 5 && (
+        {isProductLowStock(product) && (
           <div className="absolute bottom-3 right-3 bg-yellow-500 text-white text-xs px-2 py-1 rounded-lg">
             كمية منخفضة
           </div>

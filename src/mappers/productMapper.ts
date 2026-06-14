@@ -37,6 +37,18 @@ export const mapDbProduct = (
     discountStartDate: row.discount_start_date as string | undefined,
     discountEndDate: row.discount_end_date as string | undefined,
     originalPrice: row.original_price != null ? Number(row.original_price) : undefined,
+    sku: (row.sku as string) || undefined,
+    shortDescription: (row.short_description as string) || undefined,
+    seoTitle: (row.seo_title as string) || undefined,
+    seoDescription: (row.seo_description as string) || undefined,
+    productSlug: (row.product_slug as string) || undefined,
+    tags: parseJsonField<string[]>(row.tags),
+    lowStockThreshold: row.low_stock_threshold != null
+      ? Number(row.low_stock_threshold)
+      : row.min_stock_level != null
+        ? Number(row.min_stock_level)
+        : undefined,
+    isActive: row.is_active != null ? Boolean(row.is_active) : true,
   };
 
   return options.applyDiscount ? applyActiveDiscount(product) : product;
