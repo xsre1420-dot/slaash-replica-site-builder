@@ -112,20 +112,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
-        const meta = session.user.user_metadata ?? {};
-        setUserAndOwner({
-          id: session.user.id,
-          username: (meta.username as string) || session.user.email?.split('@')[0] || 'مستخدم',
-          store_name: meta.store_name as string | undefined,
-          email: session.user.email,
-        });
-        setTimeout(() => loadProfile(session.user.id, meta, session.user.email), 0);
-      } else if (event === 'SIGNED_OUT') {
-        const prevId = lastUserIdRef.current;
-        setUserAndOwner(null);
-        invalidateOwnerCache(prevId);
-      }
+      // Defer Supabase calls/state updates to avoid auth deadlocks (Supabase recommendation)
+      setTimeout(() => {
+        if (session?.user) {
+          const meta = session.user.user_metadata ?? {};
+          setUserAndOwner({
+            id: session.user.id,
+            username: (meta.username as string) || session.user.email?.split('@')[0] || 'مستخدم',
+            store_name: meta.store_name as string | undefined,
+            email: session.user.email,
+          });
+          void loadProfile(session.user.id, meta, session.user.email);
+        } else if (event === 'SIGNED_OUT') {
+          const prevId = lastUserIdRef.current;
+          setUserAndOwner(null);
+          invalidateOwnerCache(prevId);
+        }
+      }, 0);
     });
 
     supabase.auth.getSession()

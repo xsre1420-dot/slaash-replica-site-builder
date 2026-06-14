@@ -27,20 +27,20 @@ const statusConfig = {
 };
 
 const DashboardOverview = () => {
-  const { filteredOrders, loading, refetch } = useOrders();
+  const { orders, loading, refetch } = useOrders();
   useRealtimeOrders(refetch);
 
   const productCount = getProductsSync().length;
-  const pendingCount = filteredOrders.filter((o) => o.status === 'pending').length;
-  const completedCount = filteredOrders.filter((o) => o.status === 'completed').length;
-  const revenue = filteredOrders
+  const pendingCount = orders.filter((o) => o.status === 'pending').length;
+  const completedCount = orders.filter((o) => o.status === 'completed').length;
+  const revenue = orders
     .filter((o) => o.status === 'completed')
     .reduce((sum, o) => sum + o.total, 0);
-  const recentOrders = [...filteredOrders]
+  const recentOrders = [...orders]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5);
 
-  if (loading && filteredOrders.length === 0) {
+  if (loading && orders.length === 0) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -95,7 +95,7 @@ const DashboardOverview = () => {
       <div>
         <h3 className="ds-section-title mb-4 px-1">ملخص المتجر</h3>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <StatCard label="الطلبات" value={filteredOrders.length} icon={ShoppingBag} />
+          <StatCard label="الطلبات" value={orders.length} icon={ShoppingBag} />
           <StatCard
             label="قيد الانتظار"
             value={pendingCount}
@@ -105,7 +105,7 @@ const DashboardOverview = () => {
           <StatCard label="المنتجات" value={productCount} icon={Package} />
           <StatCard label="الإيرادات (د.ع)" value={revenue.toLocaleString()} icon={TrendingUp} />
         </div>
-        {filteredOrders.length > 0 && completedCount === 0 && pendingCount === 0 && (
+        {orders.length > 0 && completedCount === 0 && pendingCount === 0 && (
           <p className="text-xs text-muted-foreground mt-2 px-1">الإحصائيات تعكس الطلبات المحمّلة حالياً</p>
         )}
       </div>
@@ -114,7 +114,7 @@ const DashboardOverview = () => {
       <div>
         <div className="flex items-center justify-between mb-4 px-1">
           <h3 className="ds-section-title">آخر الطلبات</h3>
-          {filteredOrders.length > 0 && (
+          {orders.length > 0 && (
             <Link to="/orders" className="text-xs text-primary hover:text-primary/80 font-medium">
               عرض الكل
             </Link>
@@ -124,7 +124,8 @@ const DashboardOverview = () => {
         {recentOrders.length > 0 ? (
           <div className="ds-card divide-y divide-border/40 overflow-hidden">
             {recentOrders.map((order) => {
-              const config = statusConfig[order.status as keyof typeof statusConfig];
+              const config =
+                statusConfig[order.status as keyof typeof statusConfig] ?? statusConfig.pending;
               const StatusIcon = config.icon;
               return (
                 <Link

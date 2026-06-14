@@ -9,11 +9,13 @@ export const getAuthCallbackUrl = (): string => {
   return `${window.location.origin}${AUTH_CALLBACK_PATH}`;
 };
 
-/** Dev-only structured auth error logging */
+/** Structured auth error logging (always logged; dev shows full detail) */
 export const logAuthFailure = (operation: string, detail: unknown): void => {
-  if (import.meta.env.DEV) {
-    console.error(`[auth.${operation}]`, detail);
-  }
+  const payload =
+    detail instanceof Error
+      ? { message: detail.message, name: detail.name }
+      : detail;
+  console.error(`[auth.${operation}]`, payload);
 };
 
 export const normalizeUsername = (username: string): string =>

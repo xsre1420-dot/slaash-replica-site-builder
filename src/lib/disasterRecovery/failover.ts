@@ -53,14 +53,19 @@ export const resolveSupabaseConfig = (): SupabaseEndpointConfig => {
 
 export const checkEndpointHealth = async (baseUrl: string): Promise<boolean> => {
   try {
+    const cfg = resolveSupabaseConfig();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     const res = await fetch(`${baseUrl.replace(/\/$/, '')}/rest/v1/`, {
       method: 'HEAD',
       signal: controller.signal,
+      headers: {
+        apikey: cfg.key,
+        Authorization: `Bearer ${cfg.key}`,
+      },
     });
     clearTimeout(timeout);
-    return res.ok || res.status === 401 || res.status === 404;
+    return res.ok || res.status === 404;
   } catch {
     return false;
   }

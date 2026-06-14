@@ -8,6 +8,7 @@ import React, {
   ReactNode,
 } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/observability';
 import { hydrateMerchantStore } from '@/services/merchantHydration';
 
@@ -51,6 +52,16 @@ export const StoreBootstrapProvider = ({ children }: { children: ReactNode }) =>
       setIsReady(false);
 
       try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session?.user || session.user.id !== userId) {
+          logger.warn('merchant.hydrate.skipped', {
+            userId,
+            reason: sessionError?.message || 'missing_or_mismatched_session',
+          });
+          setIsReady(true);
+          return;
+        }
+
         await hydrateMerchantStore(userId);
         hydratedForRef.current = userId;
         setHydrationVersion((v) => v + 1);

@@ -26,8 +26,8 @@ describe('disasterRecovery failover', () => {
     await expect(checkEndpointHealth('https://example.supabase.co')).resolves.toBe(true);
   });
 
-  it('treats 401 as healthy API', async () => {
+  it('returns false when endpoint responds 401 even with apikey', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 }));
-    await expect(checkEndpointHealth('https://example.supabase.co')).resolves.toBe(true);
+    await expect(checkEndpointHealth('https://example.supabase.co')).resolves.toBe(false);
   });
 });
