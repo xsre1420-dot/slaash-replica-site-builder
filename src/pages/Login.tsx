@@ -10,7 +10,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { AuthPageShell, AuthLoadingScreen } from "@/components/auth/AuthPageShell";
-import { validateEmail } from "@/lib/authUtils";
+import { validateEmail, parseAuthUrlError, clearAuthUrlParams } from "@/lib/authUtils";
+import { env } from "@/lib/env";
 
 const features = [
   { icon: ShoppingBag, title: "إدارة متجرك بسهولة", desc: "أضف منتجاتك وتابع طلباتك من مكان واحد" },
@@ -33,6 +34,14 @@ const Login = () => {
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from || "/builder";
   const { toast } = useToast();
+
+  useEffect(() => {
+    const urlError = parseAuthUrlError();
+    if (urlError) {
+      setError(mapAuthUrlError(urlError));
+      clearAuthUrlParams();
+    }
+  }, []);
 
   useEffect(() => {
     if (!loading && user) navigate(from, { replace: true });
@@ -104,13 +113,16 @@ const Login = () => {
           </div>
           <h2 className="text-3xl font-bold text-foreground mb-2">تسجيل الدخول</h2>
           <p className="text-muted-foreground text-sm">أدخل بياناتك للوصول إلى لوحة التحكم</p>
+          {env.VITE_SUPABASE_PUBLISHABLE_KEY === 'missing-anon-key' && (
+            <p className="text-xs text-destructive mt-2">إعدادات Supabase غير مكتملة — راجع ملف .env</p>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
-            <Alert className="bg-destructive/10 border-destructive/20 text-right rounded-xl">
-              <AlertDescription className="text-destructive text-sm space-y-2">
-                <p>⚠️ {error}</p>
+            <Alert variant="destructive" className="text-right rounded-xl">
+              <AlertDescription className="text-sm space-y-2">
+                <p>{error}</p>
                 {emailNotConfirmed && (
                   <Button
                     type="button"
@@ -222,3 +234,10 @@ const Login = () => {
 };
 
 export default Login;
+
+function mapAuthUrlError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes('email not confirmed')) return 'يرجى تأكيد بريدك الإلكتروني أولاً';
+  if (m.includes('invalid') && m.includes('code')) return 'انتهت صلاحية رابط الدخول. حاول تسجيل الدخول يدوياً';
+  return message.length > 120 ? 'تعذر إكمال تسجيل الدخول. حاول مرة أخرى' : message;
+}

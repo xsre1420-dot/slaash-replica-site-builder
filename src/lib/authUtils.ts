@@ -67,8 +67,38 @@ export const mapAuthError = (message: string): string => {
   if (m.includes('token') && (m.includes('expired') || m.includes('invalid'))) {
     return 'انتهت صلاحية الرابط. اطلب رابطاً جديداً';
   }
+  if (m.includes('failed to fetch') || m.includes('network') || m.includes('fetch')) {
+    return 'تعذر الاتصال بالخادم. تحقق من الإنترنت وحاول مجدداً';
+  }
+  if (m.includes('invalid api key') || m.includes('api key')) {
+    return 'خطأ في إعدادات النظام. يرجى التواصل مع الدعم';
+  }
 
   return 'حدث خطأ. يرجى المحاولة مرة أخرى';
+};
+
+/** Parse Supabase auth errors from URL hash/query after failed redirects */
+export const parseAuthUrlError = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const search = new URLSearchParams(window.location.search);
+  const raw =
+    hash.get('error_description') ||
+    search.get('error_description') ||
+    hash.get('error') ||
+    search.get('error');
+  if (!raw) return null;
+  try {
+    return decodeURIComponent(raw.replace(/\+/g, ' '));
+  } catch {
+    return raw;
+  }
+};
+
+export const clearAuthUrlParams = (): void => {
+  if (typeof window === 'undefined') return;
+  const path = window.location.pathname;
+  window.history.replaceState({}, '', path);
 };
 
 export const isRecoveryUrl = (): boolean => {
@@ -97,15 +127,20 @@ export const setAuthRememberMe = (remember: boolean): void => {
 export const createAuthStorage = () => ({
   getItem(key: string): string | null {
     try {
-      const persistent = localStorage.getItem(AUTH_REMEMBER_KEY) !== 'session';
-      return (persistent ? localStorage : sessionStorage).getItem(key);
+      return localStorage.getItem(key) ?? sessionStorage.getItem(key);
     } catch {
       return null;
     }
   },
   setItem(key: string, value: string): void {
-    const persistent = localStorage.getItem(AUTH_REMEMBER_KEY) !== 'session';
-    (persistent ? localStorage : sessionStorage).setItem(key, value);
+    try {
+      const persistent = localStorage.getItem(AUTH_REMEMBER_KEY) !== 'session';
+      (persistent ? localStorage : sessionStorage).setItem(key, value);
+      // Keep a single active session — remove from the other storage
+      (persistent ? sessionStorage : localStorage).removeItem(key);
+    } catch {
+      /* ignore quota errors */
+    }
   },
   removeItem(key: string): void {
     localStorage.removeItem(key);

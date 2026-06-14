@@ -69,11 +69,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const loadProfile = async (userId: string, fallbackMeta?: Record<string, unknown>, email?: string) => {
     try {
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from('profiles')
-        .select('id, user_id, username, store_name')
-        .or(`id.eq.${userId},user_id.eq.${userId}`)
+        .select('id, username, store_name')
+        .eq('id', userId)
         .maybeSingle();
+
+      if (error) {
+        console.warn('Profile fetch failed:', error.message);
+      }
 
       if (profile) {
         setUserAndOwner({
@@ -149,10 +153,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string, rememberMe = true) => {
     try {
       setAuthRememberMe(rememberMe);
-      const { error } = await supabase.auth.signInWithPassword({
+
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
+
       if (error) {
         const mapped = mapAuthError(error.message);
         if (mapped === '__EMAIL_NOT_CONFIRMED__') {
@@ -160,9 +166,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
         return { error: mapped };
       }
+
+      if (!data.session) {
+        return { error: 'تعذر إنشاء الجلسة. حاول مرة أخرى' };
+      }
+
       return {};
-    } catch {
-      return { error: 'حدث خطأ في الاتصال. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.' };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      return { error: mapAuthError(msg) || 'حدث خطأ في الاتصال. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.' };
     }
   };
 
