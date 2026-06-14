@@ -48,8 +48,14 @@ const Store = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebouncedValue(searchQuery, 300);
 
+  const tenantCategoryFilter = useMemo(() => {
+    if (selectedCategory === 'all') return undefined;
+    const cat = categories.find((c) => c.id === selectedCategory);
+    return cat?.name ?? undefined;
+  }, [selectedCategory, categories]);
+
   const tenantProducts = useStoreProductsPage(storeSlug, {
-    category: selectedCategory,
+    category: tenantCategoryFilter,
     search: debouncedSearch,
     enabled: isTenantMode,
   });
@@ -100,9 +106,9 @@ const Store = () => {
     }
     setIsLoading(true);
     try {
-      const [cats, prods] = await Promise.all([getCategories(force), loadProducts(force)]);
+      const [cats] = await Promise.all([getCategories(force), loadProducts(force)]);
       setCategories([{ id: "all", name: "الكل", order: -1 }, ...cats]);
-      setAllProducts(selectedCategory === "all" ? prods : prods.filter(p => p.category === selectedCategory));
+      setAllProducts(getProductsByCategory(selectedCategory));
     } catch {
       setCategories([{ id: "all", name: "الكل", order: -1 }]);
     }
@@ -391,7 +397,7 @@ const Store = () => {
               </div>
               <div className="absolute inset-0 bg-gradient-to-t from-foreground/50 via-foreground/10 to-transparent pointer-events-none" />
               <div className="absolute bottom-4 right-4 left-4 text-right pointer-events-none">
-                <p className="text-lg sm:text-xl font-bold text-white drop-shadow-md">{storeName}</p>
+                <p className="text-lg sm:text-xl font-bold text-white">{storeName}</p>
                 <p className="text-xs text-white/90 mt-0.5">تسوق بثقة — توصيل سريع ودفع آمن</p>
               </div>
               {bannerImages.length > 1 && (

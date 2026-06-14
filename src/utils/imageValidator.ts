@@ -6,10 +6,17 @@
 
 import { isBlobUrl } from './imageUpload';
 
+const TRUSTED_STORAGE_PATTERN = /\/storage\/v1\/object\/public\/product-images\//;
+
+/** Uploaded Supabase storage URLs — skip slow/flaky network probes before save */
+export const isTrustedProductImageUrl = (url: string): boolean =>
+  !!url && !isBlobUrl(url) && TRUSTED_STORAGE_PATTERN.test(url);
+
 /**
  * Check if an image URL is valid and accessible
  */
 export const validateImageUrl = (url: string): Promise<boolean> => {
+  if (isTrustedProductImageUrl(url)) return Promise.resolve(true);
   return new Promise((resolve) => {
     if (!url || url.trim() === '') {
       resolve(false);
@@ -75,13 +82,13 @@ export const validateProductImages = async (
     }
   }
 
-  // If no blob URLs, validate all URLs in parallel
+  // Trusted storage URLs + optional network check for external URLs only
   if (!hasBlobUrls) {
-    const results = await Promise.allSettled(
+    await Promise.all(
       allImages.map(async (url) => {
+        if (isTrustedProductImageUrl(url)) return;
         const isValid = await validateImageUrl(url);
         if (!isValid) invalidUrls.push(url);
-        return isValid;
       })
     );
   }

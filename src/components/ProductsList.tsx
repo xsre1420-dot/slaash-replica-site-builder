@@ -94,7 +94,7 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
     if (result.success) {
       toast.success("تم تكرار المنتج بنجاح");
       // Reload products
-      const productsData = await loadProducts();
+      const productsData = await loadProducts(true);
       setAllProducts(productsData);
       onProductsLoaded?.(productsData);
     } else {

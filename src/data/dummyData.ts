@@ -1,6 +1,7 @@
 
 import { Product, Category } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
+import { getAuthenticatedUserId } from "@/lib/authSession";
 import { cache, CacheKeys, CacheTTL, dedup } from "@/lib/cache";
 import { mapDbProduct } from "@/mappers/productMapper";
 import { PRODUCT_DETAIL_SELECT, mergeProductForUpdate, productToDbRow } from "@/lib/productUpdateUtils";
@@ -23,6 +24,31 @@ export const setCurrentStore = (storeId: string | null) => {
 export const getCurrentStoreId = (): string | null => _currentStoreId;
 
 const getOwnerId = (): string | null => _currentOwnerId;
+
+const resolveStoreIdForOwner = async (ownerId: string): Promise<string | null> => {
+  if (_currentStoreId) return _currentStoreId;
+  const { data, error } = await supabase
+    .from('stores')
+    .select('id')
+    .eq('user_id', ownerId)
+    .maybeSingle();
+  if (error) {
+    console.warn('[products] resolve store_id failed:', error.message);
+    return null;
+  }
+  if (data?.id) {
+    _currentStoreId = data.id;
+    return data.id;
+  }
+  return null;
+};
+
+/** Keep merchant + storefront product caches consistent after mutations */
+const syncProductCachesAfterMutation = (ownerId: string, row?: Record<string, unknown>) => {
+  cache.flushByPrefix(`${CacheKeys.products(ownerId)}:p`);
+  cache.flushByPrefix('tenant-products:');
+  if (row) appendCachedProduct(ownerId, row);
+};
 
 // --- Categories ---
 
@@ -269,8 +295,10 @@ export const removeCachedProduct = (ownerId: string, productId: string): boolean
 
 export const addProduct = async (product: Product): Promise<{ success: boolean; error?: string }> => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { success: false, error: 'User not authenticated' };
+    const userId = await getAuthenticatedUserId();
+    if (!userId) return { success: false, error: 'يجب تسجيل الدخول أولاً' };
+
+    const storeId = await resolveStoreIdForOwner(userId);
 
     const { data, error } = await supabase
       .from('products')
@@ -296,24 +324,27 @@ export const addProduct = async (product: Product): Promise<{ success: boolean; 
         low_stock_threshold: product.lowStockThreshold ?? 3,
         min_stock_level: product.lowStockThreshold ?? 3,
         is_active: product.isActive !== false,
-        owner_id: user.id,
-        store_id: _currentStoreId || undefined,
+        owner_id: userId,
+        store_id: storeId || undefined,
       })
-      .select()
+      .select(PRODUCT_DETAIL_SELECT)
       .single();
 
-    if (error) return { success: false, error: error.message };
+    if (error) {
+      console.error('[products] insert failed:', error);
+      return { success: false, error: error.message };
+    }
 
     if (data) {
-      const key = CacheKeys.products(user.id);
-      const current = cache.get<Product[]>(key) || [];
-      cache.set(key, [mapDbProduct(data as Record<string, unknown>), ...current], CacheTTL.MEDIUM, CacheTTL.STALE);
-      products = cache.get<Product[]>(key) || [];
+      syncProductCachesAfterMutation(userId, data as Record<string, unknown>);
+      products = cache.get<Product[]>(CacheKeys.products(userId)) || [];
+      products_list = products;
     }
 
     return { success: true };
-  } catch {
-    return { success: false, error: 'Failed to add product' };
+  } catch (err) {
+    console.error('[products] addProduct unexpected error:', err);
+    return { success: false, error: err instanceof Error ? err.message : 'فشل في إضافة المنتج' };
   }
 };
 
@@ -349,21 +380,13 @@ export const updateProduct = async (productId: string, updatedProduct: Partial<P
 
     if (error) return { success: false, error: error.message };
 
-    const saved = mapDbProduct(data as Record<string, unknown>);
-    const key = CacheKeys.products(getOwnerId() || user.id);
-    const current = cache.get<Product[]>(key) || [];
-    const inCache = current.some((p) => p.id === productId);
-    cache.set(
-      key,
-      inCache ? current.map((p) => (p.id === productId ? saved : p)) : [saved, ...current],
-      CacheTTL.MEDIUM,
-      CacheTTL.STALE
-    );
-    products = cache.get<Product[]>(key) || [];
+    syncProductCachesAfterMutation(user.id, data as Record<string, unknown>);
+    products = cache.get<Product[]>(CacheKeys.products(user.id)) || [];
 
     return { success: true };
-  } catch {
-    return { success: false, error: 'Failed to update product' };
+  } catch (err) {
+    console.error('[products] updateProduct unexpected error:', err);
+    return { success: false, error: err instanceof Error ? err.message : 'فشل في تحديث المنتج' };
   }
 };
 
@@ -386,23 +409,27 @@ export const deleteProduct = async (productId: string): Promise<{ success: boole
 
     if (error) return { success: false, error: error.message };
 
-    const key = CacheKeys.products(getOwnerId());
-    const current = cache.get<Product[]>(key) || [];
-    cache.set(key, current.filter(p => p.id !== productId), CacheTTL.MEDIUM, CacheTTL.STALE);
-    products = cache.get<Product[]>(key) || [];
+    removeCachedProduct(user.id, productId);
+    cache.flushByPrefix(`${CacheKeys.products(user.id)}:p`);
+    cache.flushByPrefix('tenant-products:');
+    products = cache.get<Product[]>(CacheKeys.products(user.id)) || [];
 
     return { success: true };
-  } catch {
-    return { success: false, error: 'Failed to delete product' };
+  } catch (err) {
+    console.error('[products] deleteProduct unexpected error:', err);
+    return { success: false, error: err instanceof Error ? err.message : 'فشل في حذف المنتج' };
   }
 };
 
 // --- Product Queries (from cache) ---
 
-export const getProductsByCategory = (categoryId: string): Product[] => {
-  const all = cache.get<Product[]>(CacheKeys.products(getOwnerId())) || [];
-  if (categoryId === "all") return all;
-  return all.filter(product => product.category === categoryId);
+export const getProductsByCategory = (categoryKey: string): Product[] => {
+  const ownerId = getOwnerId();
+  const all = cache.get<Product[]>(CacheKeys.products(ownerId)) || [];
+  if (categoryKey === "all") return all;
+  const cats = cache.get<Category[]>(CacheKeys.categories(ownerId)) || [];
+  const categoryName = cats.find((c) => c.id === categoryKey)?.name ?? categoryKey;
+  return all.filter((product) => product.category === categoryName);
 };
 
 export const getProductById = (id: string): Product | undefined => {

@@ -1,7 +1,7 @@
 import { useMemo, useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { addProduct } from '@/services/productService';
+import { addProduct, invalidateProducts } from '@/services/productService';
 import { useToast } from '@/hooks/use-toast';
 import { Product, Category, ColorOption, ProductVariant } from '@/types';
 import { formatPriceInput, isValidPrice, convertArabicToEnglish } from '@/utils/numberUtils';
@@ -236,13 +236,19 @@ export function useAddProductForm() {
 
       const result = await addProduct(newProduct);
       if (result.success) {
+        invalidateProducts();
         toast({ title: 'تم بنجاح', description: isActive ? 'المنتج منشور في متجرك' : 'تم حفظ المنتج كمسودة' });
         navigate('/products');
       } else {
         toast({ title: 'خطأ', description: result.error || 'فشل في إضافة المنتج', variant: 'destructive' });
       }
-    } catch {
-      toast({ title: 'خطأ', description: 'فشل في إضافة المنتج', variant: 'destructive' });
+    } catch (err) {
+      console.error('[addProduct] submit failed:', err);
+      toast({
+        title: 'خطأ',
+        description: err instanceof Error ? err.message : 'فشل في إضافة المنتج',
+        variant: 'destructive',
+      });
     } finally {
       setIsSubmitting(false);
     }
