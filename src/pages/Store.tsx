@@ -22,6 +22,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useStoreDisplay } from "@/hooks/useStoreDisplay";
 import { STORE_PRODUCTS_PAGE_SIZE } from "@/constants/pagination";
 import SEOHead from "@/components/seo/SEOHead";
+import StorefrontTrustBar from "@/components/storefront/StorefrontTrustBar";
+import StorefrontFooter from "@/components/storefront/StorefrontFooter";
+import { getCheckoutPath, getProductPath } from "@/lib/storefrontPaths";
+import { BadgeCheck } from "lucide-react";
 
 const Store = () => {
   const { username: storeSlug } = useParams();
@@ -202,12 +206,42 @@ const Store = () => {
   };
 
   // --- Cart helpers ---
-  const cartQuantityById = useMemo(
-    () => new Map(cartItems.map((i) => [i.product.id, i.quantity])),
-    [cartItems]
-  );
+  const cartQuantityById = useMemo(() => {
+    const map = new Map<string, number>();
+    cartItems.forEach((i) => {
+      map.set(i.product.id, (map.get(i.product.id) ?? 0) + i.quantity);
+    });
+    return map;
+  }, [cartItems]);
+
+  const handleViewProduct = useCallback((productId: string) => {
+    navigate(getProductPath(productId, isTenantMode ? storeSlug : null));
+  }, [isTenantMode, storeSlug, navigate]);
+
+  const handleUpdateQuantity = useCallback((productId: string, qty: number) => {
+    const lines = cartItems.filter((i) => i.product.id === productId);
+    const simpleLine = lines.find((i) => !i.selectedSize && !i.selectedColor);
+    if (!simpleLine) {
+      handleViewProduct(productId);
+      toast({
+        title: "افتح صفحة المنتج",
+        description: "لتعديل الكمية أو الخيارات (مقاس/لون)",
+      });
+      return;
+    }
+    updateQuantity(productId, qty, simpleLine.selectedSize, simpleLine.selectedColor);
+  }, [cartItems, updateQuantity, handleViewProduct, toast]);
 
   const handleAddToCart = useCallback((product: Product) => {
+    const needsVariants = (product.sizes?.length ?? 0) > 0 || (product.colors?.length ?? 0) > 0;
+    if (needsVariants) {
+      toast({
+        title: "اختر الخيارات أولاً",
+        description: "يرجى اختيار المقاس أو اللون من صفحة المنتج",
+      });
+      handleViewProduct(product.id);
+      return;
+    }
     if (isTenantMode && tenant.storeInfo?.ownerId) {
       setStoreOwner(tenant.storeInfo.ownerId);
     }
@@ -217,16 +251,7 @@ const Store = () => {
       title: "✅ تمت الإضافة",
       description: `${product.name} أُضيف إلى السلة`,
     });
-  }, [isTenantMode, tenant.storeInfo?.ownerId, setStoreOwner, addToCart, trackAddToCart, toast]);
-
-  const handleUpdateQuantity = useCallback((productId: string, qty: number) => {
-    updateQuantity(productId, qty);
-  }, [updateQuantity]);
-
-  const handleViewProduct = useCallback((productId: string) => {
-    const path = isTenantMode ? `/store/${storeSlug}/product/${productId}` : `/product-details/${productId}`;
-    navigate(path);
-  }, [isTenantMode, storeSlug, navigate]);
+  }, [isTenantMode, tenant.storeInfo?.ownerId, setStoreOwner, addToCart, trackAddToCart, toast, handleViewProduct]);
 
   // --- Share ---
   const handleShare = async (product: Product) => {
@@ -299,7 +324,7 @@ const Store = () => {
         <div className="px-4 py-3 max-w-3xl mx-auto">
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center gap-1">
-              <CartDrawer>
+              <CartDrawer storeSlug={isTenantMode ? storeSlug : undefined}>
                 <button className="relative p-2 rounded-full hover:bg-muted transition-colors">
                   <ShoppingCart className="w-5 h-5 text-foreground" />
                   {cartCount > 0 && (
@@ -324,7 +349,10 @@ const Store = () => {
                   <img src={storeLogo} alt="" className="relative w-9 h-9 rounded-full object-cover ring-2 ring-primary/20" />
                 </div>
               )}
-              <p className="font-bold text-base text-foreground truncate">{storeName}</p>
+              <p className="font-bold text-base text-foreground truncate flex items-center gap-1 justify-center">
+                {storeName}
+                {isTenantMode && <BadgeCheck className="w-4 h-4 text-primary shrink-0" />}
+              </p>
             </div>
             <div className="w-10" />
           </div>
@@ -351,15 +379,21 @@ const Store = () => {
         </div>
       </div>
 
+      <StorefrontTrustBar />
+
       <div className="max-w-3xl mx-auto">
-        {/* Banner — hero placement */}
+        {/* Banner — hero */}
         {bannerImages.length > 0 && (
           <div className="px-4 pt-4">
-            <div className="relative h-40 sm:h-52 overflow-hidden rounded-2xl shadow-md ring-1 ring-border/40">
+            <div className="relative h-44 sm:h-56 overflow-hidden rounded-2xl shadow-lg ring-1 ring-border/40">
               <div className={`w-full h-full transition-all duration-500 ${isTransitioning ? 'opacity-0 scale-[1.03]' : 'opacity-100 scale-100'}`}>
-                <img src={bannerImages[currentImageIndex]} alt="Banner" className="w-full h-full object-cover" loading="lazy" />
+                <img src={bannerImages[currentImageIndex]} alt="" className="w-full h-full object-cover" loading="lazy" />
               </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-foreground/20 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-t from-foreground/50 via-foreground/10 to-transparent pointer-events-none" />
+              <div className="absolute bottom-4 right-4 left-4 text-right pointer-events-none">
+                <p className="text-lg sm:text-xl font-bold text-white drop-shadow-md">{storeName}</p>
+                <p className="text-xs text-white/90 mt-0.5">تسوق بثقة — توصيل سريع ودفع آمن</p>
+              </div>
               {bannerImages.length > 1 && (
                 <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
                   {bannerImages.map((_, i) => (
@@ -490,12 +524,20 @@ const Store = () => {
         )}
       </div>
 
-      <WhatsAppButton phoneNumber={(storeSettings as any).whatsappNumber || ""} />
+      <StorefrontFooter
+        storeName={storeName || 'المتجر'}
+        storeSlug={storeSlug}
+        whatsappNumber={(storeSettings as any).whatsappNumber || tenant.storeInfo?.whatsappNumber}
+        returnPolicy={tenant.storeInfo?.returnPolicy}
+        privacyPolicy={tenant.storeInfo?.privacyPolicy}
+      />
+
+      <WhatsAppButton phoneNumber={(storeSettings as any).whatsappNumber || tenant.storeInfo?.whatsappNumber || ""} />
 
       {/* Fixed Cart Bar */}
       {cartCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background/95 to-transparent">
-          <button onClick={() => navigate(isTenantMode ? `/store/${storeSlug}/checkout` : '/checkout')} className="w-full max-w-3xl mx-auto block">
+        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background/95 to-transparent safe-area-bottom">
+          <button onClick={() => navigate(getCheckoutPath(isTenantMode ? storeSlug : null))} className="w-full max-w-3xl mx-auto block">
             <div className="bg-gradient-to-r from-primary to-primary/85 rounded-2xl shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 transition-all">
               <div className="flex items-center justify-between px-5 py-3.5">
                 <div className="flex items-center gap-3">

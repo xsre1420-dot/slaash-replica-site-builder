@@ -15,6 +15,11 @@ import PaymentMethodSelector from "@/components/checkout/PaymentMethodSelector";
 import { useCheckoutFlow } from "@/hooks/useCheckoutFlow";
 import MarketingScripts from "@/components/MarketingScripts";
 import { useStoreVisitTracking } from "@/hooks/useStoreVisitTracking";
+import StoreThemeProvider from "@/components/StoreThemeProvider";
+import StorefrontFooter from "@/components/storefront/StorefrontFooter";
+import StorefrontTrustBar from "@/components/storefront/StorefrontTrustBar";
+import { useStoreDisplay } from "@/hooks/useStoreDisplay";
+import { useTenantStore } from "@/hooks/useTenantStore";
 
 const Checkout = () => {
   const { removeFromCart, updateQuantity, getMaxQuantity } = useCart();
@@ -50,6 +55,15 @@ const Checkout = () => {
     handleSubmitOrder,
   } = useCheckoutFlow();
 
+  const tenant = useTenantStore(storeSlug);
+  const display = useStoreDisplay(storeSlug);
+  const themeColors = {
+    backgroundColor: display.storeSettings.menuBackgroundColor,
+    textColor: display.storeSettings.menuTextColor,
+    accentColor: display.storeSettings.menuAccentColor,
+    font: display.storeSettings.storeFont,
+  };
+
   useStoreVisitTracking(isTenantMode ? storeSlug : undefined);
 
   if (isTenantMode && tenantLoading) {
@@ -61,6 +75,7 @@ const Checkout = () => {
   }
 
   return (
+    <StoreThemeProvider colors={themeColors}>
     <div className="min-h-screen bg-background font-arabic" dir="rtl">
       <MarketingScripts
         storeSlug={isTenantMode ? storeSlug : undefined}
@@ -68,8 +83,9 @@ const Checkout = () => {
         disabled={!isTenantMode}
       />
       <CheckoutHeader cartCount={cartCount} backTo={storeHomePath} />
+      <StorefrontTrustBar />
 
-      <div className="max-w-xl mx-auto px-4 pb-32">
+      <div className="max-w-xl mx-auto px-4 pb-36">
         {cartItems.length === 0 ? (
           <ScrollReveal>
             <div className="text-center py-16 mt-8">
@@ -84,7 +100,7 @@ const Checkout = () => {
             </div>
           </ScrollReveal>
         ) : (
-          <form onSubmit={handleSubmitOrder}>
+          <form id="checkout-form" onSubmit={handleSubmitOrder}>
             <ScrollReveal>
               <ProgressSteps currentStep={currentStep} />
             </ScrollReveal>
@@ -128,6 +144,12 @@ const Checkout = () => {
                     <span>الخصم ({appliedCoupon?.code})</span>
                   </div>
                 )}
+
+                {deliveryPrices.length > 0 && !selectedGovernorate && (
+                  <p className="text-xs text-muted-foreground mt-3 text-right">
+                    اختر المحافظة لعرض رسوم التوصيل والمجموع النهائي
+                  </p>
+                )}
               </div>
             </ScrollReveal>
 
@@ -157,12 +179,18 @@ const Checkout = () => {
               </div>
             </ScrollReveal>
 
-            {selectedGovernorate && deliveryFee > 0 && (
+            {selectedGovernorate && (
               <ScrollReveal delay={300}>
                 <div className="bg-card rounded-2xl border border-border/50 p-4 mt-4 space-y-3">
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-foreground">{deliveryFee.toLocaleString()} د.ع</span>
-                    <span className="text-muted-foreground">رسوم التوصيل ({selectedGovernorate})</span>
+                    <span className="text-foreground">
+                      {deliveryFee > 0 ? `${deliveryFee.toLocaleString()} د.ع` : "مجاني"}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {deliveryFee > 0
+                        ? `رسوم التوصيل (${selectedGovernorate})`
+                        : `توصيل مجاني (${selectedGovernorate})`}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center pt-2 border-t border-border/50">
                     <span className="font-bold text-lg text-primary">{totalWithDelivery.toLocaleString()} د.ع</span>
@@ -189,30 +217,63 @@ const Checkout = () => {
         )}
       </div>
 
+      {cartItems.length > 0 && (
+        <StorefrontFooter
+          storeName={display.storeName || 'المتجر'}
+          storeSlug={storeSlug}
+          whatsappNumber={display.storeSettings.whatsappNumber || tenant.storeInfo?.whatsappNumber}
+          returnPolicy={tenant.storeInfo?.returnPolicy}
+          privacyPolicy={tenant.storeInfo?.privacyPolicy}
+        />
+      )}
+
       {cartItems.length > 0 && !orderCompleted && (
         <div
-          className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t border-border/50 p-3 z-30 md:hidden animate-slide-up-sticky"
+          className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t border-border/50 p-3 z-30 md:hidden safe-area-bottom"
           dir="rtl"
         >
-          <div className="max-w-xl mx-auto flex items-center justify-between">
-            <div className="text-right">
+          <div className="max-w-xl mx-auto flex items-center gap-3">
+            <div className="text-right flex-1 min-w-0">
               <span className="text-xs text-muted-foreground">{cartCount} منتج</span>
-              <p className="font-bold text-foreground">{totalWithDelivery.toLocaleString()} د.ع</p>
+              <p className="font-bold text-foreground">
+                {deliveryPrices.length > 0 && !selectedGovernorate
+                  ? `${cartTotal.toLocaleString()} د.ع`
+                  : `${totalWithDelivery.toLocaleString()} د.ع`}
+              </p>
+              {deliveryPrices.length > 0 && !selectedGovernorate && (
+                <span className="text-[10px] text-muted-foreground">+ التوصيل بعد اختيار المحافظة</span>
+              )}
             </div>
             <Button
+              type="button"
               onClick={() => formRef.current?.scrollIntoView({ behavior: "smooth" })}
               size="sm"
               variant="outline"
-              className="rounded-xl text-xs"
+              className="rounded-xl text-xs shrink-0"
             >
-              معلومات التوصيل ↓
+              التوصيل
+            </Button>
+            <Button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => document.getElementById('checkout-form')?.requestSubmit()}
+              className="rounded-xl font-bold shrink-0 bg-primary min-h-[44px]"
+            >
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'تأكيد'}
             </Button>
           </div>
         </div>
       )}
 
-      {orderCompleted && <OrderSuccessModal orderId={completedOrderId} />}
+      {orderCompleted && (
+        <OrderSuccessModal
+          orderId={completedOrderId}
+          storeSlug={storeSlug}
+          whatsappNumber={display.storeSettings.whatsappNumber || tenant.storeInfo?.whatsappNumber}
+        />
+      )}
     </div>
+    </StoreThemeProvider>
   );
 };
 

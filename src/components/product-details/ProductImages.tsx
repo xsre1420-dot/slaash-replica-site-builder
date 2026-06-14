@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
 import { Sparkles, Flame, Tag } from "lucide-react";
-import { useParallax } from "@/hooks/useParallax";
+import ProductImageLightbox from "@/components/storefront/ProductImageLightbox";
 
 interface ProductImagesProps {
   images: string[];
@@ -22,7 +22,6 @@ const ProductImages = ({
   const [activeIndex, setActiveIndex] = useState(0);
   const [api, setApi] = useState<CarouselApi>();
   const [imgLoaded, setImgLoaded] = useState<boolean[]>(new Array(images.length).fill(false));
-  const { ref: parallaxRef, offset } = useParallax(0.15);
 
   useEffect(() => {
     if (!api) return;
@@ -38,19 +37,18 @@ const ProductImages = ({
   };
 
   return (
-    <div className="w-full space-y-3" ref={parallaxRef}>
-      <div className="relative overflow-hidden" style={{ transform: `translateY(${offset}px)`, willChange: 'transform' }}>
+    <div className="w-full space-y-3">
+      <div className="relative overflow-hidden">
         <Carousel className="w-full" setApi={setApi}>
           <CarouselContent>
             {images.map((img, index) => (
               <CarouselItem key={index} className="relative">
                 <div className="aspect-square bg-muted rounded-2xl overflow-hidden">
                   {!imgLoaded[index] && <div className="absolute inset-0 bg-muted animate-pulse rounded-2xl" />}
-                  <img
+                  <ProductImageLightbox
                     src={img}
-                    alt={productName}
-                    className={`w-full h-full object-cover transition-opacity duration-500 ${imgLoaded[index] ? 'opacity-100' : 'opacity-0'}`}
-                    loading={index === 0 ? "eager" : "lazy"}
+                    alt={`${productName} — صورة ${index + 1}`}
+                    className={`transition-opacity duration-500 ${imgLoaded[index] ? 'opacity-100' : 'opacity-0'}`}
                     onLoad={() => handleImgLoad(index)}
                   />
                 </div>

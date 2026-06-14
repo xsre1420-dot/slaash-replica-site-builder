@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Order } from "@/types";
-import { format } from "date-fns";
 import { cache, CacheKeys, CacheTTL, dedup, flushOwnerCache } from "@/lib/cache";
 import { useAuth } from "@/context/AuthContext";
 import { useStoreHydration } from "@/context/StoreBootstrapContext";
@@ -13,11 +12,10 @@ export const useOrders = () => {
   const { user } = useAuth();
   const { isReady, hydrationVersion } = useStoreHydration();
   const [orders, setOrders] = useState<Order[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
   const pageRef = useRef(0);
+  const knownOrderIdsRef = useRef<Set<string>>(new Set());
 
   const fetchOrders = useCallback(async (page = 0, append = false) => {
     const ownerId = user?.id;
@@ -36,6 +34,7 @@ export const useOrders = () => {
       const cached = cache.get<Order[]>(cacheKey);
       if (cached) {
         setOrders(cached);
+        cached.forEach((o) => knownOrderIdsRef.current.add(o.id));
         setHasMore(cached.length === ORDERS_PER_PAGE);
         pageRef.current = page;
         setLoading(false);
@@ -54,6 +53,7 @@ export const useOrders = () => {
     } else {
       setOrders(mapped);
     }
+    mapped.forEach((o) => knownOrderIdsRef.current.add(o.id));
     setHasMore(mapped.length === ORDERS_PER_PAGE);
     pageRef.current = page;
     setLoading(false);
@@ -64,56 +64,15 @@ export const useOrders = () => {
     fetchOrders(0);
   }, [isReady, hydrationVersion, fetchOrders]);
 
-  const filteredOrders = useMemo(() => {
-    let filtered = orders;
-
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (order) =>
-          order.customerInfo.name.toLowerCase().includes(q) ||
-          order.customerInfo.phone.includes(q) ||
-          order.id.includes(q)
-      );
-    }
-
-    if (dateFilter) {
-      const filterDate = format(dateFilter, "yyyy-MM-dd");
-      filtered = filtered.filter((order) => order.date.startsWith(filterDate));
-    }
-
-    return filtered;
-  }, [searchQuery, dateFilter, orders]);
-
   const loadMore = useCallback(() => {
     if (hasMore && !loading) {
       fetchOrders(pageRef.current + 1, true);
     }
   }, [hasMore, loading, fetchOrders]);
 
-  const archiveOrder = async (orderId: string) => {
-    const ownerId = user?.id;
-    if (!ownerId) return;
-
-    const order = orders.find((o) => o.id === orderId);
-    if (order && !canTransitionOrderStatus(order.status, 'cancelled')) {
-      toast.error('لا يمكن إلغاء هذا الطلب');
-      return;
-    }
-
-    const result = await updateOrderStatus(orderId, ownerId, 'cancelled');
-
-    if (result.success) {
-      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: 'cancelled' as const } : o)));
-      if (ownerId) flushOwnerCache(ownerId);
-    } else {
-      toast.error(mapOrderError(result.error || 'فشل التحديث'));
-    }
-  };
-
   const updateOrderStatusLocal = async (
     orderId: string,
-    newStatus: "pending" | "completed" | "cancelled"
+    newStatus: Order['status']
   ): Promise<boolean> => {
     const ownerId = user?.id;
     if (!ownerId) return false;
@@ -127,8 +86,19 @@ export const useOrders = () => {
     const result = await updateOrderStatus(orderId, ownerId, newStatus);
 
     if (result.success) {
-      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o)));
-      if (ownerId) flushOwnerCache(ownerId);
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === orderId
+            ? {
+                ...o,
+                status: newStatus,
+                ...(newStatus === 'completed' ? { deliveryStatus: 'delivered' } : {}),
+                ...(newStatus === 'cancelled' ? { deliveryStatus: o.deliveryStatus || 'pending' } : {}),
+              }
+            : o
+        )
+      );
+      flushOwnerCache(ownerId);
       return true;
     }
 
@@ -136,26 +106,34 @@ export const useOrders = () => {
     return false;
   };
 
-  const clearDateFilter = () => setDateFilter(undefined);
+  const patchOrderInList = useCallback((orderId: string, patch: Partial<Order>) => {
+    setOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, ...patch } : o))
+    );
+  }, []);
 
   const refetch = useCallback(() => {
     if (user?.id) flushOwnerCache(user.id);
     fetchOrders(0);
   }, [fetchOrders, user?.id]);
 
+  const isNewOrder = useCallback((orderId: string) => {
+    return !knownOrderIdsRef.current.has(orderId);
+  }, []);
+
+  const markOrderKnown = useCallback((orderId: string) => {
+    knownOrderIdsRef.current.add(orderId);
+  }, []);
+
   return {
     orders,
-    filteredOrders,
-    searchQuery,
-    setSearchQuery,
-    dateFilter,
-    setDateFilter,
-    archiveOrder,
     updateOrderStatus: updateOrderStatusLocal,
-    clearDateFilter,
+    patchOrderInList,
     loading,
     hasMore,
     loadMore,
     refetch,
+    isNewOrder,
+    markOrderKnown,
   };
 };

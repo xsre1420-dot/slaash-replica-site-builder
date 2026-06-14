@@ -139,6 +139,39 @@ export const useCheckoutFlow = () => {
   const storeHomePath = isTenantMode ? `/store/${storeSlug}` : "/preview";
   const { trackInitiateCheckout, trackPurchase } = useMetaPixel();
   const checkoutTrackedRef = useRef(false);
+  const cartPriceSyncedRef = useRef(false);
+  const submitLockRef = useRef(false);
+
+  useEffect(() => {
+    cartPriceSyncedRef.current = false;
+  }, [ownerId]);
+
+  useEffect(() => {
+    if (!ownerId || cartItems.length === 0 || cartPriceSyncedRef.current) return;
+    cartPriceSyncedRef.current = true;
+
+    let cancelled = false;
+    const syncCartPrices = async () => {
+      try {
+        const productIds = cartItems.map((i) => i.product.id);
+        const freshMap = await fetchFreshProducts(ownerId, productIds);
+        if (cancelled) return;
+
+        const validation = validateAndRefreshCart(cartItems, freshMap);
+        if (validation.updatedItems.length > 0) {
+          replaceCartItems(validation.updatedItems);
+        }
+        validation.errors.forEach((msg) => toast.warning(msg));
+      } catch {
+        if (!cancelled) {
+          toast.warning("تعذر تحديث أسعار السلة. سيتم التحقق عند تأكيد الطلب.");
+        }
+      }
+    };
+
+    void syncCartPrices();
+    return () => { cancelled = true; };
+  }, [ownerId, cartItems, replaceCartItems]);
 
   useEffect(() => {
     if (cartItems.length === 0 || checkoutTrackedRef.current) return;
@@ -173,7 +206,8 @@ export const useCheckoutFlow = () => {
 
   const handleSubmitOrder = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm() || isSubmitting) return;
+    if (submitLockRef.current || isSubmitting) return;
+    if (!validateForm()) return;
 
     if (!ownerId) {
       toast.error("تعذر تحديد المتجر. يرجى المحاولة مرة أخرى.");
@@ -191,6 +225,7 @@ export const useCheckoutFlow = () => {
       return;
     }
 
+    submitLockRef.current = true;
     setIsSubmitting(true);
     metrics.increment('checkout.submit.started');
 
@@ -315,6 +350,7 @@ export const useCheckoutFlow = () => {
       alertOnError('checkout.submit', error, { ownerId });
       toast.error(mapOrderError(error instanceof Error ? error.message : "فشل في إنشاء الطلب"));
     } finally {
+      submitLockRef.current = false;
       setIsSubmitting(false);
     }
   }, [

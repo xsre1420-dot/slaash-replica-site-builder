@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import MarketingScripts from "@/components/MarketingScripts";
@@ -7,9 +7,13 @@ import { Product } from "@/types";
 import { useCart } from "@/context/CartContext";
 import { useStore } from "@/context/StoreContext";
 import { useTenantStore } from "@/hooks/useTenantStore";
-import { Truck, Shield, RotateCcw, Eye, Check } from "lucide-react";
+import { Truck, Shield, RotateCcw, Check, Package, BadgeCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import StoreThemeProvider from "@/components/StoreThemeProvider";
+import StorefrontFooter from "@/components/storefront/StorefrontFooter";
+import ProductPurchaseBar from "@/components/storefront/ProductPurchaseBar";
+import { getCheckoutPath } from "@/lib/storefrontPaths";
 import {
   getAvailableQty,
   validateVariantSelection,
@@ -20,7 +24,6 @@ import {
 import ProductHeader from "@/components/product-details/ProductHeader";
 import ProductImages from "@/components/product-details/ProductImages";
 import ProductQuantity from "@/components/product-details/ProductQuantity";
-import AddToCartButton from "@/components/product-details/AddToCartButton";
 import CartButton from "@/components/product-details/CartButton";
 import ProductData from "@/components/product-details/ProductData";
 import ExpandableSection from "@/components/product-details/ExpandableSection";
@@ -67,11 +70,13 @@ const ProductDetailsSkeleton = () => (
 
 const ProductDetails = () => {
   const { productId, username: storeSlug } = useParams<{ productId: string; username?: string }>();
+  const navigate = useNavigate();
   const isTenantMode = !!storeSlug;
   const tenant = useTenantStore(storeSlug);
   const { user } = useAuth();
   const { trackViewContent, trackAddToCart } = useMetaPixel();
   const viewTrackedRef = useRef<string | null>(null);
+  const checkoutPath = getCheckoutPath(isTenantMode ? storeSlug : null);
   useStoreVisitTracking(isTenantMode ? storeSlug : undefined);
   useProductViewTracking(isTenantMode ? storeSlug : undefined, productId);
   const [product, setProduct] = useState<Product | null>(null);
@@ -80,7 +85,27 @@ const ProductDetails = () => {
   const [selectedColor, setSelectedColor] = useState<string>("");
   const [isAdding, setIsAdding] = useState(false);
   const { addToCart, cartCount, cartItems, setStoreOwner } = useCart();
-  const { storeSettings } = useStore();
+  const { storeSettings, storeName, storeGovernorate } = useStore();
+
+  const themeColors = {
+    backgroundColor: isTenantMode
+      ? tenant.storeInfo?.menuBackgroundColor || '#ffffff'
+      : storeSettings.menuBackgroundColor,
+    textColor: isTenantMode
+      ? tenant.storeInfo?.menuTextColor || '#333333'
+      : storeSettings.menuTextColor,
+    accentColor: isTenantMode
+      ? tenant.storeInfo?.menuAccentColor || '#6366f1'
+      : storeSettings.menuAccentColor,
+    font: isTenantMode
+      ? tenant.storeInfo?.storeFont || 'Tajawal'
+      : storeSettings.storeFont,
+  };
+
+  const displayStoreName = isTenantMode ? tenant.storeInfo?.storeName || storeName : storeName;
+  const returnPolicy = isTenantMode ? tenant.storeInfo?.returnPolicy : '';
+  const privacyPolicy = isTenantMode ? tenant.storeInfo?.privacyPolicy : '';
+  const whatsappNumber = isTenantMode ? tenant.storeInfo?.whatsappNumber : '';
 
   useEffect(() => {
     if (isTenantMode && tenant.storeInfo?.ownerId) {
@@ -99,9 +124,6 @@ const ProductDetails = () => {
     [cartItems]
   );
 
-  // Social proof (simulated)
-  const viewerCount = useMemo(() => Math.floor(Math.random() * 8) + 3, []);
-
   const activeProduct = product ? applyActiveDiscount(product) : null;
 
   useEffect(() => {
@@ -111,45 +133,43 @@ const ProductDetails = () => {
     trackViewContent(activeProduct.id, activeProduct.name, activeProduct.price);
   }, [activeProduct, trackViewContent]);
 
+  // Stock availability for selected variant
   const variantAvailable = activeProduct
     ? getAvailableQty(activeProduct, selectedSize || undefined, selectedColor || undefined)
     : 0;
 
-  const handleAddToCart = () => {
-    if (activeProduct && !isAdding) {
-      const selection = validateVariantSelection(
-        activeProduct,
-        selectedSize || undefined,
-        selectedColor || undefined
-      );
-      if (!selection.valid) {
-        toast.error(selection.message || "يرجى اختيار خيارات المنتج");
-        return;
-      }
-      if (variantAvailable <= 0) {
-        toast.error("المنتج غير متوفر في المخزون");
-        return;
-      }
-      if (quantity > variantAvailable) {
-        toast.error(`الكمية المتاحة ${variantAvailable} فقط`);
-        return;
-      }
-      setIsAdding(true);
-      addToCart(activeProduct, selectedSize || undefined, selectedColor || undefined, quantity);
-      trackAddToCart(activeProduct.id, activeProduct.name, activeProduct.price * quantity);
-      
-      toast.success(`تمت إضافة "${activeProduct.name}" إلى السلة`, {
-        description: [
-          selectedSize && `المقاس: ${selectedSize}`,
-          selectedColor && `اللون محدد`,
-          quantity > 1 && `الكمية: ${quantity}`,
-        ].filter(Boolean).join(' • ') || undefined,
-      });
+  const tryAddToCart = useCallback((): boolean => {
+    if (!activeProduct || isAdding) return false;
+    const selection = validateVariantSelection(
+      activeProduct,
+      selectedSize || undefined,
+      selectedColor || undefined
+    );
+    if (!selection.valid) {
+      toast.error(selection.message || "يرجى اختيار خيارات المنتج");
+      return false;
+    }
+    if (variantAvailable <= 0) {
+      toast.error("المنتج غير متوفر في المخزون");
+      return false;
+    }
+    if (quantity > variantAvailable) {
+      toast.error(`الكمية المتاحة ${variantAvailable} فقط`);
+      return false;
+    }
+    setIsAdding(true);
+    addToCart(activeProduct, selectedSize || undefined, selectedColor || undefined, quantity);
+    trackAddToCart(activeProduct.id, activeProduct.name, activeProduct.price * quantity);
+    toast.success(`تمت إضافة "${activeProduct.name}" إلى السلة`);
+    setTimeout(() => setIsAdding(false), 400);
+    return true;
+  }, [activeProduct, isAdding, selectedSize, selectedColor, variantAvailable, quantity, addToCart, trackAddToCart]);
 
-      setQuantity(1);
-      setSelectedSize("");
-      setSelectedColor("");
-      setTimeout(() => setIsAdding(false), 500);
+  const handleAddToCart = () => { tryAddToCart(); };
+
+  const handleBuyNow = () => {
+    if (tryAddToCart()) {
+      navigate(checkoutPath);
     }
   };
 
@@ -183,7 +203,8 @@ const ProductDetails = () => {
   const allImages = product.additionalImages ? [product.image, ...product.additionalImages] : [product.image];
 
   return (
-    <div className="min-h-screen bg-background">
+    <StoreThemeProvider colors={themeColors}>
+    <div className="min-h-screen bg-background pb-28">
       <MarketingScripts
         storeSlug={isTenantMode ? storeSlug : undefined}
         storeOwnerId={isTenantMode ? tenant.storeInfo?.ownerId : user?.id}
@@ -191,8 +212,7 @@ const ProductDetails = () => {
       />
       <ProductHeader productId={product.id} productName={product.name} storeSlug={storeSlug} />
 
-      <div className="max-w-md mx-auto bg-card">
-        {/* Product Images with Parallax */}
+      <div className="max-w-lg mx-auto">
         <div className="px-4 pt-4">
           <ProductImages 
             images={allImages} 
@@ -207,33 +227,47 @@ const ProductDetails = () => {
         </div>
 
         <div className="p-4 space-y-5">
-          {/* Social Proof */}
+          {/* Title, price, availability */}
           <ScrollReveal delay={0}>
-            <div className="flex items-center gap-1.5 justify-end">
-              <span className="text-xs text-muted-foreground">{viewerCount} شخص يشاهد هذا المنتج الآن</span>
-              <Eye className="w-3.5 h-3.5 text-muted-foreground" />
-            </div>
-          </ScrollReveal>
-
-          {/* Name & Price */}
-          <ScrollReveal delay={50}>
-            <div className="flex justify-between items-start gap-3">
-              <div className="text-left">
-                {hasDiscount && product.originalPrice ? (
-                  <div className="flex flex-col items-start">
-                    <span className="text-sm text-muted-foreground line-through">{product.originalPrice.toLocaleString()} د.ع</span>
-                    <span className="text-2xl font-bold text-destructive">{product.price.toLocaleString()} د.ع</span>
-                    {discountPercent && (
-                      <span className="inline-block bg-destructive/10 text-destructive text-xs px-2 py-0.5 rounded-lg font-bold mt-1">
-                        وفّر {discountPercent}%
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <span className="text-2xl font-bold text-foreground">{product.price.toLocaleString()} د.ع</span>
-                )}
+            <div className="space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="text-left shrink-0">
+                  {hasDiscount && product.originalPrice ? (
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm text-muted-foreground line-through">{product.originalPrice.toLocaleString()} د.ع</span>
+                      <span className="text-2xl font-bold text-destructive">{product.price.toLocaleString()} د.ع</span>
+                      {discountPercent && (
+                        <span className="inline-block bg-destructive/10 text-destructive text-xs px-2 py-0.5 rounded-lg font-bold mt-1">
+                          وفّر {discountPercent}%
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-2xl font-bold text-foreground">{product.price.toLocaleString()} د.ع</span>
+                  )}
+                </div>
+                <div className="text-right flex-1">
+                  <h1 className="text-xl font-bold text-foreground leading-snug">{product.name}</h1>
+                  {product.category && (
+                    <p className="text-xs text-muted-foreground mt-1">{product.category}</p>
+                  )}
+                </div>
               </div>
-              <h1 className="text-xl font-bold text-foreground text-right flex-1">{product.name}</h1>
+
+              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
+                isOutOfStock
+                  ? 'bg-muted text-muted-foreground'
+                  : isLowStock
+                    ? 'bg-warning/15 text-warning-foreground'
+                    : 'bg-green-500/10 text-green-700 dark:text-green-400'
+              }`}>
+                <Package className="w-3.5 h-3.5" />
+                {isOutOfStock
+                  ? 'غير متوفر حالياً'
+                  : isLowStock
+                    ? `متبقي ${variantAvailable} قطع فقط`
+                    : `متوفر — ${variantAvailable} قطعة`}
+              </div>
             </div>
           </ScrollReveal>
 
@@ -301,9 +335,9 @@ const ProductDetails = () => {
             </ScrollReveal>
           )}
 
-          {/* Quantity + Add to Cart */}
+          {/* Quantity — desktop inline actions hidden on mobile (sticky bar handles mobile) */}
           <ScrollReveal delay={200}>
-            <div className="space-y-3">
+            <div className="space-y-3 hidden sm:block">
               <div className="flex items-center justify-between">
                 <ProductQuantity
                   quantity={quantity}
@@ -312,29 +346,66 @@ const ProductDetails = () => {
                 />
                 <h3 className="text-sm font-semibold text-foreground">الكمية</h3>
               </div>
-              <AddToCartButton 
-                onClick={handleAddToCart} 
-                disabled={isAdding} 
-                isOutOfStock={isOutOfStock}
-              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  disabled={isAdding || isOutOfStock}
+                  className="flex-1 h-12 rounded-xl border-2 border-primary text-primary font-semibold hover:bg-primary/5 disabled:opacity-50"
+                >
+                  أضف للسلة
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBuyNow}
+                  disabled={isAdding || isOutOfStock}
+                  className="flex-1 h-12 rounded-xl bg-primary text-primary-foreground font-bold disabled:opacity-50"
+                >
+                  اشتري الآن
+                </button>
+              </div>
+            </div>
+            <div className="sm:hidden">
+              <div className="flex items-center justify-between mb-3">
+                <ProductQuantity
+                  quantity={quantity}
+                  onIncrement={() => setQuantity((prev) => Math.min(prev + 1, Math.max(variantAvailable, 1)))}
+                  onDecrement={() => setQuantity((prev) => Math.max(1, prev - 1))}
+                />
+                <h3 className="text-sm font-semibold text-foreground">الكمية</h3>
+              </div>
             </div>
           </ScrollReveal>
 
-          {/* Guarantees Bar */}
+          {/* Trust */}
           <ScrollReveal delay={250} animation="slide-up">
             <div className="grid grid-cols-3 gap-2">
               {[
                 { icon: <Truck className="w-5 h-5" />, label: "توصيل سريع" },
-                { icon: <Shield className="w-5 h-5" />, label: "ضمان الجودة" },
-                { icon: <RotateCcw className="w-5 h-5" />, label: "إرجاع سهل" },
+                { icon: <Shield className="w-5 h-5" />, label: "دفع آمن" },
+                { icon: <RotateCcw className="w-5 h-5" />, label: returnPolicy ? "إرجاع متاح" : "ضمان الجودة" },
               ].map((item, i) => (
-                <div key={i} className="flex flex-col items-center gap-1.5 py-3 bg-muted/50 rounded-xl" style={{ animationDelay: `${250 + i * 80}ms` }}>
-                  <span className="text-muted-foreground">{item.icon}</span>
-                  <span className="text-[11px] font-medium text-muted-foreground">{item.label}</span>
+                <div key={i} className="flex flex-col items-center gap-1.5 py-3 bg-muted/50 rounded-xl border border-border/40">
+                  <span className="text-primary">{item.icon}</span>
+                  <span className="text-[11px] font-medium text-muted-foreground text-center">{item.label}</span>
                 </div>
               ))}
             </div>
+            {isTenantMode && (
+              <p className="text-[10px] text-muted-foreground text-center mt-2 flex items-center justify-center gap-1">
+                <BadgeCheck className="w-3 h-3 text-primary" />
+                متجر موثوق — الدفع عند الاستلام متاح
+              </p>
+            )}
           </ScrollReveal>
+
+          {returnPolicy && (
+            <ScrollReveal delay={280}>
+              <ExpandableSection title="سياسة الإرجاع والشحن" defaultOpen={false}>
+                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{returnPolicy}</p>
+              </ExpandableSection>
+            </ScrollReveal>
+          )}
 
           {/* Description */}
           <ScrollReveal delay={300}>
@@ -357,12 +428,36 @@ const ProductDetails = () => {
             <SuggestedProducts currentProductId={productId || ""} storeSlug={storeSlug} category={product.category} />
           </ScrollReveal>
         </div>
+
+        <StorefrontFooter
+          storeName={displayStoreName || 'المتجر'}
+          storeSlug={storeSlug}
+          governorate={storeGovernorate}
+          whatsappNumber={whatsappNumber}
+          returnPolicy={returnPolicy}
+          privacyPolicy={privacyPolicy}
+        />
       </div>
 
-      {/* Bottom padding for cart button */}
-      {cartCount > 0 && <div className="h-24" />}
-      <CartButton cartCount={cartCount} totalAmount={totalAmount} />
+      <ProductPurchaseBar
+        price={activeProduct?.price || product.price}
+        quantity={quantity}
+        isOutOfStock={isOutOfStock}
+        isAdding={isAdding}
+        checkoutPath={checkoutPath}
+        onAddToCart={handleAddToCart}
+        onBuyNow={handleBuyNow}
+        className="sm:hidden"
+      />
+
+      {cartCount > 0 && (
+        <div className="hidden sm:block">
+          <div className="h-24" />
+          <CartButton cartCount={cartCount} totalAmount={totalAmount} checkoutPath={checkoutPath} storeSlug={storeSlug} />
+        </div>
+      )}
     </div>
+    </StoreThemeProvider>
   );
 };
 

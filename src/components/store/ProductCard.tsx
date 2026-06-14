@@ -1,7 +1,8 @@
+import { memo, useMemo } from "react";
 import { Heart, Plus, Minus, Star, Share2, Flame, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Product } from "@/types";
-import { memo, useMemo } from "react";
+import { getAvailableQty, hasVariantOptions } from "@/utils/inventoryUtils";
 import OptimizedImage from "@/components/OptimizedImage";
 
 interface ProductCardProps {
@@ -29,12 +30,13 @@ const ProductCard = memo(({
   onShare,
   index,
 }: ProductCardProps) => {
-  const { isNew, isLowStock, isOutOfStock, hasDiscount } = useMemo(() => ({
+  const { isNew, isLowStock, isOutOfStock, hasDiscount, hasVariants } = useMemo(() => ({
     isNew: (product as any).created_at ? (Date.now() - new Date((product as any).created_at).getTime()) < 7 * 86400000 : false,
     isLowStock: product.stockQuantity !== undefined && product.stockQuantity > 0 && product.stockQuantity <= 3,
     isOutOfStock: product.stockQuantity !== undefined && product.stockQuantity === 0,
     hasDiscount: product.discountType && product.discountType !== 'none',
-  }), [product.stockQuantity, product.discountType, (product as any).created_at]);
+    hasVariants: hasVariantOptions(product),
+  }), [product]);
 
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -104,12 +106,16 @@ const ProductCard = memo(({
               <button onClick={handleShare} aria-label="مشاركة المنتج" className="min-h-[44px] min-w-[44px] rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
                 <Share2 className="w-3 h-3" />
               </button>
-              {cartQuantity > 0 ? (
+              {cartQuantity > 0 && !hasVariants ? (
                 <div className="flex items-center gap-1 bg-primary/10 rounded-xl px-1.5">
                   <button onClick={(e) => { e.stopPropagation(); onUpdateQuantity(product.id, cartQuantity + 1); }} className="p-1 text-primary"><Plus className="w-3.5 h-3.5" /></button>
                   <span className="text-xs font-bold text-primary w-5 text-center">{cartQuantity}</span>
                   <button onClick={(e) => { e.stopPropagation(); onUpdateQuantity(product.id, cartQuantity - 1); }} className="p-1 text-primary"><Minus className="w-3.5 h-3.5" /></button>
                 </div>
+              ) : cartQuantity > 0 && hasVariants ? (
+                <Button size="sm" variant="outline" className="h-7 text-[10px] rounded-xl" onClick={(e) => { e.stopPropagation(); onView(product.id); }}>
+                  في السلة ({cartQuantity})
+                </Button>
               ) : (
                 <Button size="sm" className="h-7 text-[10px] rounded-xl bg-primary text-primary-foreground hover:bg-primary/90" onClick={(e) => { e.stopPropagation(); onAddToCart(product); }} disabled={isOutOfStock}>
                   <Plus className="w-3 h-3 ml-0.5" />
@@ -177,7 +183,7 @@ const ProductCard = memo(({
             <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
           </button>
           <button
-            className="min-h-[44px] min-w-[44px] rounded-full bg-card/85 backdrop-blur-md text-muted-foreground hover:text-primary hover:scale-110 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 shadow-sm"
+            className="min-h-[44px] min-w-[44px] rounded-full bg-card/85 backdrop-blur-md text-muted-foreground hover:text-primary flex items-center justify-center transition-all shadow-sm sm:opacity-0 sm:group-hover:opacity-100 opacity-100"
             onClick={handleShare}
             aria-label="مشاركة المنتج"
           >
@@ -201,7 +207,7 @@ const ProductCard = memo(({
           <PriceBlock size="md" />
         </div>
 
-        {cartQuantity > 0 ? (
+        {cartQuantity > 0 && !hasVariants ? (
           <div className="flex items-center justify-between bg-primary/10 rounded-xl h-9 px-2">
             <button onClick={(e) => { e.stopPropagation(); onUpdateQuantity(product.id, cartQuantity + 1); }} className="p-1 text-primary hover:bg-primary/20 rounded-lg transition-colors">
               <Plus className="w-4 h-4" />
@@ -211,6 +217,15 @@ const ProductCard = memo(({
               <Minus className="w-4 h-4" />
             </button>
           </div>
+        ) : cartQuantity > 0 && hasVariants ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full h-9 text-xs rounded-xl"
+            onClick={(e) => { e.stopPropagation(); onView(product.id); }}
+          >
+            في السلة ({cartQuantity}) — عرض الخيارات
+          </Button>
         ) : (
           <Button
             size="sm"
