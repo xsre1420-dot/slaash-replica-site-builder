@@ -9,6 +9,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Category } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
+import { generateUUID } from "@/lib/uuid";
 
 interface CategoryDialogProps {
   categories: Category[];
@@ -50,7 +51,7 @@ const CategoryDialog = ({ categories, onCategoryChange, onAddLocalCategory, open
     } catch (err: any) {
       // Fallback to local
       if (onAddLocalCategory) {
-        const newCat: Category = { id: crypto.randomUUID(), name: newCategory.name.trim(), order: categories.length };
+        const newCat: Category = { id: generateUUID(), name: newCategory.name.trim(), order: categories.length };
         onAddLocalCategory(newCat);
         setNewCategory({ name: "" });
         setIsAddDialogOpen(false);

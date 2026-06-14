@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { generateUUID } from '@/lib/uuid';
 
 const BUCKET = 'product-images';
 const MAX_WIDTH = 1200;
@@ -154,7 +155,7 @@ export const uploadImage = async (file: File, userId: string): Promise<string> =
   }
 
   const ext = processedFile.type === 'image/webp' ? 'webp' : 'jpg';
-  const fileName = `${userId}/${crypto.randomUUID()}.${ext}`;
+  const fileName = `${userId}/${generateUUID()}.${ext}`;
 
   const { error } = await supabase.storage.from(BUCKET).upload(fileName, processedFile, {
     cacheControl: '31536000',

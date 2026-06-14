@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import React from "react";
 import { QuickEditDialog } from "@/components/product-management/QuickEditDialog";
 import OptimizedImage from "@/components/OptimizedImage";
+import { generateUUID } from "@/lib/uuid";
 
 const DragDropContext = React.lazy(() => import("@hello-pangea/dnd").then(m => ({ default: m.DragDropContext })));
 const Droppable = React.lazy(() => import("@hello-pangea/dnd").then(m => ({ default: m.Droppable })));
@@ -86,7 +87,7 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
   const handleDuplicate = async (product: Product) => {
     const duplicated: Product = {
       ...product,
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name: `${product.name} (نسخة)`,
     };
     const result = await addProduct(duplicated);
