@@ -6,40 +6,50 @@ export type PasswordRecoveryMode = 'checking' | 'request' | 'update';
 
 export function usePasswordRecoveryMode() {
   const [mode, setMode] = useState<PasswordRecoveryMode>('checking');
-  const [sessionReady, setSessionReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
-    const applyRecovery = () => {
-      if (!cancelled) {
-        setMode('update');
-        setSessionReady(true);
+    const setUpdateMode = () => {
+      if (!cancelled) setMode('update');
+    };
+
+    const init = async () => {
+      const search = new URLSearchParams(window.location.search);
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+
+      if (hash.get('type') === 'recovery' || hash.get('access_token')) {
+        setUpdateMode();
+        return;
+      }
+
+      if (search.has('code')) {
+        const code = search.get('code');
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (!error) {
+            setUpdateMode();
+            window.history.replaceState({}, '', window.location.pathname);
+            return;
+          }
+        }
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled) return;
+
+      if (session && isRecoveryUrl()) {
+        setUpdateMode();
+      } else {
+        setMode('request');
       }
     };
 
-    if (isRecoveryUrl()) {
-      applyRecovery();
-    }
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' || (isRecoveryUrl() && session)) {
-        applyRecovery();
-      }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') setUpdateMode();
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (cancelled) return;
-      if (isRecoveryUrl() && session) {
-        applyRecovery();
-      } else if (mode === 'checking' && !isRecoveryUrl()) {
-        setMode('request');
-        setSessionReady(!!session);
-      } else if (mode === 'checking') {
-        setMode(isRecoveryUrl() ? 'update' : 'request');
-        setSessionReady(!!session);
-      }
-    });
+    void init();
 
     return () => {
       cancelled = true;
@@ -47,5 +57,5 @@ export function usePasswordRecoveryMode() {
     };
   }, []);
 
-  return { mode, sessionReady, isRecovery: mode === 'update' };
+  return { mode, isRecovery: mode === 'update' };
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ComponentType, type ReactNode, type FormEvent } from "react";
 import { ArrowLeft, User, Lock, Mail, Store, Eye, EyeOff, Check, Shield, Zap, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { AuthPageShell, AuthLoadingScreen } from "@/components/auth/AuthPageShell";
-import { getPasswordStrength, normalizeUsername, validateEmail, validateUsername } from "@/lib/authUtils";
+import { getPasswordStrength, normalizeUsername, validateEmail, validateUsername, clearAuthUrlParams } from "@/lib/authUtils";
 
 const benefits = [
   { icon: Zap, text: "إعداد المتجر خلال 60 ثانية فقط" },
@@ -40,6 +40,15 @@ const Signup = () => {
   const { toast } = useToast();
 
   const selectedPlan = (location.state as { selectedPlan?: { id: string; name: string; price: string } })?.selectedPlan;
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const search = new URLSearchParams(window.location.search);
+      if (search.has('code') || window.location.hash.includes('access_token')) {
+        clearAuthUrlParams();
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!loading && user && !success && !needsVerification) {
@@ -75,7 +84,7 @@ const Signup = () => {
     if (await validateStep1()) setStep(2);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) { setError("كلمات المرور غير متطابقة"); return; }
     if (password.length < 8) { setError("كلمة المرور يجب أن تكون 8 أحرف على الأقل"); return; }
@@ -251,7 +260,7 @@ const StepBadge = ({ n, label, active, done }: { n: number; label: string; activ
   </div>
 );
 
-const AuthField = ({ id, label, icon: Icon, children }: { id: string; label: string; icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) => (
+const AuthField = ({ id, label, icon: Icon, children }: { id: string; label: string; icon: ComponentType<{ className?: string }>; children: ReactNode }) => (
   <div>
     <label htmlFor={id} className="block text-right text-foreground mb-2 font-medium text-sm">{label}</label>
     <div className="relative group">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, ShoppingBag, BarChart3, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +10,23 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { AuthPageShell, AuthLoadingScreen } from "@/components/auth/AuthPageShell";
-import { validateEmail, parseAuthUrlError, clearAuthUrlParams } from "@/lib/authUtils";
+import { clearAuthUrlParams, parseAuthUrlError, validateEmail } from "@/lib/authUtils";
 import { env } from "@/lib/env";
+
+/** Remove stray auth callback params that crash auth pages when auto-processed */
+const sanitizeAuthPageUrl = () => {
+  if (typeof window === 'undefined') return;
+  const search = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const isAuthCallback =
+    search.has('code') ||
+    hash.has('access_token') ||
+    hash.has('error') ||
+    search.has('error');
+  if (isAuthCallback && !window.location.pathname.includes('reset-password')) {
+    clearAuthUrlParams();
+  }
+};
 
 const features = [
   { icon: ShoppingBag, title: "إدارة متجرك بسهولة", desc: "أضف منتجاتك وتابع طلباتك من مكان واحد" },
@@ -36,6 +51,7 @@ const Login = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    sanitizeAuthPageUrl();
     const urlError = parseAuthUrlError();
     if (urlError) {
       setError(mapAuthUrlError(urlError));
@@ -49,7 +65,7 @@ const Login = () => {
 
   if (loading) return <AuthLoadingScreen />;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const emailError = validateEmail(email);
     if (emailError) { setError(emailError); return; }
