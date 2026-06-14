@@ -24,6 +24,19 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   if (!user) {
+    const search = new URLSearchParams(location.search);
+    const hasAuthCallback =
+      search.has('code') ||
+      location.hash.includes('access_token') ||
+      location.hash.includes('error');
+    if (hasAuthCallback) {
+      return (
+        <Navigate
+          to={`/auth/callback${location.search}${location.hash}`}
+          replace
+        />
+      );
+    }
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 

@@ -32,6 +32,7 @@ describe('authUtils', () => {
     expect(mapAuthError('Invalid login credentials')).toContain('غير صحيحة');
     expect(mapAuthError('Email not confirmed')).toBe('__EMAIL_NOT_CONFIRMED__');
     expect(mapAuthError('User already registered')).toContain('تعذر');
+    expect(mapAuthError('Database error saving new user')).toContain('قاعدة البيانات');
   });
 
   it('scores password strength', () => {

@@ -8,14 +8,14 @@ import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { motion } from "framer-motion";
 import { AuthPageShell, AuthLoadingScreen } from "@/components/auth/AuthPageShell";
 import { clearAuthUrlParams, parseAuthUrlError, validateEmail } from "@/lib/authUtils";
 import { env } from "@/lib/env";
 
-/** Remove stray auth callback params that crash auth pages when auto-processed */
+/** Remove stray auth callback params on login/signup (not on /auth/callback) */
 const sanitizeAuthPageUrl = () => {
   if (typeof window === 'undefined') return;
+  if (window.location.pathname.startsWith('/auth/callback')) return;
   const search = new URLSearchParams(window.location.search);
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
   const isAuthCallback =
@@ -122,7 +122,7 @@ const Login = () => {
         </div>
       }
     >
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="text-center mb-8">
           <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-5">
             <Lock className="w-7 h-7 text-primary" />
@@ -244,7 +244,7 @@ const Login = () => {
             </Link>
           </p>
         </div>
-      </motion.div>
+      </div>
     </AuthPageShell>
   );
 };

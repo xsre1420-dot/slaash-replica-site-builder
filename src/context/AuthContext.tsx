@@ -8,6 +8,8 @@ import {
   normalizeUsername,
   validatePassword,
   setAuthRememberMe,
+  getAuthCallbackUrl,
+  logAuthFailure,
 } from '@/lib/authUtils';
 
 interface User {
@@ -77,6 +79,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (error) {
         console.warn('Profile fetch failed:', error.message);
+        logAuthFailure('profile.load', error);
       }
 
       if (profile) {
@@ -160,6 +163,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       if (error) {
+        logAuthFailure('login', error);
         const mapped = mapAuthError(error.message);
         if (mapped === '__EMAIL_NOT_CONFIRMED__') {
           return { error: 'يرجى تأكيد بريدك الإلكتروني أولاً', emailNotConfirmed: true };
@@ -173,6 +177,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       return {};
     } catch (err) {
+      logAuthFailure('login.exception', err);
       const msg = err instanceof Error ? err.message : '';
       return { error: mapAuthError(msg) || 'حدث خطأ في الاتصال. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.' };
     }
@@ -213,7 +218,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         email: email.trim(),
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/builder`,
+          emailRedirectTo: getAuthCallbackUrl(),
           data: {
             username: normalizedUsername,
             store_name: storeName?.trim() || 'متجري',
@@ -223,12 +228,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       if (error) {
+        logAuthFailure('register', error);
         return { error: mapAuthError(error.message) };
       }
 
       return { needsEmailVerification: !data.session };
-    } catch {
-      return { error: 'حدث خطأ أثناء إنشاء الحساب' };
+    } catch (err) {
+      logAuthFailure('register.exception', err);
+      const msg = err instanceof Error ? err.message : '';
+      return { error: mapAuthError(msg) || 'حدث خطأ أثناء إنشاء الحساب' };
     }
   };
 
@@ -263,7 +271,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         type: 'signup',
         email: email.trim(),
         options: {
-          emailRedirectTo: `${window.location.origin}/builder`,
+          emailRedirectTo: getAuthCallbackUrl(),
         },
       });
       if (error) return { error: mapAuthError(error.message) };

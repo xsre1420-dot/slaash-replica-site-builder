@@ -6,7 +6,6 @@ import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { motion } from "framer-motion";
 import { AuthPageShell, AuthLoadingScreen } from "@/components/auth/AuthPageShell";
 import { getPasswordStrength, normalizeUsername, validateEmail, validateUsername, clearAuthUrlParams } from "@/lib/authUtils";
 
@@ -42,7 +41,7 @@ const Signup = () => {
   const selectedPlan = (location.state as { selectedPlan?: { id: string; name: string; price: string } })?.selectedPlan;
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/auth/callback')) {
       const search = new URLSearchParams(window.location.search);
       if (search.has('code') || window.location.hash.includes('access_token')) {
         clearAuthUrlParams();
@@ -129,7 +128,7 @@ const Signup = () => {
   if (success) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center font-arabic p-6" dir="rtl">
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-md text-center">
+        <div className="w-full max-w-md text-center animate-in fade-in zoom-in-95 duration-300">
           <div className="bg-card rounded-3xl border border-border/40 p-10 shadow-xl space-y-4">
             <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
               <Mail className="w-9 h-9 text-primary" />
@@ -154,7 +153,7 @@ const Signup = () => {
               </Button>
             </Link>
           </div>
-        </motion.div>
+        </div>
       </div>
     );
   }
@@ -183,7 +182,7 @@ const Signup = () => {
         </>
       }
     >
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="text-center mb-8">
           <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-5">
             <User className="w-7 h-7 text-primary" />
@@ -246,7 +245,7 @@ const Signup = () => {
         <p className="mt-8 text-center text-muted-foreground text-sm">
           لديك حساب؟ <Link to="/login" className="text-primary font-bold">سجّل الدخول</Link>
         </p>
-      </motion.div>
+      </div>
     </AuthPageShell>
   );
 };

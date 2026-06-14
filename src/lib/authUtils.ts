@@ -2,6 +2,19 @@ export const PASSWORD_MIN_LENGTH = 8;
 export const USERNAME_PATTERN = /^[a-z0-9_-]{3,30}$/;
 export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const AUTH_REMEMBER_KEY = 'slaash_auth_remember';
+export const AUTH_CALLBACK_PATH = '/auth/callback';
+
+export const getAuthCallbackUrl = (): string => {
+  if (typeof window === 'undefined') return AUTH_CALLBACK_PATH;
+  return `${window.location.origin}${AUTH_CALLBACK_PATH}`;
+};
+
+/** Dev-only structured auth error logging */
+export const logAuthFailure = (operation: string, detail: unknown): void => {
+  if (import.meta.env.DEV) {
+    console.error(`[auth.${operation}]`, detail);
+  }
+};
 
 export const normalizeUsername = (username: string): string =>
   username.trim().toLowerCase();
@@ -72,6 +85,16 @@ export const mapAuthError = (message: string): string => {
   }
   if (m.includes('invalid api key') || m.includes('api key')) {
     return 'خطأ في إعدادات النظام. يرجى التواصل مع الدعم';
+  }
+  if (m.includes('database error saving new user') || m.includes('database error')) {
+    return 'تعذر إنشاء الحساب بسبب خطأ في قاعدة البيانات. حاول مرة أخرى أو تواصل مع الدعم';
+  }
+  if (m.includes('duplicate key') || m.includes('unique constraint')) {
+    return 'البيانات المدخلة مستخدمة بالفعل — جرّب بريداً أو اسم مستخدم مختلفاً';
+  }
+
+  if (import.meta.env.DEV && message.trim()) {
+    return message.length > 160 ? `${message.slice(0, 160)}…` : message;
   }
 
   return 'حدث خطأ. يرجى المحاولة مرة أخرى';
