@@ -131,7 +131,10 @@ const PreviewStore = () => {
   };
 
   const handleViewProduct = (productId: string) => {
-    navigate(`/product-details/${productId}`);
+    const previewProduct = products.find((p) => p.id === productId) ?? allProducts.find((p) => p.id === productId);
+    navigate(`/product-details/${productId}`, {
+      state: previewProduct ? { previewProduct } : undefined,
+    });
   };
 
   const toggleFavorite = (productId: string) => {

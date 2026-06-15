@@ -221,8 +221,13 @@ const Store = () => {
   }, [cartItems]);
 
   const handleViewProduct = useCallback((productId: string) => {
-    navigate(getProductPath(productId, isTenantMode ? storeSlug : null));
-  }, [isTenantMode, storeSlug, navigate]);
+    const previewProduct =
+      displayProducts.find((p) => p.id === productId) ??
+      allProducts.find((p) => p.id === productId);
+    navigate(getProductPath(productId, isTenantMode ? storeSlug : null), {
+      state: previewProduct ? { previewProduct } : undefined,
+    });
+  }, [isTenantMode, storeSlug, navigate, displayProducts, allProducts]);
 
   const handleUpdateQuantity = useCallback((productId: string, qty: number) => {
     const lines = cartItems.filter((i) => i.product.id === productId);

@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import MarketingScripts from "@/components/MarketingScripts";
@@ -72,6 +72,10 @@ const ProductDetailsSkeleton = () => (
 const ProductDetails = () => {
   const { productId, username: storeSlug } = useParams<{ productId: string; username?: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const previewProduct = (location.state as { previewProduct?: Product } | null)?.previewProduct;
+  const initialProduct =
+    previewProduct?.id === productId ? previewProduct : null;
   const isTenantMode = !!storeSlug;
   const tenant = useTenantStore(storeSlug);
   const { user } = useAuth();
@@ -121,16 +125,19 @@ const ProductDetails = () => {
   }, [isTenantMode, storeSlug, tenant.storeInfo?.ownerId, setStoreOwner]);
 
   useEffect(() => {
+    if (initialProduct) {
+      setProduct(initialProduct);
+      setProductLoadStatus("success");
+      return;
+    }
     setProduct(null);
     setProductLoadStatus("loading");
-  }, [productId, storeSlug]);
-
-  const cachedTenantProduct = null;
+  }, [productId, storeSlug, initialProduct]);
 
   const handleProductLoaded = useCallback((p: Product | null, status: ProductLoadStatus) => {
     setProductLoadStatus(status);
     if (status === "success" && p) setProduct(p);
-    if (status === "not_found" || status === "error") setProduct(null);
+    if (status === "not_found") setProduct(null);
   }, []);
 
   const totalAmount = useMemo(
@@ -196,18 +203,14 @@ const ProductDetails = () => {
   const hasDiscount = activeProduct && isProductDiscountActive(activeProduct);
   const discountPercent = hasDiscount && product?.discountType === 'percentage' ? product.discountValue : undefined;
 
-  if (productLoadStatus === "not_found" || productLoadStatus === "error") {
+  if (productLoadStatus === "not_found") {
     const storeHome = getStoreHomePath(isTenantMode ? storeSlug : null);
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
         <div className="w-20 h-20 mb-4 rounded-full bg-muted flex items-center justify-center text-3xl">📦</div>
-        <h1 className="text-lg font-bold text-foreground mb-2">
-          {productLoadStatus === "error" ? "تعذر تحميل المنتج" : "المنتج غير موجود"}
-        </h1>
+        <h1 className="text-lg font-bold text-foreground mb-2">المنتج غير موجود</h1>
         <p className="text-sm text-muted-foreground mb-6">
-          {productLoadStatus === "error"
-            ? "تحقق من الاتصال وحاول مرة أخرى"
-            : "ربما تم حذف المنتج أو أن الرابط غير صحيح"}
+          ربما تم حذف المنتج أو أن الرابط غير صحيح
         </p>
         <button
           type="button"
@@ -230,7 +233,7 @@ const ProductDetails = () => {
         />
         <ProductData
           productId={productId}
-          initialProduct={cachedTenantProduct}
+          initialProduct={initialProduct}
           onProductLoaded={handleProductLoaded}
         />
         <ProductDetailsSkeleton />

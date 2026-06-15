@@ -3,7 +3,7 @@
  */
 import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/types';
-import { mapStorefrontProduct } from '@/mappers/productMapper';
+import { mapStorefrontProduct, safeMapStorefrontProduct } from '@/mappers/productMapper';
 import {
   MERCHANT_PRODUCTS_LIST_SELECT,
   isSchemaColumnError,
@@ -94,7 +94,9 @@ async function queryActiveProductsByOwner(
     return [];
   }
 
-  return (data ?? []).map((row) => mapStorefrontProduct(row as Record<string, unknown>));
+  return (data ?? [])
+    .map((row) => safeMapStorefrontProduct(row))
+    .filter((p): p is Product => p != null);
 }
 
 /** SECURITY DEFINER RPC — works for anonymous customers (bypasses RLS). */
@@ -109,7 +111,9 @@ async function fetchProductsViaSlugRpc(slug: string): Promise<Product[]> {
       return [];
     }
 
-    return ((data as Record<string, unknown>[]) ?? []).map(mapStorefrontProduct);
+    return ((data as Record<string, unknown>[]) ?? [])
+      .map((row) => safeMapStorefrontProduct(row))
+      .filter((p): p is Product => p != null);
   } catch (err) {
     console.warn('[storefront] get_store_products_by_slug unavailable:', err);
     return [];
@@ -171,7 +175,9 @@ export async function fetchStorefrontProductsPage(
     });
 
     if (!error && data?.products !== undefined) {
-      const mapped = ((data.products as Record<string, unknown>[]) || []).map(mapStorefrontProduct);
+      const mapped = ((data.products as Record<string, unknown>[]) || [])
+        .map((row) => safeMapStorefrontProduct(row))
+        .filter((p): p is Product => p != null);
 
       if (mapped.length > 0 || options.cursor) {
         return {
@@ -235,56 +241,66 @@ export async function fetchStorefrontProductById(
   productId: string
 ): Promise<Product | null> {
   const normalized = slug.trim().toLowerCase();
-  if (!/^[a-z0-9-]+$/.test(normalized) || !productId?.trim()) return null;
+  const id = productId.trim();
+  if (!/^[a-z0-9-]+$/.test(normalized) || !id) return null;
 
   try {
     const { data, error } = await (supabase as any).rpc('get_store_product_by_id', {
       p_slug: normalized,
-      p_product_id: productId,
+      p_product_id: id,
     });
 
     if (!error && data) {
-      return mapStorefrontProduct(data as Record<string, unknown>);
+      const mapped = safeMapStorefrontProduct(data);
+      if (mapped) return mapped;
     }
 
     if (error) {
       console.warn('[storefront] get_store_product_by_id failed:', error.message);
     }
-  } catch (err) {
-    console.warn('[storefront] get_store_product_by_id unavailable:', err);
-  }
 
-  const ownerId = await resolveStoreOwnerBySlug(normalized);
-  if (ownerId) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const page = await fetchStorefrontProductsPage(normalized, { limit: 48 });
+    const fromPage = page.products.find((p) => p.id === id);
+    if (fromPage) return fromPage;
 
-    if (user?.id === ownerId) {
-      let { data, error } = await supabase
-        .from('products')
-        .select(MERCHANT_PRODUCTS_LIST_SELECT)
-        .eq('id', productId)
-        .eq('owner_id', ownerId)
-        .or(ACTIVE_PRODUCTS_FILTER)
-        .maybeSingle();
+    const ownerId = await resolveStoreOwnerBySlug(normalized);
+    if (ownerId) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-      if (error && isSchemaColumnError(error.message)) {
-        ({ data, error } = await supabase
+      if (user?.id === ownerId) {
+        let { data: row, error: queryError } = await supabase
           .from('products')
-          .select(MINIMAL_STOREFRONT_SELECT)
-          .eq('id', productId)
+          .select(MERCHANT_PRODUCTS_LIST_SELECT)
+          .eq('id', id)
           .eq('owner_id', ownerId)
           .or(ACTIVE_PRODUCTS_FILTER)
-          .maybeSingle());
+          .maybeSingle();
+
+        if (queryError && isSchemaColumnError(queryError.message)) {
+          ({ data: row, error: queryError } = await supabase
+            .from('products')
+            .select(MINIMAL_STOREFRONT_SELECT)
+            .eq('id', id)
+            .eq('owner_id', ownerId)
+            .or(ACTIVE_PRODUCTS_FILTER)
+            .maybeSingle());
+        }
+
+        if (row) {
+          const mapped = safeMapStorefrontProduct(row);
+          if (mapped) return mapped;
+        }
       }
-
-      if (data) return mapStorefrontProduct(data as Record<string, unknown>);
     }
-  }
 
-  const catalog = await fetchProductsViaSlugRpc(normalized);
-  return catalog.find((p) => p.id === productId) ?? null;
+    const catalog = await fetchProductsViaSlugRpc(normalized);
+    return catalog.find((p) => p.id === id) ?? null;
+  } catch (err) {
+    console.error('[storefront] fetchStorefrontProductById failed:', err);
+    return null;
+  }
 }
 
 /** Batch product fetch for checkout validation on tenant storefronts. */
@@ -341,4 +357,4 @@ export async function invalidateStorefrontForOwner(ownerId: string): Promise<voi
     );
   }
 }
-
+

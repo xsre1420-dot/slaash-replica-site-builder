@@ -57,3 +57,25 @@ export const mapDbProduct = (
 /** Storefront listing — always applies active discounts. */
 export const mapStorefrontProduct = (row: Record<string, unknown>): Product =>
   mapDbProduct(row, { applyDiscount: true });
+
+export const safeMapStorefrontProduct = (row: unknown): Product | null => {
+  if (row == null) return null;
+  let record: Record<string, unknown>;
+  if (typeof row === 'string') {
+    try {
+      record = JSON.parse(row) as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  } else if (typeof row === 'object') {
+    record = row as Record<string, unknown>;
+  } else {
+    return null;
+  }
+  try {
+    return mapStorefrontProduct(record);
+  } catch (err) {
+    console.warn('[productMapper] storefront map failed:', err);
+    return null;
+  }
+};
