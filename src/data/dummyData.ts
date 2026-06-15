@@ -2,6 +2,7 @@
 import { Product, Category } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { getAuthenticatedUserId } from "@/lib/authSession";
+import { runOncePerKey, type AddProductResult } from "@/lib/productCreateLock";
 import { cache, CacheKeys, CacheTTL, dedup } from "@/lib/cache";
 import { mapDbProduct } from "@/mappers/productMapper";
 import {
@@ -319,49 +320,57 @@ export const removeCachedProduct = (ownerId: string, productId: string): boolean
 
 // --- Product CRUD (optimistic + cache update) ---
 
-export const addProduct = async (product: Product): Promise<{ success: boolean; error?: string }> => {
-  try {
-    const userId = await getAuthenticatedUserId();
-    if (!userId) return { success: false, error: 'يجب تسجيل الدخول أولاً' };
+export const addProduct = async (
+  product: Product,
+  options?: { idempotencyKey?: string }
+): Promise<AddProductResult> => {
+  const userId = await getAuthenticatedUserId();
+  if (!userId) return { success: false, error: 'يجب تسجيل الدخول أولاً' };
 
-    if (!product.image?.trim() || product.image.startsWith('blob:')) {
-      return { success: false, error: 'انتظر اكتمال رفع الصورة قبل الحفظ' };
-    }
-
-    const storeId = await resolveStoreIdForOwner(userId);
-    const { core, full } = buildProductInsertPayload(product, userId, storeId);
-
-    let { data, error } = await supabase
-      .from('products')
-      .insert(full)
-      .select(PRODUCT_INSERT_RETURN_SELECT)
-      .single();
-
-    if (error && isSchemaColumnError(error.message)) {
-      console.warn('[products] full insert failed, retrying core columns:', error.message);
-      ({ data, error } = await supabase
-        .from('products')
-        .insert(core)
-        .select(PRODUCT_INSERT_RETURN_SELECT)
-        .single());
-    }
-
-    if (error) {
-      console.error('[products] insert failed:', error);
-      return { success: false, error: mapProductInsertError(error.message) };
-    }
-
-    if (data) {
-      syncProductCachesAfterMutation(userId, data as Record<string, unknown>);
-      products = cache.get<Product[]>(CacheKeys.products(userId)) || [];
-      products_list = products;
-    }
-
-    return { success: true };
-  } catch (err) {
-    console.error('[products] addProduct unexpected error:', err);
-    return { success: false, error: err instanceof Error ? err.message : 'فشل في إضافة المنتج' };
+  if (!product.image?.trim() || product.image.startsWith('blob:')) {
+    return { success: false, error: 'انتظر اكتمال رفع الصورة قبل الحفظ' };
   }
+
+  const lockKey = `${userId}:${options?.idempotencyKey ?? product.name}:${product.image}`;
+
+  return runOncePerKey(lockKey, async () => {
+    try {
+      const storeId = await resolveStoreIdForOwner(userId);
+      const { core, full } = buildProductInsertPayload(product, userId, storeId);
+
+      let { data, error } = await supabase
+        .from('products')
+        .insert(full)
+        .select(PRODUCT_INSERT_RETURN_SELECT)
+        .single();
+
+      if (error && isSchemaColumnError(error.message)) {
+        console.warn('[products] full insert failed, retrying core columns:', error.message);
+        ({ data, error } = await supabase
+          .from('products')
+          .insert(core)
+          .select(PRODUCT_INSERT_RETURN_SELECT)
+          .single());
+      }
+
+      if (error) {
+        console.error('[products] insert failed:', error);
+        return { success: false, error: mapProductInsertError(error.message) };
+      }
+
+      if (data) {
+        syncProductCachesAfterMutation(userId, data as Record<string, unknown>);
+        products = cache.get<Product[]>(CacheKeys.products(userId)) || [];
+        products_list = products;
+        return { success: true, productId: String((data as Record<string, unknown>).id) };
+      }
+
+      return { success: true };
+    } catch (err) {
+      console.error('[products] addProduct unexpected error:', err);
+      return { success: false, error: err instanceof Error ? err.message : 'فشل في إضافة المنتج' };
+    }
+  });
 };
 
 export const updateProduct = async (productId: string, updatedProduct: Partial<Product>): Promise<{ success: boolean; error?: string }> => {

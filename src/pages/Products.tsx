@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
 import { isProductLowStock } from '@/lib/productUpdateUtils';
-import { Link, useSearchParams, useLocation } from "react-router-dom";
+import { Link, useSearchParams, useLocation, useNavigate } from "react-router-dom";
 import { MessageSquare, Lightbulb, Download, Plus, Package, AlertTriangle, XCircle, DollarSign, Search, ArrowRight } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/layout/PageHeader";
@@ -27,6 +27,7 @@ const SuggestedProductsManager = lazy(() => import("@/components/product-managem
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const [selectedProduct, setSelectedProduct] = useState<{id: string, name: string} | null>(null);
   const [loadedProducts, setLoadedProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -120,14 +121,19 @@ const Products = () => {
 
   // After add-product: clear saved filters and reload from DB
   useEffect(() => {
-    const state = location.state as { refreshProducts?: boolean } | null;
+    const state = location.state as { refreshProducts?: boolean; createdProductId?: string } | null;
     if (!state?.refreshProducts) return;
 
     clearFilters();
     invalidateProducts();
-    reloadProductsData(true).then(setLoadedProducts);
-    window.history.replaceState({}, document.title);
-  }, [location.state]);
+    reloadProductsData(true).then((data) => {
+      setLoadedProducts(data);
+      if (state.createdProductId && data.some((p) => p.id === state.createdProductId)) {
+        toast.success('✓ المنتج ظهر في قائمة المنتجات والمخزون');
+      }
+    });
+    navigate('/products', { replace: true, state: {} });
+  }, [location.state, navigate]);
 
   const filteredProducts = useMemo(() => loadedProducts.filter(p => {
     const matchesSearch = !debouncedSearch || 

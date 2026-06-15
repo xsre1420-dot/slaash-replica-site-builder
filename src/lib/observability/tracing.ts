@@ -3,10 +3,9 @@ import { enqueueEvent } from './reporter';
 import { logger } from './logger';
 import { timing } from './metrics';
 
-const generateSpanId = () =>
-  typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID().slice(0, 8)
-    : Math.random().toString(36).slice(2, 10);
+import { generateUUID } from '@/lib/uuid';
+
+const generateSpanId = () => generateUUID().slice(0, 8);
 
 export interface SpanHandle {
   spanId: string;

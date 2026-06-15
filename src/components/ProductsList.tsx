@@ -68,7 +68,7 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
   }, [isReady, hydrationVersion, onProductsLoaded]);
 
   // Use filteredProducts if provided, otherwise use all
-  const products = filteredProducts ?? allProducts;
+  const catalog = filteredProducts ?? allProducts;
 
   const handleDragEnd = useCallback((result: DropResult) => {
     if (!result.destination) return;
@@ -118,7 +118,7 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
     );
   }
 
-  if (allProducts.length === 0) {
+  if (catalog.length === 0 && allProducts.length === 0) {
     return (
       <div className="text-center py-16">
         <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
@@ -136,7 +136,7 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
     );
   }
 
-  if (products.length === 0) {
+  if (catalog.length === 0) {
     return (
       <div className="text-center py-12 space-y-4">
         <p className="text-muted-foreground">لا توجد منتجات تطابق معايير البحث</p>
@@ -289,7 +289,7 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
           <GripVertical className="w-3.5 h-3.5 ml-1" />
           {isDragEnabled ? "إنهاء الترتيب" : "ترتيب المنتجات"}
         </Button>
-        <span className="text-sm text-muted-foreground">{products.length} منتج</span>
+        <span className="text-sm text-muted-foreground">{catalog.length} منتج</span>
       </div>
 
       {isDragEnabled ? (
@@ -323,7 +323,7 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
         </React.Suspense>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {products.map((product, index) => (
+          {catalog.map((product, index) => (
             <div key={product.id}>
               {renderProductCard(product, index)}
             </div>

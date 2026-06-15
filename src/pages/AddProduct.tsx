@@ -42,26 +42,19 @@ const AddProduct = () => {
         backLabel="المنتجات"
         breadcrumbs={[{ label: 'المنتجات', href: '/products' }, { label: 'إضافة منتج' }]}
         actions={
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-xl hidden sm:inline-flex"
-              onClick={() => actions.handleSubmit()}
-              disabled={state.isSubmitting || state.isImagesUploading}
-            >
-              {state.isActive ? 'حفظ ونشر' : 'حفظ مسودة'}
-            </Button>
-            <Button
-              type="submit"
-              form="add-product-form"
-              disabled={state.isSubmitting || state.isImagesUploading}
-              className="rounded-xl gap-1.5 min-h-[44px] shadow-brand"
-            >
+          <Button
+            type="submit"
+            form="add-product-form"
+            disabled={state.isSaveDisabled}
+            className="rounded-xl gap-1.5 min-h-[44px] shadow-brand"
+          >
+            {state.isSubmitting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
               <Save className="w-4 h-4" />
-              {state.isSubmitting ? 'جاري الحفظ…' : 'حفظ'}
-            </Button>
-          </div>
+            )}
+            {state.isSubmitting ? 'جاري الحفظ…' : state.isActive ? 'حفظ ونشر المنتج' : 'حفظ المنتج'}
+          </Button>
         }
       />
 
@@ -375,7 +368,7 @@ const AddProduct = () => {
 
         {/* Mobile sticky save */}
         <div className="fixed bottom-0 inset-x-0 p-3 bg-card/95 backdrop-blur border-t border-border lg:hidden z-40 safe-area-bottom">
-          <Button type="submit" form="add-product-form" disabled={state.isSubmitting} className="w-full rounded-xl h-12 font-bold gap-2">
+          <Button type="submit" form="add-product-form" disabled={state.isSaveDisabled} className="w-full rounded-xl h-12 font-bold gap-2">
             {state.isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {state.isSubmitting ? 'جاري الحفظ…' : state.isActive ? 'حفظ ونشر المنتج' : 'حفظ كمسودة'}
           </Button>

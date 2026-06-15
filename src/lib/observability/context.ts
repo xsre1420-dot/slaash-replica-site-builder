@@ -3,10 +3,9 @@ import type { CorrelationContext } from './types';
 const SESSION_KEY = 'obs:session-id';
 const TRACE_KEY = 'obs:trace-id';
 
-const generateId = (): string =>
-  typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+import { generateUUID } from '@/lib/uuid';
+
+const generateId = (): string => generateUUID();
 
 const readOrCreate = (key: string): string => {
   try {

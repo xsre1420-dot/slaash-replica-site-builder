@@ -1,11 +1,10 @@
+import { generateUUID } from '@/lib/uuid';
+
 export const getOrCreateIdempotencyKey = (ownerId: string): string => {
   const storageKey = `checkout-idempotency:${ownerId}`;
   const existing = sessionStorage.getItem(storageKey);
   if (existing) return existing;
-  const key =
-    typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const key = generateUUID();
   sessionStorage.setItem(storageKey, key);
   return key;
 };

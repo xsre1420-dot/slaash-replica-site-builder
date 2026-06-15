@@ -1,7 +1,8 @@
-import { useMemo, useCallback, useEffect, useState } from 'react';
+import { useMemo, useCallback, useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { getAuthenticatedUserId } from '@/lib/authSession';
+import { createProductIdempotencyKey } from '@/lib/productCreateLock';
 import { addProduct, invalidateProducts } from '@/services/productService';
 import { useToast } from '@/hooks/use-toast';
 import { Product, Category, ColorOption, ProductVariant } from '@/types';
@@ -12,6 +13,8 @@ import { computeProfit, formatDisplayPrice, parseTagsInput, slugifyProductName }
 export function useAddProductForm() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const submitLockRef = useRef(false);
+  const idempotencyKeyRef = useRef(createProductIdempotencyKey());
 
   const [mainImage, setMainImage] = useState<string | null>(null);
   const [additionalImages, setAdditionalImages] = useState<string[]>([]);
@@ -38,6 +41,7 @@ export function useAddProductForm() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isImagesUploading, setIsImagesUploading] = useState(false);
+  const [saveSucceeded, setSaveSucceeded] = useState(false);
 
   const profitInfo = useMemo(() => {
     const p = parseFloat(price.replace(/,/g, ''));
@@ -173,6 +177,9 @@ export function useAddProductForm() {
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
+
+    if (submitLockRef.current || isSubmitting || saveSucceeded) return;
+
     const userId = await getAuthenticatedUserId();
     if (!userId) {
       toast({ title: 'خطأ', description: 'يجب تسجيل الدخول أولاً', variant: 'destructive' });
@@ -209,7 +216,9 @@ export function useAddProductForm() {
       return;
     }
 
+    submitLockRef.current = true;
     setIsSubmitting(true);
+
     try {
       const numericPrice = parseFloat(price.replace(/,/g, ''));
       const numericCost = cost ? parseFloat(cost.replace(/,/g, '')) : undefined;
@@ -241,15 +250,28 @@ export function useAddProductForm() {
         isActive,
       };
 
-      const result = await addProduct(newProduct);
+      const result = await addProduct(newProduct, { idempotencyKey: idempotencyKeyRef.current });
+
       if (result.success) {
+        setSaveSucceeded(true);
         invalidateProducts();
-        toast({ title: 'تم بنجاح', description: isActive ? 'المنتج منشور في متجرك' : 'تم حفظ المنتج كمسودة' });
-        navigate('/products', { state: { refreshProducts: true } });
-      } else {
-        toast({ title: 'خطأ', description: result.error || 'فشل في إضافة المنتج', variant: 'destructive' });
+
+        const stockMsg = newProduct.stockQuantity ? ` · المخزون: ${newProduct.stockQuantity}` : '';
+        toast({
+          title: '✓ تم حفظ المنتج بنجاح',
+          description: isActive
+            ? `المنتج منشور في متجرك${stockMsg}`
+            : `تم حفظ المنتج كمسودة (مخفي عن المتجر)${stockMsg}`,
+        });
+
+        navigate('/products', { replace: true, state: { refreshProducts: true, createdProductId: result.productId } });
+        return;
       }
+
+      idempotencyKeyRef.current = createProductIdempotencyKey();
+      toast({ title: 'خطأ', description: result.error || 'فشل في إضافة المنتج', variant: 'destructive' });
     } catch (err) {
+      idempotencyKeyRef.current = createProductIdempotencyKey();
       console.error('[addProduct] submit failed:', err);
       toast({
         title: 'خطأ',
@@ -258,8 +280,11 @@ export function useAddProductForm() {
       });
     } finally {
       setIsSubmitting(false);
+      submitLockRef.current = false;
     }
   };
+
+  const isSaveDisabled = isSubmitting || isImagesUploading || saveSucceeded;
 
   return {
     state: {
@@ -287,6 +312,8 @@ export function useAddProductForm() {
       fieldErrors,
       isSubmitting,
       isImagesUploading,
+      isSaveDisabled,
+      saveSucceeded,
       profitInfo,
       progressSteps,
       completionPercentage,
