@@ -71,7 +71,7 @@ const Index = () => {
               </Button>
             </Link>
             <Link to="/signup">
-              <Button size="sm" className="rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground px-5 font-semibold shadow-lg shadow-primary/20">
+              <Button size="sm" className="rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground px-5 font-semibold">
                 ابدأ الآن
               </Button>
             </Link>
@@ -142,7 +142,7 @@ const Index = () => {
               className="flex flex-col sm:flex-row gap-4 justify-center items-center"
             >
               <Link to="/signup">
-                <Button size="lg" className="text-lg px-12 py-7 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-2xl shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 hover:-translate-y-0.5 min-w-[260px] group">
+                <Button size="lg" className="text-lg px-12 py-7 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-300 hover:-translate-y-0.5 min-w-[260px] group">
                   ابدأ الآن
                   <ArrowLeft className="mr-2 h-5 w-5 group-hover:-translate-x-1 transition-transform" />
                 </Button>
@@ -193,7 +193,7 @@ const Index = () => {
             {steps.map((step, i) => (
               <FadeUp key={i} delay={i * 0.15}>
                 <div className="text-center relative group">
-                  <div className="w-20 h-20 bg-card border-2 border-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-primary/5 group-hover:border-primary/40 group-hover:shadow-primary/15 transition-all duration-300 group-hover:-translate-y-1">
+                  <div className="w-20 h-20 bg-card border-2 border-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:border-primary/40 transition-all duration-300 group-hover:-translate-y-1">
                     <step.icon className="w-8 h-8 text-primary" />
                   </div>
                   <div className="text-xs font-bold text-primary/60 mb-2 tracking-widest">{step.step}</div>
@@ -225,7 +225,7 @@ const Index = () => {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 max-w-6xl mx-auto">
             {features.map((feature, i) => (
               <FadeUp key={i} delay={i * 0.08}>
-                <div className="bg-card p-7 rounded-2xl border border-border/40 hover:border-primary/20 transition-all duration-500 group hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 relative overflow-hidden">
+                <div className="bg-card p-7 rounded-2xl border border-border/40 hover:border-primary/20 transition-all duration-500 group hover:-translate-y-1 relative overflow-hidden">
                   <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
                   <div className="relative z-10">
                     <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-primary/15 group-hover:scale-110 transition-all duration-300">
@@ -270,7 +270,7 @@ const Index = () => {
                   onClick={() => setBillingType('monthly')}
                   className={`px-8 py-3 rounded-xl font-semibold text-sm transition-all duration-300 ${
                     billingType === 'monthly'
-                      ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                      ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
@@ -280,7 +280,7 @@ const Index = () => {
                   onClick={() => setBillingType('semiannual')}
                   className={`px-8 py-3 rounded-xl font-semibold text-sm transition-all duration-300 relative ${
                     billingType === 'semiannual'
-                      ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                      ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
@@ -298,11 +298,11 @@ const Index = () => {
                   onClick={() => setSelectedPlan('elite')}
                   className={`bg-card rounded-3xl p-8 md:p-10 border-2 relative hover:shadow-2xl transition-all duration-500 cursor-pointer group ${
                     selectedPlan === 'elite'
-                      ? 'border-primary shadow-2xl shadow-primary/15'
+                      ? 'border-primary'
                       : 'border-border/50 hover:border-primary/30 shadow-lg'
                   }`}
                 >
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-l from-primary to-secondary text-primary-foreground px-6 py-2 rounded-full text-xs font-bold shadow-lg shadow-primary/20">
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-6 py-2 rounded-full text-xs font-bold">
                     ✨ الباقة المميزة
                   </div>
 
@@ -350,7 +350,7 @@ const Index = () => {
                   </div>
 
                   <Button
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl py-6 text-base font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 hover:-translate-y-0.5"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl py-6 text-base font-bold transition-all duration-300 hover:-translate-y-0.5"
                     onClick={(e) => {
                       e.stopPropagation();
                       navigate('/signup', { state: { selectedPlan: { id: 'elite', name: 'باقة النخبة', price: '50 ألف د.ع' } } });
@@ -371,7 +371,7 @@ const Index = () => {
                   onClick={() => setSelectedPlan('annual')}
                   className={`bg-card rounded-3xl p-8 md:p-10 border-2 transition-all duration-500 cursor-pointer group ${
                     selectedPlan === 'annual'
-                      ? 'border-primary shadow-2xl shadow-primary/15'
+                      ? 'border-primary'
                       : 'border-border/50 hover:border-primary/30 shadow-lg'
                   }`}
                 >
@@ -415,7 +415,7 @@ const Index = () => {
 
                   <Button
                     size="lg"
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl py-6 text-base font-bold shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all duration-300"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl py-6 text-base font-bold hover:-translate-y-0.5 transition-all duration-300"
                     onClick={(e) => {
                       e.stopPropagation();
                       navigate('/signup', { state: { selectedPlan: { id: 'annual', name: 'باقة 6 أشهر', price: '125 ألف د.ع' } } });
@@ -463,7 +463,7 @@ const Index = () => {
                   انضم لمئات التجار الناجحين الذين يديرون متاجرهم بكل سهولة عبر منصة بداية
                 </p>
                 <Link to="/signup">
-                  <Button size="lg" className="text-lg px-12 py-7 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-2xl shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 hover:-translate-y-1 group min-w-[240px]">
+                  <Button size="lg" className="text-lg px-12 py-7 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-300 hover:-translate-y-1 group min-w-[240px]">
                     ابدأ الآن
                     <ArrowLeft className="mr-2 h-5 w-5 group-hover:-translate-x-1 transition-transform" />
                   </Button>

@@ -18,7 +18,7 @@ const CartButton = ({ cartCount, totalAmount, checkoutPath, storeSlug }: CartBut
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background/95 to-transparent safe-area-bottom pointer-events-none">
       <Link to={resolvedCheckout} className="block max-w-lg mx-auto pointer-events-auto">
-        <div className="bg-gradient-to-r from-primary to-primary/85 rounded-2xl shadow-2xl shadow-primary/25 overflow-hidden ring-1 ring-primary/20">
+        <div className="bg-primary rounded-2xl overflow-hidden">
           <div className="flex items-center justify-between px-5 py-3.5">
             <div className="flex items-center gap-3">
               <div className="relative w-10 h-10 rounded-full bg-primary-foreground/15 flex items-center justify-center">

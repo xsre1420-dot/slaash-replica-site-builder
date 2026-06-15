@@ -26,7 +26,7 @@ const ProgressSteps = ({ currentStep }: ProgressStepsProps) => (
                 isCompleted
                   ? "bg-primary text-primary-foreground scale-100"
                   : isActive
-                  ? "bg-primary/20 text-primary ring-2 ring-primary/30"
+                  ? "bg-primary/15 text-primary border-2 border-primary"
                   : "bg-muted text-muted-foreground"
               )}
             >

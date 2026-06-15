@@ -22,7 +22,7 @@ const StatCard = ({
 }: StatCardProps) => (
   <div
     className={cn(
-      'group rounded-2xl border border-border/50 bg-card p-5 shadow-soft hover:shadow-brand hover:border-primary/15 transition-all duration-200',
+      'group rounded-2xl border border-border/50 bg-card p-5 shadow-soft hover:border-primary/15 transition-all duration-200',
       className
     )}
   >

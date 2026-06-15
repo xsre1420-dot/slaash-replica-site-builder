@@ -130,6 +130,19 @@
     color: hsl(var(--muted-foreground));
   }
 
+  /* No bright white halos on blue surfaces, lines, or icons */
+  .bg-primary,
+  [class*="bg-primary"]:not([class*="bg-primary/"]) {
+    text-shadow: none;
+    box-shadow: none;
+  }
+
+  .bg-primary svg,
+  [class*="text-primary"] svg,
+  .text-primary svg {
+    filter: none;
+  }
+
   :focus-visible {
     outline: 2px solid hsl(var(--ring));
     outline-offset: 2px;
@@ -154,7 +167,7 @@
   }
 
   .ds-btn-primary {
-    @apply bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl min-h-[44px] shadow-sm shadow-primary/15 transition-all duration-200 active:scale-[0.98];
+    @apply bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl min-h-[44px] transition-all duration-200 active:scale-[0.98];
   }
 
   .ds-section-title {
@@ -204,11 +217,11 @@
   }
 
   .shadow-brand {
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 4px 16px -2px rgb(99 102 241 / 0.12);
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
   }
 
   .shadow-brand-lg {
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 16px 40px -4px rgb(99 102 241 / 0.15);
+    box-shadow: 0 2px 8px -2px rgb(0 0 0 / 0.06);
   }
 
   .shadow-soft {

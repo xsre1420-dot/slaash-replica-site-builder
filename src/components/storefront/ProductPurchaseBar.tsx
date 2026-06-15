@@ -53,7 +53,7 @@ const ProductPurchaseBar = ({
             type="button"
             disabled={isOutOfStock || isAdding}
             onClick={onBuyNow}
-            className="flex-1 h-12 rounded-xl font-bold bg-gradient-to-r from-primary to-primary/85 shadow-lg shadow-primary/20"
+            className="flex-1 h-12 rounded-xl font-bold bg-primary hover:bg-primary/90"
           >
             <Zap className="w-4 h-4 ml-1" />
             اشتري الآن

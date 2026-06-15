@@ -45,7 +45,7 @@ export default function CartDrawer({ children, checkoutPath, storeSlug }: CartDr
         <div className="flex-1 flex flex-col overflow-hidden">
           {cartItems.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground px-6">
-              <div className="w-20 h-20 mb-4 rounded-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center ring-1 ring-primary/10">
+              <div className="w-20 h-20 mb-4 rounded-full bg-primary/10 flex items-center justify-center">
                 <ShoppingCart className="w-9 h-9 text-primary/50" />
               </div>
               <p className="text-base font-bold text-foreground">السلة فارغة</p>
@@ -114,7 +114,7 @@ export default function CartDrawer({ children, checkoutPath, storeSlug }: CartDr
                   دفع آمن — لا يتم خصم المبلغ حتى تأكيد الطلب
                 </p>
                 <Button
-                  className="w-full bg-gradient-to-r from-primary to-primary/85 hover:from-primary/90 hover:to-primary/80 text-primary-foreground rounded-xl py-6 text-base font-bold shadow-md shadow-primary/20"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl py-6 text-base font-bold"
                   onClick={() => navigate(resolvedCheckout)}
                 >
                   إتمام الطلب

@@ -33,8 +33,8 @@ export default {
       },
       boxShadow: {
         soft: "0 1px 2px 0 rgb(0 0 0 / 0.03), 0 1px 6px -1px rgb(0 0 0 / 0.04)",
-        brand: "0 1px 3px 0 rgb(0 0 0 / 0.04), 0 4px 16px -2px rgb(99 102 241 / 0.12)",
-        "brand-lg": "0 4px 6px -1px rgb(0 0 0 / 0.05), 0 16px 40px -4px rgb(99 102 241 / 0.15)",
+        brand: "0 1px 2px 0 rgb(0 0 0 / 0.04)",
+        "brand-lg": "0 2px 8px -2px rgb(0 0 0 / 0.06)",
       },
       colors: {
         border: "hsl(var(--border))",

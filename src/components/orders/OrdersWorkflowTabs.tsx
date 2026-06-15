@@ -25,7 +25,7 @@ const OrdersWorkflowTabs = ({ orders, activeTab, onTabChange }: OrdersWorkflowTa
               className={cn(
                 'inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all border min-h-[44px]',
                 isActive
-                  ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                  ? 'bg-primary text-primary-foreground border-primary'
                   : 'bg-card text-muted-foreground border-border hover:border-primary/30 hover:text-foreground'
               )}
             >

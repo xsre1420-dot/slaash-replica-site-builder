@@ -60,7 +60,7 @@ const ProductImages = ({
         </span>
       )}
       {isNew && (
-        <span className="bg-primary text-primary-foreground px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 shadow">
+        <span className="bg-primary text-primary-foreground px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1">
           <Sparkles className="w-3 h-3" /> جديد
         </span>
       )}
@@ -125,7 +125,7 @@ const ProductImages = ({
       aria-label={`عرض صورة ${idx + 1}`}
       className={`overflow-hidden border-2 transition-all shrink-0 ${className} ${
         idx === activeIndex
-          ? "border-primary ring-2 ring-primary/20 opacity-100"
+          ? "border-primary border-2 opacity-100"
           : "border-border/50 opacity-70 hover:opacity-100 hover:border-primary/30"
       }`}
     >

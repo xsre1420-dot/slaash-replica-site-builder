@@ -15,7 +15,7 @@ interface StatCardProps {
 
 export const StatCard = ({ title, value, growth, icon: Icon, suffix = "", delay = 0 }: StatCardProps) => (
   <Card
-    className="group overflow-hidden animate-fade-in hover:shadow-brand hover:border-primary/15 transition-all duration-200"
+    className="group overflow-hidden animate-fade-in hover:border-primary/15 transition-all duration-200"
     style={{ animationDelay: `${delay}ms` }}
   >
     <CardContent className="p-5">

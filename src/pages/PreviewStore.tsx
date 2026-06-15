@@ -214,7 +214,7 @@ const PreviewStore = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="ابحث عن منتج..."
-                className="w-full h-11 pr-10 pl-4 rounded-xl bg-muted/70 border border-transparent text-right text-sm placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/30 focus:bg-card focus:border-primary/30 transition-all text-foreground"
+                className="w-full h-11 pr-10 pl-4 rounded-xl bg-muted/70 border border-transparent text-right text-sm placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 focus:bg-card focus:border-primary/30 transition-all text-foreground"
                 autoFocus
               />
             </div>

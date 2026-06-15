@@ -98,7 +98,7 @@ export default function Builder() {
         {/* Compact store header with primary actions */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mb-2">
           <div className="flex items-center gap-4 flex-1 min-w-0">
-            <div className="w-14 h-14 rounded-2xl bg-primary/5 flex items-center justify-center ring-1 ring-primary/10 shrink-0 overflow-hidden">
+            <div className="w-14 h-14 rounded-2xl bg-primary/5 flex items-center justify-center shrink-0 overflow-hidden">
               {storeLogo ? (
                 <img src={storeLogo} alt="" className="w-full h-full object-cover" />
               ) : (
@@ -125,7 +125,7 @@ export default function Builder() {
               {copied ? <><Check className="w-4 h-4" />تم النسخ</> : <><Copy className="w-4 h-4" />نسخ الرابط</>}
             </Button>
             <Link to="/add-product">
-              <Button className="rounded-xl min-h-[44px] shadow-brand">
+              <Button className="rounded-xl min-h-[44px]">
                 <Plus className="w-4 h-4" />
                 <span className="hidden sm:inline">إضافة منتج</span>
                 <span className="sm:hidden">منتج</span>

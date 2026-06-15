@@ -208,7 +208,7 @@ const Checkout = () => {
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full mt-4 rounded-2xl py-3 text-base font-bold h-14 bg-gradient-to-r from-primary to-primary/85 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all"
+                className="w-full mt-4 rounded-2xl py-3 text-base font-bold h-14 bg-primary hover:bg-primary/90 transition-colors"
               >
                 {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "تأكيد الطلب"}
               </Button>

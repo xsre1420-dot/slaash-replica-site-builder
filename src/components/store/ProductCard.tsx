@@ -59,7 +59,7 @@ const ProductCard = memo(({
   if (viewMode === "list") {
     return (
       <div
-        className="group bg-card rounded-2xl overflow-hidden border border-border/60 hover:border-primary/30 hover:shadow-[0_8px_30px_-8px_hsl(var(--primary)/0.18)] transition-all duration-300 cursor-pointer animate-fade-in flex gap-3 p-3"
+        className="group bg-card rounded-2xl overflow-hidden border border-border/60 hover:border-primary/30 transition-all duration-300 cursor-pointer animate-fade-in flex gap-3 p-3"
         style={{ animationDelay: `${index * 30}ms` }}
         onClick={() => onView(product.id)}
       >
@@ -72,7 +72,7 @@ const ProductCard = memo(({
               </span>
             )}
             {isNew && (
-              <span className="bg-primary text-primary-foreground px-1.5 py-0.5 rounded-md text-[9px] font-bold flex items-center gap-0.5 shadow-sm">
+              <span className="bg-primary text-primary-foreground px-1.5 py-0.5 rounded-md text-[9px] font-bold flex items-center gap-0.5">
                 <Sparkles className="w-2.5 h-2.5" /> جديد
               </span>
             )}
@@ -133,7 +133,7 @@ const ProductCard = memo(({
   // Grid view — premium card
   return (
     <div
-      className="group relative bg-card rounded-2xl overflow-hidden border border-border/60 hover:border-primary/40 hover:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.25)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer animate-fade-in"
+      className="group relative bg-card rounded-2xl overflow-hidden border border-border/60 hover:border-primary/40 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer animate-fade-in"
       style={{ animationDelay: `${index * 30}ms` }}
       onClick={() => onView(product.id)}
     >
@@ -155,7 +155,7 @@ const ProductCard = memo(({
             </span>
           )}
           {isNew && (
-            <span className="bg-primary text-primary-foreground px-2 py-0.5 rounded-lg shadow-md text-[10px] font-bold flex items-center gap-0.5">
+            <span className="bg-primary text-primary-foreground px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center gap-0.5">
               <Sparkles className="w-3 h-3" /> جديد
             </span>
           )}
@@ -229,7 +229,7 @@ const ProductCard = memo(({
         ) : (
           <Button
             size="sm"
-            className="w-full h-9 text-xs rounded-xl border-0 bg-primary hover:bg-primary/90 text-primary-foreground transition-all shadow-sm hover:shadow-md font-semibold"
+            className="w-full h-9 text-xs rounded-xl border-0 bg-primary hover:bg-primary/90 text-primary-foreground transition-all font-semibold"
             onClick={(e) => { e.stopPropagation(); onAddToCart(product); }}
             disabled={isOutOfStock}
           >

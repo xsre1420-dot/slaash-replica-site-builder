@@ -343,7 +343,7 @@ const ProductDetails = () => {
                         onClick={() => setSelectedSize(selectedSize === size ? "" : size)}
                         className={`px-4 py-2.5 rounded-xl text-sm font-medium border transition-all duration-200 min-h-[44px] ${
                           selectedSize === size
-                            ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                            ? 'bg-primary text-primary-foreground border-primary'
                             : 'bg-background text-foreground border-border hover:border-primary/30'
                         }`}
                       >
@@ -375,7 +375,7 @@ const ProductDetails = () => {
                         onClick={() => setSelectedColor(selectedColor === color.value ? "" : color.value)}
                         className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl border-2 transition-all duration-200 relative overflow-hidden ${
                           selectedColor === color.value
-                            ? 'border-primary ring-2 ring-primary/20 scale-105'
+                            ? 'border-primary border-2 scale-105'
                             : 'border-border hover:border-primary/30'
                         }`}
                         style={{ backgroundColor: color.value }}

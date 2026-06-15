@@ -120,7 +120,7 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
           'group flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200 min-h-[44px]',
           isCollapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5',
           active
-            ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/25'
+            ? 'bg-primary text-primary-foreground'
             : 'text-muted-foreground hover:text-foreground hover:bg-sidebar-accent'
         )}
         aria-current={active ? 'page' : undefined}
@@ -177,7 +177,7 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
                 <img
                   src={storeLogo}
                   alt=""
-                  className="w-9 h-9 rounded-xl object-cover ring-2 ring-primary/10 shrink-0"
+                  className="w-9 h-9 rounded-xl object-cover border border-primary/15 shrink-0"
                 />
               ) : (
                 <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">

@@ -61,7 +61,7 @@ const AddProduct = () => {
               type="button"
               disabled={state.isSaveDisabled}
               onClick={actions.handleSaveAndPublish}
-              className="rounded-xl gap-1.5 min-h-[44px] shadow-brand"
+              className="rounded-xl gap-1.5 min-h-[44px]"
             >
               {state.isSubmitting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -399,7 +399,7 @@ const AddProduct = () => {
               type="button"
               disabled={state.isSaveDisabled}
               onClick={actions.handleSaveAndPublish}
-              className="flex-1 rounded-xl h-12 font-bold gap-2 shadow-brand"
+              className="flex-1 rounded-xl h-12 font-bold gap-2"
             >
               {state.isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
               {state.isSubmitting ? 'جاري…' : 'حفظ ونشر'}

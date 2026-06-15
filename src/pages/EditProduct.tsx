@@ -220,7 +220,7 @@ const EditProduct = () => {
         backTo="/products"
         breadcrumbs={[{ label: 'المنتجات', href: '/products' }, { label: 'تعديل' }]}
         actions={
-          <Button type="submit" form="edit-product-form" disabled={isSubmitting || isImagesUploading} className="rounded-xl min-h-[44px] shadow-brand">
+          <Button type="submit" form="edit-product-form" disabled={isSubmitting || isImagesUploading} className="rounded-xl min-h-[44px]">
             <Save className="w-4 h-4" />
             {isSubmitting ? 'جاري الحفظ...' : 'حفظ'}
           </Button>
@@ -306,7 +306,7 @@ const EditProduct = () => {
             <Button
               type="submit"
               disabled={isSubmitting || isImagesUploading}
-              className="w-full rounded-xl min-h-[48px] shadow-brand"
+              className="w-full rounded-xl min-h-[48px]"
             >
               {isSubmitting ? 'جاري الحفظ...' : 'حفظ التغييرات'}
             </Button>

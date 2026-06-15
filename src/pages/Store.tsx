@@ -339,7 +339,7 @@ const Store = () => {
                 <button className="relative p-2 rounded-full hover:bg-muted transition-colors">
                   <ShoppingCart className="w-5 h-5 text-foreground" />
                   {cartCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold animate-scale-in shadow-sm">
+                    <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold animate-scale-in">
                       {cartCount}
                     </span>
                   )}
@@ -376,7 +376,7 @@ const Store = () => {
               placeholder="ابحث عن منتج..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-11 pr-10 pl-12 rounded-xl bg-muted/70 border border-transparent text-right text-sm placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/30 focus:bg-card focus:border-primary/30 transition-all text-foreground"
+              className="w-full h-11 pr-10 pl-12 rounded-xl bg-muted/70 border border-transparent text-right text-sm placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 focus:bg-card focus:border-primary/30 transition-all text-foreground"
             />
             <button
               onClick={toggleVoiceSearch}
@@ -433,7 +433,7 @@ const Store = () => {
                 key={cat.id}
                 className={`px-4 py-2 rounded-full transition-all duration-200 whitespace-nowrap text-xs font-semibold ${
                   selectedCategory === cat.id
-                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/25 scale-105"
+                    ? "bg-primary text-primary-foreground scale-105"
                     : "bg-card hover:bg-muted border border-border/60 text-muted-foreground hover:text-foreground"
                 }`}
                 onClick={() => setSelectedCategory(cat.id)}
@@ -499,7 +499,9 @@ const Store = () => {
           </div>
         ) : visibleProducts.length === 0 ? (
           <div className="text-center py-20">
-            <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-full flex items-center justify-center text-3xl ring-1 ring-primary/10">🛍️</div>
+            <div className="w-20 h-20 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center text-3xl">
+              🛍️
+            </div>
             <h3 className="text-lg font-bold mb-1 text-foreground">
               {searchQuery ? "لا توجد نتائج" : "لا توجد منتجات"}
             </h3>
@@ -549,7 +551,7 @@ const Store = () => {
       {cartCount > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background/95 to-transparent safe-area-bottom">
           <button onClick={() => navigate(getCheckoutPath(isTenantMode ? storeSlug : null))} className="w-full max-w-3xl mx-auto block">
-            <div className="bg-gradient-to-r from-primary to-primary/85 rounded-2xl shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 transition-all">
+            <div className="bg-primary rounded-2xl transition-colors">
               <div className="flex items-center justify-between px-5 py-3.5">
                 <div className="flex items-center gap-3">
                   <div className="relative w-9 h-9 rounded-full bg-primary-foreground/15 flex items-center justify-center">
