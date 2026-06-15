@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
 import { isProductLowStock } from '@/lib/productUpdateUtils';
 import { Link, useSearchParams, useLocation, useNavigate } from "react-router-dom";
-import { MessageSquare, Lightbulb, Download, Plus, Package, AlertTriangle, XCircle, DollarSign, Search, ArrowRight } from "lucide-react";
+import { MessageSquare, Lightbulb, Download, Plus, Package, AlertTriangle, XCircle, Search, ArrowRight } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ const Products = () => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
+  const [publishFilter, setPublishFilter] = useState<"all" | "published" | "draft">("all");
   const [categories, setCategories] = useState<{id: string; name: string}[]>([]);
   
   // Suggestion #17: Scroll & filter persistence
@@ -87,14 +88,17 @@ const Products = () => {
     if (saved) {
       if (saved.categoryFilter) setCategoryFilter(saved.categoryFilter);
       if (saved.stockFilter) setStockFilter(saved.stockFilter);
+      if (saved.publishFilter === 'published' || saved.publishFilter === 'draft' || saved.publishFilter === 'all') {
+        setPublishFilter(saved.publishFilter);
+      }
       if (saved.searchQuery) setSearchQuery(saved.searchQuery);
     }
   }, [location.state]);
 
   // Save filters when they change
   useEffect(() => {
-    saveFilters('products', { categoryFilter, stockFilter, searchQuery });
-  }, [categoryFilter, stockFilter, searchQuery]);
+    saveFilters('products', { categoryFilter, stockFilter, searchQuery, publishFilter });
+  }, [categoryFilter, stockFilter, searchQuery, publishFilter]);
 
   // Debounce search
   useEffect(() => {
@@ -124,6 +128,7 @@ const Products = () => {
   // Stats (memoized)
   const stats = useMemo(() => ({
     total: loadedProducts.length,
+    drafts: loadedProducts.filter((p) => p.isActive === false).length,
     inStock: loadedProducts.filter(p => (p.stockQuantity ?? 1) > 5).length,
     lowStock: loadedProducts.filter((p) => isProductLowStock(p)).length,
     outOfStock: loadedProducts.filter(p => p.stockQuantity !== undefined && p.stockQuantity === 0).length,
@@ -134,7 +139,8 @@ const Products = () => {
     setSearchQuery("");
     setCategoryFilter("all");
     setStockFilter("all");
-    saveFilters('products', { categoryFilter: 'all', stockFilter: 'all', searchQuery: '' });
+    setPublishFilter("all");
+    saveFilters('products', { categoryFilter: 'all', stockFilter: 'all', searchQuery: '', publishFilter: 'all' });
   };
 
   // After add-product: clear saved filters and reload from DB
@@ -145,13 +151,14 @@ const Products = () => {
     clearFilters();
     void reloadCatalog().then((data) => {
       if (state.createdProductId && data.some((p) => p.id === state.createdProductId)) {
-        toast.success('✓ المنتج ظهر في قائمة المنتجات والمخزون');
+        toast.success('✓ تمت إضافة المنتج — يظهر في قائمة المنتجات');
       }
     });
     navigate('/products', { replace: true, state: {} });
   }, [location.state, navigate, reloadCatalog]);
 
-  const filtersActive = categoryFilter !== 'all' || stockFilter !== 'all' || !!debouncedSearch.trim();
+  const filtersActive =
+    categoryFilter !== 'all' || stockFilter !== 'all' || publishFilter !== 'all' || !!debouncedSearch.trim();
 
   const filteredProducts = useMemo(() => loadedProducts.filter(p => {
     const matchesSearch = !debouncedSearch || 
@@ -160,14 +167,19 @@ const Products = () => {
       p.category?.includes(debouncedSearch);
     
     const matchesCategory = categoryFilter === "all" || p.category === categoryFilter;
+
+    const matchesPublish =
+      publishFilter === "all" ||
+      (publishFilter === "published" && p.isActive !== false) ||
+      (publishFilter === "draft" && p.isActive === false);
     
     let matchesStock = true;
     if (stockFilter === "in_stock") matchesStock = (p.stockQuantity ?? 1) > 5;
     else if (stockFilter === "low") matchesStock = isProductLowStock(p);
     else if (stockFilter === "out") matchesStock = p.stockQuantity !== undefined && p.stockQuantity === 0;
 
-    return matchesSearch && matchesCategory && matchesStock;
-  }), [loadedProducts, debouncedSearch, categoryFilter, stockFilter]);
+    return matchesSearch && matchesCategory && matchesPublish && matchesStock;
+  }), [loadedProducts, debouncedSearch, categoryFilter, stockFilter, publishFilter]);
 
   return (
     <DashboardLayout>
@@ -238,13 +250,13 @@ const Products = () => {
               <StatCard label="إجمالي المنتجات" value={stats.total} icon={Package} />
               <StatCard label="منخفض المخزون" value={stats.lowStock} icon={AlertTriangle} iconClassName="bg-warning/10 [&_svg]:text-warning" />
               <StatCard label="نفد المخزون" value={stats.outOfStock} icon={XCircle} iconClassName="bg-destructive/10 [&_svg]:text-destructive" />
-              <StatCard label="القيمة (د.ع)" value={stats.totalValue.toLocaleString()} icon={DollarSign} />
+              <StatCard label="مسودات" value={stats.drafts} icon={Package} iconClassName="bg-muted [&_svg]:text-muted-foreground" />
             </div>
 
             {/* Filters & Actions */}
             <Card>
               <CardContent className="p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
                   <div className="relative lg:col-span-2">
                     <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
                     <Input
@@ -279,7 +291,18 @@ const Products = () => {
                     </SelectContent>
                   </Select>
 
-                  <div className="flex gap-2">
+                  <Select value={publishFilter} onValueChange={(v) => setPublishFilter(v as "all" | "published" | "draft")}>
+                    <SelectTrigger className="rounded-xl border-border text-foreground">
+                      <SelectValue placeholder="النشر" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl bg-popover border-border">
+                      <SelectItem value="all">الكل</SelectItem>
+                      <SelectItem value="published">منشور</SelectItem>
+                      <SelectItem value="draft">مسودة</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <div className="flex gap-2 lg:col-span-2">
                     <BulkUpload onComplete={() => reloadCatalog()} />
                     <Button
                       variant="outline"

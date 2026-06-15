@@ -9,6 +9,9 @@ import { Product, Category, ColorOption, ProductVariant } from '@/types';
 import { formatPriceInput, isValidPrice, convertArabicToEnglish } from '@/utils/numberUtils';
 import { validateProductImages } from '@/utils/imageValidator';
 import { computeProfit, formatDisplayPrice, parseTagsInput, slugifyProductName } from '@/lib/productFormUtils';
+import { toast as sonnerToast } from 'sonner';
+
+export type SaveMode = 'draft' | 'publish';
 
 export function useAddProductForm() {
   const { toast } = useToast();
@@ -37,7 +40,6 @@ export function useAddProductForm() {
   const [seoDescription, setSeoDescription] = useState('');
   const [productSlug, setProductSlug] = useState('');
   const [slugTouched, setSlugTouched] = useState(false);
-  const [isActive, setIsActive] = useState(true);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isImagesUploading, setIsImagesUploading] = useState(false);
@@ -175,9 +177,7 @@ export function useAddProductForm() {
     document.getElementById(first === 'image' ? 'product-media' : first)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-
+  const saveProduct = async (publish: boolean) => {
     if (submitLockRef.current || isSubmitting || saveSucceeded) return;
 
     const userId = await getAuthenticatedUserId();
@@ -247,41 +247,49 @@ export function useAddProductForm() {
         productSlug: productSlug.trim() || slugifyProductName(name),
         tags: parseTagsInput(tagsInput),
         lowStockThreshold: parseInt(lowStockThreshold) || 3,
-        isActive,
+        isActive: publish,
       };
 
       const result = await addProduct(newProduct, { idempotencyKey: idempotencyKeyRef.current });
 
       if (result.success) {
         setSaveSucceeded(true);
-        invalidateProducts();
+        await invalidateProducts();
 
         const stockMsg = newProduct.stockQuantity ? ` · المخزون: ${newProduct.stockQuantity}` : '';
-        toast({
-          title: '✓ تم حفظ المنتج بنجاح',
-          description: isActive
-            ? `المنتج منشور في متجرك${stockMsg}`
-            : `تم حفظ المنتج كمسودة (مخفي عن المتجر)${stockMsg}`,
-        });
+        if (publish) {
+          sonnerToast.success('تم حفظ ونشر المنتج', {
+            description: `"${newProduct.name}" متاح الآن في متجرك${stockMsg}`,
+            duration: 4500,
+          });
+        } else {
+          sonnerToast.success('تم حفظ المنتج', {
+            description: `"${newProduct.name}" محفوظ كمسودة (مخفي عن المتجر)${stockMsg}`,
+            duration: 4500,
+          });
+        }
 
         navigate('/products', { replace: true, state: { refreshProducts: true, createdProductId: result.productId } });
         return;
       }
 
       idempotencyKeyRef.current = createProductIdempotencyKey();
-      toast({ title: 'خطأ', description: result.error || 'فشل في إضافة المنتج', variant: 'destructive' });
+      sonnerToast.error(result.error || 'فشل في إضافة المنتج');
     } catch (err) {
       idempotencyKeyRef.current = createProductIdempotencyKey();
       console.error('[addProduct] submit failed:', err);
-      toast({
-        title: 'خطأ',
-        description: err instanceof Error ? err.message : 'فشل في إضافة المنتج',
-        variant: 'destructive',
-      });
+      sonnerToast.error(err instanceof Error ? err.message : 'فشل في إضافة المنتج');
     } finally {
       setIsSubmitting(false);
       submitLockRef.current = false;
     }
+  };
+
+  const handleSaveDraft = () => saveProduct(false);
+  const handleSaveAndPublish = () => saveProduct(true);
+
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
   };
 
   const isSaveDisabled = isSubmitting || isImagesUploading || saveSucceeded;
@@ -308,7 +316,6 @@ export function useAddProductForm() {
       seoTitle,
       seoDescription,
       productSlug,
-      isActive,
       fieldErrors,
       isSubmitting,
       isImagesUploading,
@@ -333,7 +340,6 @@ export function useAddProductForm() {
       setSeoDescription,
       setProductSlug,
       setSlugTouched,
-      setIsActive,
       handleImagesChange,
       handlePriceChange,
       handleCompareAtChange,
@@ -344,6 +350,8 @@ export function useAddProductForm() {
       loadCategories,
       setImagesUploading: setIsImagesUploading,
       handleSubmit,
+      handleSaveDraft,
+      handleSaveAndPublish,
       formatDisplayPrice,
     },
   };

@@ -1,9 +1,9 @@
 
 import { Button } from "@/components/ui/button";
-import { Edit, Plus, Star, MessageSquare, GripVertical, Copy, Zap } from "lucide-react";
+import { Edit, Plus, Star, MessageSquare, GripVertical, Copy, Zap, Eye } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { loadProducts, addProduct, invalidateProducts } from "@/services/productService";
+import { loadProducts, addProduct, invalidateProducts, updateProduct } from "@/services/productService";
 import { useStoreHydration } from "@/context/StoreBootstrapContext";
 import { Product } from "@/types";
 import { isProductLowStock } from '@/lib/productUpdateUtils';
@@ -136,6 +136,16 @@ export const ProductsList = ({
     return productsData;
   }, [managedByParent, syncProducts]);
 
+  const handlePublish = async (product: Product) => {
+    const result = await updateProduct(product.id, { isActive: true });
+    if (result.success) {
+      toast.success(`تم نشر "${product.name}" في المتجر`);
+      await refreshCatalog();
+    } else {
+      toast.error(result.error || "فشل في نشر المنتج");
+    }
+  };
+
   const handleDuplicate = async (product: Product) => {
     const duplicated: Product = {
       ...product,
@@ -221,6 +231,11 @@ export const ProductsList = ({
           className="w-full h-48"
           loading="lazy"
         />
+        {product.isActive === false && (
+          <div className="absolute top-3 left-3 bg-muted text-muted-foreground text-xs px-2.5 py-1 rounded-lg font-semibold border border-border">
+            مسودة
+          </div>
+        )}
         <div className="absolute top-4 right-4 flex gap-1.5" onClick={(e) => e.stopPropagation()}>
           <Link to={`/edit-product/${product.id}`}>
             <Button 
@@ -287,6 +302,16 @@ export const ProductsList = ({
             )}
           </div>
           <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+            {product.isActive === false && (
+              <Button
+                size="sm"
+                className="rounded-lg text-xs px-2 h-8 gap-1"
+                onClick={() => handlePublish(product)}
+              >
+                <Eye className="w-3 h-3" />
+                نشر
+              </Button>
+            )}
             {onProductSelect && (
               <Button 
                 size="sm"

@@ -3,7 +3,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import {
   Plus,
   Save,
@@ -15,6 +14,7 @@ import {
   Search,
   Tag,
   Loader2,
+  Eye,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/layout/PageHeader';
@@ -42,19 +42,35 @@ const AddProduct = () => {
         backLabel="المنتجات"
         breadcrumbs={[{ label: 'المنتجات', href: '/products' }, { label: 'إضافة منتج' }]}
         actions={
-          <Button
-            type="submit"
-            form="add-product-form"
-            disabled={state.isSaveDisabled}
-            className="rounded-xl gap-1.5 min-h-[44px] shadow-brand"
-          >
-            {state.isSubmitting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-            {state.isSubmitting ? 'جاري الحفظ…' : state.isActive ? 'حفظ ونشر المنتج' : 'حفظ المنتج'}
-          </Button>
+          <div className="flex flex-wrap gap-2 justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={state.isSaveDisabled}
+              onClick={actions.handleSaveDraft}
+              className="rounded-xl gap-1.5 min-h-[44px]"
+            >
+              {state.isSubmitting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              {state.isSubmitting ? 'جاري الحفظ…' : 'حفظ فقط'}
+            </Button>
+            <Button
+              type="button"
+              disabled={state.isSaveDisabled}
+              onClick={actions.handleSaveAndPublish}
+              className="rounded-xl gap-1.5 min-h-[44px] shadow-brand"
+            >
+              {state.isSubmitting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
+              {state.isSubmitting ? 'جاري الحفظ…' : 'حفظ ونشر'}
+            </Button>
+          </div>
         }
       />
 
@@ -308,13 +324,13 @@ const AddProduct = () => {
 
           {/* Sidebar */}
           <div className="space-y-5 lg:sticky lg:top-20 lg:self-start">
-            <section className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <Switch checked={state.isActive} onCheckedChange={actions.setIsActive} id="is-active" />
-                <Label htmlFor="is-active" className="font-bold cursor-pointer">
-                  {state.isActive ? 'منشور في المتجر' : 'مسودة — مخفي عن العملاء'}
-                </Label>
-              </div>
+            <section className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm space-y-2">
+              <h3 className="font-bold text-foreground text-right">حالة النشر</h3>
+              <p className="text-xs text-muted-foreground text-right leading-relaxed">
+                <strong className="text-foreground">حفظ فقط:</strong> مسودة مخفية عن الزبائن.
+                <br />
+                <strong className="text-foreground">حفظ ونشر:</strong> يظهر فوراً في متجرك.
+              </p>
             </section>
 
             <section id="category" className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm space-y-3">
@@ -360,7 +376,7 @@ const AddProduct = () => {
               image={state.mainImage}
               category={state.category}
               shortDescription={state.shortDescription}
-              isActive={state.isActive}
+              isActive={true}
               profitMargin={state.profitInfo?.margin ?? null}
             />
           </div>
@@ -368,10 +384,27 @@ const AddProduct = () => {
 
         {/* Mobile sticky save */}
         <div className="fixed bottom-0 inset-x-0 p-3 bg-card/95 backdrop-blur border-t border-border lg:hidden z-40 safe-area-bottom">
-          <Button type="submit" form="add-product-form" disabled={state.isSaveDisabled} className="w-full rounded-xl h-12 font-bold gap-2">
-            {state.isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {state.isSubmitting ? 'جاري الحفظ…' : state.isActive ? 'حفظ ونشر المنتج' : 'حفظ كمسودة'}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={state.isSaveDisabled}
+              onClick={actions.handleSaveDraft}
+              className="flex-1 rounded-xl h-12 font-bold gap-2"
+            >
+              {state.isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {state.isSubmitting ? 'جاري…' : 'حفظ فقط'}
+            </Button>
+            <Button
+              type="button"
+              disabled={state.isSaveDisabled}
+              onClick={actions.handleSaveAndPublish}
+              className="flex-1 rounded-xl h-12 font-bold gap-2 shadow-brand"
+            >
+              {state.isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+              {state.isSubmitting ? 'جاري…' : 'حفظ ونشر'}
+            </Button>
+          </div>
         </div>
       </div>
 

@@ -75,6 +75,7 @@ function Inventory() {
         .from('products')
         .select('id, name, price, category, image_url, stock_quantity, min_stock_level, variants, created_at', { count: 'exact' })
         .eq('owner_id', user.id)
+        .or('is_active.eq.true,is_active.is.null')
         .order('name')
         .range(from, to);
 
