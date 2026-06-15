@@ -3,15 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { getAuthenticatedUserId } from '@/lib/authSession';
 import { createProductIdempotencyKey } from '@/lib/productCreateLock';
-import { addProduct, invalidateProducts } from '@/services/productService';
+import { addProduct, loadAllMerchantProducts } from '@/services/productService';
 import { useToast } from '@/hooks/use-toast';
 import { Product, Category, ColorOption, ProductVariant } from '@/types';
 import { formatPriceInput, isValidPrice, convertArabicToEnglish } from '@/utils/numberUtils';
 import { validateProductImages } from '@/utils/imageValidator';
 import { computeProfit, formatDisplayPrice, parseTagsInput, slugifyProductName } from '@/lib/productFormUtils';
+import { PRODUCT_SAVE_TOAST, type ProductSaveMode } from '@/lib/productFormLabels';
 import { toast as sonnerToast } from 'sonner';
 
-export type SaveMode = 'draft' | 'publish';
+export type SaveMode = ProductSaveMode;
 
 export function useAddProductForm() {
   const { toast } = useToast();
@@ -42,6 +43,7 @@ export function useAddProductForm() {
   const [slugTouched, setSlugTouched] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingSaveMode, setPendingSaveMode] = useState<SaveMode | null>(null);
   const [isImagesUploading, setIsImagesUploading] = useState(false);
   const [saveSucceeded, setSaveSucceeded] = useState(false);
 
@@ -218,6 +220,7 @@ export function useAddProductForm() {
 
     submitLockRef.current = true;
     setIsSubmitting(true);
+    setPendingSaveMode(publish ? 'publish' : 'draft');
 
     try {
       const numericPrice = parseFloat(price.replace(/,/g, ''));
@@ -254,22 +257,26 @@ export function useAddProductForm() {
 
       if (result.success) {
         setSaveSucceeded(true);
-        await invalidateProducts();
+        await loadAllMerchantProducts(true);
 
         const stockMsg = newProduct.stockQuantity ? ` · المخزون: ${newProduct.stockQuantity}` : '';
+        const saveMode: SaveMode = publish ? 'publish' : 'draft';
         if (publish) {
-          sonnerToast.success('تم حفظ ونشر المنتج', {
+          sonnerToast.success(PRODUCT_SAVE_TOAST.publishSuccess, {
             description: `"${newProduct.name}" متاح الآن في متجرك${stockMsg}`,
-            duration: 4500,
+            duration: 5000,
           });
         } else {
-          sonnerToast.success('تم حفظ المنتج', {
-            description: `"${newProduct.name}" محفوظ كمسودة (مخفي عن المتجر)${stockMsg}`,
-            duration: 4500,
+          sonnerToast.success(PRODUCT_SAVE_TOAST.draftSuccess, {
+            description: `"${newProduct.name}" يظهر في إدارة المنتجات والمخزون${stockMsg}`,
+            duration: 5000,
           });
         }
 
-        navigate('/products', { replace: true, state: { refreshProducts: true, createdProductId: result.productId } });
+        navigate('/products', {
+          replace: true,
+          state: { refreshProducts: true, createdProductId: result.productId, saveMode },
+        });
         return;
       }
 
@@ -281,6 +288,7 @@ export function useAddProductForm() {
       sonnerToast.error(err instanceof Error ? err.message : 'فشل في إضافة المنتج');
     } finally {
       setIsSubmitting(false);
+      setPendingSaveMode(null);
       submitLockRef.current = false;
     }
   };
@@ -318,6 +326,7 @@ export function useAddProductForm() {
       productSlug,
       fieldErrors,
       isSubmitting,
+      pendingSaveMode,
       isImagesUploading,
       isSaveDisabled,
       saveSucceeded,

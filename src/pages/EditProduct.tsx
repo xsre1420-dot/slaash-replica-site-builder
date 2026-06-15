@@ -9,7 +9,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/layout/PageHeader";
 import { useState, useEffect, useRef } from "react";
-import { getCategories, fetchProductById, updateProduct, deleteProduct } from "@/services/productService";
+import { getCategories, fetchProductById, updateProduct, deleteProduct, loadAllMerchantProducts } from "@/services/productService";
 import { useStoreHydration } from "@/context/StoreBootstrapContext";
 import { useToast } from "@/hooks/use-toast";
 import { Product, Category, ColorOption } from "@/types";
@@ -21,6 +21,8 @@ import { useUndoDelete } from "@/hooks/useUndoDelete";
 import { validateProductImages } from "@/utils/imageValidator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { PRODUCT_SAVE_LABELS, PRODUCT_SAVE_TOAST } from "@/lib/productFormLabels";
+import { toast as sonnerToast } from "sonner";
 
 const EditProduct = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -37,6 +39,7 @@ const EditProduct = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isImagesUploading, setIsImagesUploading] = useState(false);
   const loadedProductRef = useRef<Product | null>(null);
+  const submitLockRef = useRef(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isReady, hydrationVersion } = useStoreHydration();
@@ -126,6 +129,7 @@ const EditProduct = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitLockRef.current || isSubmitting) return;
 
     const errors: Record<string, string> = {};
     if (!name.trim()) errors.name = "اسم المنتج مطلوب";
@@ -149,6 +153,7 @@ const EditProduct = () => {
     }
 
     setFieldErrors({});
+    submitLockRef.current = true;
     setIsSubmitting(true);
 
     if (productId) {
@@ -159,6 +164,7 @@ const EditProduct = () => {
           : 'بعض روابط الصور غير صالحة';
         toast({ title: "خطأ في الصور", description: msg, variant: "destructive" });
         setIsSubmitting(false);
+        submitLockRef.current = false;
         return;
       }
 
@@ -176,13 +182,17 @@ const EditProduct = () => {
       const result = await updateProduct(productId, updatedProduct);
 
       if (result.success) {
-        toast({ title: "تم بنجاح", description: "تم تحديث بيانات المنتج" });
-        navigate('/products');
+        await loadAllMerchantProducts(true);
+        sonnerToast.success(PRODUCT_SAVE_TOAST.updatedSuccess, {
+          description: 'تم تحديث بيانات المنتج في كل الأقسام',
+        });
+        navigate('/products', { replace: true, state: { refreshProducts: true } });
       } else {
-        toast({ title: "خطأ", description: result.error || "فشل في تحديث المنتج", variant: "destructive" });
+        sonnerToast.error(result.error || 'فشل في تحديث المنتج');
       }
     }
     setIsSubmitting(false);
+    submitLockRef.current = false;
   };
 
   // Suggestion #18: Undo delete
@@ -220,9 +230,9 @@ const EditProduct = () => {
         backTo="/products"
         breadcrumbs={[{ label: 'المنتجات', href: '/products' }, { label: 'تعديل' }]}
         actions={
-          <Button type="submit" form="edit-product-form" disabled={isSubmitting || isImagesUploading} className="rounded-xl min-h-[44px]">
+          <Button type="submit" form="edit-product-form" disabled={isSubmitting || isImagesUploading} className="rounded-xl min-h-[44px] gap-1.5">
             <Save className="w-4 h-4" />
-            {isSubmitting ? 'جاري الحفظ...' : 'حفظ'}
+            {isSubmitting ? PRODUCT_SAVE_LABELS.saving : PRODUCT_SAVE_LABELS.saveChanges}
           </Button>
         }
       />

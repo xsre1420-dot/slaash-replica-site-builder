@@ -49,11 +49,11 @@ export const mapDbProduct = (
         ? Number(row.min_stock_level)
         : undefined,
     isActive: row.is_active != null ? Boolean(row.is_active) : true,
+    archivedAt: (row.archived_at as string) || undefined,
   };
 
   return options.applyDiscount ? applyActiveDiscount(product) : product;
 };
-
 export const safeMapDbProduct = (
   row: unknown,
   options: { applyDiscount?: boolean } = {}

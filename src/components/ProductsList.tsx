@@ -1,12 +1,13 @@
 
 import { Button } from "@/components/ui/button";
-import { Edit, Plus, Star, MessageSquare, GripVertical, Copy, Zap, Eye } from "lucide-react";
+import { Edit, Plus, Star, MessageSquare, GripVertical, Copy, Zap, Eye, Archive, ArchiveRestore } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { loadProducts, addProduct, invalidateProducts, updateProduct } from "@/services/productService";
+import { loadProducts, loadAllMerchantProducts, addProduct, invalidateProducts, updateProduct } from "@/services/productService";
 import { useStoreHydration } from "@/context/StoreBootstrapContext";
 import { Product } from "@/types";
 import { isProductLowStock } from '@/lib/productUpdateUtils';
+import { getProductLifecycleStatus, lifecycleStatusLabel } from '@/lib/productLifecycle';
 import { toast } from "sonner";
 import React from "react";
 import { QuickEditDialog } from "@/components/product-management/QuickEditDialog";
@@ -125,23 +126,50 @@ export const ProductsList = ({
 
   const refreshCatalog = useCallback(async () => {
     await invalidateProducts();
-    const productsData = applyDisplayOrder(await loadProducts(true));
+    const { products: productsData } = await loadAllMerchantProducts(true);
+    const ordered = applyDisplayOrder(productsData);
     if (managedByParent) {
-      syncProducts?.(productsData);
+      syncProducts?.(ordered);
     } else {
-      setLocalProducts(productsData);
-      syncProducts?.(productsData);
+      setLocalProducts(ordered);
+      syncProducts?.(ordered);
     }
-    return productsData;
+    return ordered;
   }, [managedByParent, syncProducts]);
 
   const handlePublish = async (product: Product) => {
-    const result = await updateProduct(product.id, { isActive: true });
+    const result = await updateProduct(product.id, { isActive: true, archivedAt: undefined });
     if (result.success) {
       toast.success(`تم نشر "${product.name}" في المتجر`);
       await refreshCatalog();
     } else {
       toast.error(result.error || "فشل في نشر المنتج");
+    }
+  };
+
+  const handleArchive = async (product: Product) => {
+    const result = await updateProduct(product.id, {
+      isActive: false,
+      archivedAt: new Date().toISOString(),
+    });
+    if (result.success) {
+      toast.success(`تم أرشفة "${product.name}"`);
+      await refreshCatalog();
+    } else {
+      toast.error(result.error || "فشل في أرشفة المنتج");
+    }
+  };
+
+  const handleRestore = async (product: Product) => {
+    const result = await updateProduct(product.id, {
+      isActive: false,
+      archivedAt: undefined,
+    });
+    if (result.success) {
+      toast.success(`تم استرجاع "${product.name}" كمسودة`);
+      await refreshCatalog();
+    } else {
+      toast.error(result.error || "فشل في استرجاع المنتج");
     }
   };
 
@@ -230,11 +258,28 @@ export const ProductsList = ({
           className="w-full h-48"
           loading="lazy"
         />
-        {product.isActive === false && (
-          <div className="absolute top-3 left-3 bg-muted text-muted-foreground text-xs px-2.5 py-1 rounded-lg font-semibold border border-border">
-            مسودة
-          </div>
-        )}
+        {(() => {
+          const lifecycle = getProductLifecycleStatus(product);
+          if (lifecycle === 'archived') {
+            return (
+              <div className="absolute top-3 left-3 bg-muted text-muted-foreground text-xs px-2.5 py-1 rounded-lg font-semibold border border-border">
+                {lifecycleStatusLabel.archived}
+              </div>
+            );
+          }
+          if (lifecycle === 'draft') {
+            return (
+              <div className="absolute top-3 left-3 bg-amber-500/15 text-amber-700 text-xs px-2.5 py-1 rounded-lg font-semibold border border-amber-500/25">
+                {lifecycleStatusLabel.draft}
+              </div>
+            );
+          }
+          return (
+            <div className="absolute top-3 left-3 bg-emerald-500/10 text-emerald-700 text-xs px-2.5 py-1 rounded-lg font-semibold border border-emerald-500/20">
+              {lifecycleStatusLabel.published}
+            </div>
+          );
+        })()}
         <div className="absolute top-4 right-4 flex gap-1.5" onClick={(e) => e.stopPropagation()}>
           <Link to={`/edit-product/${product.id}`}>
             <Button 
@@ -300,15 +345,23 @@ export const ProductsList = ({
               <span className="text-xs text-muted-foreground">الكمية: {product.stockQuantity}</span>
             )}
           </div>
-          <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
-            {product.isActive === false && (
-              <Button
-                size="sm"
-                className="rounded-lg text-xs px-2 h-8 gap-1"
-                onClick={() => handlePublish(product)}
-              >
+          <div className="flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
+            {getProductLifecycleStatus(product) === 'draft' && (
+              <Button size="sm" className="rounded-lg text-xs px-2 h-8 gap-1" onClick={() => handlePublish(product)}>
                 <Eye className="w-3 h-3" />
                 نشر
+              </Button>
+            )}
+            {getProductLifecycleStatus(product) === 'archived' && (
+              <Button size="sm" variant="outline" className="rounded-lg text-xs px-2 h-8 gap-1" onClick={() => handleRestore(product)}>
+                <ArchiveRestore className="w-3 h-3" />
+                استرجاع
+              </Button>
+            )}
+            {getProductLifecycleStatus(product) === 'published' && (
+              <Button size="sm" variant="outline" className="rounded-lg text-xs px-2 h-8 gap-1" onClick={() => handleArchive(product)}>
+                <Archive className="w-3 h-3" />
+                أرشفة
               </Button>
             )}
             {onProductSelect && (

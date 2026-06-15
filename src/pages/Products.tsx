@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
 import { isProductLowStock } from '@/lib/productUpdateUtils';
 import { Link, useSearchParams, useLocation, useNavigate } from "react-router-dom";
-import { MessageSquare, Lightbulb, Download, Plus, Package, AlertTriangle, XCircle, Search, ArrowRight } from "lucide-react";
+import { MessageSquare, Lightbulb, Download, Plus, Package, XCircle, Search, ArrowRight } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,9 @@ import { ProductsList } from "@/components/ProductsList";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Product } from "@/types";
 import { exportProductsToCSV } from "@/utils/exportProducts";
-import { toast } from "sonner";
-import { getCategories, invalidateProducts, loadProducts as reloadProductsData } from "@/services/productService";
+import { toast } from 'sonner';
+import { getCategories, invalidateProducts, loadAllMerchantProducts as reloadProductsData } from "@/services/productService";
+import { getProductLifecycleStatus, matchesLifecycleFilter, type ProductLifecycleFilter } from "@/lib/productLifecycle";
 import { useAuth } from "@/context/AuthContext";
 import { useRealtimeProducts } from "@/hooks/useRealtimeProducts";
 import { useScrollPersistence, saveFilters, loadFilters } from "@/hooks/useScrollPersistence";
@@ -39,7 +40,8 @@ const Products = () => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
-  const [publishFilter, setPublishFilter] = useState<"all" | "published" | "draft">("all");
+  const [publishFilter, setPublishFilter] = useState<ProductLifecycleFilter>("all");
+  const [catalogTotal, setCatalogTotal] = useState(0);
   const [categories, setCategories] = useState<{id: string; name: string}[]>([]);
   
   // Suggestion #17: Scroll & filter persistence
@@ -63,9 +65,10 @@ const Products = () => {
     setCatalogLoading(true);
     try {
       await invalidateProducts();
-      const data = await reloadProductsData(true);
-      setLoadedProducts(data);
-      return data;
+      const result = await reloadProductsData(true);
+      setLoadedProducts(result.products);
+      setCatalogTotal(result.total);
+      return result.products;
     } catch (err) {
       console.error('[Products] failed to load catalog:', err);
       toast.error('تعذر تحميل المنتجات — حاول تحديث الصفحة');
@@ -104,7 +107,7 @@ const Products = () => {
     if (!saved) return;
     if (saved.categoryFilter) setCategoryFilter(saved.categoryFilter);
     if (saved.stockFilter) setStockFilter(saved.stockFilter);
-    if (saved.publishFilter === 'published' || saved.publishFilter === 'draft' || saved.publishFilter === 'all') {
+    if (saved.publishFilter === 'published' || saved.publishFilter === 'draft' || saved.publishFilter === 'archived' || saved.publishFilter === 'all') {
       setPublishFilter(saved.publishFilter);
     }
     if (saved.searchQuery) setSearchQuery(saved.searchQuery);
@@ -150,13 +153,15 @@ const Products = () => {
 
   // Stats (memoized)
   const stats = useMemo(() => ({
-    total: loadedProducts.length,
-    drafts: loadedProducts.filter((p) => p.isActive === false).length,
+    total: catalogTotal || loadedProducts.length,
+    published: loadedProducts.filter((p) => getProductLifecycleStatus(p) === 'published').length,
+    drafts: loadedProducts.filter((p) => getProductLifecycleStatus(p) === 'draft').length,
+    archived: loadedProducts.filter((p) => getProductLifecycleStatus(p) === 'archived').length,
     inStock: loadedProducts.filter(p => (p.stockQuantity ?? 1) > 5).length,
     lowStock: loadedProducts.filter((p) => isProductLowStock(p)).length,
     outOfStock: loadedProducts.filter(p => p.stockQuantity !== undefined && p.stockQuantity === 0).length,
     totalValue: loadedProducts.reduce((sum, p) => sum + p.price * (p.stockQuantity ?? 1), 0),
-  }), [loadedProducts]);
+  }), [loadedProducts, catalogTotal]);
 
   const clearFilters = () => {
     setSearchQuery("");
@@ -168,13 +173,17 @@ const Products = () => {
 
   // After add-product: clear saved filters and reload from DB
   useEffect(() => {
-    const state = location.state as { refreshProducts?: boolean; createdProductId?: string } | null;
+    const state = location.state as {
+      refreshProducts?: boolean;
+      createdProductId?: string;
+      saveMode?: ProductSaveMode;
+    } | null;
     if (!state?.refreshProducts) return;
 
     clearFilters();
     void reloadCatalog().then((data) => {
-      if (state.createdProductId && data.some((p) => p.id === state.createdProductId)) {
-        toast.success('✓ تمت إضافة المنتج — يظهر في قائمة المنتجات');
+      if (state.createdProductId && !data.some((p) => p.id === state.createdProductId)) {
+        toast.error('تم الحفظ لكن تعذر عرض المنتج — حدّث الصفحة');
       }
     });
     navigate('/products', { replace: true, state: {} });
@@ -191,10 +200,7 @@ const Products = () => {
     
     const matchesCategory = categoryFilter === "all" || p.category === categoryFilter;
 
-    const matchesPublish =
-      publishFilter === "all" ||
-      (publishFilter === "published" && p.isActive !== false) ||
-      (publishFilter === "draft" && p.isActive === false);
+    const matchesPublish = matchesLifecycleFilter(p, publishFilter);
     
     let matchesStock = true;
     if (stockFilter === "in_stock") matchesStock = (p.stockQuantity ?? 1) > 5;
@@ -269,11 +275,12 @@ const Products = () => {
         ) : (
           <>
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
               <StatCard label="إجمالي المنتجات" value={stats.total} icon={Package} />
-              <StatCard label="منخفض المخزون" value={stats.lowStock} icon={AlertTriangle} iconClassName="bg-warning/10 [&_svg]:text-warning" />
-              <StatCard label="نفد المخزون" value={stats.outOfStock} icon={XCircle} iconClassName="bg-destructive/10 [&_svg]:text-destructive" />
+              <StatCard label="منشور" value={stats.published} icon={Package} iconClassName="bg-emerald-500/10 [&_svg]:text-emerald-600" />
               <StatCard label="مسودات" value={stats.drafts} icon={Package} iconClassName="bg-muted [&_svg]:text-muted-foreground" />
+              <StatCard label="مؤرشف" value={stats.archived} icon={Package} iconClassName="bg-muted [&_svg]:text-muted-foreground" />
+              <StatCard label="نفد المخزون" value={stats.outOfStock} icon={XCircle} iconClassName="bg-destructive/10 [&_svg]:text-destructive" />
             </div>
 
             {/* Filters & Actions */}
@@ -314,14 +321,15 @@ const Products = () => {
                     </SelectContent>
                   </Select>
 
-                  <Select value={publishFilter} onValueChange={(v) => setPublishFilter(v as "all" | "published" | "draft")}>
+                  <Select value={publishFilter} onValueChange={(v) => setPublishFilter(v as ProductLifecycleFilter)}>
                     <SelectTrigger className="rounded-xl border-border text-foreground">
-                      <SelectValue placeholder="النشر" />
+                      <SelectValue placeholder="الحالة" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl bg-popover border-border">
-                      <SelectItem value="all">الكل</SelectItem>
+                      <SelectItem value="all">كل الحالات</SelectItem>
                       <SelectItem value="published">منشور</SelectItem>
                       <SelectItem value="draft">مسودة</SelectItem>
+                      <SelectItem value="archived">مؤرشف</SelectItem>
                     </SelectContent>
                   </Select>
 

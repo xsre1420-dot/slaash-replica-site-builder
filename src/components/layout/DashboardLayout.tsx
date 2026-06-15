@@ -297,7 +297,7 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
         {/* Main content */}
         <div className={cn('flex-1 flex flex-col min-h-screen transition-all duration-300', mainOffset)}>
           {/* Mobile top bar */}
-          <header className="lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card/95 backdrop-blur-xl">
+          <header className="lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card">
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
               <SheetTrigger asChild>
                 <Button
@@ -367,7 +367,7 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
 
           {/* Mobile bottom nav */}
           <nav
-            className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border/50 safe-area-bottom shadow-[0_-4px_24px_-4px_rgb(0_0_0/0.06)]"
+            className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-card border-t border-border/50 safe-area-bottom"
             aria-label="التنقل السريع"
           >
             <div className="flex items-stretch justify-around px-1 py-1">

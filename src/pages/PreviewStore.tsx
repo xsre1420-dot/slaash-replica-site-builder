@@ -375,7 +375,7 @@ const PreviewStore = () => {
       {cartCount > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-6 pt-2 bg-gradient-to-t from-background via-background to-transparent">
           <Link to="/checkout">
-            <div className="accent-gradient rounded-full shadow-2xl overflow-hidden">
+            <div className="bg-primary rounded-full shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4">
                 <div className="flex items-center gap-3">
                   <div className="relative rounded-full p-3">

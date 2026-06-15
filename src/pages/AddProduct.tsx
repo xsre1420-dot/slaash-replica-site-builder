@@ -13,8 +13,6 @@ import {
   Palette,
   Search,
   Tag,
-  Loader2,
-  Eye,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/layout/PageHeader';
@@ -25,6 +23,8 @@ import CategoryDialog from '@/components/CategoryDialog';
 import ProductFormProgress from '@/components/add-product/ProductFormProgress';
 import ProductPreviewCard from '@/components/add-product/ProductPreviewCard';
 import ProductFormSection from '@/components/add-product/ProductFormSection';
+import ProductSaveActions from '@/components/add-product/ProductSaveActions';
+import { PRODUCT_SAVE_LABELS } from '@/lib/productFormLabels';
 import { useAddProductForm } from '@/hooks/useAddProductForm';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -42,35 +42,14 @@ const AddProduct = () => {
         backLabel="المنتجات"
         breadcrumbs={[{ label: 'المنتجات', href: '/products' }, { label: 'إضافة منتج' }]}
         actions={
-          <div className="flex flex-wrap gap-2 justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={state.isSaveDisabled}
-              onClick={actions.handleSaveDraft}
-              className="rounded-xl gap-1.5 min-h-[44px]"
-            >
-              {state.isSubmitting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              {state.isSubmitting ? 'جاري الحفظ…' : 'حفظ فقط'}
-            </Button>
-            <Button
-              type="button"
-              disabled={state.isSaveDisabled}
-              onClick={actions.handleSaveAndPublish}
-              className="rounded-xl gap-1.5 min-h-[44px]"
-            >
-              {state.isSubmitting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Eye className="w-4 h-4" />
-              )}
-              {state.isSubmitting ? 'جاري الحفظ…' : 'حفظ ونشر'}
-            </Button>
-          </div>
+          <ProductSaveActions
+            isSubmitting={state.isSubmitting}
+            pendingSaveMode={state.pendingSaveMode}
+            isSaveDisabled={state.isSaveDisabled}
+            onSaveDraft={actions.handleSaveDraft}
+            onSaveAndPublish={actions.handleSaveAndPublish}
+            className="justify-end"
+          />
         }
       />
 
@@ -327,9 +306,9 @@ const AddProduct = () => {
             <section className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm space-y-2">
               <h3 className="font-bold text-foreground text-right">حالة النشر</h3>
               <p className="text-xs text-muted-foreground text-right leading-relaxed">
-                <strong className="text-foreground">حفظ فقط:</strong> مسودة مخفية عن الزبائن.
+                <strong className="text-foreground">{PRODUCT_SAVE_LABELS.saveDraft}:</strong> مسودة مخفية عن المتجر، تظهر في إدارة المنتجات والمخزون.
                 <br />
-                <strong className="text-foreground">حفظ ونشر:</strong> يظهر فوراً في متجرك.
+                <strong className="text-foreground">{PRODUCT_SAVE_LABELS.saveAndPublish}:</strong> يظهر فوراً في متجرك للعملاء.
               </p>
             </section>
 
@@ -383,28 +362,15 @@ const AddProduct = () => {
         </form>
 
         {/* Mobile sticky save */}
-        <div className="fixed bottom-0 inset-x-0 p-3 bg-card/95 backdrop-blur border-t border-border lg:hidden z-40 safe-area-bottom">
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={state.isSaveDisabled}
-              onClick={actions.handleSaveDraft}
-              className="flex-1 rounded-xl h-12 font-bold gap-2"
-            >
-              {state.isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {state.isSubmitting ? 'جاري…' : 'حفظ فقط'}
-            </Button>
-            <Button
-              type="button"
-              disabled={state.isSaveDisabled}
-              onClick={actions.handleSaveAndPublish}
-              className="flex-1 rounded-xl h-12 font-bold gap-2"
-            >
-              {state.isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
-              {state.isSubmitting ? 'جاري…' : 'حفظ ونشر'}
-            </Button>
-          </div>
+        <div className="fixed bottom-0 inset-x-0 p-3 bg-card border-t border-border lg:hidden z-40 safe-area-bottom">
+          <ProductSaveActions
+            isSubmitting={state.isSubmitting}
+            pendingSaveMode={state.pendingSaveMode}
+            isSaveDisabled={state.isSaveDisabled}
+            onSaveDraft={actions.handleSaveDraft}
+            onSaveAndPublish={actions.handleSaveAndPublish}
+            size="sticky"
+          />
         </div>
       </div>
 

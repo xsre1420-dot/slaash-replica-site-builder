@@ -47,7 +47,7 @@ const OrderDetailsCard = ({
     <div className="space-y-4 pb-8">
       {/* Header summary */}
       <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
-        <div className="accent-gradient px-5 py-5 text-white">
+        <div className="bg-primary px-5 py-5 text-primary-foreground">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="text-right">
               <p className="text-sm text-primary-foreground/80">طلب {formatOrderNumber(order.id)}</p>

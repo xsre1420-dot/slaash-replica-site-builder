@@ -58,7 +58,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background font-arabic" dir="rtl">
       {/* Header */}
-      <header className={`sticky top-0 z-50 w-full transition-all duration-500 ${scrolled ? 'bg-background/90 backdrop-blur-xl shadow-sm border-b border-border/30' : 'bg-transparent'}`}>
+      <header className={`sticky top-0 z-50 w-full transition-colors duration-200 ${scrolled ? 'bg-background/95 border-b border-border/40' : 'bg-transparent'}`}>
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
             <img src="/lovable-uploads/f51ae0c5-1208-4965-a0c7-85a6d908ceb1.png" alt="بداية" className="h-9 w-auto" />
@@ -80,90 +80,70 @@ const Index = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden min-h-[90vh] flex items-center">
-        {/* Animated background */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-1/4 right-1/4 w-[600px] h-[600px] bg-primary/8 rounded-full blur-[120px] animate-pulse" />
-          <div className="absolute bottom-1/4 left-1/4 w-[500px] h-[500px] bg-secondary/6 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1s' }} />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/3 rounded-full blur-[150px]" />
-          {/* Grid pattern */}
-          <div className="absolute inset-0 bg-[linear-gradient(hsl(var(--border)/0.03)_1px,transparent_1px),linear-gradient(90deg,hsl(var(--border)/0.03)_1px,transparent_1px)] bg-[size:60px_60px]" />
+      <section className="relative overflow-hidden border-b border-border/40 bg-muted/25">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute inset-0 bg-[linear-gradient(hsl(var(--border)/0.05)_1px,transparent_1px),linear-gradient(90deg,hsl(var(--border)/0.05)_1px,transparent_1px)] bg-[size:48px_48px]" />
         </div>
 
-        <div className="container mx-auto px-4 py-20 lg:py-28 relative z-10">
-          <div className="text-center max-w-5xl mx-auto">
-            {/* Badge */}
+        <div className="container mx-auto px-4 py-16 sm:py-20 lg:py-24 relative z-10">
+          <div className="text-center max-w-3xl mx-auto">
             <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 text-primary px-5 py-2.5 rounded-full text-sm font-semibold mb-10"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="inline-flex items-center gap-2 bg-primary/8 border border-primary/15 text-primary px-4 py-2 rounded-full text-sm font-medium mb-8"
             >
-              <Sparkles className="w-4 h-4" />
+              <Sparkles className="w-4 h-4" strokeWidth={1.75} />
               أنشئ متجرك الإلكتروني في دقائق
             </motion.div>
 
             <motion.h1
-              initial={{ opacity: 0, y: 40 }}
+              initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-              className="text-5xl sm:text-6xl md:text-7xl lg:text-[5.5rem] font-bold mb-8 leading-[1.1] text-foreground tracking-tight"
+              transition={{ duration: 0.5, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+              className="ds-display mb-6"
             >
-              حوّل فكرتك إلى
-              <br />
-              <span className="relative inline-block mt-3">
-                <span className="bg-gradient-to-l from-primary via-secondary to-primary bg-clip-text text-transparent">
-                  متجر احترافي
-                </span>
-                <motion.span
-                  initial={{ scaleX: 0 }}
-                  animate={{ scaleX: 1 }}
-                  transition={{ duration: 0.8, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
-                  className="absolute -bottom-2 right-0 left-0 h-1.5 bg-gradient-to-l from-primary to-secondary rounded-full origin-right"
-                />
-              </span>
+              حوّل فكرتك إلى{' '}
+              <span className="text-primary">متجر احترافي</span>
             </motion.h1>
 
             <motion.p
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="text-lg md:text-xl text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed"
+              transition={{ duration: 0.45, delay: 0.18 }}
+              className="ds-body-lg mb-10 max-w-xl mx-auto"
             >
               منصة متكاملة لبناء وإدارة متجرك الإلكتروني — بدون برمجة، بدون تعقيد.
-              <br />
-              <span className="text-foreground/60">ابدأ الآن واحصل على كل الأدوات التي تحتاجها.</span>
             </motion.p>
 
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
-              className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+              transition={{ duration: 0.45, delay: 0.28 }}
+              className="flex flex-col sm:flex-row gap-3 justify-center items-center"
             >
               <Link to="/signup">
-                <Button size="lg" className="text-lg px-12 py-7 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-300 hover:-translate-y-0.5 min-w-[260px] group">
+                <Button size="lg" className="min-w-[200px] sm:min-w-[220px] group">
                   ابدأ الآن
-                  <ArrowLeft className="mr-2 h-5 w-5 group-hover:-translate-x-1 transition-transform" />
+                  <ArrowLeft className="mr-1 h-4 w-4 group-hover:-translate-x-0.5 transition-transform" strokeWidth={1.75} />
                 </Button>
               </Link>
               <Link to="/login">
-                <Button variant="outline" size="lg" className="text-lg px-12 py-7 rounded-2xl border-2 border-border/60 hover:border-primary/30 hover:bg-accent text-foreground min-w-[260px] transition-all duration-300">
+                <Button variant="outline" size="lg" className="min-w-[200px] sm:min-w-[220px]">
                   لدي حساب بالفعل
                 </Button>
               </Link>
             </motion.div>
 
-            {/* Stats row */}
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.7 }}
-              className="flex items-center justify-center gap-8 sm:gap-16 mt-16 pt-10 border-t border-border/30"
+              transition={{ duration: 0.45, delay: 0.38 }}
+              className="flex flex-wrap items-center justify-center gap-8 sm:gap-12 mt-14 pt-8 border-t border-border/40"
             >
               {stats.map((stat, i) => (
-                <div key={i} className="text-center">
-                  <div className="text-3xl sm:text-4xl font-bold text-foreground">{stat.number}</div>
+                <div key={i} className="text-center min-w-[80px]">
+                  <div className="text-2xl sm:text-3xl font-semibold text-foreground tabular-nums">{stat.number}</div>
                   <div className="text-sm text-muted-foreground mt-1">{stat.label}</div>
                 </div>
               ))}
@@ -181,7 +161,7 @@ const Index = () => {
                 <Zap className="w-4 h-4" />
                 كيف يعمل
               </div>
-              <h2 className="text-4xl md:text-5xl font-bold mb-4 text-foreground">ثلاث خطوات فقط</h2>
+              <h2 className="ds-heading-lg mb-3">ثلاث خطوات فقط</h2>
               <p className="text-lg text-muted-foreground">من الفكرة إلى متجر جاهز للبيع</p>
             </div>
           </FadeUp>
@@ -193,11 +173,11 @@ const Index = () => {
             {steps.map((step, i) => (
               <FadeUp key={i} delay={i * 0.15}>
                 <div className="text-center relative group">
-                  <div className="w-20 h-20 bg-card border-2 border-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:border-primary/40 transition-all duration-300 group-hover:-translate-y-1">
-                    <step.icon className="w-8 h-8 text-primary" />
+                  <div className="w-16 h-16 bg-card border border-border/60 rounded-xl flex items-center justify-center mx-auto mb-5 group-hover:border-primary/30 transition-colors">
+                    <step.icon className="w-7 h-7 text-primary" strokeWidth={1.75} />
                   </div>
-                  <div className="text-xs font-bold text-primary/60 mb-2 tracking-widest">{step.step}</div>
-                  <h3 className="text-xl font-bold text-foreground mb-2">{step.title}</h3>
+                  <div className="text-xs font-medium text-primary/70 mb-2 tracking-wide">{step.step}</div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">{step.title}</h3>
                   <p className="text-muted-foreground text-sm">{step.desc}</p>
                 </div>
               </FadeUp>
@@ -215,7 +195,7 @@ const Index = () => {
                 <Shield className="w-4 h-4" />
                 المميزات
               </div>
-              <h2 className="text-4xl md:text-5xl font-bold mb-4 text-foreground">كل ما يحتاجه متجرك</h2>
+              <h2 className="ds-heading-lg mb-3">كل ما يحتاجه متجرك</h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 أدوات متكاملة لإدارة متجرك من الألف إلى الياء
               </p>
@@ -225,13 +205,12 @@ const Index = () => {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 max-w-6xl mx-auto">
             {features.map((feature, i) => (
               <FadeUp key={i} delay={i * 0.08}>
-                <div className="bg-card p-7 rounded-2xl border border-border/40 hover:border-primary/20 transition-all duration-500 group hover:-translate-y-1 relative overflow-hidden">
-                  <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
-                  <div className="relative z-10">
-                    <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-primary/15 group-hover:scale-110 transition-all duration-300">
-                      <feature.icon className="w-7 h-7 text-primary" />
+                <div className="bg-card p-6 rounded-xl border border-border/50 hover:border-primary/20 transition-colors group">
+                  <div className="relative">
+                    <div className="w-11 h-11 bg-primary/8 rounded-lg flex items-center justify-center mb-4">
+                      <feature.icon className="w-5 h-5 text-primary" strokeWidth={1.75} />
                     </div>
-                    <h3 className="text-lg font-bold mb-2 text-foreground">{feature.title}</h3>
+                    <h3 className="text-base font-semibold mb-2 text-foreground">{feature.title}</h3>
                     <p className="text-muted-foreground text-sm leading-relaxed">{feature.desc}</p>
                   </div>
                 </div>
@@ -242,20 +221,15 @@ const Index = () => {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-28 bg-muted/20 relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/3 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[150px]" />
-          <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-secondary/5 rounded-full blur-[120px]" />
-        </div>
-
-        <div className="container mx-auto px-4 relative z-10">
+      <section id="pricing" className="py-24 bg-muted/20">
+        <div className="container mx-auto px-4">
           <FadeUp>
             <div className="text-center mb-16">
-              <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 px-4 py-2 rounded-full text-sm font-semibold text-primary mb-6">
-                <Star className="w-4 h-4" />
+              <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 px-4 py-2 rounded-full text-sm font-medium text-primary mb-6">
+                <Star className="w-4 h-4" strokeWidth={1.75} />
                 الباقات
               </div>
-              <h2 className="text-4xl md:text-5xl font-bold mb-4 text-foreground">خطط تسعير بسيطة وشفافة</h2>
+              <h2 className="ds-heading-lg mb-3">خطط تسعير بسيطة وشفافة</h2>
               <p className="text-lg text-muted-foreground max-w-xl mx-auto">
                 اختر الخطة المناسبة لعملك وابدأ بثقة — بدون رسوم خفية
               </p>
@@ -296,13 +270,13 @@ const Index = () => {
               <div className="max-w-lg mx-auto">
                 <div
                   onClick={() => setSelectedPlan('elite')}
-                  className={`bg-card rounded-3xl p-8 md:p-10 border-2 relative hover:shadow-2xl transition-all duration-500 cursor-pointer group ${
+                  className={`bg-card rounded-2xl p-8 md:p-10 border relative transition-colors cursor-pointer ${
                     selectedPlan === 'elite'
                       ? 'border-primary'
-                      : 'border-border/50 hover:border-primary/30 shadow-lg'
+                      : 'border-border/50 hover:border-primary/25'
                   }`}
                 >
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-6 py-2 rounded-full text-xs font-bold">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-5 py-1.5 rounded-full text-xs font-medium">
                     ✨ الباقة المميزة
                   </div>
 
@@ -312,7 +286,7 @@ const Index = () => {
                       <Star className="w-6 h-6 text-primary" />
                     </div>
                     <div>
-                      <h3 className="text-2xl font-bold text-foreground">باقة النخبة</h3>
+                      <h3 className="text-xl font-semibold text-foreground">باقة النخبة</h3>
                       <p className="text-xs text-foreground/60">كل ما تحتاجه لمتجر ناجح</p>
                     </div>
                   </div>
@@ -320,7 +294,7 @@ const Index = () => {
                   {/* Price - Centered */}
                   <div className="text-center py-6 mb-6 bg-muted/30 rounded-2xl">
                     <div className="flex items-baseline gap-2 justify-center">
-                      <span className="text-5xl font-bold text-foreground">50</span>
+                      <span className="text-4xl font-semibold text-foreground tabular-nums">50</span>
                       <span className="text-foreground/70 text-sm font-medium">ألف د.ع / شهرياً</span>
                     </div>
                   </div>
@@ -350,7 +324,7 @@ const Index = () => {
                   </div>
 
                   <Button
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl py-6 text-base font-bold transition-all duration-300 hover:-translate-y-0.5"
+                    className="w-full rounded-xl py-6 text-base font-semibold"
                     onClick={(e) => {
                       e.stopPropagation();
                       navigate('/signup', { state: { selectedPlan: { id: 'elite', name: 'باقة النخبة', price: '50 ألف د.ع' } } });
@@ -369,10 +343,10 @@ const Index = () => {
               <div className="max-w-lg mx-auto">
                 <div
                   onClick={() => setSelectedPlan('annual')}
-                  className={`bg-card rounded-3xl p-8 md:p-10 border-2 transition-all duration-500 cursor-pointer group ${
+                  className={`bg-card rounded-2xl p-8 md:p-10 border transition-colors cursor-pointer ${
                     selectedPlan === 'annual'
                       ? 'border-primary'
-                      : 'border-border/50 hover:border-primary/30 shadow-lg'
+                      : 'border-border/50 hover:border-primary/25'
                   }`}
                 >
                   {/* Header */}
@@ -381,7 +355,7 @@ const Index = () => {
                       <Zap className="w-6 h-6 text-primary" />
                     </div>
                     <div>
-                      <h3 className="text-2xl font-bold text-foreground">باقة 6 أشهر</h3>
+                      <h3 className="text-xl font-semibold text-foreground">باقة 6 أشهر</h3>
                       <p className="text-xs text-foreground/60">أفضل قيمة لمتجرك</p>
                     </div>
                   </div>
@@ -390,7 +364,7 @@ const Index = () => {
                   <div className="text-center py-6 mb-4 bg-muted/30 rounded-2xl">
                     <div className="text-foreground/50 line-through text-sm mb-1">300 ألف د.ع</div>
                     <div className="flex items-baseline gap-2 justify-center">
-                      <span className="text-5xl font-bold text-foreground">125</span>
+                      <span className="text-4xl font-semibold text-foreground tabular-nums">125</span>
                       <span className="text-foreground/70 text-sm font-medium">ألف د.ع / لـ 6 أشهر</span>
                     </div>
                   </div>
@@ -415,7 +389,7 @@ const Index = () => {
 
                   <Button
                     size="lg"
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl py-6 text-base font-bold hover:-translate-y-0.5 transition-all duration-300"
+                    className="w-full rounded-xl py-6 text-base font-semibold"
                     onClick={(e) => {
                       e.stopPropagation();
                       navigate('/signup', { state: { selectedPlan: { id: 'annual', name: 'باقة 6 أشهر', price: '125 ألف د.ع' } } });
@@ -431,58 +405,41 @@ const Index = () => {
         </div>
       </section>
 
-      {/* CTA Section - connected to pricing */}
-      <section className="pb-28 pt-16 bg-muted/20 relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/3 to-primary/5" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-primary/5 rounded-full blur-[150px]" />
-        </div>
-        <div className="container mx-auto px-4 relative z-10">
+      {/* CTA Section */}
+      <section className="pb-24 pt-12 bg-background border-t border-border/40">
+        <div className="container mx-auto px-4">
           <FadeUp>
-            <div className="max-w-4xl mx-auto text-center bg-gradient-to-br from-card via-card to-accent/30 border border-border/40 rounded-[2rem] p-12 md:p-20 shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-40 h-40 bg-primary/10 rounded-full blur-[80px]" />
-              <div className="absolute bottom-0 left-0 w-40 h-40 bg-secondary/10 rounded-full blur-[80px]" />
-              <div className="absolute top-6 left-6 w-20 h-20 border border-primary/10 rounded-2xl rotate-12 opacity-50" />
-              <div className="absolute bottom-6 right-6 w-16 h-16 border border-secondary/10 rounded-full opacity-50" />
-              
-              <div className="relative z-10">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  whileInView={{ scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                  className="w-16 h-16 bg-gradient-to-br from-primary/15 to-secondary/15 rounded-2xl flex items-center justify-center mx-auto mb-8 border-0 shadow-none"
-                >
-                  <Sparkles className="w-8 h-8 text-primary" />
-                </motion.div>
-                <h2 className="text-3xl md:text-5xl font-bold mb-5 text-foreground leading-tight">
-                  جاهز لإطلاق
-                  <span className="bg-gradient-to-l from-primary to-secondary bg-clip-text text-transparent"> متجرك الاحترافي؟</span>
-                </h2>
-                <p className="text-foreground/60 mb-10 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
-                  انضم لمئات التجار الناجحين الذين يديرون متاجرهم بكل سهولة عبر منصة بداية
-                </p>
-                <Link to="/signup">
-                  <Button size="lg" className="text-lg px-12 py-7 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-300 hover:-translate-y-1 group min-w-[240px]">
-                    ابدأ الآن
-                    <ArrowLeft className="mr-2 h-5 w-5 group-hover:-translate-x-1 transition-transform" />
-                  </Button>
-                </Link>
-                <div className="flex items-center justify-center gap-6 mt-10 pt-8 border-t border-border/30">
-                  <div className="flex items-center gap-2 text-foreground/50 text-sm">
-                    <Shield className="w-4 h-4 text-primary/70" />
-                    <span>حماية كاملة</span>
-                  </div>
-                  <div className="w-1 h-1 rounded-full bg-border" />
-                  <div className="flex items-center gap-2 text-foreground/50 text-sm">
-                    <Zap className="w-4 h-4 text-primary/70" />
-                    <span>إعداد فوري</span>
-                  </div>
-                  <div className="w-1 h-1 rounded-full bg-border" />
-                  <div className="flex items-center gap-2 text-foreground/50 text-sm">
-                    <Headphones className="w-4 h-4 text-primary/70" />
-                    <span>دعم مستمر</span>
-                  </div>
+            <div className="max-w-3xl mx-auto text-center ds-card p-10 md:p-14">
+              <div className="w-12 h-12 bg-primary/8 rounded-xl flex items-center justify-center mx-auto mb-6">
+                <Sparkles className="w-6 h-6 text-primary" strokeWidth={1.75} />
+              </div>
+              <h2 className="ds-heading-lg mb-4">
+                جاهز لإطلاق
+                <span className="text-primary"> متجرك الاحترافي؟</span>
+              </h2>
+              <p className="text-muted-foreground mb-8 text-base md:text-lg max-w-xl mx-auto leading-relaxed">
+                انضم لمئات التجار الناجحين الذين يديرون متاجرهم بكل سهولة عبر منصة بداية
+              </p>
+              <Link to="/signup">
+                <Button size="lg" className="min-w-[200px] group">
+                  ابدأ الآن
+                  <ArrowLeft className="mr-1 h-4 w-4 group-hover:-translate-x-0.5 transition-transform" strokeWidth={1.75} />
+                </Button>
+              </Link>
+              <div className="flex flex-wrap items-center justify-center gap-5 mt-8 pt-8 border-t border-border/40">
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <Shield className="w-4 h-4 text-primary" strokeWidth={1.75} />
+                  <span>حماية كاملة</span>
+                </div>
+                <div className="w-1 h-1 rounded-full bg-border hidden sm:block" />
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <Zap className="w-4 h-4 text-primary" strokeWidth={1.75} />
+                  <span>إعداد فوري</span>
+                </div>
+                <div className="w-1 h-1 rounded-full bg-border hidden sm:block" />
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <Headphones className="w-4 h-4 text-primary" strokeWidth={1.75} />
+                  <span>دعم مستمر</span>
                 </div>
               </div>
             </div>

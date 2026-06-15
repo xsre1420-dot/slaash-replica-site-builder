@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mergeProductForUpdate, isProductLowStock, getProductLowStockThreshold } from './productUpdateUtils';
+import { buildProductInsertPayload, mergeProductForUpdate, isProductLowStock, getProductLowStockThreshold } from './productUpdateUtils';
 import { Product } from '@/types';
 
 const base: Product = {
@@ -17,6 +17,27 @@ const base: Product = {
   lowStockThreshold: 3,
   isActive: true,
 };
+
+describe('buildProductInsertPayload', () => {
+  it('sets is_active false for drafts and true when published', () => {
+    const draft = buildProductInsertPayload(
+      { ...base, id: '', isActive: false },
+      'owner-1',
+      'store-1'
+    );
+    expect(draft.full.is_active).toBe(false);
+    expect(draft.full.store_id).toBe('store-1');
+    expect(draft.full.owner_id).toBe('owner-1');
+
+    const published = buildProductInsertPayload(
+      { ...base, id: '', isActive: true },
+      'owner-1',
+      null
+    );
+    expect(published.full.is_active).toBe(true);
+    expect(published.full.store_id).toBeUndefined();
+  });
+});
 
 describe('mergeProductForUpdate', () => {
   it('preserves variants and stock when patch omits them', () => {

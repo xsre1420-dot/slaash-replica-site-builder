@@ -2,15 +2,15 @@ import { Product } from '@/types';
 
 /** Columns selected for product fetch/update round-trips */
 export const PRODUCT_DETAIL_SELECT =
-  'id, name, description, short_description, category, price, cost, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, is_active, sku, seo_title, seo_description, product_slug, tags, low_stock_threshold, min_stock_level, store_id, owner_id, created_at, updated_at';
+  'id, name, description, short_description, category, price, cost, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, is_active, archived_at, sku, seo_title, seo_description, product_slug, tags, low_stock_threshold, min_stock_level, store_id, owner_id, created_at, updated_at';
 
 /** Safe columns for insert return — avoids failures when optional migrations are pending */
 export const PRODUCT_INSERT_RETURN_SELECT =
-  'id, name, description, category, price, cost, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, min_stock_level, owner_id, created_at, updated_at';
+  'id, name, description, category, price, cost, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, archived_at, min_stock_level, owner_id, created_at, updated_at';
 
 /** Merchant list/load — matches base schema (Inventory page uses same core fields) */
 export const MERCHANT_PRODUCTS_LIST_SELECT =
-  'id, name, description, category, price, cost, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, min_stock_level, discount_type, discount_value, discount_start_date, discount_end_date, created_at, updated_at';
+  'id, name, description, category, price, cost, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, archived_at, min_stock_level, discount_type, discount_value, discount_start_date, discount_end_date, created_at, updated_at';
 
 export const isSchemaColumnError = (message: string): boolean =>
   /column|schema cache|does not exist/i.test(message);
@@ -34,6 +34,7 @@ export const buildProductInsertPayload = (
     sizes: product.sizes ?? null,
     variants: product.variants ? JSON.parse(JSON.stringify(product.variants)) : null,
     is_active: product.isActive !== false,
+    archived_at: product.archivedAt ?? null,
     min_stock_level: product.lowStockThreshold ?? 3,
     owner_id: ownerId,
   };
@@ -92,6 +93,7 @@ export const mergeProductForUpdate = (existing: Product, patch: Partial<Product>
   tags: patch.tags !== undefined ? patch.tags : existing.tags,
   lowStockThreshold: patch.lowStockThreshold !== undefined ? patch.lowStockThreshold : existing.lowStockThreshold,
   isActive: patch.isActive !== undefined ? patch.isActive : existing.isActive,
+  archivedAt: patch.archivedAt !== undefined ? patch.archivedAt : existing.archivedAt,
 });
 
 export const productToDbRow = (product: Product) => ({
@@ -116,6 +118,7 @@ export const productToDbRow = (product: Product) => ({
   low_stock_threshold: product.lowStockThreshold ?? 3,
   min_stock_level: product.lowStockThreshold ?? 3,
   is_active: product.isActive !== false,
+  archived_at: product.archivedAt ?? null,
 });
 
 /** Per-product low-stock threshold with sensible default */

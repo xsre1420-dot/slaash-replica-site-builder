@@ -33,6 +33,8 @@ export interface Product {
   tags?: string[];
   lowStockThreshold?: number;
   isActive?: boolean;
+  /** Set when merchant archives a product — hidden from storefront but visible in admin */
+  archivedAt?: string;
   freeShipping?: boolean;
   additionalProducts?: string[];
   // Rating and review features

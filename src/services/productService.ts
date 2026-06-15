@@ -11,6 +11,7 @@ export {
   PRODUCTS_PAGE_SIZE,
   loadProductsPage,
   loadProducts,
+  loadAllMerchantProducts,
   getProductsSync,
   products,
   reloadProducts,

@@ -135,7 +135,7 @@ const ProductCard = memo(({
   // Grid view — premium card
   return (
     <div
-      className="group relative bg-card rounded-2xl overflow-hidden border border-border/60 hover:border-primary/40 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer animate-fade-in"
+      className="group relative bg-card rounded-2xl overflow-hidden border border-border/60 hover:border-primary/30 transition-colors duration-200 cursor-pointer animate-fade-in"
       style={{ animationDelay: `${index * 30}ms` }}
       onClick={() => onView(product.id)}
     >

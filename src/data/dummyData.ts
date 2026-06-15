@@ -67,6 +67,7 @@ const resolveStoreIdForOwner = async (ownerId: string): Promise<string | null> =
 const syncProductCachesAfterMutation = (ownerId: string, row?: Record<string, unknown>) => {
   cache.flushByPrefix(`${CacheKeys.products(ownerId)}:p`);
   clearInflight(`${CacheKeys.products(ownerId)}:p0:s:c`);
+  cache.flushByPrefix(`stats:${ownerId}:`);
   void invalidateStorefrontForOwner(ownerId);
   if (row) appendCachedProduct(ownerId, row);
 };
@@ -219,7 +220,7 @@ export const loadProductsPage = async (
       if (error && isSchemaColumnError(error.message)) {
         console.warn('[products] extended select failed, using minimal columns:', error.message);
         ({ data, error, count } = await runDirectQuery(
-          'id, name, description, category, price, image_url, additional_images, stock_quantity, is_active, min_stock_level, created_at, updated_at'
+          'id, name, description, category, price, image_url, additional_images, stock_quantity, is_active, archived_at, min_stock_level, created_at, updated_at'
         ));
       }
 
@@ -244,8 +245,35 @@ export const loadProductsPage = async (
 let products_list: Product[] = [];
 
 export const loadProducts = async (force = false): Promise<Product[]> => {
-  const { products } = await loadProductsPage(0, PRODUCTS_PAGE_SIZE, force);
+  const { products } = await loadAllMerchantProducts(force);
   return products;
+};
+
+/** Loads every merchant product page — used by Product Management & Inventory */
+export const loadAllMerchantProducts = async (
+  force = false
+): Promise<ProductsPageResult> => {
+  const pageSize = PRODUCTS_PAGE_SIZE;
+  let page = 0;
+  let combined: Product[] = [];
+  let total = 0;
+  let hasMore = true;
+
+  while (hasMore && page < 100) {
+    const result = await loadProductsPage(page, pageSize, force && page === 0);
+    combined = page === 0 ? result.products : [...combined, ...result.products];
+    total = result.total;
+    hasMore = result.hasMore;
+    page += 1;
+  }
+
+  const ownerId = await getAuthOwnerId();
+  if (ownerId) {
+    cache.set(CacheKeys.products(ownerId), combined, CacheTTL.MEDIUM, CacheTTL.STALE);
+    products_list = combined;
+  }
+
+  return { products: combined, hasMore: false, total: total || combined.length };
 };
 
 export const getProductsSync = (): Product[] => {
@@ -310,7 +338,7 @@ export const appendCachedProduct = (ownerId: string, row: Record<string, unknown
     return true;
   }
   if (cached.some((p) => p.id === formatted.id)) return patchCachedProduct(ownerId, row);
-  const updated = [formatted, ...cached].slice(0, PRODUCTS_PAGE_SIZE);
+  const updated = [formatted, ...cached];
   cache.set(key, updated, CacheTTL.MEDIUM, CacheTTL.STALE);
   products_list = updated;
   return true;
@@ -379,6 +407,17 @@ export const addProduct = async (
 
       if (data) {
         syncProductCachesAfterMutation(userId, data as Record<string, unknown>);
+
+        const stockQty = product.stockQuantity ?? 0;
+        if (stockQty > 0) {
+          void (supabase as any).from('inventory_movements').insert({
+            product_id: (data as Record<string, unknown>).id,
+            owner_id: userId,
+            quantity_delta: stockQty,
+            reason: 'initial_stock',
+          });
+        }
+
         products = cache.get<Product[]>(CacheKeys.products(userId)) || [];
         products_list = products;
         return { success: true, productId: String((data as Record<string, unknown>).id) };
@@ -416,10 +455,6 @@ export const updateProduct = async (productId: string, updatedProduct: Partial<P
       .eq('id', productId)
       .eq('owner_id', user.id);
 
-    if (_currentStoreId) {
-      updateQuery = updateQuery.eq('store_id', _currentStoreId);
-    }
-
     const { data, error } = await updateQuery.select(PRODUCT_DETAIL_SELECT).single();
 
     if (error) return { success: false, error: error.message };
@@ -439,17 +474,11 @@ export const deleteProduct = async (productId: string): Promise<{ success: boole
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, error: 'User not authenticated' };
 
-    let deleteQuery = supabase
+    const { error } = await supabase
       .from('products')
       .delete()
       .eq('id', productId)
       .eq('owner_id', user.id);
-
-    if (_currentStoreId) {
-      deleteQuery = deleteQuery.eq('store_id', _currentStoreId);
-    }
-
-    const { error } = await deleteQuery;
 
     if (error) return { success: false, error: error.message };
 

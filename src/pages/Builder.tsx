@@ -110,7 +110,7 @@ export default function Builder() {
                 <Sparkles className="w-3.5 h-3.5" />
                 لوحة التحكم
               </div>
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight truncate">
+              <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight truncate">
                 {storeName || 'متجري'}
               </h1>
               <p className="text-xs text-muted-foreground mt-0.5">مرحباً — إليك ملخص متجرك اليوم</p>
@@ -147,7 +147,7 @@ export default function Builder() {
                   className="ds-card card-hover p-5 sm:p-6 animate-fade-in h-full"
                   style={{ animationDelay: `${i * 50}ms` }}
                 >
-                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 transition-transform duration-200 group-hover:scale-105 ${card.color}`}>
+                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${card.color}`}>
                     <card.icon className="w-5 h-5" strokeWidth={1.75} />
                   </div>
                   <h3 className="font-semibold text-foreground text-sm sm:text-base mb-1">{card.label}</h3>

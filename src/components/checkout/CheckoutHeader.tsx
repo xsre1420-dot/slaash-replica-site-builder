@@ -7,7 +7,7 @@ interface CheckoutHeaderProps {
 }
 
 const CheckoutHeader = ({ cartCount, backTo = "/preview" }: CheckoutHeaderProps) => (
-  <div className="sticky top-0 z-40 bg-card/90 backdrop-blur-xl border-b border-border/50">
+  <div className="sticky top-0 z-40 bg-card border-b border-border/50">
     <div className="flex justify-between items-center p-3 max-w-xl mx-auto">
       <div className="flex items-center gap-2 w-20">
         <div className="relative w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">

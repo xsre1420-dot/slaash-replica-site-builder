@@ -3,10 +3,9 @@
  * Single source of truth: database. In-memory cache is repopulated here.
  */
 import { cache, CacheKeys, CacheTTL } from '@/lib/cache';
-import { OWNER_PRODUCTS_PAGE_SIZE } from '@/constants/pagination';
 import {
   getCategories,
-  loadProductsPage,
+  loadAllMerchantProducts,
   setCurrentStore,
 } from '@/services/productService';
 import {
@@ -35,7 +34,7 @@ export const hydrateMerchantStore = async (userId: string): Promise<HydrationRes
   const [storeRecord, storeProfile, productsPage, categories, orders] = await Promise.all([
     fetchStoreByUserId(userId),
     fetchStoreSettings(userId, true),
-    loadProductsPage(0, OWNER_PRODUCTS_PAGE_SIZE, true),
+    loadAllMerchantProducts(true),
     getCategories(true),
     fetchOrdersPage(userId, 0, ORDERS_PER_PAGE),
   ]);

@@ -16,7 +16,7 @@ const OrderDetailsPageHeader = ({ orderId }: OrderDetailsPageHeaderProps) => {
               <ArrowLeft className="w-4 h-4" />
             </Button>
           </Link>
-          <h1 className="text-2xl font-bold text-foreground">تفاصيل الطلب #{orderId}</h1>
+          <h1 className="text-2xl font-semibold text-foreground">تفاصيل الطلب #{orderId}</h1>
           <div className="w-10"></div>
         </div>
       </div>
