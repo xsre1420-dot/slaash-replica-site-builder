@@ -15,9 +15,20 @@ const variantMatches = (
   color?: string
 ): boolean => {
   const sizeOk = !size || variant.size === size;
-  const colorOk = !color || variant.color === color;
+  const colorOk =
+    !color ||
+    variant.color === color ||
+    variant.color?.toLowerCase() === color.toLowerCase();
   return sizeOk && colorOk;
 };
+
+const normalizeDim = (value?: string) => {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+};
+
+const capByAggregate = (qty: number, aggregate: number) =>
+  aggregate === Number.MAX_SAFE_INTEGER ? qty : Math.min(qty, aggregate);
 
 export const findVariant = (
   product: Product,
@@ -25,7 +36,9 @@ export const findVariant = (
   color?: string
 ): ProductVariant | undefined => {
   if (!product.variants?.length) return undefined;
-  return product.variants.find((v) => variantMatches(v, size, color));
+  const normalizedSize = normalizeDim(size);
+  const normalizedColor = normalizeDim(color);
+  return product.variants.find((v) => variantMatches(v, normalizedSize, normalizedColor));
 };
 
 export const getAvailableQty = (
@@ -33,19 +46,36 @@ export const getAvailableQty = (
   size?: string,
   color?: string
 ): number => {
-  const aggregate =
-    product.stockQuantity == null ? Number.MAX_SAFE_INTEGER : product.stockQuantity;
+  const normalizedSize = normalizeDim(size);
+  const normalizedColor = normalizeDim(color);
 
-  if (product.variants?.length) {
-    if (size || color) {
-      const variant = findVariant(product, size, color);
-      if (!variant) return 0;
-      return Math.min(variant.quantity, aggregate);
-    }
-    const variantSum = product.variants.reduce((s, v) => s + (v.quantity || 0), 0);
-    return Math.min(variantSum, aggregate);
+  const aggregate =
+    product.stockQuantity == null || product.stockQuantity < 0
+      ? Number.MAX_SAFE_INTEGER
+      : product.stockQuantity;
+
+  if (!product.variants?.length) {
+    return aggregate;
   }
 
+  if (normalizedSize || normalizedColor) {
+    const variant = findVariant(product, normalizedSize, normalizedColor);
+    if (variant && (variant.quantity ?? 0) > 0) {
+      return capByAggregate(variant.quantity ?? 0, aggregate);
+    }
+    // Variant grid out of sync — trust aggregate stock when set
+    if (aggregate > 0 && aggregate !== Number.MAX_SAFE_INTEGER) {
+      return aggregate;
+    }
+    return 0;
+  }
+
+  const variantSum = product.variants.reduce((sum, v) => sum + (v.quantity || 0), 0);
+  if (variantSum > 0) {
+    return capByAggregate(variantSum, aggregate);
+  }
+
+  // Variants exist but quantities are 0 — use total stock_quantity
   return aggregate;
 };
 

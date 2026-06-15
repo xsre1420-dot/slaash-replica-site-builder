@@ -26,6 +26,27 @@ describe('inventoryUtils', () => {
     expect(getAvailableQty(product, 'M', 'red')).toBe(5);
   });
 
+  it('uses aggregate stock when variant rows are zero', () => {
+    const product = baseProduct({
+      stockQuantity: 25,
+      sizes: ['M', 'L'],
+      variants: [
+        { size: 'M', quantity: 0 },
+        { size: 'L', quantity: 0 },
+      ],
+    });
+    expect(getAvailableQty(product)).toBe(25);
+    expect(getAvailableQty(product, 'M')).toBe(25);
+  });
+
+  it('returns zero only when aggregate and variants are empty', () => {
+    const product = baseProduct({
+      stockQuantity: 0,
+      variants: [{ size: 'M', quantity: 0 }],
+    });
+    expect(getAvailableQty(product, 'M')).toBe(0);
+  });
+
   it('computes percentage discount when active', () => {
     const product = baseProduct({
       price: 1000,

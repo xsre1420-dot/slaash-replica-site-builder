@@ -27,7 +27,7 @@ describe('checkoutValidation', () => {
   });
 
   it('removes unavailable products', () => {
-    const items: CartItem[] = [{ product: product('gone', 100), quantity: 1 }];
+    const items: CartItem[] = [{ product: product('gone', 100, 0), quantity: 1 }];
     const result = validateAndRefreshCart(items, new Map());
     expect(result.updatedItems).toHaveLength(0);
     expect(result.errors[0]).toContain('لم يعد متوفراً');

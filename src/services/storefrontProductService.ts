@@ -58,6 +58,71 @@ export async function resolveStoreOwnerBySlug(slug: string): Promise<string | nu
   return null;
 }
 
+export async function resolveStoreSlugByOwnerId(ownerId: string): Promise<string | null> {
+  if (!ownerId) return null;
+
+  const { data: settings } = await supabase
+    .from('store_settings')
+    .select('store_slug')
+    .eq('owner_id', ownerId)
+    .maybeSingle();
+
+  if (settings?.store_slug?.trim()) {
+    return settings.store_slug.trim().toLowerCase();
+  }
+
+  try {
+    const { data: storeRow } = await (supabase as any)
+      .from('stores')
+      .select('store_slug')
+      .eq('user_id', ownerId)
+      .maybeSingle();
+    if (storeRow?.store_slug?.trim()) {
+      return String(storeRow.store_slug).trim().toLowerCase();
+    }
+  } catch {
+    /* stores table may not exist in older DBs */
+  }
+
+  return null;
+}
+
+export async function fetchOwnerActiveProductsByIds(
+  ownerId: string,
+  productIds: string[]
+): Promise<Map<string, Product>> {
+  return queryProductsByIdsForOwner(ownerId, productIds);
+}
+
+async function queryProductsByIdsForOwner(
+  ownerId: string,
+  productIds: string[]
+): Promise<Map<string, Product>> {
+  const map = new Map<string, Product>();
+  if (!ownerId || productIds.length === 0) return map;
+
+  const runQuery = async (select: string) =>
+    supabase
+      .from('products')
+      .select(select)
+      .eq('owner_id', ownerId)
+      .in('id', productIds)
+      .or(ACTIVE_PRODUCTS_FILTER);
+
+  let { data, error } = await runQuery(MERCHANT_PRODUCTS_LIST_SELECT);
+  if (error && isSchemaColumnError(error.message)) {
+    ({ data, error } = await runQuery(MINIMAL_STOREFRONT_SELECT));
+  }
+
+  if (error || !data) return map;
+
+  for (const row of data) {
+    const mapped = safeMapStorefrontProduct(row);
+    if (mapped) map.set(mapped.id, mapped);
+  }
+  return map;
+}
+
 async function queryActiveProductsByOwner(
   ownerId: string,
   options: { category?: string; search?: string; limit?: number } = {}
@@ -312,12 +377,23 @@ export async function fetchStorefrontProductsByIds(
   const map = new Map<string, Product>();
   if (uniqueIds.length === 0) return map;
 
-  await Promise.all(
-    uniqueIds.map(async (id) => {
-      const product = await fetchStorefrontProductById(slug, id);
-      if (product) map.set(id, product);
-    })
-  );
+  const normalized = slug.trim().toLowerCase();
+  const idSet = new Set(uniqueIds);
+
+  const catalog = await fetchProductsViaSlugRpc(normalized);
+  for (const product of catalog) {
+    if (idSet.has(product.id)) map.set(product.id, product);
+  }
+
+  const missing = uniqueIds.filter((id) => !map.has(id));
+  if (missing.length > 0) {
+    await Promise.all(
+      missing.map(async (id) => {
+        const product = await fetchStorefrontProductById(normalized, id);
+        if (product) map.set(id, product);
+      })
+    );
+  }
 
   return map;
 }

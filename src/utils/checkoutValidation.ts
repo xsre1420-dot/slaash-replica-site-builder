@@ -3,43 +3,113 @@ import { CartItem, Product } from '@/types';
 import { getAvailableQty } from './inventoryUtils';
 import { AppliedCoupon, validateCoupon } from '@/services/couponService';
 import { mapDbProduct } from '@/mappers/productMapper';
-import { fetchStorefrontProductsByIds } from '@/services/storefrontProductService';
+import {
+  fetchStorefrontProductsByIds,
+  fetchOwnerActiveProductsByIds,
+  resolveStoreSlugByOwnerId,
+} from '@/services/storefrontProductService';
 import { getServerUnitPrice } from '@/utils/inventoryUtils';
+
+export type FetchFreshProductsOptions = {
+  applyDiscount?: boolean;
+  cartFallback?: Map<string, Product>;
+};
+
+/** Prefer server stock; fall back to cart snapshot when RPC omits variant rows. */
+function mergeProductStock(server: Product, cartProduct: Product): Product {
+  const serverStock = server.stockQuantity;
+  const cartStock = cartProduct.stockQuantity;
+
+  const stockQuantity =
+    serverStock != null && serverStock > 0
+      ? serverStock
+      : cartStock != null && cartStock > 0
+        ? cartStock
+        : serverStock ?? cartStock;
+
+  const serverVariantQty = (server.variants ?? []).reduce((s, v) => s + (v.quantity || 0), 0);
+  const cartVariantQty = (cartProduct.variants ?? []).reduce((s, v) => s + (v.quantity || 0), 0);
+
+  const variants =
+    serverVariantQty > 0
+      ? server.variants
+      : cartVariantQty > 0
+        ? cartProduct.variants
+        : server.variants ?? cartProduct.variants;
+
+  return {
+    ...server,
+    stockQuantity,
+    variants,
+    sizes: server.sizes?.length ? server.sizes : cartProduct.sizes,
+    colors: server.colors?.length ? server.colors : cartProduct.colors,
+  };
+}
 
 export async function fetchFreshProducts(
   ownerId: string,
   productIds: string[],
   storeSlug?: string,
-  options: { applyDiscount?: boolean } = {}
+  options: FetchFreshProductsOptions = {}
 ): Promise<Map<string, Product>> {
   const applyDiscount = options.applyDiscount !== false;
   const uniqueIds = [...new Set(productIds)];
   if (uniqueIds.length === 0) return new Map();
 
-  if (storeSlug?.trim()) {
-    return fetchStorefrontProductsByIds(storeSlug.trim(), uniqueIds);
+  let slug = storeSlug?.trim() || null;
+  if (!slug && ownerId) {
+    slug = await resolveStoreSlugByOwnerId(ownerId);
   }
 
-  const { data, error } = await supabase
-    .from('products')
-    .select(
-      'id, name, description, category, price, image_url, additional_images, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, original_price, is_active'
-    )
-    .eq('owner_id', ownerId)
-    .in('id', uniqueIds)
-    .or('is_active.eq.true,is_active.is.null');
+  let map = new Map<string, Product>();
 
-  if (error) {
-    throw new Error(error.message || 'FETCH_FAILED');
+  if (slug) {
+    map = await fetchStorefrontProductsByIds(slug, uniqueIds);
   }
-  if (!data) return new Map();
 
-  return new Map(
-    data.map((row) => [
-      String(row.id),
-      mapDbProduct(row as Record<string, unknown>, { applyDiscount }),
-    ])
-  );
+  const missingAfterSlug = uniqueIds.filter((id) => !map.has(id));
+  if (missingAfterSlug.length > 0 && ownerId) {
+    const direct = await fetchOwnerActiveProductsByIds(ownerId, missingAfterSlug);
+    for (const [id, product] of direct) {
+      map.set(id, product);
+    }
+  }
+
+  if (!slug && map.size === 0 && ownerId) {
+    map = await fetchOwnerActiveProductsByIds(ownerId, uniqueIds);
+  }
+
+  if (!slug && map.size === 0) {
+    const { data, error } = await supabase
+      .from('products')
+      .select(
+        'id, name, description, category, price, image_url, additional_images, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, original_price, is_active'
+      )
+      .eq('owner_id', ownerId)
+      .in('id', uniqueIds)
+      .or('is_active.eq.true,is_active.is.null');
+
+    if (!error && data) {
+      map = new Map(
+        data.map((row) => [
+          String(row.id),
+          mapDbProduct(row as Record<string, unknown>, { applyDiscount }),
+        ])
+      );
+    }
+  }
+
+  if (options.cartFallback) {
+    for (const id of uniqueIds) {
+      if (!map.has(id) && options.cartFallback.has(id)) {
+        map.set(id, options.cartFallback.get(id)!);
+      } else if (map.has(id) && options.cartFallback.has(id)) {
+        map.set(id, mergeProductStock(map.get(id)!, options.cartFallback.get(id)!));
+      }
+    }
+  }
+
+  return map;
 }
 
 export function computeServerCheckoutSubtotal(
@@ -71,10 +141,17 @@ export function validateAndRefreshCart(
   let subtotal = 0;
 
   for (const item of items) {
-    const fresh = freshProducts.get(item.product.id);
+    let fresh = freshProducts.get(item.product.id);
+
     if (!fresh) {
-      errors.push(`المنتج "${item.product.name}" لم يعد متوفراً`);
-      continue;
+      if (getAvailableQty(item.product, item.selectedSize, item.selectedColor) > 0) {
+        fresh = item.product;
+      } else {
+        errors.push(`المنتج "${item.product.name}" لم يعد متوفراً`);
+        continue;
+      }
+    } else {
+      fresh = mergeProductStock(fresh, item.product);
     }
 
     const available = getAvailableQty(fresh, item.selectedSize, item.selectedColor);

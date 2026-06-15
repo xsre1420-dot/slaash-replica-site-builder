@@ -176,10 +176,16 @@ export const useCheckoutFlow = () => {
     cartPriceSyncedRef.current = true;
 
     let cancelled = false;
+    const cartFallback = new Map(cartItems.map((i) => [i.product.id, i.product]));
     const syncCartPrices = async () => {
       try {
         const productIds = cartItems.map((i) => i.product.id);
-        const freshMap = await fetchFreshProducts(ownerId, productIds, isTenantMode ? storeSlug : undefined);
+        const freshMap = await fetchFreshProducts(
+          ownerId,
+          productIds,
+          isTenantMode ? storeSlug : undefined,
+          { cartFallback }
+        );
         if (cancelled) return;
 
         const validation = validateAndRefreshCart(cartItems, freshMap);
@@ -196,7 +202,7 @@ export const useCheckoutFlow = () => {
 
     void syncCartPrices();
     return () => { cancelled = true; };
-  }, [ownerId, cartItems, replaceCartItems]);
+  }, [ownerId, cartItems, replaceCartItems, isTenantMode, storeSlug]);
 
   useEffect(() => {
     if (cartItems.length === 0 || checkoutTrackedRef.current) return;
@@ -260,9 +266,15 @@ export const useCheckoutFlow = () => {
 
     try {
       const productIds = cartItems.map((i) => i.product.id);
+      const cartFallback = new Map(cartItems.map((i) => [i.product.id, i.product]));
       let freshMap: Map<string, import('@/types').Product>;
       try {
-        freshMap = await fetchFreshProducts(ownerId, productIds, isTenantMode ? storeSlug : undefined);
+        freshMap = await fetchFreshProducts(
+          ownerId,
+          productIds,
+          isTenantMode ? storeSlug : undefined,
+          { cartFallback }
+        );
       } catch {
         toast.error("تعذر التحقق من المنتجات. تحقق من الاتصال وحاول مرة أخرى.");
         return;
