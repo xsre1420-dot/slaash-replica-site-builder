@@ -1,7 +1,11 @@
 import { X, ShoppingCart, Plus, Trash2, Search, Heart, Star } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useState, useEffect, useMemo } from "react";
-import { getProductsByCategory, getCategories, loadProducts } from "@/services/productService";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { getCategories } from "@/services/productService";
+import {
+  fetchStorefrontProductsByOwnerId,
+  STOREFRONT_PRODUCTS_CHANGED,
+} from "@/services/storefrontProductService";
 import { useStoreHydration } from "@/context/StoreBootstrapContext";
 import { Product, Category } from "@/types";
 import { useCart } from "@/context/CartContext";
@@ -74,33 +78,53 @@ const PreviewStore = () => {
 
   const bannerImages = storeSettings.bannerImages || [];
 
-  // Load products when category changes only (search is client-side)
+  const filterByCategory = useCallback(
+    (items: Product[]) => {
+      if (selectedCategory === 'all') return items;
+      const cat = categories.find((c) => c.id === selectedCategory);
+      const categoryName = cat?.name ?? selectedCategory;
+      return items.filter((p) => p.category === categoryName);
+    },
+    [selectedCategory, categories]
+  );
+
+  // Load published products directly from DB (same source as inventory)
   useEffect(() => {
-    if (!isReady) return;
+    if (!isReady || !user?.id) return;
 
     const loadProductsData = async () => {
       setProductsLoading(true);
       try {
-        await loadProducts(true);
-        const visible = getProductsByCategory(selectedCategory).filter((p) => p.isActive !== false);
-        setAllProducts(visible);
+        const rows = await fetchStorefrontProductsByOwnerId(user.id);
+        setAllProducts(filterByCategory(rows));
       } finally {
         setProductsLoading(false);
       }
     };
     loadProductsData();
 
+    const onChanged = (e: Event) => {
+      const detail = (e as CustomEvent<{ ownerId?: string }>).detail;
+      if (detail?.ownerId && detail.ownerId !== user.id) return;
+      loadProductsData();
+    };
+
+    window.addEventListener(STOREFRONT_PRODUCTS_CHANGED, onChanged);
+
     let lastFocusRefresh = 0;
     const handleFocus = () => {
       const now = Date.now();
-      if (now - lastFocusRefresh < 30_000) return;
+      if (now - lastFocusRefresh < 15_000) return;
       lastFocusRefresh = now;
       loadProductsData();
     };
 
     window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [selectedCategory, isReady, hydrationVersion]);
+    return () => {
+      window.removeEventListener(STOREFRONT_PRODUCTS_CHANGED, onChanged);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [selectedCategory, isReady, hydrationVersion, user?.id, filterByCategory]);
 
   const handleAddToCart = (product: Product) => {
     addToCart(product);

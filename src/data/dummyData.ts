@@ -3,6 +3,7 @@ import { Product, Category } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { getAuthenticatedUserId } from "@/lib/authSession";
 import { runOncePerKey, type AddProductResult } from "@/lib/productCreateLock";
+import { invalidateStorefrontForOwner } from "@/services/storefrontProductService";
 import { cache, CacheKeys, CacheTTL, dedup } from "@/lib/cache";
 import { mapDbProduct } from "@/mappers/productMapper";
 import {
@@ -65,7 +66,7 @@ const resolveStoreIdForOwner = async (ownerId: string): Promise<string | null> =
 /** Keep merchant + storefront product caches consistent after mutations */
 const syncProductCachesAfterMutation = (ownerId: string, row?: Record<string, unknown>) => {
   cache.flushByPrefix(`${CacheKeys.products(ownerId)}:p`);
-  cache.flushByPrefix('tenant-products:');
+  void invalidateStorefrontForOwner(ownerId);
   if (row) appendCachedProduct(ownerId, row);
 };
 

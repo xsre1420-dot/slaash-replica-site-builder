@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/types';
-import { mapStorefrontProduct } from '@/mappers/productMapper';
-import { cache, CacheTTL, dedup } from '@/lib/cache';
+import { cache, CacheTTL } from '@/lib/cache';
+import {
+  fetchStorefrontProductsPage,
+  STOREFRONT_PRODUCTS_CHANGED,
+} from '@/services/storefrontProductService';
 
 const PAGE_SIZE = 24;
 
@@ -30,7 +32,7 @@ export const useStoreProductsPage = (
   const searchFilter = search?.trim() || undefined;
 
   const fetchPage = useCallback(
-    async (append = false, cursor: string | null = null) => {
+    async (append = false, cursor: string | null = null, force = false) => {
       if (!normalizedSlug || !/^[a-z0-9-]+$/.test(normalizedSlug)) {
         setLoading(false);
         setError('رابط المتجر غير صالح');
@@ -46,32 +48,38 @@ export const useStoreProductsPage = (
       const cacheKey = `tenant-products:${reqKey}`;
 
       try {
-        const result = await dedup(cacheKey, async () => {
-          const { data, error: rpcError } = await (supabase as any).rpc('get_store_products_page', {
-            p_slug: normalizedSlug,
-            p_limit: PAGE_SIZE,
-            p_cursor: cursor,
-            p_category: categoryFilter || null,
-            p_search: searchFilter || null,
-          });
+        if (!force && !append) {
+          const cached = cache.get<{
+            products: Product[];
+            nextCursor: string | null;
+            hasMore: boolean;
+          }>(cacheKey);
+          if (cached?.products?.length) {
+            setProducts(cached.products);
+            cursorRef.current = cached.nextCursor;
+            setHasMore(!!cached.hasMore);
+            setError(null);
+            setLoading(false);
+            setLoadingMore(false);
+            return;
+          }
+        }
 
-          if (rpcError) throw rpcError;
-          return data as {
-            products: Record<string, unknown>[];
-            next_cursor: string | null;
-            has_more: boolean;
-          };
+        const result = await fetchStorefrontProductsPage(normalizedSlug, {
+          limit: PAGE_SIZE,
+          cursor,
+          category: categoryFilter,
+          search: searchFilter,
         });
 
         if (requestKeyRef.current !== reqKey) return;
 
-        const mapped = (result.products || []).map(mapStorefrontProduct);
         cache.set(cacheKey, result, CacheTTL.SHORT, CacheTTL.STALE);
 
-        setProducts((prev) => (append ? [...prev, ...mapped] : mapped));
-        cursorRef.current = result.next_cursor || null;
-        setHasMore(!!result.has_more);
-        setError(null);
+        setProducts((prev) => (append ? [...prev, ...result.products] : result.products));
+        cursorRef.current = result.nextCursor;
+        setHasMore(!!result.hasMore);
+        setError(result.products.length === 0 ? null : null);
       } catch (err: unknown) {
         if (requestKeyRef.current !== reqKey) return;
         setError(err instanceof Error ? err.message : 'فشل في تحميل المنتجات');
@@ -94,7 +102,7 @@ export const useStoreProductsPage = (
   const refetch = useCallback(() => {
     cursorRef.current = null;
     cache.flushByPrefix(`tenant-products:${normalizedSlug}:`);
-    fetchPage(false, null);
+    fetchPage(false, null, true);
   }, [normalizedSlug, fetchPage]);
 
   useEffect(() => {
@@ -102,6 +110,17 @@ export const useStoreProductsPage = (
     cursorRef.current = null;
     fetchPage(false, null);
   }, [enabled, fetchPage]);
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const onProductsChanged = () => {
+      refetch();
+    };
+
+    window.addEventListener(STOREFRONT_PRODUCTS_CHANGED, onProductsChanged);
+    return () => window.removeEventListener(STOREFRONT_PRODUCTS_CHANGED, onProductsChanged);
+  }, [enabled, refetch]);
 
   return {
     products,

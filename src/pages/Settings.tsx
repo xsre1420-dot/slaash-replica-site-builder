@@ -170,6 +170,15 @@ const Settings = () => {
               : slugError.message || 'فشل في حفظ رابط المتجر';
           throw new Error(message);
         }
+
+        try {
+          await (supabase as any)
+            .from('stores')
+            .update({ store_slug: normalizedSlug })
+            .eq('user_id', user.id);
+        } catch {
+          /* stores table may not exist before migration */
+        }
       }
       
       lastSavedRef.current = settingsHash;
