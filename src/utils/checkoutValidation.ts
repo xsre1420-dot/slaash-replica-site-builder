@@ -15,27 +15,15 @@ export type FetchFreshProductsOptions = {
   cartFallback?: Map<string, Product>;
 };
 
-/** Prefer server stock; fall back to cart snapshot when RPC omits variant rows. */
+/** Prefer server stock; fall back to cart snapshot only when the server omitted fields. */
 function mergeProductStock(server: Product, cartProduct: Product): Product {
-  const serverStock = server.stockQuantity;
-  const cartStock = cartProduct.stockQuantity;
-
   const stockQuantity =
-    serverStock != null && serverStock > 0
-      ? serverStock
-      : cartStock != null && cartStock > 0
-        ? cartStock
-        : serverStock ?? cartStock;
+    server.stockQuantity != null ? server.stockQuantity : cartProduct.stockQuantity;
 
-  const serverVariantQty = (server.variants ?? []).reduce((s, v) => s + (v.quantity || 0), 0);
-  const cartVariantQty = (cartProduct.variants ?? []).reduce((s, v) => s + (v.quantity || 0), 0);
-
-  const variants =
-    serverVariantQty > 0
-      ? server.variants
-      : cartVariantQty > 0
-        ? cartProduct.variants
-        : server.variants ?? cartProduct.variants;
+  const serverHasVariants = server.variants != null;
+  const variants = serverHasVariants
+    ? server.variants
+    : cartProduct.variants ?? server.variants;
 
   return {
     ...server,

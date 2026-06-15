@@ -14,7 +14,7 @@ describe('orderErrors', () => {
     expect(mapOrderError('invalid_status_transition')).toContain('حالة');
   });
 
-  it('returns fallback for unknown errors', () => {
-    expect(mapOrderError('')).toContain('فشل');
+  it('maps store resolution errors', () => {
+    expect(mapOrderError('store_slug_required')).toContain('المتجر');
   });
 });

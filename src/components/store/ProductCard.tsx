@@ -30,13 +30,15 @@ const ProductCard = memo(({
   onShare,
   index,
 }: ProductCardProps) => {
+  const availableQty = useMemo(() => getAvailableQty(product), [product]);
+
   const { isNew, isLowStock, isOutOfStock, hasDiscount, hasVariants } = useMemo(() => ({
     isNew: (product as any).created_at ? (Date.now() - new Date((product as any).created_at).getTime()) < 7 * 86400000 : false,
-    isLowStock: product.stockQuantity !== undefined && product.stockQuantity > 0 && product.stockQuantity <= 3,
-    isOutOfStock: product.stockQuantity !== undefined && product.stockQuantity === 0,
+    isLowStock: availableQty > 0 && availableQty <= 3,
+    isOutOfStock: availableQty <= 0,
     hasDiscount: product.discountType && product.discountType !== 'none',
     hasVariants: hasVariantOptions(product),
-  }), [product]);
+  }), [product, availableQty]);
 
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -161,7 +163,7 @@ const ProductCard = memo(({
           )}
           {isLowStock && (
             <span className="bg-warning text-warning-foreground px-2 py-0.5 rounded-lg shadow-md text-[10px] font-bold flex items-center gap-0.5">
-              <Flame className="w-3 h-3" /> آخر {product.stockQuantity}
+              <Flame className="w-3 h-3" /> آخر {availableQty}
             </span>
           )}
           {isOutOfStock && (

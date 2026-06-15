@@ -29,6 +29,8 @@ import { toast } from "sonner";
 import { generateUUID } from "@/lib/uuid";
 import { formatPhoneForStorage, isValidIraqiPhone } from "@/utils/phoneUtils";
 import { loadCheckoutCustomer, saveCheckoutCustomer } from "@/utils/checkoutCustomer";
+import { resolveStoreSlugByOwnerId } from "@/services/storefrontProductService";
+import { flushOwnerCache } from "@/lib/cache";
 
 const COUPON_STORAGE_KEY = (ownerId: string) => `checkout-coupon:${ownerId}`;
 
@@ -58,6 +60,8 @@ export const useCheckoutFlow = () => {
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethodId>("cash_on_delivery");
   const [deliveryFee, setDeliveryFee] = useState(0);
+  const [checkoutStoreSlug, setCheckoutStoreSlug] = useState<string | null>(storeSlug ?? null);
+  const customerHydratedRef = useRef(false);
 
   const paymentMethodOptions = useMemo(() => {
     const raw = isTenantMode
@@ -88,7 +92,24 @@ export const useCheckoutFlow = () => {
   }, [ownerId, setStoreOwner]);
 
   useEffect(() => {
+    if (storeSlug) {
+      setCheckoutStoreSlug(storeSlug);
+      return;
+    }
+    if (!ownerId) {
+      setCheckoutStoreSlug(null);
+      return;
+    }
+    let cancelled = false;
+    resolveStoreSlugByOwnerId(ownerId).then((slug) => {
+      if (!cancelled) setCheckoutStoreSlug(slug);
+    });
+    return () => { cancelled = true; };
+  }, [storeSlug, ownerId]);
+
+  useEffect(() => {
     if (!ownerId) return;
+    customerHydratedRef.current = false;
     const saved = loadCheckoutCustomer(ownerId);
     if (saved) {
       setCustomerInfo({
@@ -99,10 +120,11 @@ export const useCheckoutFlow = () => {
       });
       if (saved.governorate) setSelectedGovernorate(saved.governorate);
     }
+    customerHydratedRef.current = true;
   }, [ownerId]);
 
   useEffect(() => {
-    if (!ownerId) return;
+    if (!ownerId || !customerHydratedRef.current) return;
     saveCheckoutCustomer(ownerId, {
       ...customerInfo,
       governorate: selectedGovernorate || undefined,
@@ -137,8 +159,8 @@ export const useCheckoutFlow = () => {
     let cancelled = false;
     const localFee = calculateDeliveryFeeFromPrices(deliveryPrices, selectedGovernorate);
 
-    const feePromise = isTenantMode && storeSlug
-      ? fetchDeliveryFeeBySlug(storeSlug, selectedGovernorate)
+    const feePromise = checkoutStoreSlug
+      ? fetchDeliveryFeeBySlug(checkoutStoreSlug, selectedGovernorate)
       : fetchDeliveryFee(ownerId, selectedGovernorate);
 
     feePromise
@@ -150,7 +172,7 @@ export const useCheckoutFlow = () => {
       });
 
     return () => { cancelled = true; };
-  }, [selectedGovernorate, ownerId, deliveryPrices, isTenantMode, storeSlug]);
+  }, [selectedGovernorate, ownerId, deliveryPrices, checkoutStoreSlug]);
 
   const discountAmount = appliedCoupon?.discountAmount || 0;
   const totalWithDelivery = computeOrderTotal(cartTotal, deliveryFee, discountAmount);
@@ -183,7 +205,7 @@ export const useCheckoutFlow = () => {
         const freshMap = await fetchFreshProducts(
           ownerId,
           productIds,
-          isTenantMode ? storeSlug : undefined,
+          checkoutStoreSlug ?? undefined,
           { cartFallback }
         );
         if (cancelled) return;
@@ -202,7 +224,7 @@ export const useCheckoutFlow = () => {
 
     void syncCartPrices();
     return () => { cancelled = true; };
-  }, [ownerId, cartItems, replaceCartItems, isTenantMode, storeSlug]);
+  }, [ownerId, cartItems, replaceCartItems, checkoutStoreSlug]);
 
   useEffect(() => {
     if (cartItems.length === 0 || checkoutTrackedRef.current) return;
@@ -249,6 +271,11 @@ export const useCheckoutFlow = () => {
       return;
     }
 
+    if (!checkoutStoreSlug && !user?.id) {
+      toast.error("تعذر تحديد المتجر. افتح صفحة المتجر الرسمية ثم حاول مرة أخرى.");
+      return;
+    }
+
     if (cartItems.length === 0) {
       toast.error("سلة التسوق فارغة");
       return;
@@ -272,7 +299,7 @@ export const useCheckoutFlow = () => {
         freshMap = await fetchFreshProducts(
           ownerId,
           productIds,
-          isTenantMode ? storeSlug : undefined,
+          checkoutStoreSlug ?? undefined,
           { cartFallback }
         );
       } catch {
@@ -284,7 +311,14 @@ export const useCheckoutFlow = () => {
       validation.errors.forEach((msg) => toast.warning(msg));
 
       if (validation.updatedItems.length === 0) {
-        toast.error("لا توجد منتجات صالحة في السلة");
+        toast.error("لا توجد منتجات صالحة في السلة. راجع المخزون وحاول مرة أخرى.");
+        return;
+      }
+
+      const removedCount = cartItems.length - validation.updatedItems.length;
+      if (removedCount > 0) {
+        toast.error(`تمت إزالة ${removedCount} منتج(ات) غير متوفرة من السلة. راجع الطلب قبل المتابعة.`);
+        replaceCartItems(validation.updatedItems);
         return;
       }
 
@@ -303,7 +337,7 @@ export const useCheckoutFlow = () => {
           ownerId,
           appliedCoupon.code,
           validation.subtotal,
-          isTenantMode ? storeSlug : undefined
+          checkoutStoreSlug ?? undefined
         );
         if (!revalidated) {
           setAppliedCoupon(null);
@@ -320,8 +354,8 @@ export const useCheckoutFlow = () => {
       if (selectedGovernorate) {
         try {
           feeForOrder =
-            isTenantMode && storeSlug
-              ? await fetchDeliveryFeeBySlug(storeSlug, selectedGovernorate)
+            checkoutStoreSlug
+              ? await fetchDeliveryFeeBySlug(checkoutStoreSlug, selectedGovernorate)
               : await fetchDeliveryFee(ownerId, selectedGovernorate);
         } catch {
           feeForOrder = calculateDeliveryFeeFromPrices(deliveryPrices, selectedGovernorate);
@@ -362,8 +396,8 @@ export const useCheckoutFlow = () => {
         ownerId,
         selectedPaymentMethod,
         couponToApply?.code,
-        isTenantMode ? storeSlug : null,
-        getStoredMarketingAttribution(isTenantMode ? storeSlug : null)
+        checkoutStoreSlug,
+        getStoredMarketingAttribution(checkoutStoreSlug)
       );
 
       trackPurchase(
@@ -371,11 +405,15 @@ export const useCheckoutFlow = () => {
         validation.updatedItems.map((item) => item.product.id),
         savedOrder?.id || orderId
       );
-      clearMarketingAttribution(isTenantMode ? storeSlug : null);
+      clearMarketingAttribution(checkoutStoreSlug);
 
-      if (isTenantMode && storeSlug) {
-        cache.del(`tenant-meta:${storeSlug.trim().toLowerCase()}`);
-        cache.flushByPrefix(`tenant-products:${storeSlug.trim().toLowerCase()}:`);
+      if (checkoutStoreSlug) {
+        cache.del(`tenant-meta:${checkoutStoreSlug.trim().toLowerCase()}`);
+        cache.flushByPrefix(`tenant-products:${checkoutStoreSlug.trim().toLowerCase()}:`);
+      }
+
+      if (user?.id === ownerId) {
+        flushOwnerCache(ownerId);
       }
 
       setCompletedOrderId(savedOrder?.id || orderId);
@@ -392,6 +430,7 @@ export const useCheckoutFlow = () => {
       clearCheckoutIdempotencyKey(ownerId);
       metrics.increment('checkout.submit.success');
       logger.info('checkout.submit.success', { orderId: savedOrder?.id || orderId, ownerId });
+      toast.success("تم استلام طلبك بنجاح! سنتواصل معك قريباً.");
 
       setTimeout(() => {
         setOrderCompleted(false);
@@ -416,8 +455,9 @@ export const useCheckoutFlow = () => {
     selectedGovernorate,
     deliveryPrices,
     customerInfo,
+    checkoutStoreSlug,
+    user?.id,
     isTenantMode,
-    storeSlug,
     replaceCartItems,
     clearCart,
     navigate,

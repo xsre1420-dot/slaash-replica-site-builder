@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Order } from "@/types";
-import { cache, CacheKeys, CacheTTL, dedup, flushOwnerCache } from "@/lib/cache";
+import { cache, CacheKeys, CacheTTL, dedup, flushOwnerCache, clearInflight } from "@/lib/cache";
 import { useAuth } from "@/context/AuthContext";
 import { useStoreHydration } from "@/context/StoreBootstrapContext";
 import { mapOrderError } from "@/utils/orderErrors";
@@ -26,9 +26,8 @@ export const useOrders = () => {
       return;
     }
 
-    if (!append) setLoading(true);
-
     const cacheKey = CacheKeys.orders(ownerId, page);
+    const dedupKey = `fetch-orders-${ownerId}-${page}`;
 
     if (!append) {
       const cached = cache.get<Order[]>(cacheKey);
@@ -38,11 +37,14 @@ export const useOrders = () => {
         setHasMore(cached.length === ORDERS_PER_PAGE);
         pageRef.current = page;
         setLoading(false);
-        return;
+      } else {
+        setLoading(true);
       }
+    } else {
+      setLoading(true);
     }
 
-    const mapped = await dedup(`fetch-orders-${ownerId}-${page}`, () =>
+    const mapped = await dedup(dedupKey, () =>
       fetchOrdersPage(ownerId, page, ORDERS_PER_PAGE)
     );
 
@@ -63,6 +65,17 @@ export const useOrders = () => {
     if (!isReady) return;
     fetchOrders(0);
   }, [isReady, hydrationVersion, fetchOrders]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && user?.id) {
+        clearInflight(`fetch-orders-${user.id}-0`);
+        fetchOrders(0);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [fetchOrders, user?.id]);
 
   const loadMore = useCallback(() => {
     if (hasMore && !loading) {
@@ -113,7 +126,10 @@ export const useOrders = () => {
   }, []);
 
   const refetch = useCallback(() => {
-    if (user?.id) flushOwnerCache(user.id);
+    if (user?.id) {
+      flushOwnerCache(user.id);
+      clearInflight(`fetch-orders-${user.id}-0`);
+    }
     fetchOrders(0);
   }, [fetchOrders, user?.id]);
 

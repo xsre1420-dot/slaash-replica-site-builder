@@ -40,4 +40,29 @@ describe('checkoutValidation', () => {
     expect(result.updatedItems[0].quantity).toBe(2);
     expect(result.subtotal).toBe(1000);
   });
+
+  it('trusts server stock of zero over stale cart snapshot', () => {
+    const staleCart = product('p1', 500, 10);
+    const freshServer = product('p1', 500, 0);
+    const items: CartItem[] = [{ product: staleCart, quantity: 1 }];
+    const result = validateAndRefreshCart(items, new Map([['p1', freshServer]]));
+    expect(result.updatedItems).toHaveLength(0);
+    expect(result.errors[0]).toContain('غير متوفر');
+  });
+
+  it('uses aggregate stock when variant rows are zero', () => {
+    const fresh: Product = {
+      ...product('p1', 500, 25),
+      sizes: ['M', 'L'],
+      variants: [
+        { size: 'M', quantity: 0 },
+        { size: 'L', quantity: 0 },
+      ],
+    };
+    const items: CartItem[] = [{ product: fresh, quantity: 2, selectedSize: 'M' }];
+    const result = validateAndRefreshCart(items, new Map([['p1', fresh]]));
+    expect(result.updatedItems).toHaveLength(1);
+    expect(result.updatedItems[0].quantity).toBe(2);
+    expect(result.valid).toBe(true);
+  });
 });

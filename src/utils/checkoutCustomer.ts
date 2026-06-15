@@ -6,14 +6,16 @@ export interface CheckoutCustomerInfo {
   governorate?: string;
 }
 
-const storageKey = (ownerId: string) => `checkout-customer:${ownerId}`;
+const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-export function loadCheckoutCustomer(ownerId: string): CheckoutCustomerInfo | null {
+const sessionKey = (ownerId: string) => `checkout-customer:${ownerId}`;
+const backupKey = (ownerId: string) => `checkout-customer:${ownerId}:backup`;
+
+function parseCustomer(raw: string): CheckoutCustomerInfo | null {
   try {
-    const raw = sessionStorage.getItem(storageKey(ownerId));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<CheckoutCustomerInfo>;
+    const parsed = JSON.parse(raw) as Partial<CheckoutCustomerInfo> & { expiresAt?: number };
     if (!parsed || typeof parsed !== 'object') return null;
+    if (parsed.expiresAt != null && parsed.expiresAt < Date.now()) return null;
     return {
       name: String(parsed.name || ''),
       phone: String(parsed.phone || ''),
@@ -26,9 +28,43 @@ export function loadCheckoutCustomer(ownerId: string): CheckoutCustomerInfo | nu
   }
 }
 
-export function saveCheckoutCustomer(ownerId: string, info: CheckoutCustomerInfo): void {
+export function loadCheckoutCustomer(ownerId: string): CheckoutCustomerInfo | null {
+  if (!ownerId) return null;
+
   try {
-    sessionStorage.setItem(storageKey(ownerId), JSON.stringify(info));
+    const fromSession = sessionStorage.getItem(sessionKey(ownerId));
+    if (fromSession) {
+      const parsed = parseCustomer(fromSession);
+      if (parsed) return parsed;
+    }
+
+    const fromBackup = localStorage.getItem(backupKey(ownerId));
+    if (fromBackup) {
+      const parsed = parseCustomer(fromBackup);
+      if (parsed) {
+        sessionStorage.setItem(sessionKey(ownerId), fromBackup);
+        return parsed;
+      }
+      localStorage.removeItem(backupKey(ownerId));
+    }
+  } catch {
+    /* ignore quota / parse errors */
+  }
+
+  return null;
+}
+
+export function saveCheckoutCustomer(ownerId: string, info: CheckoutCustomerInfo): void {
+  if (!ownerId) return;
+
+  const payload = JSON.stringify({
+    ...info,
+    expiresAt: Date.now() + SESSION_TTL_MS,
+  });
+
+  try {
+    sessionStorage.setItem(sessionKey(ownerId), payload);
+    localStorage.setItem(backupKey(ownerId), payload);
   } catch {
     /* ignore quota errors */
   }

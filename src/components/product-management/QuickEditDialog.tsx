@@ -9,6 +9,8 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Product } from "@/types";
 import { invalidateProducts } from "@/services/productService";
+import { invalidateStorefrontForOwner } from "@/services/storefrontProductService";
+import { scaleVariantsToTotal } from "@/utils/inventoryUtils";
 
 interface QuickEditDialogProps {
   product: Product | null;
@@ -44,14 +46,21 @@ export const QuickEditDialog = ({ product, open, onOpenChange, onSaved }: QuickE
     }
 
     setSaving(true);
+    const stockQty = parseInt(stock) || 0;
+    const updatePayload: Record<string, unknown> = {
+      name: name.trim(),
+      price: priceNum,
+      stock_quantity: stockQty,
+      cost: cost ? parseFloat(cost) || null : null,
+    };
+
+    if (product.variants?.length) {
+      updatePayload.variants = scaleVariantsToTotal(product.variants, stockQty);
+    }
+
     const { error } = await supabase
       .from("products")
-      .update({
-        name: name.trim(),
-        price: priceNum,
-        stock_quantity: parseInt(stock) || 0,
-        cost: cost ? parseFloat(cost) || null : null,
-      })
+      .update(updatePayload)
       .eq("id", product.id)
       .eq("owner_id", user.id);
 
@@ -60,6 +69,7 @@ export const QuickEditDialog = ({ product, open, onOpenChange, onSaved }: QuickE
       toast.error("فشل في حفظ التغييرات");
     } else {
       invalidateProducts();
+      void invalidateStorefrontForOwner(user.id);
       toast.success("تم حفظ التغييرات");
       onSaved();
       onOpenChange(false);

@@ -226,6 +226,7 @@ export const createOrder = async (
         error: lastError,
         rpcError: data?.error,
         expectedTotal: data?.expected_total,
+        receivedTotal: order.total,
       });
 
       if (attempt < maxAttempts && isRetryableOrderError(lastError)) {

@@ -11,7 +11,7 @@ import {
 import { cache } from '@/lib/cache';
 
 const MINIMAL_STOREFRONT_SELECT =
-  'id, name, description, category, price, image_url, additional_images, stock_quantity, is_active, created_at, updated_at';
+  'id, name, description, category, price, image_url, additional_images, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, original_price, is_active, created_at, updated_at';
 
 export interface StorefrontProductsPage {
   products: Product[];

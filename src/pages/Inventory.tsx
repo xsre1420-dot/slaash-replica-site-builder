@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ProductVariant } from "@/types";
 import { scaleVariantsToTotal } from "@/utils/inventoryUtils";
+import { invalidateStorefrontForOwner } from "@/services/storefrontProductService";
 import { OWNER_PRODUCTS_PAGE_SIZE } from "@/constants/pagination";
 
 interface Product {
@@ -127,6 +128,7 @@ function Inventory() {
       }
 
       toast.success("تم تحديث المخزون بنجاح");
+      void invalidateStorefrontForOwner(user.id);
       fetchProducts(0, false);
       setDialogOpen(false);
       setSelectedProduct(null);
