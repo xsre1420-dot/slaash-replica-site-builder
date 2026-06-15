@@ -33,7 +33,8 @@ export const getAvailableQty = (
   size?: string,
   color?: string
 ): number => {
-  const aggregate = product.stockQuantity ?? 0;
+  const aggregate =
+    product.stockQuantity == null ? Number.MAX_SAFE_INTEGER : product.stockQuantity;
 
   if (product.variants?.length) {
     if (size || color) {
@@ -75,6 +76,12 @@ export const computeDiscountedPrice = (product: Product): number => {
   }
 
   return product.price;
+};
+
+/** Unit price used by checkout RPC (matches server-side effective price). */
+export const getServerUnitPrice = (product: Product): number => {
+  if (!isProductDiscountActive(product)) return product.price;
+  return computeDiscountedPrice(product);
 };
 
 export const applyActiveDiscount = (product: Product): Product => {

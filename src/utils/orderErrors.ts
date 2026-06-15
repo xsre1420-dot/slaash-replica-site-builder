@@ -17,6 +17,12 @@ export const mapOrderError = (message: string): string => {
   if (lower.includes('could not be processed')) {
     return 'تعذر معالجة الطلب. تحقق من المخزون والأسعار وحاول مرة أخرى.';
   }
+  if (lower.includes('customer_info_required')) {
+    return 'يرجى إدخال الاسم ورقم الهاتف والعنوان بشكل صحيح.';
+  }
+  if (lower.includes('total_amount_mismatch')) {
+    return 'تغيّر سعر الطلب. يرجى تحديث الصفحة والمحاولة مرة أخرى.';
+  }
   if (lower.includes('payment_method')) {
     return mapPaymentError(message);
   }

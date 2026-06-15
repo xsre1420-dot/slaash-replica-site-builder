@@ -16,6 +16,7 @@ import { Product } from "@/types";
 import { exportProductsToCSV } from "@/utils/exportProducts";
 import { toast } from "sonner";
 import { getCategories, invalidateProducts, loadProducts as reloadProductsData } from "@/services/productService";
+import { useAuth } from "@/context/AuthContext";
 import { useRealtimeProducts } from "@/hooks/useRealtimeProducts";
 import { useScrollPersistence, saveFilters, loadFilters } from "@/hooks/useScrollPersistence";
 import { useStoreHydration } from "@/context/StoreBootstrapContext";
@@ -30,6 +31,7 @@ const Products = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isReady, hydrationVersion } = useStoreHydration();
+  const { user } = useAuth();
   const [selectedProduct, setSelectedProduct] = useState<{id: string, name: string} | null>(null);
   const [loadedProducts, setLoadedProducts] = useState<Product[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
@@ -52,19 +54,33 @@ const Products = () => {
   useRealtimeProducts(handleRealtimeUpdate);
 
   const reloadCatalog = useCallback(async () => {
+    if (!user?.id) {
+      setLoadedProducts([]);
+      setCatalogLoading(false);
+      return [];
+    }
+
     setCatalogLoading(true);
-    await invalidateProducts();
-    const data = await reloadProductsData(true);
-    setLoadedProducts(data);
-    setCatalogLoading(false);
-    return data;
-  }, []);
+    try {
+      await invalidateProducts();
+      const data = await reloadProductsData(true);
+      setLoadedProducts(data);
+      return data;
+    } catch (err) {
+      console.error('[Products] failed to load catalog:', err);
+      toast.error('تعذر تحميل المنتجات — حاول تحديث الصفحة');
+      setLoadedProducts([]);
+      return [];
+    } finally {
+      setCatalogLoading(false);
+    }
+  }, [user?.id]);
 
   // Initial load + re-hydration after login
   useEffect(() => {
-    if (!isReady) return;
+    if (!isReady || !user?.id) return;
     void reloadCatalog();
-  }, [isReady, hydrationVersion, reloadCatalog]);
+  }, [isReady, hydrationVersion, reloadCatalog, user?.id]);
 
   const productIdParam = searchParams.get('productId');
   const productNameParam = searchParams.get('productName');
@@ -80,20 +96,27 @@ const Products = () => {
     getCategories().then(cats => setCategories(cats));
   }, []);
 
-  // Restore saved filters (skip when arriving from add-product)
+  // Restore saved filters once (skip when arriving from add-product)
   useEffect(() => {
     const state = location.state as { refreshProducts?: boolean } | null;
     if (state?.refreshProducts) return;
     const saved = loadFilters('products');
-    if (saved) {
-      if (saved.categoryFilter) setCategoryFilter(saved.categoryFilter);
-      if (saved.stockFilter) setStockFilter(saved.stockFilter);
-      if (saved.publishFilter === 'published' || saved.publishFilter === 'draft' || saved.publishFilter === 'all') {
-        setPublishFilter(saved.publishFilter);
-      }
-      if (saved.searchQuery) setSearchQuery(saved.searchQuery);
+    if (!saved) return;
+    if (saved.categoryFilter) setCategoryFilter(saved.categoryFilter);
+    if (saved.stockFilter) setStockFilter(saved.stockFilter);
+    if (saved.publishFilter === 'published' || saved.publishFilter === 'draft' || saved.publishFilter === 'all') {
+      setPublishFilter(saved.publishFilter);
     }
-  }, [location.state]);
+    if (saved.searchQuery) setSearchQuery(saved.searchQuery);
+  }, []);
+
+  // Drop stale category filter values (e.g. old UUIDs) that hide all products
+  useEffect(() => {
+    if (categoryFilter === 'all' || categories.length === 0) return;
+    if (!categories.some((c) => c.name === categoryFilter)) {
+      setCategoryFilter('all');
+    }
+  }, [categories, categoryFilter]);
 
   // Save filters when they change
   useEffect(() => {
@@ -319,6 +342,17 @@ const Products = () => {
             </Card>
 
             {/* Products List */}
+            {!catalogLoading && loadedProducts.length > 0 && filteredProducts.length === 0 && filtersActive && (
+              <div className="mb-4 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-foreground">
+                  الفلاتر الحالية تخفي كل المنتجات ({loadedProducts.length} منتج في متجرك)
+                </p>
+                <Button variant="outline" size="sm" className="rounded-xl" onClick={clearFilters}>
+                  مسح الفلاتر
+                </Button>
+              </div>
+            )}
+
             <div className="ds-card p-4 sm:p-6">
               <ProductsList 
                 onProductSelect={handleProductSelect} 

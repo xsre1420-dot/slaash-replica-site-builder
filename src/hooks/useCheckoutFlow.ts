@@ -26,6 +26,9 @@ import {
 } from "@/utils/paymentUtils";
 import { cache } from "@/lib/cache";
 import { toast } from "sonner";
+import { generateUUID } from "@/lib/uuid";
+import { formatPhoneForStorage, isValidIraqiPhone } from "@/utils/phoneUtils";
+import { loadCheckoutCustomer, saveCheckoutCustomer } from "@/utils/checkoutCustomer";
 
 const COUPON_STORAGE_KEY = (ownerId: string) => `checkout-coupon:${ownerId}`;
 
@@ -86,6 +89,28 @@ export const useCheckoutFlow = () => {
 
   useEffect(() => {
     if (!ownerId) return;
+    const saved = loadCheckoutCustomer(ownerId);
+    if (saved) {
+      setCustomerInfo({
+        name: saved.name,
+        phone: saved.phone,
+        address: saved.address,
+        notes: saved.notes,
+      });
+      if (saved.governorate) setSelectedGovernorate(saved.governorate);
+    }
+  }, [ownerId]);
+
+  useEffect(() => {
+    if (!ownerId) return;
+    saveCheckoutCustomer(ownerId, {
+      ...customerInfo,
+      governorate: selectedGovernorate || undefined,
+    });
+  }, [ownerId, customerInfo, selectedGovernorate]);
+
+  useEffect(() => {
+    if (!ownerId) return;
     try {
       const saved = sessionStorage.getItem(COUPON_STORAGE_KEY(ownerId));
       if (saved) setAppliedCoupon(JSON.parse(saved));
@@ -118,7 +143,7 @@ export const useCheckoutFlow = () => {
 
     feePromise
       .then((fee) => {
-        if (!cancelled) setDeliveryFee(fee > 0 ? fee : localFee);
+        if (!cancelled) setDeliveryFee(Number.isFinite(fee) ? fee : localFee);
       })
       .catch(() => {
         if (!cancelled) setDeliveryFee(localFee);
@@ -195,10 +220,14 @@ export const useCheckoutFlow = () => {
 
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
-    if (!customerInfo.name.trim()) errors.name = "يرجى إدخال الاسم";
-    if (!customerInfo.phone.trim()) errors.phone = "يرجى إدخال رقم الهاتف";
-    else if (!/^[\d\s+()-]{7,15}$/.test(customerInfo.phone.trim())) errors.phone = "رقم الهاتف غير صحيح";
-    if (!customerInfo.address.trim()) errors.address = "يرجى إدخال العنوان";
+    const name = customerInfo.name.trim();
+    const phone = customerInfo.phone.trim();
+    const address = customerInfo.address.trim();
+
+    if (!name) errors.name = "يرجى إدخال الاسم";
+    if (!phone) errors.phone = "يرجى إدخال رقم الهاتف";
+    else if (!isValidIraqiPhone(phone)) errors.phone = "رقم الهاتف غير صحيح (مثال: 07701234567)";
+    if (!address) errors.address = "يرجى إدخال العنوان";
     if (deliveryPrices.length && !selectedGovernorate) errors.governorate = "يرجى اختيار المحافظة";
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -275,32 +304,36 @@ export const useCheckoutFlow = () => {
       }
 
       const finalDiscount = couponToApply?.discountAmount || 0;
-      const feeForOrder = selectedGovernorate
-        ? isTenantMode && storeSlug
-          ? await fetchDeliveryFeeBySlug(storeSlug, selectedGovernorate).catch(() =>
-              calculateDeliveryFeeFromPrices(deliveryPrices, selectedGovernorate)
-            )
-          : ownerId
-            ? await fetchDeliveryFee(ownerId, selectedGovernorate).catch(() =>
-                calculateDeliveryFeeFromPrices(deliveryPrices, selectedGovernorate)
-              )
-            : calculateDeliveryFeeFromPrices(deliveryPrices, selectedGovernorate)
-        : 0;
+      let feeForOrder = 0;
+      if (selectedGovernorate) {
+        try {
+          feeForOrder =
+            isTenantMode && storeSlug
+              ? await fetchDeliveryFeeBySlug(storeSlug, selectedGovernorate)
+              : await fetchDeliveryFee(ownerId, selectedGovernorate);
+        } catch {
+          feeForOrder = calculateDeliveryFeeFromPrices(deliveryPrices, selectedGovernorate);
+        }
+      }
       const computedTotal = computeOrderTotal(validation.subtotal, feeForOrder, finalDiscount);
 
-      const orderId =
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const normalizedCustomer = {
+        name: customerInfo.name.trim(),
+        phone: formatPhoneForStorage(customerInfo.phone),
+        address: customerInfo.address.trim(),
+        notes: customerInfo.notes.trim(),
+      };
+
+      const orderId = generateUUID();
 
       const orderToSave: Order = {
         id: orderId,
         items: validation.updatedItems,
         customerInfo: {
-          name: customerInfo.name,
-          phone: customerInfo.phone,
-          address: customerInfo.address,
-          notes: customerInfo.notes || undefined,
+          name: normalizedCustomer.name,
+          phone: normalizedCustomer.phone,
+          address: normalizedCustomer.address,
+          notes: normalizedCustomer.notes || undefined,
           governorate: selectedGovernorate || undefined,
         },
         total: computedTotal,
@@ -337,6 +370,14 @@ export const useCheckoutFlow = () => {
       setOrderCompleted(true);
       clearCart();
       sessionStorage.removeItem(COUPON_STORAGE_KEY(ownerId));
+      saveCheckoutCustomer(ownerId, {
+        name: normalizedCustomer.name,
+        phone: normalizedCustomer.phone,
+        address: normalizedCustomer.address,
+        notes: normalizedCustomer.notes,
+        governorate: selectedGovernorate || undefined,
+      });
+      clearCheckoutIdempotencyKey(ownerId);
       metrics.increment('checkout.submit.success');
       logger.info('checkout.submit.success', { orderId: savedOrder?.id || orderId, ownerId });
 

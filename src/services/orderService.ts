@@ -166,12 +166,12 @@ export const createOrder = async (
         p_order_id: order.id,
         p_owner_id: ownerId,
         p_idempotency_key: idempotencyKey,
-        p_customer_name: order.customerInfo.name,
-        p_customer_phone: order.customerInfo.phone,
-        p_customer_address: order.customerInfo.address,
+        p_customer_name: order.customerInfo.name.trim(),
+        p_customer_phone: order.customerInfo.phone.trim(),
+        p_customer_address: order.customerInfo.address.trim(),
         p_total_amount: order.total,
-        p_customer_governorate: order.customerInfo.governorate || null,
-        p_notes: order.customerInfo.notes || null,
+        p_customer_governorate: order.customerInfo.governorate?.trim() || null,
+        p_notes: order.customerInfo.notes?.trim() || null,
         p_items: orderItems,
         p_payment_method: paymentMethod,
         p_coupon_code: couponCode || null,
@@ -220,7 +220,13 @@ export const createOrder = async (
       }
 
       lastError = mapOrderError(error?.message || data?.error || 'Order creation failed');
-      logger.warn('order.create.retry', { ownerId, attempt, error: lastError });
+      logger.warn('order.create.retry', {
+        ownerId,
+        attempt,
+        error: lastError,
+        rpcError: data?.error,
+        expectedTotal: data?.expected_total,
+      });
 
       if (attempt < maxAttempts && isRetryableOrderError(lastError)) {
         await sleep(400 * attempt);

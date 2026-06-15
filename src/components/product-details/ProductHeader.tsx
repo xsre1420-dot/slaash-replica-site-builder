@@ -40,8 +40,8 @@ const ProductHeader = ({ productId, productName, storeSlug }: ProductHeaderProps
   };
 
   return (
-    <div className="bg-card/90 backdrop-blur-xl p-3 sticky top-0 z-20 border-b border-border/50">
-      <div className="flex justify-between items-center max-w-md mx-auto">
+    <div className="bg-card/90 backdrop-blur-xl p-3 sm:p-4 sticky top-0 z-20 border-b border-border/50">
+      <div className="flex justify-between items-center max-w-6xl mx-auto px-1 sm:px-2">
         <div className="flex items-center gap-2">
           {productId && (
             <>

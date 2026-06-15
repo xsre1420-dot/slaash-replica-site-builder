@@ -101,9 +101,8 @@ export const ProductsList = ({
   }, [managedByParent, productsFromParent]);
 
   const catalog = useMemo(() => {
-    if (filtersActive) return filteredProducts ?? [];
-    if (filteredProducts && filteredProducts.length > 0) return filteredProducts;
-    return allProducts;
+    if (!filtersActive) return allProducts;
+    return filteredProducts ?? [];
   }, [filtersActive, filteredProducts, allProducts]);
 
   const handleDragEnd = useCallback((result: DropResult) => {

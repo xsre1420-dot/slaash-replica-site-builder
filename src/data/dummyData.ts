@@ -5,7 +5,7 @@ import { getAuthenticatedUserId } from '@/lib/authSession';
 import { runOncePerKey, type AddProductResult } from "@/lib/productCreateLock";
 import { invalidateStorefrontForOwner } from "@/services/storefrontProductService";
 import { cache, CacheKeys, CacheTTL, dedup, clearInflight } from '@/lib/cache';
-import { mapDbProduct } from "@/mappers/productMapper";
+import { mapDbProduct, safeMapDbProduct } from "@/mappers/productMapper";
 import {
   PRODUCT_DETAIL_SELECT,
   PRODUCT_INSERT_RETURN_SELECT,
@@ -180,7 +180,9 @@ export const loadProductsPage = async (
       });
 
       if (!rpcError && rpcData?.products) {
-        const rpcProducts = (rpcData.products as Record<string, unknown>[]).map((row) => mapDbProduct(row));
+        const rpcProducts = ((rpcData.products as Record<string, unknown>[]) || [])
+          .map((row) => safeMapDbProduct(row))
+          .filter((p): p is Product => p != null);
         const rpcTotal = Number(rpcData.total) || rpcProducts.length;
         const hasFilters = !!(search?.trim() || (category && category !== 'all'));
         if (rpcProducts.length > 0 || rpcTotal > 0 || page > 0 || hasFilters) {
@@ -226,7 +228,10 @@ export const loadProductsPage = async (
         return cache.get<ProductsPageResult>(key) || { products: [], hasMore: false, total: 0 };
       }
 
-      const products = data?.map((row) => mapDbProduct(row as Record<string, unknown>)) || [];
+      const products =
+        data
+          ?.map((row) => safeMapDbProduct(row as Record<string, unknown>))
+          .filter((p): p is Product => p != null) || [];
       const total = count ?? products.length;
       return useRpcResult(products, total, from + products.length < total);
     } catch (error) {

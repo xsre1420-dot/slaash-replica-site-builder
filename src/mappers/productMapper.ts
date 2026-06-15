@@ -54,6 +54,19 @@ export const mapDbProduct = (
   return options.applyDiscount ? applyActiveDiscount(product) : product;
 };
 
+export const safeMapDbProduct = (
+  row: unknown,
+  options: { applyDiscount?: boolean } = {}
+): Product | null => {
+  if (row == null || typeof row !== 'object') return null;
+  try {
+    return mapDbProduct(row as Record<string, unknown>, options);
+  } catch (err) {
+    console.warn('[productMapper] map failed:', err);
+    return null;
+  }
+};
+
 /** Storefront listing — always applies active discounts. */
 export const mapStorefrontProduct = (row: Record<string, unknown>): Product =>
   mapDbProduct(row, { applyDiscount: true });

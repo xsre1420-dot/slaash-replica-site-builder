@@ -239,7 +239,7 @@ export function useAddProductForm() {
         additionalImages,
         sizes: sizes.length > 0 ? sizes : undefined,
         colors: colors.length > 0 ? colors : undefined,
-        stockQuantity: stockQuantity ? parseInt(stockQuantity) : 0,
+        stockQuantity: stockQuantity ? parseInt(stockQuantity, 10) : undefined,
         variants: variants.length > 0 ? variants : undefined,
         sku: sku.trim() || undefined,
         seoTitle: seoTitle.trim() || name.trim(),

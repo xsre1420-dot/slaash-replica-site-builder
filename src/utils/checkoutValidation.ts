@@ -4,12 +4,15 @@ import { getAvailableQty } from './inventoryUtils';
 import { AppliedCoupon, validateCoupon } from '@/services/couponService';
 import { mapDbProduct } from '@/mappers/productMapper';
 import { fetchStorefrontProductsByIds } from '@/services/storefrontProductService';
+import { getServerUnitPrice } from '@/utils/inventoryUtils';
 
 export async function fetchFreshProducts(
   ownerId: string,
   productIds: string[],
-  storeSlug?: string
+  storeSlug?: string,
+  options: { applyDiscount?: boolean } = {}
 ): Promise<Map<string, Product>> {
+  const applyDiscount = options.applyDiscount !== false;
   const uniqueIds = [...new Set(productIds)];
   if (uniqueIds.length === 0) return new Map();
 
@@ -34,9 +37,22 @@ export async function fetchFreshProducts(
   return new Map(
     data.map((row) => [
       String(row.id),
-      mapDbProduct(row as Record<string, unknown>, { applyDiscount: true }),
+      mapDbProduct(row as Record<string, unknown>, { applyDiscount }),
     ])
   );
+}
+
+export function computeServerCheckoutSubtotal(
+  items: CartItem[],
+  freshProducts: Map<string, Product>
+): number {
+  let subtotal = 0;
+  for (const item of items) {
+    const fresh = freshProducts.get(item.product.id);
+    if (!fresh) continue;
+    subtotal += getServerUnitPrice(fresh) * item.quantity;
+  }
+  return subtotal;
 }
 
 export interface CartValidationResult {
@@ -77,7 +93,7 @@ export function validateAndRefreshCart(
       product: fresh,
       quantity: qty,
     });
-    subtotal += fresh.price * qty;
+    subtotal += getServerUnitPrice(fresh) * qty;
   }
 
   return {
