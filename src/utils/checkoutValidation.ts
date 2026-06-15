@@ -3,13 +3,19 @@ import { CartItem, Product } from '@/types';
 import { getAvailableQty } from './inventoryUtils';
 import { AppliedCoupon, validateCoupon } from '@/services/couponService';
 import { mapDbProduct } from '@/mappers/productMapper';
+import { fetchStorefrontProductsByIds } from '@/services/storefrontProductService';
 
 export async function fetchFreshProducts(
   ownerId: string,
-  productIds: string[]
+  productIds: string[],
+  storeSlug?: string
 ): Promise<Map<string, Product>> {
   const uniqueIds = [...new Set(productIds)];
   if (uniqueIds.length === 0) return new Map();
+
+  if (storeSlug?.trim()) {
+    return fetchStorefrontProductsByIds(storeSlug.trim(), uniqueIds);
+  }
 
   const { data, error } = await supabase
     .from('products')

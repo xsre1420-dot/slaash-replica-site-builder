@@ -276,7 +276,55 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.get_store_product_by_id(
+  p_slug TEXT,
+  p_product_id UUID
+) RETURNS JSONB
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_owner_id UUID;
+  v_product JSONB;
+BEGIN
+  IF p_slug IS NULL OR p_product_id IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  IF p_slug !~ '^[a-z0-9-]+$' THEN
+    RETURN NULL;
+  END IF;
+
+  SELECT owner_id INTO v_owner_id
+  FROM store_settings
+  WHERE LOWER(store_slug) = LOWER(trim(p_slug))
+  LIMIT 1;
+
+  IF v_owner_id IS NULL THEN
+    SELECT user_id INTO v_owner_id
+    FROM stores
+    WHERE LOWER(store_slug) = LOWER(trim(p_slug))
+    LIMIT 1;
+  END IF;
+
+  IF v_owner_id IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  SELECT to_jsonb(p.*) INTO v_product
+  FROM products p
+  WHERE p.id = p_product_id
+    AND p.owner_id = v_owner_id
+    AND COALESCE(p.is_active, true) = true;
+
+  RETURN v_product;
+END;
+$$;
+
 GRANT EXECUTE ON FUNCTION public.get_store_products_page(TEXT, INT, TEXT, TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_store_meta(TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_store_products_by_slug(TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_store_categories_by_slug(TEXT) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.get_store_product_by_id(TEXT, UUID) TO anon, authenticated;

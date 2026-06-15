@@ -154,7 +154,7 @@ export const useCheckoutFlow = () => {
     const syncCartPrices = async () => {
       try {
         const productIds = cartItems.map((i) => i.product.id);
-        const freshMap = await fetchFreshProducts(ownerId, productIds);
+        const freshMap = await fetchFreshProducts(ownerId, productIds, isTenantMode ? storeSlug : undefined);
         if (cancelled) return;
 
         const validation = validateAndRefreshCart(cartItems, freshMap);
@@ -233,7 +233,7 @@ export const useCheckoutFlow = () => {
       const productIds = cartItems.map((i) => i.product.id);
       let freshMap: Map<string, import('@/types').Product>;
       try {
-        freshMap = await fetchFreshProducts(ownerId, productIds);
+        freshMap = await fetchFreshProducts(ownerId, productIds, isTenantMode ? storeSlug : undefined);
       } catch {
         toast.error("تعذر التحقق من المنتجات. تحقق من الاتصال وحاول مرة أخرى.");
         return;

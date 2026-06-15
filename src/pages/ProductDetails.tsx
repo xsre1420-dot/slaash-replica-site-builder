@@ -13,7 +13,8 @@ import { toast } from "sonner";
 import StoreThemeProvider from "@/components/StoreThemeProvider";
 import StorefrontFooter from "@/components/storefront/StorefrontFooter";
 import ProductPurchaseBar from "@/components/storefront/ProductPurchaseBar";
-import { getCheckoutPath } from "@/lib/storefrontPaths";
+import { getCheckoutPath, getStoreHomePath } from "@/lib/storefrontPaths";
+import { resolveStoreOwnerBySlug } from "@/services/storefrontProductService";
 import {
   getAvailableQty,
   validateVariantSelection,
@@ -25,7 +26,7 @@ import ProductHeader from "@/components/product-details/ProductHeader";
 import ProductImages from "@/components/product-details/ProductImages";
 import ProductQuantity from "@/components/product-details/ProductQuantity";
 import CartButton from "@/components/product-details/CartButton";
-import ProductData from "@/components/product-details/ProductData";
+import ProductData, { type ProductLoadStatus } from "@/components/product-details/ProductData";
 import ExpandableSection from "@/components/product-details/ExpandableSection";
 import RatingSection from "@/components/product-details/RatingSection";
 import SuggestedProducts from "@/components/product-details/SuggestedProducts";
@@ -80,6 +81,7 @@ const ProductDetails = () => {
   useStoreVisitTracking(isTenantMode ? storeSlug : undefined);
   useProductViewTracking(isTenantMode ? storeSlug : undefined, productId);
   const [product, setProduct] = useState<Product | null>(null);
+  const [productLoadStatus, setProductLoadStatus] = useState<ProductLoadStatus>("loading");
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [selectedColor, setSelectedColor] = useState<string>("");
@@ -108,15 +110,27 @@ const ProductDetails = () => {
   const whatsappNumber = isTenantMode ? tenant.storeInfo?.whatsappNumber : '';
 
   useEffect(() => {
-    if (isTenantMode && tenant.storeInfo?.ownerId) {
+    if (!isTenantMode || !storeSlug) return;
+    if (tenant.storeInfo?.ownerId) {
       setStoreOwner(tenant.storeInfo.ownerId);
+      return;
     }
-  }, [isTenantMode, tenant.storeInfo?.ownerId, setStoreOwner]);
+    void resolveStoreOwnerBySlug(storeSlug).then((ownerId) => {
+      if (ownerId) setStoreOwner(ownerId);
+    });
+  }, [isTenantMode, storeSlug, tenant.storeInfo?.ownerId, setStoreOwner]);
+
+  useEffect(() => {
+    setProduct(null);
+    setProductLoadStatus("loading");
+  }, [productId, storeSlug]);
 
   const cachedTenantProduct = null;
 
-  const handleProductLoaded = useCallback((p: Product | null) => {
-    setProduct(p);
+  const handleProductLoaded = useCallback((p: Product | null, status: ProductLoadStatus) => {
+    setProductLoadStatus(status);
+    if (status === "success" && p) setProduct(p);
+    if (status === "not_found" || status === "error") setProduct(null);
   }, []);
 
   const totalAmount = useMemo(
@@ -181,6 +195,30 @@ const ProductDetails = () => {
   const isOutOfStock = activeProduct ? variantAvailable <= 0 : false;
   const hasDiscount = activeProduct && isProductDiscountActive(activeProduct);
   const discountPercent = hasDiscount && product?.discountType === 'percentage' ? product.discountValue : undefined;
+
+  if (productLoadStatus === "not_found" || productLoadStatus === "error") {
+    const storeHome = getStoreHomePath(isTenantMode ? storeSlug : null);
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 mb-4 rounded-full bg-muted flex items-center justify-center text-3xl">📦</div>
+        <h1 className="text-lg font-bold text-foreground mb-2">
+          {productLoadStatus === "error" ? "تعذر تحميل المنتج" : "المنتج غير موجود"}
+        </h1>
+        <p className="text-sm text-muted-foreground mb-6">
+          {productLoadStatus === "error"
+            ? "تحقق من الاتصال وحاول مرة أخرى"
+            : "ربما تم حذف المنتج أو أن الرابط غير صحيح"}
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate(storeHome)}
+          className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium"
+        >
+          العودة للمتجر
+        </button>
+      </div>
+    );
+  }
 
   if (!product) {
     return (

@@ -2,14 +2,15 @@ import { useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { Product } from "@/types";
 import { loadProducts, getProductById } from "@/services/productService";
-import { supabase } from "@/integrations/supabase/client";
-import { mapStorefrontProduct } from "@/mappers/productMapper";
+import { fetchStorefrontProductById } from "@/services/storefrontProductService";
+
+export type ProductLoadStatus = "loading" | "success" | "not_found" | "error";
 
 interface ProductDataProps {
   productId: string | undefined;
-  /** Pre-resolved product from tenant catalog — skips RPC when provided */
+  /** Pre-resolved product from tenant catalog — skips network when provided */
   initialProduct?: Product | null;
-  onProductLoaded: (product: Product | null) => void;
+  onProductLoaded: (product: Product | null, status: ProductLoadStatus) => void;
 }
 
 const ProductData = ({ productId, initialProduct, onProductLoaded }: ProductDataProps) => {
@@ -17,38 +18,35 @@ const ProductData = ({ productId, initialProduct, onProductLoaded }: ProductData
 
   const loadProduct = useCallback(async () => {
     if (!productId) {
-      onProductLoaded(null);
+      onProductLoaded(null, "not_found");
       return;
     }
 
     if (initialProduct?.id === productId) {
-      onProductLoaded(initialProduct);
+      onProductLoaded(initialProduct, "success");
       return;
     }
 
-    if (storeSlug) {
-      const { data, error } = await (supabase as any).rpc('get_store_product_by_id', {
-        p_slug: storeSlug.trim().toLowerCase(),
-        p_product_id: productId,
-      });
-
-      if (!error && data) {
-        onProductLoaded(mapStorefrontProduct(data as Record<string, unknown>));
+    try {
+      if (storeSlug) {
+        const product = await fetchStorefrontProductById(storeSlug, productId);
+        onProductLoaded(product, product ? "success" : "not_found");
         return;
       }
 
-      onProductLoaded(null);
-      return;
+      await loadProducts(true);
+      const foundProduct = getProductById(productId);
+      onProductLoaded(foundProduct ?? null, foundProduct ? "success" : "not_found");
+    } catch (err) {
+      console.error("[ProductData] load failed:", err);
+      onProductLoaded(null, "error");
     }
-
-    await loadProducts();
-    const foundProduct = getProductById(productId);
-    onProductLoaded(foundProduct || null);
   }, [productId, storeSlug, initialProduct, onProductLoaded]);
 
   useEffect(() => {
+    onProductLoaded(null, "loading");
     loadProduct();
-  }, [loadProduct]);
+  }, [loadProduct, onProductLoaded]);
 
   return null;
 };
