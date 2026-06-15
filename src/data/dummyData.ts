@@ -7,6 +7,7 @@ import { mapDbProduct } from "@/mappers/productMapper";
 import {
   PRODUCT_DETAIL_SELECT,
   PRODUCT_INSERT_RETURN_SELECT,
+  MERCHANT_PRODUCTS_LIST_SELECT,
   buildProductInsertPayload,
   isSchemaColumnError,
   mapProductInsertError,
@@ -149,6 +150,16 @@ export const loadProductsPage = async (
 
   return dedup(key, async () => {
     try {
+      const useRpcResult = (products: Product[], total: number, hasMore: boolean) => {
+        const result: ProductsPageResult = { products, hasMore, total };
+        cache.set(key, result, CacheTTL.MEDIUM, CacheTTL.STALE);
+        if (page === 0) {
+          cache.set(CacheKeys.products(ownerId), products, CacheTTL.MEDIUM, CacheTTL.STALE);
+          products_list = products;
+        }
+        return result;
+      };
+
       const { data: rpcData, error: rpcError } = await (supabase as any).rpc('get_owner_products_page', {
         p_owner_id: ownerId,
         p_limit: pageSize,
@@ -158,38 +169,46 @@ export const loadProductsPage = async (
       });
 
       if (!rpcError && rpcData?.products) {
-        const products = (rpcData.products as Record<string, unknown>[]).map((row) => mapDbProduct(row));
-        const result: ProductsPageResult = {
-          products,
-          hasMore: !!rpcData.has_more,
-          total: Number(rpcData.total) || products.length,
-        };
-        cache.set(key, result, CacheTTL.MEDIUM, CacheTTL.STALE);
-        if (page === 0) {
-          cache.set(CacheKeys.products(ownerId), products, CacheTTL.MEDIUM, CacheTTL.STALE);
-          products_list = products;
+        const rpcProducts = (rpcData.products as Record<string, unknown>[]).map((row) => mapDbProduct(row));
+        const rpcTotal = Number(rpcData.total) || rpcProducts.length;
+        const hasFilters = !!(search?.trim() || (category && category !== 'all'));
+        if (rpcProducts.length > 0 || rpcTotal > 0 || page > 0 || hasFilters) {
+          return useRpcResult(rpcProducts, rpcTotal, !!rpcData.has_more);
         }
-        return result;
+        console.warn('[products] RPC returned empty list, falling back to direct query');
+      } else if (rpcError) {
+        console.warn('[products] RPC failed, falling back to direct query:', rpcError.message);
       }
 
       const from = page * pageSize;
       const to = from + pageSize - 1;
 
-      let query = supabase
-        .from('products')
-        .select('id, name, description, short_description, category, price, cost, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, sku, seo_title, seo_description, product_slug, tags, low_stock_threshold, min_stock_level, created_at, updated_at', { count: 'exact' })
-        .eq('owner_id', ownerId)
-        .order('created_at', { ascending: false })
-        .range(from, to);
+      const runDirectQuery = async (selectColumns: string) => {
+        let query = supabase
+          .from('products')
+          .select(selectColumns, { count: 'exact' })
+          .eq('owner_id', ownerId)
+          .order('created_at', { ascending: false })
+          .range(from, to);
 
-      if (category && category !== 'all') {
-        query = query.eq('category', category);
-      }
-      if (search?.trim()) {
-        query = query.ilike('name', `%${search.trim()}%`);
-      }
+        if (category && category !== 'all') {
+          query = query.eq('category', category);
+        }
+        if (search?.trim()) {
+          query = query.ilike('name', `%${search.trim()}%`);
+        }
 
-      const { data, error, count } = await query;
+        return query;
+      };
+
+      let { data, error, count } = await runDirectQuery(MERCHANT_PRODUCTS_LIST_SELECT);
+
+      if (error && isSchemaColumnError(error.message)) {
+        console.warn('[products] extended select failed, using minimal columns:', error.message);
+        ({ data, error, count } = await runDirectQuery(
+          'id, name, description, category, price, image_url, additional_images, stock_quantity, is_active, min_stock_level, created_at, updated_at'
+        ));
+      }
 
       if (error) {
         console.error('Error loading products page:', error);
@@ -198,17 +217,7 @@ export const loadProductsPage = async (
 
       const products = data?.map((row) => mapDbProduct(row as Record<string, unknown>)) || [];
       const total = count ?? products.length;
-      const result: ProductsPageResult = {
-        products,
-        hasMore: from + products.length < total,
-        total,
-      };
-      cache.set(key, result, CacheTTL.MEDIUM, CacheTTL.STALE);
-      if (page === 0) {
-        cache.set(CacheKeys.products(ownerId), products, CacheTTL.MEDIUM, CacheTTL.STALE);
-        products_list = products;
-      }
-      return result;
+      return useRpcResult(products, total, from + products.length < total);
     } catch (error) {
       console.error('Error loading products page:', error);
       return cache.get<ProductsPageResult>(key) || { products: [], hasMore: false, total: 0 };

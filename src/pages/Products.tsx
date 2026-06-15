@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
 import { isProductLowStock } from '@/lib/productUpdateUtils';
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useLocation } from "react-router-dom";
 import { MessageSquare, Lightbulb, Download, Plus, Package, AlertTriangle, XCircle, DollarSign, Search, ArrowRight } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/layout/PageHeader";
@@ -26,6 +26,7 @@ const SuggestedProductsManager = lazy(() => import("@/components/product-managem
 
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const [selectedProduct, setSelectedProduct] = useState<{id: string, name: string} | null>(null);
   const [loadedProducts, setLoadedProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,15 +60,17 @@ const Products = () => {
     getCategories().then(cats => setCategories(cats));
   }, []);
 
-  // Suggestion #17: Restore saved filters
+  // Restore saved filters (skip when arriving from add-product)
   useEffect(() => {
+    const state = location.state as { refreshProducts?: boolean } | null;
+    if (state?.refreshProducts) return;
     const saved = loadFilters('products');
     if (saved) {
       if (saved.categoryFilter) setCategoryFilter(saved.categoryFilter);
       if (saved.stockFilter) setStockFilter(saved.stockFilter);
       if (saved.searchQuery) setSearchQuery(saved.searchQuery);
     }
-  }, []);
+  }, [location.state]);
 
   // Save filters when they change
   useEffect(() => {
@@ -112,7 +115,19 @@ const Products = () => {
     setSearchQuery("");
     setCategoryFilter("all");
     setStockFilter("all");
+    saveFilters('products', { categoryFilter: 'all', stockFilter: 'all', searchQuery: '' });
   };
+
+  // After add-product: clear saved filters and reload from DB
+  useEffect(() => {
+    const state = location.state as { refreshProducts?: boolean } | null;
+    if (!state?.refreshProducts) return;
+
+    clearFilters();
+    invalidateProducts();
+    reloadProductsData(true).then(setLoadedProducts);
+    window.history.replaceState({}, document.title);
+  }, [location.state]);
 
   const filteredProducts = useMemo(() => loadedProducts.filter(p => {
     const matchesSearch = !debouncedSearch || 

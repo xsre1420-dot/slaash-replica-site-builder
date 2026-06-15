@@ -8,6 +8,10 @@ export const PRODUCT_DETAIL_SELECT =
 export const PRODUCT_INSERT_RETURN_SELECT =
   'id, name, description, category, price, cost, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, min_stock_level, owner_id, created_at, updated_at';
 
+/** Merchant list/load — matches base schema (Inventory page uses same core fields) */
+export const MERCHANT_PRODUCTS_LIST_SELECT =
+  'id, name, description, category, price, cost, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, min_stock_level, discount_type, discount_value, discount_start_date, discount_end_date, created_at, updated_at';
+
 export const isSchemaColumnError = (message: string): boolean =>
   /column|schema cache|does not exist/i.test(message);
 

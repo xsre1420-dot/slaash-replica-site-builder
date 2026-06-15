@@ -82,12 +82,24 @@ const PreviewStore = () => {
       setProductsLoading(true);
       try {
         await loadProducts(true);
-        setAllProducts(getProductsByCategory(selectedCategory));
+        const visible = getProductsByCategory(selectedCategory).filter((p) => p.isActive !== false);
+        setAllProducts(visible);
       } finally {
         setProductsLoading(false);
       }
     };
     loadProductsData();
+
+    let lastFocusRefresh = 0;
+    const handleFocus = () => {
+      const now = Date.now();
+      if (now - lastFocusRefresh < 30_000) return;
+      lastFocusRefresh = now;
+      loadProductsData();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, [selectedCategory, isReady, hydrationVersion]);
 
   const handleAddToCart = (product: Product) => {

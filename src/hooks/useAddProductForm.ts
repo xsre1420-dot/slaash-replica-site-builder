@@ -245,7 +245,7 @@ export function useAddProductForm() {
       if (result.success) {
         invalidateProducts();
         toast({ title: 'تم بنجاح', description: isActive ? 'المنتج منشور في متجرك' : 'تم حفظ المنتج كمسودة' });
-        navigate('/products');
+        navigate('/products', { state: { refreshProducts: true } });
       } else {
         toast({ title: 'خطأ', description: result.error || 'فشل في إضافة المنتج', variant: 'destructive' });
       }
