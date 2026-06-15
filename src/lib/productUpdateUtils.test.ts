@@ -26,8 +26,10 @@ describe('buildProductInsertPayload', () => {
       'store-1'
     );
     expect(draft.full.is_active).toBe(false);
+    expect(draft.minimal.is_active).toBe(false);
     expect(draft.full.store_id).toBe('store-1');
-    expect(draft.full.owner_id).toBe('owner-1');
+    expect(draft.minimal.owner_id).toBe('owner-1');
+    expect(draft.minimal).not.toHaveProperty('archived_at');
 
     const published = buildProductInsertPayload(
       { ...base, id: '', isActive: true },

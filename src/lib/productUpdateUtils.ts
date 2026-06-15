@@ -1,10 +1,18 @@
 import { Product } from '@/types';
 
+/** Oldest compatible columns — works before optional migrations */
+export const PRODUCT_MINIMAL_SELECT =
+  'id, name, description, category, price, image_url, additional_images, stock_quantity, is_active, owner_id, created_at, updated_at';
+
+/** Insert return — never request columns that may be missing */
+export const PRODUCT_INSERT_RETURN_MINIMAL =
+  'id, name, description, category, price, image_url, additional_images, stock_quantity, is_active, owner_id, created_at, updated_at';
+
 /** Columns selected for product fetch/update round-trips */
 export const PRODUCT_DETAIL_SELECT =
   'id, name, description, short_description, category, price, cost, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, is_active, archived_at, sku, seo_title, seo_description, product_slug, tags, low_stock_threshold, min_stock_level, store_id, owner_id, created_at, updated_at';
 
-/** Safe columns for insert return — avoids failures when optional migrations are pending */
+/** Extended merchant list — requires migrations */
 export const PRODUCT_INSERT_RETURN_SELECT =
   'id, name, description, category, price, cost, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, archived_at, min_stock_level, owner_id, created_at, updated_at';
 
@@ -12,35 +20,54 @@ export const PRODUCT_INSERT_RETURN_SELECT =
 export const MERCHANT_PRODUCTS_LIST_SELECT =
   'id, name, description, category, price, cost, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, archived_at, min_stock_level, discount_type, discount_value, discount_start_date, discount_end_date, created_at, updated_at';
 
+/** Standard select without archived_at / discount columns */
+export const MERCHANT_PRODUCTS_STANDARD_SELECT =
+  'id, name, description, category, price, cost, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, min_stock_level, created_at, updated_at';
+
 export const isSchemaColumnError = (message: string): boolean =>
   /column|schema cache|does not exist/i.test(message);
+
+export type ProductInsertPayloads = {
+  minimal: Record<string, unknown>;
+  standard: Record<string, unknown>;
+  extended: Record<string, unknown>;
+  full: Record<string, unknown>;
+};
 
 export const buildProductInsertPayload = (
   product: Product,
   ownerId: string,
   storeId: string | null
-): { core: Record<string, unknown>; full: Record<string, unknown> } => {
-  const core: Record<string, unknown> = {
+): ProductInsertPayloads => {
+  const minimal: Record<string, unknown> = {
     name: product.name,
     description: product.description || null,
     category: product.category,
     price: product.price,
-    cost: product.cost ?? null,
-    original_price: product.originalPrice ?? null,
     image_url: product.image,
     additional_images: product.additionalImages ?? [],
+    owner_id: ownerId,
+    is_active: product.isActive !== false,
+  };
+
+  const standard: Record<string, unknown> = {
+    ...minimal,
+    cost: product.cost ?? null,
+    original_price: product.originalPrice ?? null,
     stock_quantity: product.stockQuantity ?? null,
     colors: product.colors ? JSON.parse(JSON.stringify(product.colors)) : null,
     sizes: product.sizes ?? null,
     variants: product.variants ? JSON.parse(JSON.stringify(product.variants)) : null,
-    is_active: product.isActive !== false,
-    archived_at: product.archivedAt ?? null,
     min_stock_level: product.lowStockThreshold ?? 3,
-    owner_id: ownerId,
+  };
+
+  const extended: Record<string, unknown> = {
+    ...standard,
+    archived_at: product.archivedAt ?? null,
   };
 
   const full: Record<string, unknown> = {
-    ...core,
+    ...extended,
     sku: product.sku || null,
     short_description: product.shortDescription || null,
     seo_title: product.seoTitle || null,
@@ -52,7 +79,22 @@ export const buildProductInsertPayload = (
 
   if (storeId) full.store_id = storeId;
 
-  return { core, full };
+  return { minimal, standard, extended, full };
+};
+
+/** @deprecated use ProductInsertPayloads */
+export type LegacyProductInsertPayload = {
+  core: Record<string, unknown>;
+  full: Record<string, unknown>;
+};
+
+export const buildLegacyProductInsertPayload = (
+  product: Product,
+  ownerId: string,
+  storeId: string | null
+): LegacyProductInsertPayload => {
+  const payloads = buildProductInsertPayload(product, ownerId, storeId);
+  return { core: payloads.extended, full: payloads.full };
 };
 
 export const mapProductInsertError = (message: string): string => {
@@ -64,7 +106,7 @@ export const mapProductInsertError = (message: string): string => {
     return 'متجرك غير مهيأ — افتح الإعدادات ثم حاول مرة أخرى';
   }
   if (isSchemaColumnError(message)) {
-    return 'قاعدة البيانات تحتاج تحديث — نفّذ supabase db push';
+    return 'تعذر الحفظ — حدّث قاعدة البيانات عبر: supabase db push (المنتجات لم تُحذف، المشكلة في المزامنة)';
   }
   if (m.includes('duplicate') || m.includes('unique')) {
     return 'SKU أو رابط المنتج مستخدم مسبقاً';

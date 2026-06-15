@@ -10,6 +10,9 @@ import {
   PRODUCT_DETAIL_SELECT,
   PRODUCT_INSERT_RETURN_SELECT,
   MERCHANT_PRODUCTS_LIST_SELECT,
+  MERCHANT_PRODUCTS_STANDARD_SELECT,
+  PRODUCT_MINIMAL_SELECT,
+  PRODUCT_INSERT_RETURN_MINIMAL,
   buildProductInsertPayload,
   isSchemaColumnError,
   mapProductInsertError,
@@ -218,10 +221,13 @@ export const loadProductsPage = async (
       let { data, error, count } = await runDirectQuery(MERCHANT_PRODUCTS_LIST_SELECT);
 
       if (error && isSchemaColumnError(error.message)) {
-        console.warn('[products] extended select failed, using minimal columns:', error.message);
-        ({ data, error, count } = await runDirectQuery(
-          'id, name, description, category, price, image_url, additional_images, stock_quantity, is_active, archived_at, min_stock_level, created_at, updated_at'
-        ));
+        console.warn('[products] extended select failed, using standard columns:', error.message);
+        ({ data, error, count } = await runDirectQuery(MERCHANT_PRODUCTS_STANDARD_SELECT));
+      }
+
+      if (error && isSchemaColumnError(error.message)) {
+        console.warn('[products] standard select failed, using minimal columns:', error.message);
+        ({ data, error, count } = await runDirectQuery(PRODUCT_MINIMAL_SELECT));
       }
 
       if (error) {
@@ -383,21 +389,30 @@ export const addProduct = async (
   return runOncePerKey(lockKey, async () => {
     try {
       const storeId = await resolveStoreIdForOwner(userId);
-      const { core, full } = buildProductInsertPayload(product, userId, storeId);
+      const payloads = buildProductInsertPayload(product, userId, storeId);
+      const insertAttempts = [
+        payloads.full,
+        payloads.extended,
+        payloads.standard,
+        payloads.minimal,
+      ];
 
-      let { data, error } = await supabase
-        .from('products')
-        .insert(full)
-        .select(PRODUCT_INSERT_RETURN_SELECT)
-        .single();
+      let data: Record<string, unknown> | null = null;
+      let error: { message: string } | null = null;
 
-      if (error && isSchemaColumnError(error.message)) {
-        console.warn('[products] full insert failed, retrying core columns:', error.message);
-        ({ data, error } = await supabase
+      for (const row of insertAttempts) {
+        const attempt = await supabase
           .from('products')
-          .insert(core)
-          .select(PRODUCT_INSERT_RETURN_SELECT)
-          .single());
+          .insert(row)
+          .select(PRODUCT_INSERT_RETURN_MINIMAL)
+          .single();
+
+        data = attempt.data as Record<string, unknown> | null;
+        error = attempt.error;
+
+        if (!error) break;
+        if (!isSchemaColumnError(error.message)) break;
+        console.warn('[products] insert retry with fewer columns:', error.message);
       }
 
       if (error) {
@@ -443,10 +458,16 @@ export const updateProduct = async (productId: string, updatedProduct: Partial<P
       .eq('owner_id', user.id)
       .maybeSingle();
 
-    if (fetchError) return { success: false, error: fetchError.message };
-    if (!existingRow) return { success: false, error: 'Product not found' };
+    let existingData = existingRow as Record<string, unknown> | null;
+    if (fetchError && isSchemaColumnError(fetchError.message)) {
+      existingData = await fetchProductRowById(productId, user.id);
+    } else if (fetchError) {
+      return { success: false, error: fetchError.message };
+    }
 
-    const existing = mapDbProduct(existingRow as Record<string, unknown>);
+    if (!existingData) return { success: false, error: 'Product not found' };
+
+    const existing = mapDbProduct(existingData);
     const merged = mergeProductForUpdate(existing, updatedProduct);
 
     let updateQuery = supabase
@@ -510,21 +531,43 @@ export const getProductById = (id: string): Product | undefined => {
   return all.find(product => product.id === id);
 };
 
+/** Fetch product row with progressive column fallback when migrations are pending */
+const fetchProductRowById = async (
+  productId: string,
+  ownerId: string
+): Promise<Record<string, unknown> | null> => {
+  const selects = [PRODUCT_DETAIL_SELECT, MERCHANT_PRODUCTS_STANDARD_SELECT, PRODUCT_MINIMAL_SELECT];
+
+  for (const selectColumns of selects) {
+    const { data, error } = await supabase
+      .from('products')
+      .select(selectColumns)
+      .eq('id', productId)
+      .eq('owner_id', ownerId)
+      .maybeSingle();
+
+    if (!error && data) return data as Record<string, unknown>;
+    if (error && !isSchemaColumnError(error.message)) {
+      console.error('[products] fetchProductById failed:', error.message);
+      return null;
+    }
+    if (error) {
+      console.warn('[products] fetchProductById retry:', error.message);
+    }
+  }
+
+  return null;
+};
+
 /** Fetch product from DB — always reads fresh row for edit/detail reliability */
 export const fetchProductById = async (productId: string): Promise<Product | null> => {
   const ownerId = await getAuthOwnerId();
   if (!ownerId) return null;
 
-  const { data, error } = await supabase
-    .from('products')
-    .select(PRODUCT_DETAIL_SELECT)
-    .eq('id', productId)
-    .eq('owner_id', ownerId)
-    .maybeSingle();
+  const data = await fetchProductRowById(productId, ownerId);
+  if (!data) return null;
 
-  if (error || !data) return null;
-
-  const product = mapDbProduct(data as Record<string, unknown>);
+  const product = mapDbProduct(data);
   const key = CacheKeys.products(ownerId);
   const current = cache.get<Product[]>(key) || [];
   cache.set(
