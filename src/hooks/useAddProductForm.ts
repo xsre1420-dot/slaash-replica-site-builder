@@ -1,6 +1,7 @@
 import { useMemo, useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { getAuthenticatedUserId } from '@/lib/authSession';
 import { addProduct, invalidateProducts } from '@/services/productService';
 import { useToast } from '@/hooks/use-toast';
 import { Product, Category, ColorOption, ProductVariant } from '@/types';
@@ -172,8 +173,8 @@ export function useAddProductForm() {
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
       toast({ title: 'خطأ', description: 'يجب تسجيل الدخول أولاً', variant: 'destructive' });
       return;
     }
@@ -198,7 +199,13 @@ export function useAddProductForm() {
 
     const imageValidation = await validateProductImages(mainImage, additionalImages);
     if (imageValidation.hasBlobUrls || !imageValidation.valid) {
-      toast({ title: 'خطأ في الصور', description: 'انتظر اكتمال رفع الصور', variant: 'destructive' });
+      toast({
+        title: 'خطأ في الصور',
+        description: imageValidation.hasBlobUrls
+          ? 'انتظر اكتمال رفع الصور ثم اضغط حفظ'
+          : 'أضف صورة رئيسية للمنتج',
+        variant: 'destructive',
+      });
       return;
     }
 

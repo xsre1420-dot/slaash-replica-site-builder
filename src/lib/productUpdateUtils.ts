@@ -4,6 +4,69 @@ import { Product } from '@/types';
 export const PRODUCT_DETAIL_SELECT =
   'id, name, description, short_description, category, price, cost, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, is_active, sku, seo_title, seo_description, product_slug, tags, low_stock_threshold, min_stock_level, store_id, owner_id, created_at, updated_at';
 
+/** Safe columns for insert return — avoids failures when optional migrations are pending */
+export const PRODUCT_INSERT_RETURN_SELECT =
+  'id, name, description, category, price, cost, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, min_stock_level, owner_id, created_at, updated_at';
+
+export const isSchemaColumnError = (message: string): boolean =>
+  /column|schema cache|does not exist/i.test(message);
+
+export const buildProductInsertPayload = (
+  product: Product,
+  ownerId: string,
+  storeId: string | null
+): { core: Record<string, unknown>; full: Record<string, unknown> } => {
+  const core: Record<string, unknown> = {
+    name: product.name,
+    description: product.description || null,
+    category: product.category,
+    price: product.price,
+    cost: product.cost ?? null,
+    original_price: product.originalPrice ?? null,
+    image_url: product.image,
+    additional_images: product.additionalImages ?? [],
+    stock_quantity: product.stockQuantity ?? null,
+    colors: product.colors ? JSON.parse(JSON.stringify(product.colors)) : null,
+    sizes: product.sizes ?? null,
+    variants: product.variants ? JSON.parse(JSON.stringify(product.variants)) : null,
+    is_active: product.isActive !== false,
+    min_stock_level: product.lowStockThreshold ?? 3,
+    owner_id: ownerId,
+  };
+
+  const full: Record<string, unknown> = {
+    ...core,
+    sku: product.sku || null,
+    short_description: product.shortDescription || null,
+    seo_title: product.seoTitle || null,
+    seo_description: product.seoDescription || null,
+    product_slug: product.productSlug || null,
+    tags: product.tags?.length ? product.tags : [],
+    low_stock_threshold: product.lowStockThreshold ?? 3,
+  };
+
+  if (storeId) full.store_id = storeId;
+
+  return { core, full };
+};
+
+export const mapProductInsertError = (message: string): string => {
+  const m = message.toLowerCase();
+  if (m.includes('row-level security') || m.includes('policy')) {
+    return 'ليس لديك صلاحية إضافة منتج — أعد تسجيل الدخول';
+  }
+  if (m.includes('foreign key') && m.includes('store_id')) {
+    return 'متجرك غير مهيأ — افتح الإعدادات ثم حاول مرة أخرى';
+  }
+  if (isSchemaColumnError(message)) {
+    return 'قاعدة البيانات تحتاج تحديث — نفّذ supabase db push';
+  }
+  if (m.includes('duplicate') || m.includes('unique')) {
+    return 'SKU أو رابط المنتج مستخدم مسبقاً';
+  }
+  return message;
+};
+
 /** Merge a partial UI patch onto an existing product without wiping omitted fields */
 export const mergeProductForUpdate = (existing: Product, patch: Partial<Product>): Product => ({
   ...existing,

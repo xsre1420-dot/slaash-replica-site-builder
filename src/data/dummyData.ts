@@ -4,7 +4,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { getAuthenticatedUserId } from "@/lib/authSession";
 import { cache, CacheKeys, CacheTTL, dedup } from "@/lib/cache";
 import { mapDbProduct } from "@/mappers/productMapper";
-import { PRODUCT_DETAIL_SELECT, mergeProductForUpdate, productToDbRow } from "@/lib/productUpdateUtils";
+import {
+  PRODUCT_DETAIL_SELECT,
+  PRODUCT_INSERT_RETURN_SELECT,
+  buildProductInsertPayload,
+  isSchemaColumnError,
+  mapProductInsertError,
+  mergeProductForUpdate,
+  productToDbRow,
+} from "@/lib/productUpdateUtils";
 
 /** @deprecated Use `@/services/productService` for new imports. */
 
@@ -27,19 +35,28 @@ const getOwnerId = (): string | null => _currentOwnerId;
 
 const resolveStoreIdForOwner = async (ownerId: string): Promise<string | null> => {
   if (_currentStoreId) return _currentStoreId;
-  const { data, error } = await supabase
-    .from('stores')
+
+  try {
+    const { data, error } = await (supabase as any).rpc('get_store_for_user', { p_user_id: ownerId });
+    if (!error && data?.id) {
+      _currentStoreId = data.id as string;
+      return _currentStoreId;
+    }
+  } catch {
+    /* RPC may be unavailable before migration */
+  }
+
+  const { data: settings } = await supabase
+    .from('store_settings')
     .select('id')
-    .eq('user_id', ownerId)
+    .eq('owner_id', ownerId)
     .maybeSingle();
-  if (error) {
-    console.warn('[products] resolve store_id failed:', error.message);
-    return null;
+
+  if (settings?.id) {
+    _currentStoreId = settings.id;
+    return settings.id;
   }
-  if (data?.id) {
-    _currentStoreId = data.id;
-    return data.id;
-  }
+
   return null;
 };
 
@@ -298,41 +315,31 @@ export const addProduct = async (product: Product): Promise<{ success: boolean; 
     const userId = await getAuthenticatedUserId();
     if (!userId) return { success: false, error: 'يجب تسجيل الدخول أولاً' };
 
-    const storeId = await resolveStoreIdForOwner(userId);
+    if (!product.image?.trim() || product.image.startsWith('blob:')) {
+      return { success: false, error: 'انتظر اكتمال رفع الصورة قبل الحفظ' };
+    }
 
-    const { data, error } = await supabase
+    const storeId = await resolveStoreIdForOwner(userId);
+    const { core, full } = buildProductInsertPayload(product, userId, storeId);
+
+    let { data, error } = await supabase
       .from('products')
-      .insert({
-        name: product.name,
-        description: product.description,
-        short_description: product.shortDescription || null,
-        category: product.category,
-        price: product.price,
-        cost: product.cost || null,
-        original_price: product.originalPrice || null,
-        image_url: product.image,
-        additional_images: product.additionalImages || [],
-        stock_quantity: product.stockQuantity ?? null,
-        colors: product.colors ? JSON.parse(JSON.stringify(product.colors)) : null,
-        sizes: product.sizes || null,
-        variants: product.variants ? JSON.parse(JSON.stringify(product.variants)) : null,
-        sku: product.sku || null,
-        seo_title: product.seoTitle || null,
-        seo_description: product.seoDescription || null,
-        product_slug: product.productSlug || null,
-        tags: product.tags?.length ? product.tags : [],
-        low_stock_threshold: product.lowStockThreshold ?? 3,
-        min_stock_level: product.lowStockThreshold ?? 3,
-        is_active: product.isActive !== false,
-        owner_id: userId,
-        store_id: storeId || undefined,
-      })
-      .select(PRODUCT_DETAIL_SELECT)
+      .insert(full)
+      .select(PRODUCT_INSERT_RETURN_SELECT)
       .single();
+
+    if (error && isSchemaColumnError(error.message)) {
+      console.warn('[products] full insert failed, retrying core columns:', error.message);
+      ({ data, error } = await supabase
+        .from('products')
+        .insert(core)
+        .select(PRODUCT_INSERT_RETURN_SELECT)
+        .single());
+    }
 
     if (error) {
       console.error('[products] insert failed:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: mapProductInsertError(error.message) };
     }
 
     if (data) {
