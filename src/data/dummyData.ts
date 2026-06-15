@@ -1,10 +1,10 @@
 
 import { Product, Category } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
-import { getAuthenticatedUserId } from "@/lib/authSession";
+import { getAuthenticatedUserId } from '@/lib/authSession';
 import { runOncePerKey, type AddProductResult } from "@/lib/productCreateLock";
 import { invalidateStorefrontForOwner } from "@/services/storefrontProductService";
-import { cache, CacheKeys, CacheTTL, dedup } from "@/lib/cache";
+import { cache, CacheKeys, CacheTTL, dedup, clearInflight } from '@/lib/cache';
 import { mapDbProduct } from "@/mappers/productMapper";
 import {
   PRODUCT_DETAIL_SELECT,
@@ -66,6 +66,7 @@ const resolveStoreIdForOwner = async (ownerId: string): Promise<string | null> =
 /** Keep merchant + storefront product caches consistent after mutations */
 const syncProductCachesAfterMutation = (ownerId: string, row?: Record<string, unknown>) => {
   cache.flushByPrefix(`${CacheKeys.products(ownerId)}:p`);
+  clearInflight(`${CacheKeys.products(ownerId)}:p0:s:c`);
   void invalidateStorefrontForOwner(ownerId);
   if (row) appendCachedProduct(ownerId, row);
 };
@@ -73,9 +74,14 @@ const syncProductCachesAfterMutation = (ownerId: string, row?: Record<string, un
 // --- Categories ---
 
 const getAuthOwnerId = async (): Promise<string | null> => {
-  if (_currentOwnerId) return _currentOwnerId;
-  const { data: { user } } = await supabase.auth.getUser();
-  return user?.id ?? null;
+  const sessionOwnerId = await getAuthenticatedUserId();
+  if (sessionOwnerId) {
+    if (_currentOwnerId && _currentOwnerId !== sessionOwnerId) {
+      console.warn('[products] owner context mismatch — using session user');
+    }
+    return sessionOwnerId;
+  }
+  return _currentOwnerId;
 };
 
 export const getCategories = async (force = false): Promise<Category[]> => {
@@ -145,7 +151,10 @@ export const loadProductsPage = async (
 
   const key = `${CacheKeys.products(ownerId)}:p${page}:s${search || ''}:c${category || ''}`;
 
-  if (!force) {
+  if (force) {
+    cache.flushByPrefix(`${CacheKeys.products(ownerId)}:p`);
+    clearInflight(key);
+  } else {
     const cached = cache.get<ProductsPageResult>(key);
     if (cached) return cached;
   }
@@ -273,8 +282,12 @@ export const invalidateCache = (ownerId?: string | null) => {
   invalidateOwnerCache(ownerId);
 };
 
-export const invalidateProducts = () => {
+export const invalidateProducts = async () => {
   cache.flushByPrefix('products:');
+  const ownerId = await getAuthOwnerId();
+  if (ownerId) {
+    clearInflight(`${CacheKeys.products(ownerId)}:p0:s:c`);
+  }
 };
 
 export const invalidateCategories = () => {

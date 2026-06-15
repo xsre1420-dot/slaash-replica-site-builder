@@ -93,6 +93,11 @@ export function dedup<T>(key: string, fn: () => Promise<T>): Promise<T> {
   return promise;
 }
 
+/** Drop an in-flight deduped request so the next call fetches fresh data. */
+export function clearInflight(key: string): void {
+  inflight.delete(key);
+}
+
 export const CacheKeys = {
   products: (ownerId: string) => `products:${ownerId}`,
   productsByStore: (storeId: string) => `products:store:${storeId}`,

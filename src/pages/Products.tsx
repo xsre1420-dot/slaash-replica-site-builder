@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { getCategories, invalidateProducts, loadProducts as reloadProductsData } from "@/services/productService";
 import { useRealtimeProducts } from "@/hooks/useRealtimeProducts";
 import { useScrollPersistence, saveFilters, loadFilters } from "@/hooks/useScrollPersistence";
+import { useStoreHydration } from "@/context/StoreBootstrapContext";
 import { BulkUpload } from "@/components/product-management/BulkUpload";
 
 // Suggestion #8: Lazy load sub-managers
@@ -28,8 +29,10 @@ const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const { isReady, hydrationVersion } = useStoreHydration();
   const [selectedProduct, setSelectedProduct] = useState<{id: string, name: string} | null>(null);
   const [loadedProducts, setLoadedProducts] = useState<Product[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -41,11 +44,26 @@ const Products = () => {
 
   // Realtime subscriptions
   const handleRealtimeUpdate = useCallback(async () => {
-    invalidateProducts();
+    await invalidateProducts();
     const data = await reloadProductsData(true);
     setLoadedProducts(data);
   }, []);
   useRealtimeProducts(handleRealtimeUpdate);
+
+  const reloadCatalog = useCallback(async () => {
+    setCatalogLoading(true);
+    await invalidateProducts();
+    const data = await reloadProductsData(true);
+    setLoadedProducts(data);
+    setCatalogLoading(false);
+    return data;
+  }, []);
+
+  // Initial load + re-hydration after login
+  useEffect(() => {
+    if (!isReady) return;
+    void reloadCatalog();
+  }, [isReady, hydrationVersion, reloadCatalog]);
 
   const productIdParam = searchParams.get('productId');
   const productNameParam = searchParams.get('productName');
@@ -125,15 +143,15 @@ const Products = () => {
     if (!state?.refreshProducts) return;
 
     clearFilters();
-    invalidateProducts();
-    reloadProductsData(true).then((data) => {
-      setLoadedProducts(data);
+    void reloadCatalog().then((data) => {
       if (state.createdProductId && data.some((p) => p.id === state.createdProductId)) {
         toast.success('✓ المنتج ظهر في قائمة المنتجات والمخزون');
       }
     });
     navigate('/products', { replace: true, state: {} });
-  }, [location.state, navigate]);
+  }, [location.state, navigate, reloadCatalog]);
+
+  const filtersActive = categoryFilter !== 'all' || stockFilter !== 'all' || !!debouncedSearch.trim();
 
   const filteredProducts = useMemo(() => loadedProducts.filter(p => {
     const matchesSearch = !debouncedSearch || 
@@ -262,11 +280,7 @@ const Products = () => {
                   </Select>
 
                   <div className="flex gap-2">
-                    <BulkUpload onComplete={async () => {
-                      invalidateProducts();
-                      const data = await reloadProductsData(true);
-                      setLoadedProducts(data);
-                    }} />
+                    <BulkUpload onComplete={() => reloadCatalog()} />
                     <Button
                       variant="outline"
                       size="sm"
@@ -285,9 +299,13 @@ const Products = () => {
             <div className="ds-card p-4 sm:p-6">
               <ProductsList 
                 onProductSelect={handleProductSelect} 
-                onProductsLoaded={setLoadedProducts}
+                products={loadedProducts}
                 filteredProducts={filteredProducts}
+                filtersActive={filtersActive}
+                onProductsChange={setLoadedProducts}
                 onClearFilters={clearFilters}
+                isLoading={!isReady || catalogLoading}
+                reloadToken={hydrationVersion}
               />
             </div>
           </>

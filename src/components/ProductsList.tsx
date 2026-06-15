@@ -2,8 +2,8 @@
 import { Button } from "@/components/ui/button";
 import { Edit, Plus, Star, MessageSquare, GripVertical, Copy, Zap } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useState, useEffect, useCallback } from "react";
-import { loadProducts, addProduct } from "@/services/productService";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { loadProducts, addProduct, invalidateProducts } from "@/services/productService";
 import { useStoreHydration } from "@/context/StoreBootstrapContext";
 import { Product } from "@/types";
 import { isProductLowStock } from '@/lib/productUpdateUtils';
@@ -20,38 +20,67 @@ type DropResult = import("@hello-pangea/dnd").DropResult;
 
 interface ProductsListProps {
   onProductSelect?: (product: {id: string, name: string}) => void;
-  onProductsLoaded?: (products: Product[]) => void;
+  /** Full catalog from parent (preferred — avoids duplicate/stale loads) */
+  products?: Product[];
   filteredProducts?: Product[];
+  filtersActive?: boolean;
+  onProductsChange?: (products: Product[]) => void;
+  /** @deprecated Use onProductsChange */
+  onProductsLoaded?: (products: Product[]) => void;
   onClearFilters?: () => void;
+  reloadToken?: number;
+  isLoading?: boolean;
 }
 
-export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProducts, onClearFilters }: ProductsListProps = {}) => {
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+const applyDisplayOrder = (items: Product[]): Product[] => {
+  const savedOrder = localStorage.getItem('products_display_order');
+  if (!savedOrder) return items;
+  try {
+    const orderMap: Record<string, number> = JSON.parse(savedOrder);
+    return [...items].sort((a, b) => (orderMap[a.id] ?? 999) - (orderMap[b.id] ?? 999));
+  } catch {
+    return items;
+  }
+};
+
+export const ProductsList = ({
+  onProductSelect,
+  products: productsFromParent,
+  filteredProducts,
+  filtersActive = false,
+  onProductsChange,
+  onProductsLoaded,
+  onClearFilters,
+  reloadToken = 0,
+  isLoading: isLoadingFromParent,
+}: ProductsListProps = {}) => {
+  const [localProducts, setLocalProducts] = useState<Product[]>([]);
+  const [isLoadingLocal, setIsLoadingLocal] = useState(!productsFromParent);
   const [isDragEnabled, setIsDragEnabled] = useState(false);
   const [quickEditProduct, setQuickEditProduct] = useState<Product | null>(null);
   const [quickEditOpen, setQuickEditOpen] = useState(false);
   const navigate = useNavigate();
-  const { isReady, hydrationVersion } = useStoreHydration();
+  const { isReady } = useStoreHydration();
+  const managedByParent = productsFromParent !== undefined;
+  const syncProducts = onProductsChange ?? onProductsLoaded;
+  const isLoading = isLoadingFromParent ?? isLoadingLocal;
+
+  const allProducts = useMemo(
+    () => applyDisplayOrder(managedByParent ? (productsFromParent ?? []) : localProducts),
+    [managedByParent, productsFromParent, localProducts]
+  );
 
   useEffect(() => {
-    if (!isReady) return;
+    if (managedByParent || !isReady) return;
 
     const loadProductsData = async () => {
-      setIsLoading(true);
+      setIsLoadingLocal(true);
       try {
-        const productsData = await loadProducts(true);
-        const savedOrder = localStorage.getItem('products_display_order');
-        if (savedOrder) {
-          try {
-            const orderMap: Record<string, number> = JSON.parse(savedOrder);
-            productsData.sort((a, b) => (orderMap[a.id] ?? 999) - (orderMap[b.id] ?? 999));
-          } catch {}
-        }
-        setAllProducts(productsData);
-        onProductsLoaded?.(productsData);
+        const productsData = applyDisplayOrder(await loadProducts(true));
+        setLocalProducts(productsData);
+        syncProducts?.(productsData);
       } finally {
-        setIsLoading(false);
+        setIsLoadingLocal(false);
       }
     };
     loadProductsData();
@@ -65,24 +94,47 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
     };
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [isReady, hydrationVersion, onProductsLoaded]);
+  }, [isReady, reloadToken, managedByParent, syncProducts]);
 
-  // Use filteredProducts if provided, otherwise use all
-  const catalog = filteredProducts ?? allProducts;
+  useEffect(() => {
+    if (managedByParent) setIsLoadingLocal(false);
+  }, [managedByParent, productsFromParent]);
+
+  const catalog = useMemo(() => {
+    if (filtersActive) return filteredProducts ?? [];
+    if (filteredProducts && filteredProducts.length > 0) return filteredProducts;
+    return allProducts;
+  }, [filtersActive, filteredProducts, allProducts]);
 
   const handleDragEnd = useCallback((result: DropResult) => {
     if (!result.destination) return;
     const items = Array.from(allProducts);
     const [reordered] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reordered);
-    setAllProducts(items);
-    onProductsLoaded?.(items);
+    if (managedByParent) {
+      syncProducts?.(items);
+    } else {
+      setLocalProducts(items);
+      syncProducts?.(items);
+    }
 
     const orderMap: Record<string, number> = {};
     items.forEach((item, index) => { orderMap[item.id] = index; });
     localStorage.setItem('products_display_order', JSON.stringify(orderMap));
     toast.success("تم حفظ ترتيب المنتجات", { duration: 1500 });
-  }, [allProducts, onProductsLoaded]);
+  }, [allProducts, managedByParent, syncProducts]);
+
+  const refreshCatalog = useCallback(async () => {
+    await invalidateProducts();
+    const productsData = applyDisplayOrder(await loadProducts(true));
+    if (managedByParent) {
+      syncProducts?.(productsData);
+    } else {
+      setLocalProducts(productsData);
+      syncProducts?.(productsData);
+    }
+    return productsData;
+  }, [managedByParent, syncProducts]);
 
   const handleDuplicate = async (product: Product) => {
     const duplicated: Product = {
@@ -93,10 +145,7 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
     const result = await addProduct(duplicated);
     if (result.success) {
       toast.success("تم تكرار المنتج بنجاح");
-      // Reload products
-      const productsData = await loadProducts(true);
-      setAllProducts(productsData);
-      onProductsLoaded?.(productsData);
+      await refreshCatalog();
     } else {
       toast.error("فشل في تكرار المنتج");
     }
@@ -335,11 +384,7 @@ export const ProductsList = ({ onProductSelect, onProductsLoaded, filteredProduc
         product={quickEditProduct}
         open={quickEditOpen}
         onOpenChange={setQuickEditOpen}
-        onSaved={async () => {
-          const productsData = await loadProducts(true);
-          setAllProducts(productsData);
-          onProductsLoaded?.(productsData);
-        }}
+        onSaved={refreshCatalog}
       />
     </div>
   );
