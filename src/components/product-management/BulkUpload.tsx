@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { syncMerchantProductCatalog } from "@/services/productService";
 
 interface ParsedProduct {
   name: string;
@@ -156,6 +157,7 @@ export const BulkUpload = ({ onComplete }: { onComplete: () => void }) => {
     setUploading(false);
 
     if (success > 0) {
+      syncMerchantProductCatalog(user.id);
       toast.success(`تم رفع ${success} منتج بنجاح`);
       onComplete();
     }

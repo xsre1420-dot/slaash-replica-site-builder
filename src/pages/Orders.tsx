@@ -16,9 +16,9 @@ import OrdersDataTable from '@/components/orders/OrdersDataTable';
 import {
   OrderListFilters,
   filterOrdersList,
-  computeOrderStats,
   formatOrderNumber,
 } from '@/utils/orderWorkflowUtils';
+import { useOrderDashboardStats } from '@/hooks/useOrderDashboardStats';
 import { toast } from 'sonner';
 import { copyStorePublicUrl } from '@/lib/storeUrl';
 import { useScrollPersistence } from '@/hooks/useScrollPersistence';
@@ -39,8 +39,11 @@ const Orders = () => {
 
   const [filters, setFilters] = useState<OrderListFilters>(DEFAULT_ORDER_FILTERS);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [statsRefreshKey, setStatsRefreshKey] = useState(0);
 
   useScrollPersistence('orders');
+
+  const { stats } = useOrderDashboardStats(statsRefreshKey);
 
   const handleRealtimeEvent = useCallback(
     (event: OrderRealtimeEvent) => {
@@ -78,7 +81,10 @@ const Orders = () => {
     [isNewOrder, markOrderKnown, navigate]
   );
 
-  useRealtimeOrders(refetch, handleRealtimeEvent);
+  useRealtimeOrders(() => {
+    refetch();
+    setStatsRefreshKey((k) => k + 1);
+  }, handleRealtimeEvent);
 
   const tabCountBase = useMemo(
     () => filterOrdersList(orders, { ...filters, workflowTab: 'all' }),
@@ -89,8 +95,6 @@ const Orders = () => {
     () => filterOrdersList(orders, filters),
     [orders, filters]
   );
-
-  const stats = useMemo(() => computeOrderStats(orders), [orders]);
 
   const updateFilters = (patch: Partial<OrderListFilters>) => {
     setFilters((prev) => ({ ...prev, ...patch }));
@@ -113,7 +117,7 @@ const Orders = () => {
   const handleCopyStoreLink = async () => {
     if (!user?.id) return;
     try {
-      const url = await copyStorePublicUrl(user.id, user.username);
+      const url = await copyStorePublicUrl(user.id);
       if (!url) {
         toast.error('حدّد رابط المتجر (slug) من الإعدادات أولاً');
         return;
@@ -160,12 +164,6 @@ const Orders = () => {
       />
 
       <div className="ds-page space-y-4">
-        {hasMore && (
-          <p className="text-xs text-center text-muted-foreground bg-muted/30 rounded-xl py-2 px-3">
-            الإحصائيات والتبويبات تعكس {orders.length} طلباً محمّلاً — استخدم «تحميل المزيد» لعرض الأرقام الكاملة
-          </p>
-        )}
-
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <StatCard label="إجمالي الطلبات" value={stats.total} icon={Package} />
           <StatCard

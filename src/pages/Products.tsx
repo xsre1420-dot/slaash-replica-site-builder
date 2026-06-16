@@ -17,6 +17,7 @@ import { exportProductsToCSV } from "@/utils/exportProducts";
 import { toast } from 'sonner';
 import { getCategories, invalidateProducts, loadAllMerchantProducts as reloadProductsData } from "@/services/productService";
 import { getProductLifecycleStatus, matchesLifecycleFilter, type ProductLifecycleFilter } from "@/lib/productLifecycle";
+import type { ProductSaveMode } from "@/lib/productFormLabels";
 import { useAuth } from "@/context/AuthContext";
 import { useRealtimeProducts } from "@/hooks/useRealtimeProducts";
 import { useScrollPersistence, saveFilters, loadFilters } from "@/hooks/useScrollPersistence";
@@ -50,8 +51,9 @@ const Products = () => {
   // Realtime subscriptions
   const handleRealtimeUpdate = useCallback(async () => {
     await invalidateProducts();
-    const data = await reloadProductsData(true);
-    setLoadedProducts(data);
+    const result = await reloadProductsData(true);
+    setLoadedProducts(result.products);
+    setCatalogTotal(result.total);
   }, []);
   useRealtimeProducts(handleRealtimeUpdate);
 
@@ -157,7 +159,7 @@ const Products = () => {
     published: loadedProducts.filter((p) => getProductLifecycleStatus(p) === 'published').length,
     drafts: loadedProducts.filter((p) => getProductLifecycleStatus(p) === 'draft').length,
     archived: loadedProducts.filter((p) => getProductLifecycleStatus(p) === 'archived').length,
-    inStock: loadedProducts.filter(p => (p.stockQuantity ?? 1) > 5).length,
+    inStock: loadedProducts.filter((p) => !isProductLowStock(p) && (p.stockQuantity ?? 0) > 0).length,
     lowStock: loadedProducts.filter((p) => isProductLowStock(p)).length,
     outOfStock: loadedProducts.filter(p => p.stockQuantity !== undefined && p.stockQuantity === 0).length,
     totalValue: loadedProducts.reduce((sum, p) => sum + p.price * (p.stockQuantity ?? 1), 0),
@@ -203,7 +205,7 @@ const Products = () => {
     const matchesPublish = matchesLifecycleFilter(p, publishFilter);
     
     let matchesStock = true;
-    if (stockFilter === "in_stock") matchesStock = (p.stockQuantity ?? 1) > 5;
+    if (stockFilter === "in_stock") matchesStock = !isProductLowStock(p) && (p.stockQuantity ?? 0) > 0;
     else if (stockFilter === "low") matchesStock = isProductLowStock(p);
     else if (stockFilter === "out") matchesStock = p.stockQuantity !== undefined && p.stockQuantity === 0;
 

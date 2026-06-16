@@ -16,8 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { Product, ProductVariant } from "@/types";
 import { scaleVariantsToTotal } from "@/utils/inventoryUtils";
-import { invalidateStorefrontForOwner } from "@/services/storefrontProductService";
-import { loadAllMerchantProducts, invalidateProducts } from "@/services/productService";
+import { loadAllMerchantProducts, syncMerchantProductCatalog, invalidateProducts } from "@/services/productService";
 import { getProductLifecycleStatus, lifecycleStatusLabel } from "@/lib/productLifecycle";
 import { useRealtimeProducts } from '@/hooks/useRealtimeProducts';
 import { useStoreHydration } from "@/context/StoreBootstrapContext";
@@ -134,7 +133,7 @@ function Inventory() {
       }
 
       toast.success("تم تحديث المخزون بنجاح");
-      void invalidateStorefrontForOwner(user.id);
+      syncMerchantProductCatalog(user.id);
       await reloadInventory();
       setDialogOpen(false);
       setSelectedProduct(null);

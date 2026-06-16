@@ -17,22 +17,24 @@ import {
   authSubmitClass,
   authToggleButtonClass,
 } from '@/components/auth/authFormStyles';
-import { clearAuthUrlParams, parseAuthUrlError, validateEmail } from '@/lib/authUtils';
+import { clearAuthUrlParams, parseAuthUrlError, validateEmail, sanitizeInternalRedirect } from '@/lib/authUtils';
 import { env } from '@/lib/env';
 
-const sanitizeAuthPageUrl = () => {
-  if (typeof window === 'undefined') return;
-  if (window.location.pathname.startsWith('/auth/callback')) return;
+const redirectAuthTokensToCallback = (navigate: (path: string, opts?: { replace?: boolean }) => void) => {
+  if (typeof window === 'undefined') return false;
+  if (window.location.pathname.startsWith('/auth/callback')) return false;
   const search = new URLSearchParams(window.location.search);
-  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-  const isAuthCallback =
+  const hash = window.location.hash || '';
+  const hasAuthPayload =
     search.has('code') ||
-    hash.has('access_token') ||
-    hash.has('error') ||
+    hash.includes('access_token') ||
+    hash.includes('error') ||
     search.has('error');
-  if (isAuthCallback && !window.location.pathname.includes('reset-password')) {
-    clearAuthUrlParams();
+  if (hasAuthPayload && !window.location.pathname.includes('reset-password')) {
+    navigate(`/auth/callback${window.location.search}${hash}`, { replace: true });
+    return true;
   }
+  return false;
 };
 
 const Login = () => {
@@ -48,11 +50,11 @@ const Login = () => {
   const { login, user, loading, resendVerificationEmail } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: string } | null)?.from || '/builder';
+  const from = sanitizeInternalRedirect((location.state as { from?: string } | null)?.from);
   const { toast } = useToast();
 
   useEffect(() => {
-    sanitizeAuthPageUrl();
+    if (redirectAuthTokensToCallback(navigate)) return;
     const urlError = parseAuthUrlError();
     if (urlError) {
       setError(mapAuthUrlError(urlError));

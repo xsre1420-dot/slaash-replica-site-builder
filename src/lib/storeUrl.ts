@@ -1,7 +1,6 @@
-import { supabase } from '@/integrations/supabase/client';export async function getStorePublicSlug(
-  ownerId: string,
-  fallbackUsername?: string
-): Promise<string | null> {
+import { supabase } from '@/integrations/supabase/client';
+
+export async function getStorePublicSlug(ownerId: string): Promise<string | null> {
   const { data } = await supabase
     .from('store_settings')
     .select('store_slug')
@@ -13,8 +12,15 @@ import { supabase } from '@/integrations/supabase/client';export async function 
     return slug;
   }
 
-  if (fallbackUsername) {
-    return fallbackUsername.trim().toLowerCase();
+  const { data: storeRow } = await supabase
+    .from('stores')
+    .select('store_slug')
+    .eq('user_id', ownerId)
+    .maybeSingle();
+
+  const storeSlug = storeRow?.store_slug?.trim().toLowerCase();
+  if (storeSlug && /^[a-z0-9-]+$/.test(storeSlug)) {
+    return storeSlug;
   }
 
   return null;
@@ -24,8 +30,8 @@ export function buildStorePublicUrl(slug: string): string {
   return `${window.location.origin}/store/${slug}`;
 }
 
-export async function copyStorePublicUrl(ownerId: string, fallbackUsername?: string): Promise<string | null> {
-  const slug = await getStorePublicSlug(ownerId, fallbackUsername);
+export async function copyStorePublicUrl(ownerId: string): Promise<string | null> {
+  const slug = await getStorePublicSlug(ownerId);
   if (!slug) return null;
   const url = buildStorePublicUrl(slug);
   await navigator.clipboard.writeText(url);

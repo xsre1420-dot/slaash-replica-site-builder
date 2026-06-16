@@ -62,7 +62,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const lastUserIdRef = useRef<string | null>(null);
 
   const setUserAndOwner = (u: User | null) => {
+    const prevId = lastUserIdRef.current;
+    if (u?.id && prevId && u.id !== prevId) {
+      invalidateOwnerCache(prevId);
+      setCurrentStore(null);
+    }
     if (u?.id) lastUserIdRef.current = u.id;
+    else lastUserIdRef.current = null;
     setUser(u);
     setCurrentOwner(u?.id || null);
     if (!u) setCurrentStore(null);
@@ -123,7 +129,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             email: session.user.email,
           });
           void loadProfile(session.user.id, meta, session.user.email);
-        } else if (event === 'SIGNED_OUT') {
+        } else {
           const prevId = lastUserIdRef.current;
           setUserAndOwner(null);
           invalidateOwnerCache(prevId);

@@ -3,6 +3,8 @@ import { Order, CartItem } from '@/types';
 import { mapDbOrder } from '@/mappers/orderMapper';
 import { clearCheckoutIdempotencyKey, getOrCreateIdempotencyKey } from '@/utils/checkoutSession';
 import { mapOrderError } from '@/utils/orderErrors';
+import { computeOrderStats } from '@/utils/orderWorkflowUtils';
+import { cache, CacheKeys, CacheTTL, dedup } from '@/lib/cache';
 import { instrumentAsync, instrumentQuery, logger, metrics } from '@/lib/observability';
 import type { MarketingAttribution } from '@/lib/attribution';
 
@@ -125,6 +127,52 @@ export const updateOrderStatus = async (
 
   metrics.increment('orders.updateStatus.success', { status });
   return { success: true };
+};
+
+export const ORDERS_STATS_CAP = 5000;
+
+export const ORDER_STATS_SELECT =
+  'id, status, total_amount, payment_status, delivery_status, created_at';
+
+export type OrderDashboardStats = ReturnType<typeof computeOrderStats>;
+
+/** Aggregate order stats across the full store (not paginated list). */
+export const fetchOrderStatsSummary = async (ownerId: string): Promise<OrderDashboardStats> => {
+  const cacheKey = CacheKeys.ordersStatsSummary(ownerId);
+  const cached = cache.get<OrderDashboardStats>(cacheKey);
+  if (cached) return cached;
+
+  return dedup(`orders-stats-${ownerId}`, async () => {
+    const stats = await instrumentAsync('orders.statsSummary', async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(ORDER_STATS_SELECT)
+        .eq('owner_id', ownerId)
+        .order('created_at', { ascending: false })
+        .limit(ORDERS_STATS_CAP);
+
+      if (error) {
+        logger.error('orders.statsSummary.failed', { ownerId, message: error.message });
+        throw new Error(mapOrderError(error.message));
+      }
+
+      const orders: Order[] = (data ?? []).map((row) => ({
+        id: String(row.id),
+        status: row.status as Order['status'],
+        total: Number(row.total_amount ?? 0),
+        paymentStatus: row.payment_status ?? undefined,
+        deliveryStatus: row.delivery_status ?? undefined,
+        date: String(row.created_at),
+        customerInfo: { name: '', phone: '', address: '' },
+        items: [],
+      }));
+
+      return computeOrderStats(orders);
+    }, { ownerId });
+
+    cache.set(cacheKey, stats, CacheTTL.SHORT, CacheTTL.STALE);
+    return stats;
+  });
 };
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

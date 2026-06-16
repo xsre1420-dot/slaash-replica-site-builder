@@ -29,6 +29,9 @@ let _currentOwnerId: string | null = null;
 let _currentStoreId: string | null = null;
 
 export const setCurrentOwner = (ownerId: string | null) => {
+  if (ownerId !== _currentOwnerId) {
+    _currentStoreId = null;
+  }
   _currentOwnerId = ownerId;
 };
 
@@ -41,7 +44,7 @@ export const getCurrentStoreId = (): string | null => _currentStoreId;
 const getOwnerId = (): string | null => _currentOwnerId;
 
 const resolveStoreIdForOwner = async (ownerId: string): Promise<string | null> => {
-  if (_currentStoreId) return _currentStoreId;
+  if (_currentStoreId && _currentOwnerId === ownerId) return _currentStoreId;
 
   try {
     const { data, error } = await (supabase as any).rpc('get_store_for_user', { p_user_id: ownerId });
@@ -68,13 +71,15 @@ const resolveStoreIdForOwner = async (ownerId: string): Promise<string | null> =
 };
 
 /** Keep merchant + storefront product caches consistent after mutations */
-const syncProductCachesAfterMutation = (ownerId: string, row?: Record<string, unknown>) => {
+export const syncMerchantProductCatalog = (ownerId: string, row?: Record<string, unknown>) => {
   cache.flushByPrefix(`${CacheKeys.products(ownerId)}:p`);
   clearInflight(`${CacheKeys.products(ownerId)}:p0:s:c`);
   cache.flushByPrefix(`stats:${ownerId}:`);
   void invalidateStorefrontForOwner(ownerId);
   if (row) appendCachedProduct(ownerId, row);
 };
+
+const syncProductCachesAfterMutation = syncMerchantProductCatalog;
 
 // --- Categories ---
 
@@ -266,8 +271,16 @@ export const loadAllMerchantProducts = async (
   let total = 0;
   let hasMore = true;
 
+  if (force) {
+    const ownerId = await getAuthOwnerId();
+    if (ownerId) {
+      cache.flushByPrefix(`${CacheKeys.products(ownerId)}:p`);
+      clearInflight(`${CacheKeys.products(ownerId)}:p0:s:c`);
+    }
+  }
+
   while (hasMore && page < 100) {
-    const result = await loadProductsPage(page, pageSize, force && page === 0);
+    const result = await loadProductsPage(page, pageSize, force);
     combined = page === 0 ? result.products : [...combined, ...result.products];
     total = result.total;
     hasMore = result.hasMore;
@@ -505,8 +518,7 @@ export const deleteProduct = async (productId: string): Promise<{ success: boole
     if (error) return { success: false, error: error.message };
 
     removeCachedProduct(user.id, productId);
-    cache.flushByPrefix(`${CacheKeys.products(user.id)}:p`);
-    cache.flushByPrefix('tenant-products:');
+    syncMerchantProductCatalog(user.id);
     products = cache.get<Product[]>(CacheKeys.products(user.id)) || [];
 
     return { success: true };

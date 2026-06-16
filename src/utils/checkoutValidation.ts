@@ -9,6 +9,7 @@ import {
   resolveStoreSlugByOwnerId,
 } from '@/services/storefrontProductService';
 import { getServerUnitPrice } from '@/utils/inventoryUtils';
+import { isStorefrontVisible } from '@/lib/productLifecycle';
 
 export type FetchFreshProductsOptions = {
   applyDiscount?: boolean;
@@ -56,22 +57,26 @@ export async function fetchFreshProducts(
   }
 
   const missingAfterSlug = uniqueIds.filter((id) => !map.has(id));
-  if (missingAfterSlug.length > 0 && ownerId) {
+
+  if (ownerId && missingAfterSlug.length > 0) {
     const direct = await fetchOwnerActiveProductsByIds(ownerId, missingAfterSlug);
     for (const [id, product] of direct) {
       map.set(id, product);
     }
   }
 
-  if (!slug && map.size === 0 && ownerId) {
-    map = await fetchOwnerActiveProductsByIds(ownerId, uniqueIds);
+  if (!slug && ownerId) {
+    const direct = await fetchOwnerActiveProductsByIds(ownerId, uniqueIds);
+    for (const [id, product] of direct) {
+      map.set(id, product);
+    }
   }
 
-  if (!slug && map.size === 0) {
+  if (!slug && map.size === 0 && ownerId) {
     const { data, error } = await supabase
       .from('products')
       .select(
-        'id, name, description, category, price, image_url, additional_images, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, original_price, is_active'
+        'id, name, description, category, price, image_url, additional_images, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, original_price, is_active, archived_at'
       )
       .eq('owner_id', ownerId)
       .in('id', uniqueIds)
@@ -79,39 +84,17 @@ export async function fetchFreshProducts(
 
     if (!error && data) {
       map = new Map(
-        data.map((row) => [
-          String(row.id),
-          mapDbProduct(row as Record<string, unknown>, { applyDiscount }),
-        ])
+        data
+          .map((row) => mapDbProduct(row as Record<string, unknown>, { applyDiscount }))
+          .filter((p) => !p.archivedAt)
+          .map((p) => [p.id, p] as const)
       );
-    }
-  }
-
-  if (ownerId) {
-    const direct = await fetchOwnerActiveProductsByIds(ownerId, uniqueIds);
-    for (const [id, directProduct] of direct) {
-      const current = map.get(id);
-      if (current) {
-        map.set(id, {
-          ...current,
-          stockQuantity: directProduct.stockQuantity,
-          variants: directProduct.variants ?? current.variants,
-          sizes: directProduct.sizes?.length ? directProduct.sizes : current.sizes,
-          colors: directProduct.colors?.length ? directProduct.colors : current.colors,
-          price: directProduct.price,
-          originalPrice: directProduct.originalPrice ?? current.originalPrice,
-        });
-      } else {
-        map.set(id, directProduct);
-      }
     }
   }
 
   if (options.cartFallback) {
     for (const id of uniqueIds) {
-      if (!map.has(id) && options.cartFallback.has(id)) {
-        map.set(id, options.cartFallback.get(id)!);
-      } else if (map.has(id) && options.cartFallback.has(id)) {
+      if (map.has(id) && options.cartFallback.has(id)) {
         map.set(id, mergeProductStock(map.get(id)!, options.cartFallback.get(id)!));
       }
     }
@@ -184,14 +167,15 @@ export function validateAndRefreshCart(
     let fresh = freshProducts.get(item.product.id);
 
     if (!fresh) {
-      if (getAvailableQty(item.product, item.selectedSize, item.selectedColor) > 0) {
-        fresh = item.product;
-      } else {
-        errors.push(`المنتج "${item.product.name}" لم يعد متوفراً`);
-        continue;
-      }
-    } else {
-      fresh = mergeProductStock(fresh, item.product);
+      errors.push(`المنتج "${item.product.name}" لم يعد متوفراً`);
+      continue;
+    }
+
+    fresh = mergeProductStock(fresh, item.product);
+
+    if (!isStorefrontVisible(fresh)) {
+      errors.push(`المنتج "${fresh.name}" لم يعد متوفراً`);
+      continue;
     }
 
     const stockCheck = validateCheckoutItemStock(item, fresh);
@@ -201,11 +185,6 @@ export function validateAndRefreshCart(
     }
 
     const available = getAvailableQty(fresh, item.selectedSize, item.selectedColor);
-    if (available <= 0) {
-      errors.push(`"${fresh.name}" غير متوفر في المخزون`);
-      continue;
-    }
-
     const qty = Math.min(item.quantity, available);
     if (qty < item.quantity) {
       errors.push(`تم تعديل كمية "${fresh.name}" إلى ${qty} (المتوفر: ${available})`);

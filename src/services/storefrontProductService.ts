@@ -9,6 +9,7 @@ import {
   isSchemaColumnError,
 } from '@/lib/productUpdateUtils';
 import { cache } from '@/lib/cache';
+import { isStorefrontVisible } from '@/lib/productLifecycle';
 
 const MINIMAL_STOREFRONT_SELECT =
   'id, name, description, category, price, image_url, additional_images, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, original_price, is_active, created_at, updated_at';
@@ -161,7 +162,7 @@ async function queryActiveProductsByOwner(
 
   return (data ?? [])
     .map((row) => safeMapStorefrontProduct(row))
-    .filter((p): p is Product => p != null);
+    .filter((p): p is Product => p != null && isStorefrontVisible(p));
 }
 
 /** SECURITY DEFINER RPC — works for anonymous customers (bypasses RLS). */
@@ -178,7 +179,7 @@ async function fetchProductsViaSlugRpc(slug: string): Promise<Product[]> {
 
     return ((data as Record<string, unknown>[]) ?? [])
       .map((row) => safeMapStorefrontProduct(row))
-      .filter((p): p is Product => p != null);
+      .filter((p): p is Product => p != null && isStorefrontVisible(p));
   } catch (err) {
     console.warn('[storefront] get_store_products_by_slug unavailable:', err);
     return [];
@@ -189,7 +190,7 @@ function applyClientFilters(
   products: Product[],
   options: { category?: string; search?: string; limit?: number }
 ): Product[] {
-  let filtered = products;
+  let filtered = products.filter(isStorefrontVisible);
 
   if (options.category?.trim()) {
     filtered = filtered.filter((p) => p.category === options.category!.trim());

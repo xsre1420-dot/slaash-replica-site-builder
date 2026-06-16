@@ -60,10 +60,11 @@ export const getAvailableQty = (
 
   if (normalizedSize || normalizedColor) {
     const variant = findVariant(product, normalizedSize, normalizedColor);
-    if (variant && (variant.quantity ?? 0) > 0) {
-      return capByAggregate(variant.quantity ?? 0, aggregate);
+    const variantQty = variant?.quantity ?? 0;
+    if (variantQty > 0) {
+      if (aggregate === 0) return variantQty;
+      return capByAggregate(variantQty, aggregate);
     }
-    // Variant grid out of sync — trust aggregate stock when set
     if (aggregate > 0 && aggregate !== Number.MAX_SAFE_INTEGER) {
       return aggregate;
     }
@@ -72,6 +73,7 @@ export const getAvailableQty = (
 
   const variantSum = product.variants.reduce((sum, v) => sum + (v.quantity || 0), 0);
   if (variantSum > 0) {
+    if (aggregate === 0) return variantSum;
     return capByAggregate(variantSum, aggregate);
   }
 

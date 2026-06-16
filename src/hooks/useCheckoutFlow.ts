@@ -187,16 +187,11 @@ export const useCheckoutFlow = () => {
   const storeHomePath = isTenantMode ? `/store/${storeSlug}` : "/preview";
   const { trackInitiateCheckout, trackPurchase } = useMetaPixel();
   const checkoutTrackedRef = useRef(false);
-  const cartPriceSyncedRef = useRef(false);
   const submitLockRef = useRef(false);
+  const cartFingerprint = buildCartFingerprint(cartItems);
 
   useEffect(() => {
-    cartPriceSyncedRef.current = false;
-  }, [ownerId]);
-
-  useEffect(() => {
-    if (!ownerId || cartItems.length === 0 || cartPriceSyncedRef.current) return;
-    cartPriceSyncedRef.current = true;
+    if (!ownerId || cartItems.length === 0) return;
 
     let cancelled = false;
     const cartFallback = new Map(cartItems.map((i) => [i.product.id, i.product]));
@@ -215,7 +210,12 @@ export const useCheckoutFlow = () => {
         if (validation.updatedItems.length > 0) {
           replaceCartItems(validation.updatedItems);
         }
-        validation.errors.forEach((msg) => toast.warning(msg));
+        const fatals = validation.errors.filter(isFatalCheckoutError);
+        if (fatals.length > 0) {
+          toast.error(fatals.join(' · '));
+        } else {
+          validation.errors.forEach((msg) => toast.warning(msg));
+        }
       } catch {
         if (!cancelled) {
           toast.warning("تعذر تحديث أسعار السلة. سيتم التحقق عند تأكيد الطلب.");
@@ -225,7 +225,7 @@ export const useCheckoutFlow = () => {
 
     void syncCartPrices();
     return () => { cancelled = true; };
-  }, [ownerId, cartItems, replaceCartItems, checkoutStoreSlug]);
+  }, [ownerId, cartFingerprint, checkoutStoreSlug, replaceCartItems]);
 
   useEffect(() => {
     if (cartItems.length === 0 || checkoutTrackedRef.current) return;

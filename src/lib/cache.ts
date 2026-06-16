@@ -106,6 +106,7 @@ export const CacheKeys = {
   storeSettings: (ownerId: string) => `store_settings:${ownerId}`,
   store: (userId: string) => `store:${userId}`,
   orders: (ownerId: string, page: number) => `orders:${ownerId}:${page}`,
+  ordersStatsSummary: (ownerId: string) => `orders:stats:${ownerId}`,
   statistics: (ownerId: string, range: string) => `stats:${ownerId}:${range}`,
   tenantMeta: (slug: string) => `tenant-meta:${slug}`,
   tenantProducts: (slug: string, pageKey: string) => `tenant-products:${slug}:${pageKey}`,
@@ -121,6 +122,7 @@ export const CacheTTL = {
 /** Invalidate cached merchant data for a single tenant (avoids cross-tenant flush). */
 export function flushOwnerCache(ownerId: string): void {
   cache.flushByPrefix(`orders:${ownerId}:`);
+  cache.del(CacheKeys.ordersStatsSummary(ownerId));
   cache.flushByPrefix(`stats:${ownerId}:`);
   cache.del(CacheKeys.products(ownerId));
   cache.del(CacheKeys.categories(ownerId));

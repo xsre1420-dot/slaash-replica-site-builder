@@ -29,26 +29,28 @@ export const useOrders = () => {
     const cacheKey = CacheKeys.orders(ownerId, page);
     const dedupKey = `fetch-orders-${ownerId}-${page}`;
 
+    const loadPage = async () => {
+      const fresh = await fetchOrdersPage(ownerId, page, ORDERS_PER_PAGE);
+      cache.set(cacheKey, fresh, CacheTTL.SHORT, CacheTTL.STALE);
+      return fresh;
+    };
+
     if (!append) {
-      const cached = cache.get<Order[]>(cacheKey);
+      const cached = cache.get<Order[]>(cacheKey, loadPage);
       if (cached) {
         setOrders(cached);
         cached.forEach((o) => knownOrderIdsRef.current.add(o.id));
         setHasMore(cached.length === ORDERS_PER_PAGE);
         pageRef.current = page;
         setLoading(false);
-      } else {
-        setLoading(true);
+        return;
       }
+      setLoading(true);
     } else {
       setLoading(true);
     }
 
-    const mapped = await dedup(dedupKey, () =>
-      fetchOrdersPage(ownerId, page, ORDERS_PER_PAGE)
-    );
-
-    cache.set(cacheKey, mapped, CacheTTL.SHORT, CacheTTL.STALE);
+    const mapped = await dedup(dedupKey, loadPage);
 
     if (append) {
       setOrders((prev) => [...prev, ...mapped]);

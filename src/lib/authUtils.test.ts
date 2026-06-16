@@ -6,6 +6,7 @@ import {
   validateEmail,
   mapAuthError,
   getPasswordStrength,
+  sanitizeInternalRedirect,
 } from './authUtils';
 
 describe('authUtils', () => {
@@ -38,5 +39,12 @@ describe('authUtils', () => {
   it('scores password strength', () => {
     expect(getPasswordStrength('')).toBe(0);
     expect(getPasswordStrength('Password1!')).toBeGreaterThan(2);
+  });
+
+  it('sanitizes internal redirects', () => {
+    expect(sanitizeInternalRedirect('/orders')).toBe('/orders');
+    expect(sanitizeInternalRedirect('//evil.com')).toBe('/builder');
+    expect(sanitizeInternalRedirect('https://evil.com')).toBe('/builder');
+    expect(sanitizeInternalRedirect(undefined)).toBe('/builder');
   });
 });

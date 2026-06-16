@@ -93,7 +93,7 @@ const Statistics = () => {
   const handleCopyStoreLink = async () => {
     if (!user?.id) return;
     try {
-      const url = await copyStorePublicUrl(user.id, user.username);
+      const url = await copyStorePublicUrl(user.id);
       if (!url) {
         toast.error("لم يتم العثور على رابط المتجر — حدّد slug في الإعدادات");
         return;

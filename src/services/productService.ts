@@ -22,6 +22,7 @@ export {
   appendCachedProduct,
   patchCachedProduct,
   removeCachedProduct,
+  syncMerchantProductCatalog,
   addProduct,
   updateProduct,
   deleteProduct,

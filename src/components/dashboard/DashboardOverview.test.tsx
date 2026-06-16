@@ -19,6 +19,20 @@ vi.mock('@/hooks/useOrders', () => ({
   }),
 }));
 
+vi.mock('@/hooks/useOrderDashboardStats', () => ({
+  useOrderDashboardStats: () => ({
+    stats: {
+      total: 1,
+      newOrders: 1,
+      pendingFulfillment: 1,
+      delivered: 0,
+      revenue: 0,
+    },
+    statsLoading: false,
+    reloadStats: vi.fn(),
+  }),
+}));
+
 vi.mock('@/hooks/useRealtimeOrders', () => ({
   useRealtimeOrders: vi.fn(),
 }));

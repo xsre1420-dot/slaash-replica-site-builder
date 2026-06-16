@@ -6,11 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { Product } from "@/types";
-import { invalidateProducts } from "@/services/productService";
-import { invalidateStorefrontForOwner } from "@/services/storefrontProductService";
+import { updateProduct, fetchProductById } from "@/services/productService";
 import { scaleVariantsToTotal } from "@/utils/inventoryUtils";
+import { mapProductInsertError } from "@/lib/productUpdateUtils";
 
 interface QuickEditDialogProps {
   product: Product | null;
@@ -46,34 +45,31 @@ export const QuickEditDialog = ({ product, open, onOpenChange, onSaved }: QuickE
     }
 
     setSaving(true);
-    const stockQty = parseInt(stock) || 0;
-    const updatePayload: Record<string, unknown> = {
+    const stockQty = parseInt(stock, 10) || 0;
+    const latest = (await fetchProductById(product.id)) ?? product;
+
+    const patch: Partial<Product> = {
       name: name.trim(),
       price: priceNum,
-      stock_quantity: stockQty,
-      cost: cost ? parseFloat(cost) || null : null,
+      stockQuantity: stockQty,
+      cost: cost ? parseFloat(cost) || undefined : undefined,
     };
 
-    if (product.variants?.length) {
-      updatePayload.variants = scaleVariantsToTotal(product.variants, stockQty);
+    if (latest.variants?.length) {
+      patch.variants = scaleVariantsToTotal(latest.variants, stockQty);
     }
 
-    const { error } = await supabase
-      .from("products")
-      .update(updatePayload)
-      .eq("id", product.id)
-      .eq("owner_id", user.id);
-
+    const result = await updateProduct(product.id, patch);
     setSaving(false);
-    if (error) {
-      toast.error("فشل في حفظ التغييرات");
-    } else {
-      invalidateProducts();
-      void invalidateStorefrontForOwner(user.id);
-      toast.success("تم حفظ التغييرات");
-      onSaved();
-      onOpenChange(false);
+
+    if (!result.success) {
+      toast.error(mapProductInsertError(result.error || "فشل في حفظ التغييرات"));
+      return;
     }
+
+    toast.success("تم حفظ التغييرات");
+    onSaved();
+    onOpenChange(false);
   };
 
   return (

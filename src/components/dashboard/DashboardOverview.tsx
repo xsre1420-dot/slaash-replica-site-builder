@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import { format } from 'date-fns';
 import {
   Package,
@@ -16,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import StatCard from '@/components/ui/StatCard';
 import { useOrders } from '@/hooks/useOrders';
+import { useOrderDashboardStats } from '@/hooks/useOrderDashboardStats';
 import { useRealtimeOrders } from '@/hooks/useRealtimeOrders';
 import { getProductsSync } from '@/services/productService';
 import { cn } from '@/lib/utils';
@@ -28,14 +30,18 @@ const statusConfig = {
 
 const DashboardOverview = () => {
   const { orders, loading, refetch } = useOrders();
-  useRealtimeOrders(refetch);
+  const [statsRefreshKey, setStatsRefreshKey] = useState(0);
+  const { stats } = useOrderDashboardStats(statsRefreshKey);
+
+  useRealtimeOrders(() => {
+    refetch();
+    setStatsRefreshKey((k) => k + 1);
+  });
 
   const productCount = getProductsSync().length;
-  const pendingCount = orders.filter((o) => o.status === 'pending').length;
-  const completedCount = orders.filter((o) => o.status === 'completed').length;
-  const revenue = orders
-    .filter((o) => o.status === 'completed')
-    .reduce((sum, o) => sum + o.total, 0);
+  const pendingCount = stats.newOrders;
+  const completedCount = stats.delivered;
+  const revenue = stats.revenue;
   const recentOrders = [...orders]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5);

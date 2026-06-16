@@ -9,6 +9,14 @@ export const getAuthCallbackUrl = (): string => {
   return `${window.location.origin}${AUTH_CALLBACK_PATH}`;
 };
 
+/** Only allow same-origin relative paths (blocks open redirects). */
+export const sanitizeInternalRedirect = (path: string | undefined | null, fallback = '/builder'): string => {
+  if (!path || typeof path !== 'string') return fallback;
+  const trimmed = path.trim();
+  if (!/^\/(?!\/)[\w\-./?=&%]*$/.test(trimmed)) return fallback;
+  return trimmed;
+};
+
 /** Structured auth error logging (always logged; dev shows full detail) */
 export const logAuthFailure = (operation: string, detail: unknown): void => {
   const payload =

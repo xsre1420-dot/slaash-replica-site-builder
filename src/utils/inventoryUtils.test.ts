@@ -47,6 +47,14 @@ describe('inventoryUtils', () => {
     expect(getAvailableQty(product, 'M')).toBe(0);
   });
 
+  it('trusts variant qty when aggregate stock_quantity is zero (drift)', () => {
+    const product = baseProduct({
+      stockQuantity: 0,
+      variants: [{ size: 'M', quantity: 12 }],
+    });
+    expect(getAvailableQty(product, 'M')).toBe(12);
+  });
+
   it('computes percentage discount when active', () => {
     const product = baseProduct({
       price: 1000,

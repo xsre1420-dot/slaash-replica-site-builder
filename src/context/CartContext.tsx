@@ -1,7 +1,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from "react";
 import { CartItem, Product } from "@/types";
-import { getAvailableQty } from "@/utils/inventoryUtils";
+import { getAvailableQty, getServerUnitPrice } from "@/utils/inventoryUtils";
 import { toast } from "sonner";
 
 interface CartContextType {
@@ -216,7 +216,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const cartTotal = useMemo(
-    () => cartItems.reduce((total, item) => total + item.product.price * item.quantity, 0),
+    () =>
+      cartItems.reduce(
+        (total, item) => total + getServerUnitPrice(item.product) * item.quantity,
+        0
+      ),
     [cartItems]
   );
 

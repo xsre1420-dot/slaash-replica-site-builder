@@ -46,7 +46,7 @@ export default function Builder() {
   const handleCopyLink = async () => {
     if (!user?.id) return;
     try {
-      const url = await copyStorePublicUrl(user.id, user.username);
+      const url = await copyStorePublicUrl(user.id);
       if (!url) {
         toast.error("حدّد رابط المتجر (slug) من الإعدادات أولاً");
         return;

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { AuthPageShell, AuthLoadingScreen } from "@/components/auth/AuthPageShell";
@@ -62,8 +63,9 @@ const ResetPassword = () => {
     if (result.error) {
       setError(result.error);
     } else {
-      toast({ title: "تم بنجاح", description: "يمكنك تسجيل الدخول بكلمة المرور الجديدة" });
-      navigate("/login", { replace: true });
+      await supabase.auth.signOut();
+      toast({ title: "تم بنجاح", description: "سجّل الدخول بكلمة المرور الجديدة" });
+      navigate("/login?reset=success", { replace: true });
     }
   };
 
