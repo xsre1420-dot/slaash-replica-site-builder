@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { useStore } from '@/context/StoreContext';
 import { useAuth } from '@/context/AuthContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import PlatformDbStatusBanner from '@/components/platform/PlatformDbStatusBanner';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -363,7 +364,10 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
             <ThemeToggle />
           </header>
 
-          <main id="main-content" className="flex-1 pb-20 lg:pb-0">{children}</main>
+          <main id="main-content" className="flex-1 pb-20 lg:pb-0">
+            <PlatformDbStatusBanner />
+            {children}
+          </main>
 
           {/* Mobile bottom nav */}
           <nav

@@ -15,6 +15,7 @@ import {
 } from '@/services/storeService';
 import { fetchOrdersPage, ORDERS_PER_PAGE } from '@/services/orderService';
 import { logger } from '@/lib/observability';
+import { fetchPlatformHealth, invalidatePlatformHealthCache } from '@/services/platformHealthService';
 
 export interface HydrationResult {
   userId: string;
@@ -27,6 +28,16 @@ export interface HydrationResult {
 
 export const hydrateMerchantStore = async (userId: string): Promise<HydrationResult> => {
   logger.info('merchant.hydrate.start', { userId });
+
+  invalidatePlatformHealthCache();
+  const health = await fetchPlatformHealth(true);
+  if (!health.ok) {
+    logger.warn('platform.health.degraded', {
+      userId,
+      message: health.message,
+      missing: health.missing,
+    });
+  }
 
   // Try combined RPC first (populates cache when migration applied)
   await bootstrapOwnerStore(userId);

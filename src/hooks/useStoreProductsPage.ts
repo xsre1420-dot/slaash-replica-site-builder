@@ -118,8 +118,17 @@ export const useStoreProductsPage = (
       refetch();
     };
 
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== 'storefront:invalidate') return;
+      refetch();
+    };
+
     window.addEventListener(STOREFRONT_PRODUCTS_CHANGED, onProductsChanged);
-    return () => window.removeEventListener(STOREFRONT_PRODUCTS_CHANGED, onProductsChanged);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener(STOREFRONT_PRODUCTS_CHANGED, onProductsChanged);
+      window.removeEventListener('storage', onStorage);
+    };
   }, [enabled, refetch]);
 
   return {

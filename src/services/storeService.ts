@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { cache, CacheKeys, CacheTTL } from '@/lib/cache';
+import { isSchemaColumnError } from '@/lib/productUpdateUtils';
 import { mapDbProduct } from '@/mappers/productMapper';
 import { defaultStoreSettings, StoreProfile, StoreSettings } from '@/types/store';
 import { DeliveryPrice } from '@/utils/deliveryUtils';
@@ -7,6 +8,9 @@ import { logger } from '@/lib/observability';
 
 const STORE_SETTINGS_SELECT =
   'store_name, store_logo, store_governorate, menu_background_color, menu_text_color, menu_accent_color, store_font, banner_images, primary_banner_index, delivery_prices, payment_methods, store_slug, return_policy, privacy_policy, terms_conditions, whatsapp_number, whatsapp_welcome_message, whatsapp_order_confirmation';
+
+const STORE_SETTINGS_SELECT_MINIMAL =
+  'store_name, store_logo, store_governorate, menu_background_color, menu_text_color, menu_accent_color, store_font, banner_images, primary_banner_index, delivery_prices, payment_methods, store_slug, return_policy, privacy_policy, whatsapp_number';
 
 export const mapStoreSettingsRow = (data: Record<string, unknown>): StoreProfile => ({
   storeName: String(data.store_name || ''),
@@ -38,6 +42,18 @@ export const fetchStoreSettings = async (ownerId: string, force = false): Promis
     .select(STORE_SETTINGS_SELECT)
     .eq('owner_id', ownerId)
     .maybeSingle();
+
+  if (error && isSchemaColumnError(error.message)) {
+    const retry = await supabase
+      .from('store_settings')
+      .select(STORE_SETTINGS_SELECT_MINIMAL)
+      .eq('owner_id', ownerId)
+      .maybeSingle();
+    if (!retry.error && retry.data) {
+      cache.set(cacheKey, retry.data, CacheTTL.LONG, CacheTTL.STALE);
+      return mapStoreSettingsRow(retry.data as Record<string, unknown>);
+    }
+  }
 
   if (error && error.code !== 'PGRST116') {
     console.error('Error loading store settings:', error);

@@ -369,6 +369,28 @@ export async function fetchStorefrontProductById(
   }
 }
 
+/** Per-product RPC fetch — most reliable for checkout stock (avoids stale catalog scans). */
+export async function fetchCheckoutProductsByIds(
+  slug: string,
+  productIds: string[]
+): Promise<Map<string, Product>> {
+  const map = new Map<string, Product>();
+  const normalized = slug.trim().toLowerCase();
+  const uniqueIds = [...new Set(productIds.filter(Boolean))];
+  if (!/^[a-z0-9-]+$/.test(normalized) || uniqueIds.length === 0) return map;
+
+  await Promise.all(
+    uniqueIds.map(async (id) => {
+      const product = await fetchStorefrontProductById(normalized, id);
+      if (product && isStorefrontVisible(product)) {
+        map.set(id, product);
+      }
+    })
+  );
+
+  return map;
+}
+
 /** Batch product fetch for checkout validation on tenant storefronts. */
 export async function fetchStorefrontProductsByIds(
   slug: string,
@@ -432,6 +454,14 @@ export async function invalidateStorefrontForOwner(ownerId: string): Promise<voi
     window.dispatchEvent(
       new CustomEvent(STOREFRONT_PRODUCTS_CHANGED, { detail: { ownerId, slug } })
     );
+    try {
+      localStorage.setItem(
+        'storefront:invalidate',
+        JSON.stringify({ ownerId, slug, at: Date.now() })
+      );
+    } catch {
+      /* ignore quota */
+    }
   }
 }
 

@@ -1,6 +1,6 @@
 # Supabase deployment (required for production)
 
-The app code assumes migrations through `20260616000007` are applied.
+The app code assumes migrations through `20260616000009` are applied.
 
 ## Quick deploy (linked project)
 
@@ -28,8 +28,14 @@ npm run db:types
 | `20260616000005_platform_schema_contract.sql` | Storefront archived filter + schema contract |
 | `20260616000006_post_audit_hardening.sql` | GRANTs + product view filters |
 | `20260616000007_checkout_stock_unified.sql` | **Checkout stock fix** (variant vs aggregate) |
+| `20260616000008_publish_and_reviews_fix.sql` | **Publish draft + merchant reviews** |
+| `20260616000009_platform_db_integration.sql` | **Health check RPC + schema version** |
 
 If checkout fails with "بعض المنتجات غير متوفرة" while products look in stock, apply **`20260616000007`** (or run all migrations in order).
+
+If published products or reviews do not appear, apply **`20260616000008`**.
+
+If many features fail across the platform, run **`npm run db:verify`** then apply all `20260616*.sql` migrations.
 
 ## Without CLI
 

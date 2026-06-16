@@ -25,6 +25,8 @@ import SEOHead from "@/components/seo/SEOHead";
 import StorefrontTrustBar from "@/components/storefront/StorefrontTrustBar";
 import StorefrontFooter from "@/components/storefront/StorefrontFooter";
 import { getCheckoutPath, getProductPath } from "@/lib/storefrontPaths";
+import { persistCheckoutStoreSlug } from "@/lib/checkoutStoreContext";
+import { persistCheckoutStoreSlug } from "@/lib/checkoutStoreContext";
 import { BadgeCheck } from "lucide-react";
 
 const Store = () => {
@@ -83,8 +85,9 @@ const Store = () => {
   useEffect(() => {
     if (isTenantMode && displayOwnerId) {
       setStoreOwner(displayOwnerId);
+      if (storeSlug) persistCheckoutStoreSlug(displayOwnerId, storeSlug);
     }
-  }, [isTenantMode, displayOwnerId, setStoreOwner]);
+  }, [isTenantMode, displayOwnerId, storeSlug, setStoreOwner]);
 
   useEffect(() => {
     if (isTenantMode) {

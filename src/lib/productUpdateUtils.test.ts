@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildProductInsertPayload, mergeProductForUpdate, isProductLowStock, getProductLowStockThreshold } from './productUpdateUtils';
+import { buildProductInsertPayload, buildProductLifecyclePatch, mergeProductForUpdate, isProductLowStock, getProductLowStockThreshold } from './productUpdateUtils';
 import { Product } from '@/types';
 
 const base: Product = {
@@ -52,9 +52,11 @@ describe('mergeProductForUpdate', () => {
     expect(merged.sku).toBe('SKU-1');
   });
 
-  it('allows explicit nulling via undefined vs explicit empty', () => {
-    const merged = mergeProductForUpdate(base, { sizes: undefined });
-    expect(merged.sizes).toBeUndefined();
+  it('clears archivedAt when publishing from archived state', () => {
+    const archived = { ...base, isActive: false, archivedAt: '2026-01-01T00:00:00Z' };
+    const merged = mergeProductForUpdate(archived, buildProductLifecyclePatch('publish'));
+    expect(merged.isActive).toBe(true);
+    expect(merged.archivedAt).toBeUndefined();
   });
 });
 

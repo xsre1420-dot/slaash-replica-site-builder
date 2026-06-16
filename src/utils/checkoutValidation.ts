@@ -4,6 +4,7 @@ import { getAvailableQty, validateVariantSelection } from './inventoryUtils';
 import { AppliedCoupon, validateCoupon } from '@/services/couponService';
 import { mapDbProduct } from '@/mappers/productMapper';
 import {
+  fetchCheckoutProductsByIds,
   fetchStorefrontProductsByIds,
   fetchOwnerActiveProductsByIds,
   resolveStoreSlugByOwnerId,
@@ -16,15 +17,39 @@ export type FetchFreshProductsOptions = {
   cartFallback?: Map<string, Product>;
 };
 
-/** Prefer server stock; fall back to cart snapshot only when the server omitted fields. */
-function mergeProductStock(server: Product, cartProduct: Product): Product {
-  const stockQuantity =
+const variantStockSum = (variants?: Product['variants']) =>
+  (variants ?? []).reduce((sum, v) => sum + (v.quantity || 0), 0);
+
+/** Reconcile server/cart stock when variant rows and stock_quantity drift. */
+export function mergeProductStock(server: Product, cartProduct: Product): Product {
+  let stockQuantity =
     server.stockQuantity != null ? server.stockQuantity : cartProduct.stockQuantity;
 
-  const serverHasVariants = server.variants != null;
-  const variants = serverHasVariants
-    ? server.variants
-    : cartProduct.variants ?? server.variants;
+  let variants =
+    server.variants != null && server.variants.length > 0
+      ? server.variants
+      : cartProduct.variants ?? server.variants;
+
+  let variantSum = variantStockSum(variants);
+  const cartAggregate = cartProduct.stockQuantity ?? 0;
+  const cartVariantSum = variantStockSum(cartProduct.variants);
+
+  if ((stockQuantity ?? 0) <= 0 && variantSum <= 0) {
+    if (cartVariantSum > 0) {
+      variants = cartProduct.variants;
+      variantSum = cartVariantSum;
+      stockQuantity = cartVariantSum;
+    } else if (cartAggregate > 0) {
+      stockQuantity = cartAggregate;
+      if (variants?.length && variantSum <= 0) {
+        variants = undefined;
+      }
+    }
+  }
+
+  if ((stockQuantity ?? 0) > 0 && variants?.length && variantSum <= 0) {
+    variants = undefined;
+  }
 
   return {
     ...server,
@@ -33,6 +58,21 @@ function mergeProductStock(server: Product, cartProduct: Product): Product {
     sizes: server.sizes?.length ? server.sizes : cartProduct.sizes,
     colors: server.colors?.length ? server.colors : cartProduct.colors,
   };
+}
+
+/** Update prices/stock from server without removing cart lines (background checkout sync). */
+export function refreshCartFromServer(
+  items: CartItem[],
+  freshProducts: Map<string, Product>
+): CartItem[] {
+  return items.map((item) => {
+    const fresh = freshProducts.get(item.product.id);
+    if (!fresh) return item;
+    return {
+      ...item,
+      product: mergeProductStock(fresh, item.product),
+    };
+  });
 }
 
 export async function fetchFreshProducts(
@@ -53,7 +93,13 @@ export async function fetchFreshProducts(
   let map = new Map<string, Product>();
 
   if (slug) {
-    map = await fetchStorefrontProductsByIds(slug, uniqueIds);
+    map = await fetchCheckoutProductsByIds(slug, uniqueIds);
+    if (map.size < uniqueIds.length) {
+      const catalog = await fetchStorefrontProductsByIds(slug, uniqueIds);
+      for (const [id, product] of catalog) {
+        if (!map.has(id)) map.set(id, product);
+      }
+    }
   }
 
   const missingAfterSlug = uniqueIds.filter((id) => !map.has(id));
@@ -94,8 +140,12 @@ export async function fetchFreshProducts(
 
   if (options.cartFallback) {
     for (const id of uniqueIds) {
-      if (map.has(id) && options.cartFallback.has(id)) {
-        map.set(id, mergeProductStock(map.get(id)!, options.cartFallback.get(id)!));
+      const cartProduct = options.cartFallback.get(id);
+      if (!cartProduct) continue;
+      if (map.has(id)) {
+        map.set(id, mergeProductStock(map.get(id)!, cartProduct));
+      } else {
+        map.set(id, cartProduct);
       }
     }
   }
@@ -186,6 +236,10 @@ export function validateAndRefreshCart(
 
     const available = getAvailableQty(fresh, item.selectedSize, item.selectedColor);
     const qty = Math.min(item.quantity, available);
+    if (qty <= 0) {
+      errors.push(`"${fresh.name}" غير متوفر في المخزون (الكمية منتهية)`);
+      continue;
+    }
     if (qty < item.quantity) {
       errors.push(`تم تعديل كمية "${fresh.name}" إلى ${qty} (المتوفر: ${available})`);
     }

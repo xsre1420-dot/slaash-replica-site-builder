@@ -25,6 +25,8 @@ export {
   syncMerchantProductCatalog,
   addProduct,
   updateProduct,
+  setProductLifecycle,
+  publishProduct,
   deleteProduct,
   getProductsByCategory,
   getProductById,

@@ -23,7 +23,8 @@
     "recovery:check": "node scripts/recovery-check.mjs",
     "db:push": "supabase db push",
     "db:types": "supabase gen types typescript --linked > src/integrations/supabase/types.generated.ts",
-    "db:deploy": "powershell -ExecutionPolicy Bypass -File scripts/db-push.ps1"
+    "db:deploy": "powershell -ExecutionPolicy Bypass -File scripts/db-push.ps1",
+    "db:verify": "node scripts/verify-platform-db.mjs"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^16.3.0",

@@ -13,10 +13,12 @@ import { useMetaPixel } from "@/hooks/useMetaPixel";
 import {
   fetchFreshProducts,
   validateAndRefreshCart,
+  refreshCartFromServer,
   revalidateCoupon,
   buildCartFingerprint,
   isFatalCheckoutError,
 } from "@/utils/checkoutValidation";
+import { persistCheckoutStoreSlug, loadCheckoutStoreSlug } from "@/lib/checkoutStoreContext";
 import { AppliedCoupon } from "@/services/couponService";
 import { fetchDeliveryFee, fetchDeliveryFeeBySlug } from "@/services/deliveryService";
 import { calculateDeliveryFeeFromPrices, computeOrderTotal } from "@/utils/deliveryUtils";
@@ -95,15 +97,24 @@ export const useCheckoutFlow = () => {
   useEffect(() => {
     if (storeSlug) {
       setCheckoutStoreSlug(storeSlug);
+      if (ownerId) persistCheckoutStoreSlug(ownerId, storeSlug);
       return;
     }
     if (!ownerId) {
       setCheckoutStoreSlug(null);
       return;
     }
+    const savedSlug = loadCheckoutStoreSlug(ownerId);
+    if (savedSlug) {
+      setCheckoutStoreSlug(savedSlug);
+      return;
+    }
     let cancelled = false;
     resolveStoreSlugByOwnerId(ownerId).then((slug) => {
-      if (!cancelled) setCheckoutStoreSlug(slug);
+      if (!cancelled) {
+        setCheckoutStoreSlug(slug);
+        if (slug) persistCheckoutStoreSlug(ownerId, slug);
+      }
     });
     return () => { cancelled = true; };
   }, [storeSlug, ownerId]);
@@ -206,16 +217,8 @@ export const useCheckoutFlow = () => {
         );
         if (cancelled) return;
 
-        const validation = validateAndRefreshCart(cartItems, freshMap);
-        if (validation.updatedItems.length > 0) {
-          replaceCartItems(validation.updatedItems);
-        }
-        const fatals = validation.errors.filter(isFatalCheckoutError);
-        if (fatals.length > 0) {
-          toast.error(fatals.join(' · '));
-        } else {
-          validation.errors.forEach((msg) => toast.warning(msg));
-        }
+        const refreshed = refreshCartFromServer(cartItems, freshMap);
+        replaceCartItems(refreshed);
       } catch {
         if (!cancelled) {
           toast.warning("تعذر تحديث أسعار السلة. سيتم التحقق عند تأكيد الطلب.");

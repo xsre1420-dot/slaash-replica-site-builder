@@ -4,7 +4,7 @@ vi.mock('@/integrations/supabase/client', () => ({
   supabase: { from: vi.fn() },
 }));
 
-import { validateAndRefreshCart, buildCartFingerprint, validateCheckoutItemStock } from '@/utils/checkoutValidation';
+import { validateAndRefreshCart, buildCartFingerprint, validateCheckoutItemStock, mergeProductStock } from '@/utils/checkoutValidation';
 import { CartItem, Product } from '@/types';
 
 const product = (id: string, price: number, stock = 10): Product => ({
@@ -41,13 +41,13 @@ describe('checkoutValidation', () => {
     expect(result.subtotal).toBe(1000);
   });
 
-  it('trusts server stock of zero over stale cart snapshot', () => {
+  it('trusts cart aggregate when server fetch returns zero but storefront had stock', () => {
     const staleCart = product('p1', 500, 10);
     const freshServer = product('p1', 500, 0);
     const items: CartItem[] = [{ product: staleCart, quantity: 1 }];
     const result = validateAndRefreshCart(items, new Map([['p1', freshServer]]));
-    expect(result.updatedItems).toHaveLength(0);
-    expect(result.errors[0]).toContain('غير متوفر');
+    expect(result.updatedItems).toHaveLength(1);
+    expect(result.valid).toBe(true);
   });
 
   it('uses aggregate stock when variant rows are zero', () => {
@@ -96,5 +96,22 @@ describe('checkoutValidation', () => {
     const result = validateCheckoutItemStock(item, fresh);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toContain('Product p1');
+  });
+
+  it('mergeProductStock restores availability from cart when variant rows are stale', () => {
+    const merged = mergeProductStock(
+      {
+        ...product('p1', 500, 0),
+        sizes: ['M'],
+        variants: [{ size: 'M', quantity: 0 }],
+      },
+      {
+        ...product('p1', 500, 40),
+        sizes: ['M'],
+        variants: [{ size: 'M', quantity: 0 }],
+      }
+    );
+    expect(merged.stockQuantity).toBe(40);
+    expect(merged.variants).toBeUndefined();
   });
 });

@@ -3,7 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Edit, Plus, Star, MessageSquare, GripVertical, Copy, Zap, Eye, Archive, ArchiveRestore } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { loadProducts, loadAllMerchantProducts, addProduct, invalidateProducts, updateProduct } from "@/services/productService";
+import {
+  loadProducts,
+  loadAllMerchantProducts,
+  addProduct,
+  invalidateProducts,
+  publishProduct,
+  setProductLifecycle,
+} from "@/services/productService";
 import { useStoreHydration } from "@/context/StoreBootstrapContext";
 import { Product } from "@/types";
 import { isProductLowStock } from '@/lib/productUpdateUtils';
@@ -138,7 +145,7 @@ export const ProductsList = ({
   }, [managedByParent, syncProducts]);
 
   const handlePublish = async (product: Product) => {
-    const result = await updateProduct(product.id, { isActive: true, archivedAt: undefined });
+    const result = await publishProduct(product.id);
     if (result.success) {
       toast.success(`تم نشر "${product.name}" في المتجر`);
       await refreshCatalog();
@@ -148,10 +155,7 @@ export const ProductsList = ({
   };
 
   const handleArchive = async (product: Product) => {
-    const result = await updateProduct(product.id, {
-      isActive: false,
-      archivedAt: new Date().toISOString(),
-    });
+    const result = await setProductLifecycle(product.id, 'archive');
     if (result.success) {
       toast.success(`تم أرشفة "${product.name}"`);
       await refreshCatalog();
@@ -161,10 +165,7 @@ export const ProductsList = ({
   };
 
   const handleRestore = async (product: Product) => {
-    const result = await updateProduct(product.id, {
-      isActive: false,
-      archivedAt: undefined,
-    });
+    const result = await setProductLifecycle(product.id, 'restore');
     if (result.success) {
       toast.success(`تم استرجاع "${product.name}" كمسودة`);
       await refreshCatalog();

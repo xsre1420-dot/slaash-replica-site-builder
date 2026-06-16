@@ -114,6 +114,23 @@ export const mapProductInsertError = (message: string): string => {
   return message;
 };
 
+export type ProductLifecycleAction = 'publish' | 'draft' | 'archive' | 'restore';
+
+export const buildProductLifecyclePatch = (
+  action: ProductLifecycleAction
+): Partial<Product> => {
+  switch (action) {
+    case 'publish':
+      return { isActive: true, archivedAt: null };
+    case 'draft':
+      return { isActive: false, archivedAt: null };
+    case 'archive':
+      return { isActive: false, archivedAt: new Date().toISOString() };
+    case 'restore':
+      return { isActive: false, archivedAt: null };
+  }
+};
+
 /** Merge a partial UI patch onto an existing product without wiping omitted fields */
 export const mergeProductForUpdate = (existing: Product, patch: Partial<Product>): Product => ({
   ...existing,
@@ -135,7 +152,7 @@ export const mergeProductForUpdate = (existing: Product, patch: Partial<Product>
   tags: patch.tags !== undefined ? patch.tags : existing.tags,
   lowStockThreshold: patch.lowStockThreshold !== undefined ? patch.lowStockThreshold : existing.lowStockThreshold,
   isActive: patch.isActive !== undefined ? patch.isActive : existing.isActive,
-  archivedAt: patch.archivedAt !== undefined ? patch.archivedAt : existing.archivedAt,
+  archivedAt: 'archivedAt' in patch ? (patch.archivedAt ?? undefined) : existing.archivedAt,
 });
 
 export const productToDbRow = (product: Product) => ({
@@ -162,6 +179,17 @@ export const productToDbRow = (product: Product) => ({
   is_active: product.isActive !== false,
   archived_at: product.archivedAt ?? null,
 });
+
+/** Progressive update payloads — lifecycle-only last for publish/draft toggles */
+export const buildProductUpdateAttempts = (product: Product): Record<string, unknown>[] => {
+  const full = productToDbRow(product);
+  const lifecycle = {
+    is_active: product.isActive !== false,
+    archived_at: product.archivedAt ?? null,
+  };
+  const publishOnly = { is_active: true, archived_at: null };
+  return [full, lifecycle, publishOnly, { is_active: product.isActive !== false }];
+};
 
 /** Per-product low-stock threshold with sensible default */
 export const getProductLowStockThreshold = (product: Pick<Product, 'lowStockThreshold' | 'stockQuantity'>): number =>

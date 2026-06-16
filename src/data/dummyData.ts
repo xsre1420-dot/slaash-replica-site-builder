@@ -14,10 +14,13 @@ import {
   PRODUCT_MINIMAL_SELECT,
   PRODUCT_INSERT_RETURN_MINIMAL,
   buildProductInsertPayload,
+  buildProductLifecyclePatch,
+  buildProductUpdateAttempts,
   isSchemaColumnError,
   mapProductInsertError,
   mergeProductForUpdate,
   productToDbRow,
+  type ProductLifecycleAction,
 } from "@/lib/productUpdateUtils";
 import { OWNER_PRODUCTS_PAGE_SIZE } from '@/constants/pagination';
 
@@ -484,17 +487,43 @@ export const updateProduct = async (productId: string, updatedProduct: Partial<P
     const existing = mapDbProduct(existingData);
     const merged = mergeProductForUpdate(existing, updatedProduct);
 
-    let updateQuery = supabase
-      .from('products')
-      .update(productToDbRow(merged))
-      .eq('id', productId)
-      .eq('owner_id', user.id);
+    const selectAttempts = [
+      PRODUCT_DETAIL_SELECT,
+      MERCHANT_PRODUCTS_LIST_SELECT,
+      MERCHANT_PRODUCTS_STANDARD_SELECT,
+      PRODUCT_INSERT_RETURN_MINIMAL,
+    ];
 
-    const { data, error } = await updateQuery.select(PRODUCT_DETAIL_SELECT).single();
+    let data: Record<string, unknown> | null = null;
+    let lastError: string | null = null;
 
-    if (error) return { success: false, error: error.message };
+    for (const patch of buildProductUpdateAttempts(merged)) {
+      for (const selectColumns of selectAttempts) {
+        const { data: row, error } = await supabase
+          .from('products')
+          .update(patch)
+          .eq('id', productId)
+          .eq('owner_id', user.id)
+          .select(selectColumns)
+          .maybeSingle();
 
-    syncProductCachesAfterMutation(user.id, data as Record<string, unknown>);
+        if (!error && row) {
+          data = row as Record<string, unknown>;
+          lastError = null;
+          break;
+        }
+
+        lastError = error?.message ?? lastError;
+        if (error && !isSchemaColumnError(error.message)) break;
+      }
+      if (data) break;
+    }
+
+    if (!data) {
+      return { success: false, error: lastError || 'فشل في تحديث المنتج' };
+    }
+
+    syncProductCachesAfterMutation(user.id, data);
     products = cache.get<Product[]>(CacheKeys.products(user.id)) || [];
 
     return { success: true };
@@ -502,6 +531,33 @@ export const updateProduct = async (productId: string, updatedProduct: Partial<P
     console.error('[products] updateProduct unexpected error:', err);
     return { success: false, error: err instanceof Error ? err.message : 'فشل في تحديث المنتج' };
   }
+};
+
+export const setProductLifecycle = async (
+  productId: string,
+  action: ProductLifecycleAction
+): Promise<{ success: boolean; error?: string }> =>
+  updateProduct(productId, buildProductLifecyclePatch(action));
+
+export const publishProduct = async (productId: string) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: 'User not authenticated' };
+
+    const { data, error } = await (supabase as any).rpc('publish_owner_product', {
+      p_product_id: productId,
+    });
+
+    if (!error && data?.success && data?.product) {
+      syncProductCachesAfterMutation(user.id, data.product as Record<string, unknown>);
+      products = cache.get<Product[]>(CacheKeys.products(user.id)) || [];
+      return { success: true };
+    }
+  } catch {
+    /* RPC optional until migration applied */
+  }
+
+  return setProductLifecycle(productId, 'publish');
 };
 
 export const deleteProduct = async (productId: string): Promise<{ success: boolean; error?: string }> => {

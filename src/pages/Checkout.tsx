@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { ShoppingBag, Loader2 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import { useTenantStore } from "@/hooks/useTenantStore";
 const Checkout = () => {
   const { removeFromCart, updateQuantity, getMaxQuantity } = useCart();
   const formRef = useRef<HTMLDivElement>(null);
+  const prevStepRef = useRef(0);
 
   const {
     isTenantMode,
@@ -65,6 +66,13 @@ const Checkout = () => {
   };
 
   useStoreVisitTracking(isTenantMode ? storeSlug : undefined);
+
+  useEffect(() => {
+    if (currentStep > prevStepRef.current && formRef.current) {
+      formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    prevStepRef.current = currentStep;
+  }, [currentStep]);
 
   if (isTenantMode && tenantLoading && !ownerId) {
     return (
