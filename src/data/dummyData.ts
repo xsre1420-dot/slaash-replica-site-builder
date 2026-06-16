@@ -19,6 +19,7 @@ import {
   mergeProductForUpdate,
   productToDbRow,
 } from "@/lib/productUpdateUtils";
+import { OWNER_PRODUCTS_PAGE_SIZE } from '@/constants/pagination';
 
 /** @deprecated Use `@/services/productService` for new imports. */
 
@@ -135,7 +136,7 @@ export const getCategoriesSync = (): Category[] => {
 
 // --- Products ---
 
-export { OWNER_PRODUCTS_PAGE_SIZE as PRODUCTS_PAGE_SIZE } from '@/constants/pagination';
+export const PRODUCTS_PAGE_SIZE = OWNER_PRODUCTS_PAGE_SIZE;
 
 export interface ProductsPageResult {
   products: Product[];
