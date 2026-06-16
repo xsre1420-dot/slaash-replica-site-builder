@@ -8,6 +8,9 @@ export type PlatformHealthChecks = {
   merchant_catalog: boolean;
   publish: boolean;
   reviews: boolean;
+  statistics?: boolean;
+  bootstrap?: boolean;
+  storage?: boolean;
 };
 
 export type PlatformHealthResult = {
@@ -71,7 +74,7 @@ const parseRpcHealth = (data: Record<string, unknown>): PlatformHealthResult => 
   const result: PlatformHealthResult = {
     ok: Boolean(data.ok),
     schemaVersion: Number(data.schema_version ?? 0),
-    requiredVersion: Number(data.required_version ?? 9),
+    requiredVersion: Number(data.required_version ?? 10),
     missing,
     checks: {
       storefront: Boolean(checksRaw.storefront),
@@ -79,6 +82,9 @@ const parseRpcHealth = (data: Record<string, unknown>): PlatformHealthResult => 
       merchant_catalog: Boolean(checksRaw.merchant_catalog),
       publish: Boolean(checksRaw.publish),
       reviews: Boolean(checksRaw.reviews),
+      statistics: Boolean(checksRaw.statistics),
+      bootstrap: Boolean(checksRaw.bootstrap),
+      storage: Boolean(checksRaw.storage),
     },
     message,
     ...buildUserFacing(message, missing),
@@ -101,7 +107,7 @@ async function probePlatformHealthFallback(): Promise<PlatformHealthResult> {
       return {
         ok: false,
         schemaVersion: 0,
-        requiredVersion: 9,
+        requiredVersion: 10,
         missing: ['connection'],
         checks: defaultChecks(),
         message: 'connection_error',
@@ -167,7 +173,7 @@ async function probePlatformHealthFallback(): Promise<PlatformHealthResult> {
   return {
     ok: missing.length === 0 && Object.values(checks).every(Boolean),
     schemaVersion: 0,
-    requiredVersion: 9,
+    requiredVersion: 10,
     missing,
     checks,
     message,

@@ -80,7 +80,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('id, username, store_name')
-        .eq('id', userId)
+        .or(`id.eq.${userId},user_id.eq.${userId}`)
         .maybeSingle();
 
       if (error) {

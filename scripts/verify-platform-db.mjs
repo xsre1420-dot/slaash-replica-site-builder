@@ -59,7 +59,7 @@ const rpc = async (fn, body = {}) => {
 
 const { ok, status, json } = await rpc('platform_health_check');
 if (ok && json?.ok) {
-  pass(`platform_health_check OK (schema v${json.schema_version})`);
+  pass(`platform_health_check OK (schema v${json.schema_version}, required v${json.required_version ?? 10})`);
   process.exit(0);
 }
 

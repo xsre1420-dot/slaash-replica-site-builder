@@ -1,6 +1,6 @@
 # Supabase deployment (required for production)
 
-The app code assumes migrations through `20260616000009` are applied.
+The app code assumes migrations through `20260616000010` are applied.
 
 ## Quick deploy (linked project)
 
@@ -30,6 +30,7 @@ npm run db:types
 | `20260616000007_checkout_stock_unified.sql` | **Checkout stock fix** (variant vs aggregate) |
 | `20260616000008_publish_and_reviews_fix.sql` | **Publish draft + merchant reviews** |
 | `20260616000009_platform_db_integration.sql` | **Health check RPC + schema version** |
+| `20260616000010_platform_sync_consolidation.sql` | **Final consolidation + health v10** |
 
 If checkout fails with "بعض المنتجات غير متوفرة" while products look in stock, apply **`20260616000007`** (or run all migrations in order).
 
@@ -39,7 +40,13 @@ If many features fail across the platform, run **`npm run db:verify`** then appl
 
 ## Without CLI
 
-Open **Supabase Dashboard → SQL Editor** and run each file above in order.
+Open **Supabase Dashboard → SQL Editor** and run:
+
+```bash
+npm run db:bundle
+```
+
+Then paste `supabase/apply-platform-sync-bundle.sql` (all 10 June 2026 migrations in order).
 
 ## Verify after deploy
 

@@ -263,6 +263,7 @@ export type Database = {
           customer_name: string | null
           customer_phone: string | null
           delivery_fee: number | null
+          delivery_status: string | null
           delivery_time: number | null
           discount_amount: number | null
           id: string
@@ -270,7 +271,9 @@ export type Database = {
           notes: string | null
           owner_id: string
           payment_method: string | null
+          payment_status: string | null
           status: string
+          store_id: string | null
           total: number | null
           total_amount: number
           updated_at: string
@@ -361,6 +364,7 @@ export type Database = {
       products: {
         Row: {
           additional_images: string[] | null
+          archived_at: string | null
           category: string
           colors: Json | null
           cost: number | null
@@ -380,6 +384,7 @@ export type Database = {
           price: number
           sizes: Json | null
           stock_quantity: number | null
+          store_id: string | null
           updated_at: string
           variants: Json | null
         }
@@ -404,11 +409,14 @@ export type Database = {
           price: number
           sizes?: Json | null
           stock_quantity?: number | null
+          store_id?: string | null
           updated_at?: string
           variants?: Json | null
+          archived_at?: string | null
         }
         Update: {
           additional_images?: string[] | null
+          archived_at?: string | null
           category?: string
           colors?: Json | null
           cost?: number | null
@@ -428,8 +436,39 @@ export type Database = {
           price?: number
           sizes?: Json | null
           stock_quantity?: number | null
+          store_id?: string | null
           updated_at?: string
           variants?: Json | null
+        }
+        Relationships: []
+      }
+      stores: {
+        Row: {
+          created_at: string
+          id: string
+          store_name: string
+          store_slug: string | null
+          theme_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          store_name?: string
+          store_slug?: string | null
+          theme_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          store_name?: string
+          store_slug?: string | null
+          theme_id?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -646,7 +685,19 @@ export type Database = {
         }[]
       }
       get_store_statistics: {
-        Args: { p_owner_id: string; p_days?: number }
+        Args: { p_owner_id: string; p_start: string; p_end: string }
+        Returns: Json
+      }
+      platform_health_check: {
+        Args: Record<string, never>
+        Returns: Json
+      }
+      create_order_with_stock_deduction: {
+        Args: Record<string, unknown>
+        Returns: Json
+      }
+      publish_owner_product: {
+        Args: { p_product_id: string }
         Returns: Json
       }
       get_store_products_by_slug: {
