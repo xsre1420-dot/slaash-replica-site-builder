@@ -15,6 +15,7 @@ import {
   validateAndRefreshCart,
   revalidateCoupon,
   buildCartFingerprint,
+  isFatalCheckoutError,
 } from "@/utils/checkoutValidation";
 import { AppliedCoupon } from "@/services/couponService";
 import { fetchDeliveryFee, fetchDeliveryFeeBySlug } from "@/services/deliveryService";
@@ -266,13 +267,13 @@ export const useCheckoutFlow = () => {
     if (submitLockRef.current || isSubmitting) return;
     if (!validateForm()) return;
 
-    if (!ownerId) {
-      toast.error("تعذر تحديد المتجر. يرجى المحاولة مرة أخرى.");
+    if (!checkoutStoreSlug && isTenantMode) {
+      toast.error("تعذر تحديد المتجر. افتح صفحة المتجر من الرابط الرسمي ثم حاول مرة أخرى.");
       return;
     }
 
-    if (!checkoutStoreSlug && !user?.id) {
-      toast.error("تعذر تحديد المتجر. افتح صفحة المتجر الرسمية ثم حاول مرة أخرى.");
+    if (!ownerId) {
+      toast.error("تعذر تحديد المتجر. يرجى المحاولة مرة أخرى.");
       return;
     }
 
@@ -308,17 +309,26 @@ export const useCheckoutFlow = () => {
       }
 
       const validation = validateAndRefreshCart(cartItems, freshMap);
-      validation.errors.forEach((msg) => toast.warning(msg));
 
       if (validation.updatedItems.length === 0) {
-        toast.error("لا توجد منتجات صالحة في السلة. راجع المخزون وحاول مرة أخرى.");
+        toast.error(
+          validation.errors[0] ||
+            "لا توجد منتجات صالحة في السلة. راجع المخزون وحاول مرة أخرى."
+        );
         return;
       }
 
-      const removedCount = cartItems.length - validation.updatedItems.length;
-      if (removedCount > 0) {
-        toast.error(`تمت إزالة ${removedCount} منتج(ات) غير متوفرة من السلة. راجع الطلب قبل المتابعة.`);
+      const fatalErrors = validation.errors.filter(isFatalCheckoutError);
+      if (fatalErrors.length > 0) {
+        toast.error(fatalErrors.join(' · '));
         replaceCartItems(validation.updatedItems);
+        return;
+      }
+
+      if (!validation.valid) {
+        validation.errors.forEach((msg) => toast.warning(msg));
+        replaceCartItems(validation.updatedItems);
+        toast.info("تم تحديث السلة — راجع الكميات ثم أكّد الطلب مرة أخرى.");
         return;
       }
 

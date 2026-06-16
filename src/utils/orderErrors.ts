@@ -3,14 +3,20 @@ import { mapPaymentError } from '@/utils/paymentUtils';
 export const mapOrderError = (message: string): string => {
   const lower = message.toLowerCase();
 
+  if (lower.includes('stock_deduction_failed')) {
+    return 'تعذر خصم المخزون — ربما نفد أحد المنتجات أثناء الطلب. حدّث الصفحة وراجع السلة.';
+  }
+
+  if (lower.includes('insufficient stock')) {
+    return 'بعض المنتجات غير متوفرة بالكمية المطلوبة. راجع السلة وحدّث الصفحة.';
+  }
+
   if (
-    lower.includes('stock_deduction_failed') ||
-    lower.includes('insufficient stock') ||
     lower.includes('stock') ||
     lower.includes('مخزون') ||
     lower.includes('insufficient')
   ) {
-    return 'بعض المنتجات غير متوفرة بالكمية المطلوبة. يرجى مراجعة السلة وتحديث الصفحة.';
+    return 'بعض المنتجات غير متوفرة بالكمية المطلوبة. راجع السلة وحدّث الصفحة.';
   }
 
   if (lower.includes('total_amount_mismatch')) {

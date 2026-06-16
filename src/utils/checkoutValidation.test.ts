@@ -4,7 +4,7 @@ vi.mock('@/integrations/supabase/client', () => ({
   supabase: { from: vi.fn() },
 }));
 
-import { validateAndRefreshCart, buildCartFingerprint } from '@/utils/checkoutValidation';
+import { validateAndRefreshCart, buildCartFingerprint, validateCheckoutItemStock } from '@/utils/checkoutValidation';
 import { CartItem, Product } from '@/types';
 
 const product = (id: string, price: number, stock = 10): Product => ({
@@ -64,5 +64,27 @@ describe('checkoutValidation', () => {
     expect(result.updatedItems).toHaveLength(1);
     expect(result.updatedItems[0].quantity).toBe(2);
     expect(result.valid).toBe(true);
+  });
+
+  it('validateCheckoutItemStock allows aggregate when variant qty is zero', () => {
+    const fresh: Product = {
+      ...product('p1', 500, 20),
+      sizes: ['M'],
+      variants: [{ size: 'M', quantity: 0 }],
+    };
+    const item: CartItem = { product: fresh, quantity: 3, selectedSize: 'M' };
+    expect(validateCheckoutItemStock(item, fresh).ok).toBe(true);
+  });
+
+  it('validateCheckoutItemStock rejects when no stock remains', () => {
+    const fresh: Product = {
+      ...product('p1', 500, 0),
+      sizes: ['M'],
+      variants: [{ size: 'M', quantity: 0 }],
+    };
+    const item: CartItem = { product: fresh, quantity: 1, selectedSize: 'M' };
+    const result = validateCheckoutItemStock(item, fresh);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain('Product p1');
   });
 });

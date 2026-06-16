@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { CartItem, Product } from '@/types';
-import { getAvailableQty } from './inventoryUtils';
+import { getAvailableQty, validateVariantSelection } from './inventoryUtils';
 import { AppliedCoupon, validateCoupon } from '@/services/couponService';
 import { mapDbProduct } from '@/mappers/productMapper';
 import {
@@ -87,6 +87,26 @@ export async function fetchFreshProducts(
     }
   }
 
+  if (ownerId) {
+    const direct = await fetchOwnerActiveProductsByIds(ownerId, uniqueIds);
+    for (const [id, directProduct] of direct) {
+      const current = map.get(id);
+      if (current) {
+        map.set(id, {
+          ...current,
+          stockQuantity: directProduct.stockQuantity,
+          variants: directProduct.variants ?? current.variants,
+          sizes: directProduct.sizes?.length ? directProduct.sizes : current.sizes,
+          colors: directProduct.colors?.length ? directProduct.colors : current.colors,
+          price: directProduct.price,
+          originalPrice: directProduct.originalPrice ?? current.originalPrice,
+        });
+      } else {
+        map.set(id, directProduct);
+      }
+    }
+  }
+
   if (options.cartFallback) {
     for (const id of uniqueIds) {
       if (!map.has(id) && options.cartFallback.has(id)) {
@@ -98,6 +118,38 @@ export async function fetchFreshProducts(
   }
 
   return map;
+}
+
+/** Mirrors server checkout stock rules (migration 20260616000001+). */
+export function validateCheckoutItemStock(
+  item: CartItem,
+  product: Product
+): { ok: true } | { ok: false; error: string } {
+  const variantCheck = validateVariantSelection(product, item.selectedSize, item.selectedColor);
+  if (!variantCheck.valid) {
+    return { ok: false, error: `${product.name}: ${variantCheck.message}` };
+  }
+
+  const available = getAvailableQty(product, item.selectedSize, item.selectedColor);
+
+  if (available <= 0) {
+    return {
+      ok: false,
+      error: `"${product.name}" غير متوفر في المخزون`,
+    };
+  }
+
+  return { ok: true };
+}
+
+export function isFatalCheckoutError(message: string): boolean {
+  return (
+    message.includes('غير متوفر') ||
+    message.includes('لم يعد متوفر') ||
+    message.includes('اختر') ||
+    message.includes('المقاس') ||
+    message.includes('اللون')
+  );
 }
 
 export function computeServerCheckoutSubtotal(
@@ -140,6 +192,12 @@ export function validateAndRefreshCart(
       }
     } else {
       fresh = mergeProductStock(fresh, item.product);
+    }
+
+    const stockCheck = validateCheckoutItemStock(item, fresh);
+    if (!stockCheck.ok) {
+      errors.push(stockCheck.error);
+      continue;
     }
 
     const available = getAvailableQty(fresh, item.selectedSize, item.selectedColor);
