@@ -2,7 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Order, CartItem } from '@/types';
 import { mapDbOrder } from '@/mappers/orderMapper';
 import { clearCheckoutIdempotencyKey, getOrCreateIdempotencyKey } from '@/utils/checkoutSession';
-import { mapOrderError } from '@/utils/orderErrors';
+import { mapOrderRpcFailure, mapOrderError } from '@/utils/orderErrors';
 import { computeOrderStats } from '@/utils/orderWorkflowUtils';
 import { cache, CacheKeys, CacheTTL, dedup } from '@/lib/cache';
 import { instrumentAsync, instrumentQuery, logger, metrics } from '@/lib/observability';
@@ -188,6 +188,14 @@ const isRetryableOrderError = (message: string): boolean => {
   );
 };
 
+const normalizeOrderRpcItems = (items: CartItem[]) =>
+  items.map((item) => ({
+    product_id: item.product.id,
+    quantity: item.quantity,
+    selected_size: item.selectedSize?.trim() || null,
+    selected_color: item.selectedColor?.trim() || null,
+  }));
+
 export const createOrder = async (
   order: Order,
   ownerId: string,
@@ -200,12 +208,8 @@ export const createOrder = async (
     const idempotencyKey = getOrCreateIdempotencyKey(ownerId);
     const maxAttempts = 3;
 
-    const orderItems = order.items.map((item: CartItem) => ({
-      product_id: item.product.id,
-      quantity: item.quantity,
-      selected_size: item.selectedSize || null,
-      selected_color: item.selectedColor || null,
-    }));
+    const orderItems = normalizeOrderRpcItems(order.items);
+    let submitTotal = order.total;
 
     let lastError = 'Order creation failed';
 
@@ -217,7 +221,7 @@ export const createOrder = async (
         p_customer_name: order.customerInfo.name.trim(),
         p_customer_phone: order.customerInfo.phone.trim(),
         p_customer_address: order.customerInfo.address.trim(),
-        p_total_amount: order.total,
+        p_total_amount: submitTotal,
         p_customer_governorate: order.customerInfo.governorate?.trim() || null,
         p_notes: order.customerInfo.notes?.trim() || null,
         p_items: orderItems,
@@ -267,12 +271,29 @@ export const createOrder = async (
         };
       }
 
-      lastError = mapOrderError(error?.message || data?.error || 'Order creation failed');
+      if (
+        data?.error === 'total_amount_mismatch' &&
+        data?.expected_total != null &&
+        attempt < maxAttempts
+      ) {
+        submitTotal = Number(data.expected_total);
+        logger.warn('order.create.total_mismatch_retry', {
+          ownerId,
+          attempt,
+          expectedTotal: submitTotal,
+          receivedTotal: order.total,
+        });
+        await sleep(200);
+        continue;
+      }
+
+      lastError = mapOrderRpcFailure(data ?? { error: error?.message });
       logger.warn('order.create.retry', {
         ownerId,
         attempt,
         error: lastError,
         rpcError: data?.error,
+        productName: data?.product_name,
         expectedTotal: data?.expected_total,
         receivedTotal: order.total,
       });

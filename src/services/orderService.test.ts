@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mapOrderError } from '@/utils/orderErrors';
+import { mapOrderError, mapOrderRpcFailure } from '@/utils/orderErrors';
 
 const mockRpc = vi.fn();
 
@@ -54,5 +54,43 @@ describe('orderService integration', () => {
     mockRpc.mockResolvedValue({ data: { success: false, error: 'insufficient stock' }, error: null });
 
     await expect(createOrder(sampleOrder, 'owner-1')).rejects.toThrow(mapOrderError('insufficient stock'));
+  });
+
+  it('includes product name in insufficient stock errors', async () => {
+    mockRpc.mockResolvedValue({
+      data: {
+        success: false,
+        error: 'insufficient stock',
+        product_name: 'قميص',
+        available: 0,
+        requested: 2,
+      },
+      error: null,
+    });
+
+    await expect(createOrder(sampleOrder, 'owner-1')).rejects.toThrow(/قميص/);
+    expect(mapOrderRpcFailure({
+      error: 'insufficient stock',
+      product_name: 'قميص',
+      available: 0,
+      requested: 2,
+    })).toContain('قميص');
+  });
+
+  it('retries once when server reports total_amount_mismatch', async () => {
+    mockRpc
+      .mockResolvedValueOnce({
+        data: { success: false, error: 'total_amount_mismatch', expected_total: 1200 },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: { success: true, order_id: 'order-1', total_amount: 1200 },
+        error: null,
+      });
+
+    const result = await createOrder(sampleOrder, 'owner-1');
+    expect(result.total).toBe(1200);
+    expect(mockRpc).toHaveBeenCalledTimes(2);
+    expect(mockRpc.mock.calls[1][1].p_total_amount).toBe(1200);
   });
 });

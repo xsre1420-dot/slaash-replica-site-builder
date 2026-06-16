@@ -1,5 +1,29 @@
 import { mapPaymentError } from '@/utils/paymentUtils';
 
+export type OrderRpcErrorPayload = {
+  error?: string;
+  product_name?: string;
+  available?: number;
+  requested?: number;
+  expected_total?: number;
+};
+
+export const mapOrderRpcFailure = (payload: OrderRpcErrorPayload | null | undefined): string => {
+  const raw = String(payload?.error || 'Order creation failed');
+  const lower = raw.toLowerCase();
+
+  if (
+    lower.includes('insufficient stock') &&
+    payload?.product_name
+  ) {
+    const available = payload.available ?? 0;
+    const requested = payload.requested ?? 0;
+    return `"${payload.product_name}" غير متوفر بالكمية المطلوبة (المتوفر: ${available}، المطلوب: ${requested}). راجع السلة وحدّث الصفحة.`;
+  }
+
+  return mapOrderError(raw);
+};
+
 export const mapOrderError = (message: string): string => {
   const lower = message.toLowerCase();
 

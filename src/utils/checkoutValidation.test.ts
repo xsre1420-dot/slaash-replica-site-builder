@@ -76,6 +76,16 @@ describe('checkoutValidation', () => {
     expect(validateCheckoutItemStock(item, fresh).ok).toBe(true);
   });
 
+  it('validateCheckoutItemStock allows variant-only inventory when stock_quantity is zero', () => {
+    const fresh: Product = {
+      ...product('p1', 500, 0),
+      sizes: ['M'],
+      variants: [{ size: 'M', quantity: 8 }],
+    };
+    const item: CartItem = { product: fresh, quantity: 2, selectedSize: 'M' };
+    expect(validateCheckoutItemStock(item, fresh).ok).toBe(true);
+  });
+
   it('validateCheckoutItemStock rejects when no stock remains', () => {
     const fresh: Product = {
       ...product('p1', 500, 0),
