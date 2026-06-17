@@ -55,14 +55,6 @@ const navGroups = [
   },
 ];
 
-const allNavItems = navGroups.flatMap((g) => g.items);
-const mobilePrimaryNav = [
-  { to: '/builder', icon: LayoutDashboard, label: 'الرئيسية' },
-  { to: '/orders', icon: ShoppingBag, label: 'الطلبات' },
-  { to: '/products', icon: Package, label: 'المنتجات' },
-  { to: '/settings', icon: Settings, label: 'الإعدادات' },
-];
-
 interface DashboardLayoutProps {
   children: React.ReactNode;
   isHome?: boolean;
@@ -364,48 +356,10 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
             <ThemeToggle />
           </header>
 
-          <main id="main-content" className="flex-1 pb-20 lg:pb-0">
+          <main id="main-content" className="flex-1">
             <PlatformDbStatusBanner />
             {children}
           </main>
-
-          {/* Mobile bottom nav */}
-          <nav
-            className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-card border-t border-border/50 safe-area-bottom"
-            aria-label="التنقل السريع"
-          >
-            <div className="flex items-stretch justify-around px-1 py-1">
-              {mobilePrimaryNav.map(({ to, icon: Icon, label }) => {
-                const active = isActive(to);
-                return (
-                  <Link
-                    key={to}
-                    to={to}
-                    className={cn(
-                      'relative flex flex-col items-center justify-center gap-0.5 flex-1 py-2 min-h-[52px] rounded-xl transition-all duration-200',
-                      active ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-                    )}
-                    aria-current={active ? 'page' : undefined}
-                  >
-                    {active && (
-                      <span className="absolute top-1.5 w-1 h-1 rounded-full bg-primary" />
-                    )}
-                    <Icon className="w-5 h-5" strokeWidth={active ? 2.25 : 1.75} />
-                    <span className="text-[10px] font-medium">{label}</span>
-                  </Link>
-                );
-              })}
-              <button
-                type="button"
-                onClick={() => setMenuOpen(true)}
-                className="relative flex flex-col items-center justify-center gap-0.5 flex-1 py-2 min-h-[52px] rounded-xl transition-all duration-200 text-muted-foreground hover:text-foreground"
-                aria-label="المزيد من القوائم"
-              >
-                <Menu className="w-5 h-5" strokeWidth={1.75} />
-                <span className="text-[10px] font-medium">المزيد</span>
-              </button>
-            </div>
-          </nav>
         </div>
       </div>
     </TooltipProvider>

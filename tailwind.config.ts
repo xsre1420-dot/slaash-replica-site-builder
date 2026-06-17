@@ -148,6 +148,36 @@ export default {
           "0%": { transform: "translateX(8px)", opacity: "0" },
           "100%": { transform: "translateX(0)", opacity: "1" },
         },
+        "attention-glow": {
+          "0%, 100%": { boxShadow: "0 0 0 0 rgba(248, 113, 113, 0.35)" },
+          "50%": { boxShadow: "0 0 0 6px rgba(248, 113, 113, 0.12)" },
+        },
+        "attention-enter": {
+          "0%": {
+            opacity: "0.92",
+            boxShadow: "0 0 0 0 hsl(0 84% 60% / 0.35), 0 8px 24px -8px hsl(0 84% 60% / 0.22)",
+            backgroundColor: "hsl(0 84% 60% / 0.11)",
+          },
+          "40%": {
+            boxShadow: "0 0 0 6px hsl(0 84% 60% / 0.14), 0 12px 28px -10px hsl(0 84% 60% / 0.2)",
+            backgroundColor: "hsl(0 84% 60% / 0.08)",
+          },
+          "100%": {
+            opacity: "1",
+            boxShadow: "0 0 0 2px hsl(0 84% 60% / 0.22), 0 8px 24px -8px hsl(0 84% 60% / 0.16)",
+            backgroundColor: "hsl(0 84% 60% / 0.07)",
+          },
+        },
+        "attention-strip-glow": {
+          "0%, 100%": {
+            borderBottomColor: "hsl(0 84% 60% / 0.65)",
+            boxShadow: "0 8px 24px -10px hsl(0 84% 60% / 0.35)",
+          },
+          "50%": {
+            borderBottomColor: "hsl(0 84% 60% / 0.3)",
+            boxShadow: "0 2px 10px -8px hsl(0 84% 60% / 0.1)",
+          },
+        },
       },
       animation: {
         "fade-in": "fade-in 0.5s ease-out forwards",
@@ -157,6 +187,10 @@ export default {
         "scale-bounce": "scale-bounce 0.5s ease-out forwards",
         "scale-in": "scale-bounce 0.3s ease-out forwards",
         "slide-in-right": "slide-in-right 0.2s ease-out forwards",
+        "attention-glow": "attention-glow 2s ease-in-out 3",
+        "attention-enter": "attention-enter 1.1s ease-out forwards",
+        "attention-bar-glow": "attention-bar-glow 2.2s ease-in-out infinite",
+        "attention-strip-glow": "attention-strip-glow 2s ease-in-out 2",
       },
     },
   },

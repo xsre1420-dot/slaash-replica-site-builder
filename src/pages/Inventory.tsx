@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Search, Package, AlertTriangle, CheckCircle, Edit, Download, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -20,6 +20,9 @@ import { loadAllMerchantProducts, syncMerchantProductCatalog, invalidateProducts
 import { getProductLifecycleStatus, lifecycleStatusLabel } from "@/lib/productLifecycle";
 import { useRealtimeProducts } from '@/hooks/useRealtimeProducts';
 import { useStoreHydration } from "@/context/StoreBootstrapContext";
+import AttentionStrip from "@/components/ui/AttentionStrip";
+import { ATTENTION_PARAM } from "@/lib/attentionHighlight";
+import { useSearchParams } from "react-router-dom";
 
 type StockFilter = "all" | "good" | "low" | "out";
 
@@ -45,6 +48,8 @@ const stockFilters: { value: StockFilter; label: string; icon: React.ReactNode }
 
 function Inventory() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const attentionApplied = useRef(false);
   const { isReady, hydrationVersion } = useStoreHydration();
   const [products, setProducts] = useState<InventoryRow[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -181,6 +186,15 @@ function Inventory() {
     [products]
   );
 
+  useEffect(() => {
+    if (searchParams.get(ATTENTION_PARAM) !== 'low-stock' || attentionApplied.current || loading) return;
+    attentionApplied.current = true;
+    const outCount = products.filter((p) => getStockStatus(p).status === 'out').length;
+    const lowCount = products.filter((p) => getStockStatus(p).status === 'low').length;
+    if (outCount > 0 && lowCount === 0) setStockFilter('out');
+    else if (lowCount > 0) setStockFilter('low');
+  }, [searchParams, products, loading]);
+
   const exportCSV = () => {
     if (products.length === 0) {
       toast.error("لا توجد منتجات للتصدير");
@@ -247,53 +261,51 @@ function Inventory() {
         }
       />
 
-      <div className="ds-page">
-        {lowStockProducts.length > 0 && (
-          <div className="mb-5 p-4 rounded-2xl bg-amber-500/5 border border-amber-500/15 animate-fade-in">
-            <div className="flex items-center gap-2 mb-1">
-              <AlertTriangle className="w-4 h-4 text-amber-500" />
-              <span className="text-sm font-semibold text-foreground">
-                تنبيه: {lowStockProducts.length} منتج بحاجة لإعادة تعبئة
-              </span>
-            </div>
-          </div>
-        )}
+      <div className="ds-page space-y-6">
+        <AttentionStrip
+          attentionKey="low-stock"
+          visible={lowStockProducts.length > 0}
+          message={`${lowStockProducts.length} منتج بحاجة لإعادة تعبئة`}
+        />
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard label="إجمالي المنتجات" value={stats.total} icon={Package} />
           <StatCard label="متوفر" value={stats.good} icon={CheckCircle} iconClassName="bg-emerald-500/10 [&_svg]:text-emerald-600" />
           <StatCard label="منخفض" value={stats.low} icon={AlertTriangle} iconClassName="bg-amber-500/10 [&_svg]:text-amber-600" />
           <StatCard label="نفد" value={stats.out} icon={XCircle} iconClassName="bg-destructive/10 [&_svg]:text-destructive" />
-        </div>
+        </section>
 
-        <Card className="mb-6">
-          <CardContent className="p-4 flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <Input
-                placeholder="بحث في المخزون..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pr-10 rounded-xl"
-              />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {stockFilters.map((f) => (
-                <Button
-                  key={f.value}
-                  variant={stockFilter === f.value ? "default" : "outline"}
-                  size="sm"
-                  className={`rounded-xl gap-1.5 ${stockFilter !== f.value ? 'border-border/30 bg-card/80' : ''}`}
-                  onClick={() => setStockFilter(f.value)}
-                >
-                  {f.icon}
-                  {f.label}
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <section>
+          <Card>
+            <CardContent className="p-4 flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  placeholder="بحث في المخزون..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pr-10 rounded-xl"
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {stockFilters.map((f) => (
+                  <Button
+                    key={f.value}
+                    variant={stockFilter === f.value ? "default" : "outline"}
+                    size="sm"
+                    className={`rounded-xl gap-1.5 ${stockFilter !== f.value ? 'border-border/30 bg-card/80' : ''}`}
+                    onClick={() => setStockFilter(f.value)}
+                  >
+                    {f.icon}
+                    {f.label}
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </section>
 
+        <section>
         {filteredProducts.length === 0 ? (
           <EmptyState
             icon={Package}
@@ -380,6 +392,7 @@ function Inventory() {
             })}
           </div>
         )}
+        </section>
       </div>
     </DashboardLayout>
   );

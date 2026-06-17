@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Upload, X, ChevronLeft, ChevronRight, Star, ImageIcon, Store, Loader2 } from "lucide-react";
+import { Upload, X, ChevronLeft, ChevronRight, Star, ImageIcon, Store, Loader2, Settings } from "lucide-react";
 import { getAuthenticatedUserId } from "@/lib/authSession";
 import { uploadImage } from "@/utils/imageUpload";
 import { toast } from "sonner";
 import { normalizeStoreSlugInput, validateStoreSlug } from "@/lib/storeSlug";
+import AttentionStrip from "@/components/ui/AttentionStrip";
 
 interface StoreInfoTabProps {
   settings: {
@@ -113,6 +114,12 @@ const StoreInfoTab = ({ settings, setSettings }: StoreInfoTabProps) => {
           />
         </div>
 
+        <AttentionStrip
+          attentionKey="missing-slug"
+          visible={!settings.storeSlug?.trim()}
+          icon={Settings}
+          message="رابط المتجر غير مُعدّ — حدّد slug المتجر حتى يصل العملاء لصفحتك"
+        />
         <div className="space-y-2">
           <Label htmlFor="store-slug" className="text-right block text-foreground font-medium">رابط المتجر (Slug)</Label>
           <div className="flex items-center gap-2 direction-ltr">

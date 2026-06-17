@@ -10,7 +10,7 @@ vi.mock('@/hooks/useOrders', () => ({
         id: '1',
         status: 'pending',
         total: 100,
-        date: '2026-06-14T10:00:00Z',
+        date: new Date().toISOString(),
         customerInfo: { name: 'عميل', phone: '0770000000', address: 'بغداد', governorate: 'بغداد' },
       },
     ],
@@ -19,17 +19,40 @@ vi.mock('@/hooks/useOrders', () => ({
   }),
 }));
 
-vi.mock('@/hooks/useOrderDashboardStats', () => ({
-  useOrderDashboardStats: () => ({
-    stats: {
-      total: 1,
-      newOrders: 1,
-      pendingFulfillment: 1,
-      delivered: 0,
-      revenue: 0,
-    },
-    statsLoading: false,
-    reloadStats: vi.fn(),
+vi.mock('@/hooks/useDashboardInsights', () => ({
+  useDashboardInsights: () => ({
+    actions: [
+      {
+        id: 'pending-orders',
+        title: '2 طلبات تحتاج المعالجة',
+        description: 'راجع الطلبات وحدّث حالتها',
+        href: '/orders?attention=pending-orders',
+        icon: () => null,
+      },
+      {
+        id: 'pending-reviews',
+        title: '2 تقييمات بانتظار المعالجة',
+        description: 'راجع التعليقات ووافق على ما يناسب متجرك',
+        href: '/products?attention=pending-reviews',
+        icon: () => null,
+      },
+      {
+        id: 'low-stock',
+        title: 'مخزون منخفض',
+        description: '1 نفد · 2 منخفض',
+        href: '/inventory?attention=low-stock',
+        icon: () => null,
+      },
+    ],
+    today: { orders: 1, revenue: 50000, visits: 12 },
+    yesterday: { orders: 0, revenue: 0, visits: 8 },
+    week: { orders: 1, revenue: 50000, visits: 5 },
+    previousWeek: { orders: 0, revenue: 0, visits: 2 },
+    lowStockCount: 3,
+    inventoryOutCount: 1,
+    pendingOrdersCount: 2,
+    pendingReviewsCount: 2,
+    loading: false,
   }),
 }));
 
@@ -37,20 +60,22 @@ vi.mock('@/hooks/useRealtimeOrders', () => ({
   useRealtimeOrders: vi.fn(),
 }));
 
-vi.mock('@/services/productService', () => ({
-  getProductsSync: () => [{ id: 'p1' }],
-}));
-
 describe('DashboardOverview', () => {
-  it('renders without crashing when useOrders returns orders', () => {
+  it('renders action items and performance KPIs', () => {
     render(
       <MemoryRouter>
         <DashboardOverview />
       </MemoryRouter>
     );
 
-    expect(screen.queryByText('حدث خطأ غير متوقع')).not.toBeInTheDocument();
-    expect(screen.getByText('ملخص المتجر')).toBeInTheDocument();
-    expect(screen.getAllByText('قيد الانتظار').length).toBeGreaterThan(0);
+    expect(screen.getByText('يحتاج انتباهك')).toBeInTheDocument();
+    expect(screen.getByText('2 طلبات تحتاج المعالجة')).toBeInTheDocument();
+    expect(screen.getByText('2 تقييمات بانتظار المعالجة')).toBeInTheDocument();
+    expect(screen.getByText('مخزون منخفض')).toBeInTheDocument();
+    expect(screen.getByText('ملخص اليوم')).toBeInTheDocument();
+    expect(screen.getByText('مبيعات اليوم (د.ع)')).toBeInTheDocument();
+    expect(screen.getByText('زوار اليوم')).toBeInTheDocument();
+    expect(screen.getAllByText(/طلبات تحتاج المعالجة/).length).toBe(1);
+    expect(screen.getByText('آخر الطلبات')).toBeInTheDocument();
   });
 });

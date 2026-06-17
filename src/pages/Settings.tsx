@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,6 +16,7 @@ import PaymentTab from "@/components/settings/PaymentTab";
 import DesignTab from "@/components/settings/DesignTab";
 import CustomDomainTab from "@/components/settings/CustomDomainTab";
 import { validateStoreSlug, normalizeStoreSlugInput } from "@/lib/storeSlug";
+import { ATTENTION_PARAM } from "@/lib/attentionHighlight";
 
 const Settings = () => {
   const { user } = useAuth();
@@ -24,6 +26,8 @@ const Settings = () => {
   const isDbLoaded = useRef(false);
   const lastSavedRef = useRef<string>("");
   const [saveStatus, setSaveStatus] = useState<'idle' | 'pending' | 'saving' | 'saved' | 'error'>('idle');
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState('store');
   
   const [settings, setSettings] = useState({
     storeName: storeName,
@@ -87,6 +91,12 @@ const Settings = () => {
         isDbLoaded.current = true;
       });
   }, [user?.id]);
+
+  useEffect(() => {
+    if (searchParams.get(ATTENTION_PARAM) === 'missing-slug') {
+      setActiveTab('store');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     setSettings(prev => ({
@@ -264,7 +274,7 @@ const Settings = () => {
       />
 
       <div className="ds-page max-w-5xl">
-        <Tabs defaultValue="store" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="flex w-full overflow-x-auto scrollbar-hide rounded-xl p-1 h-auto gap-1 mb-6 lg:mb-8">
             {tabItems.map((tab) => {
               const Icon = tab.icon;

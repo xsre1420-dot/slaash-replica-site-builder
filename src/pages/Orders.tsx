@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Package, Clock, TrendingUp, ShoppingBag, Bell, Loader2 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/layout/PageHeader';
@@ -22,10 +22,14 @@ import { useOrderDashboardStats } from '@/hooks/useOrderDashboardStats';
 import { toast } from 'sonner';
 import { copyStorePublicUrl } from '@/lib/storeUrl';
 import { useScrollPersistence } from '@/hooks/useScrollPersistence';
+import AttentionStrip from '@/components/ui/AttentionStrip';
+import { ATTENTION_PARAM } from '@/lib/attentionHighlight';
 
 const Orders = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const attentionApplied = useRef(false);
   const {
     orders,
     updateOrderStatus,
@@ -44,6 +48,15 @@ const Orders = () => {
   useScrollPersistence('orders');
 
   const { stats } = useOrderDashboardStats(statsRefreshKey);
+
+  useEffect(() => {
+    if (searchParams.get(ATTENTION_PARAM) !== 'pending-orders' || attentionApplied.current) return;
+    attentionApplied.current = true;
+    setFilters((prev) => ({
+      ...prev,
+      workflowTab: stats.newOrders > 0 ? 'new' : 'processing',
+    }));
+  }, [searchParams, stats.newOrders]);
 
   const handleRealtimeEvent = useCallback(
     (event: OrderRealtimeEvent) => {
@@ -185,6 +198,16 @@ const Orders = () => {
             iconClassName="bg-success/10 [&_svg]:text-success"
           />
         </div>
+
+        {stats.pendingFulfillment > 0 && (
+          <AttentionStrip
+            attentionKey="pending-orders"
+            icon={Clock}
+            message={`${stats.pendingFulfillment} ${
+              stats.pendingFulfillment === 1 ? 'طلب' : 'طلبات'
+            } تحتاج المعالجة — راجع الطلبات وحدّث حالتها`}
+          />
+        )}
 
         <OrdersWorkflowTabs
           orders={tabCountBase}

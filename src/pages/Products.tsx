@@ -1,28 +1,29 @@
 
-import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense, useRef } from "react";
 import { isProductLowStock } from '@/lib/productUpdateUtils';
 import { Link, useSearchParams, useLocation, useNavigate } from "react-router-dom";
-import { MessageSquare, Lightbulb, Download, Plus, Package, XCircle, Search, ArrowRight } from "lucide-react";
+import { MessageSquare, Lightbulb, Plus, Search, ArrowRight, Package, XCircle } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import StatCard from "@/components/ui/StatCard";
 import { ProductsList } from "@/components/ProductsList";
+import StatCard from "@/components/ui/StatCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Product } from "@/types";
-import { exportProductsToCSV } from "@/utils/exportProducts";
 import { toast } from 'sonner';
 import { getCategories, invalidateProducts, loadAllMerchantProducts as reloadProductsData } from "@/services/productService";
+import { getFirstPendingReviewTarget, countPendingReviewsForOwner } from "@/services/reviewService";
 import { getProductLifecycleStatus, matchesLifecycleFilter, type ProductLifecycleFilter } from "@/lib/productLifecycle";
 import type { ProductSaveMode } from "@/lib/productFormLabels";
 import { useAuth } from "@/context/AuthContext";
 import { useRealtimeProducts } from "@/hooks/useRealtimeProducts";
 import { useScrollPersistence, saveFilters, loadFilters } from "@/hooks/useScrollPersistence";
 import { useStoreHydration } from "@/context/StoreBootstrapContext";
-import { BulkUpload } from "@/components/product-management/BulkUpload";
+import AttentionStrip from "@/components/ui/AttentionStrip";
+import { ATTENTION_PARAM } from "@/lib/attentionHighlight";
 
 // Suggestion #8: Lazy load sub-managers
 const ProductReviewsManager = lazy(() => import("@/components/product-management/ProductReviewsManager"));
@@ -44,6 +45,8 @@ const Products = () => {
   const [publishFilter, setPublishFilter] = useState<ProductLifecycleFilter>("all");
   const [catalogTotal, setCatalogTotal] = useState(0);
   const [categories, setCategories] = useState<{id: string; name: string}[]>([]);
+  const [pendingReviewsCount, setPendingReviewsCount] = useState(0);
+  const attentionApplied = useRef(false);
   
   // Suggestion #17: Scroll & filter persistence
   useScrollPersistence('products');
@@ -96,10 +99,42 @@ const Products = () => {
     }
   }, [productIdParam, productNameParam]);
 
+  useEffect(() => {
+    const attention = searchParams.get(ATTENTION_PARAM);
+    if (!attention || attentionApplied.current || !user?.id) return;
+
+    if (attention === 'draft-products') {
+      attentionApplied.current = true;
+      setPublishFilter('draft');
+      return;
+    }
+
+    if (attention === 'pending-reviews') {
+      attentionApplied.current = true;
+      void getFirstPendingReviewTarget(user.id).then((target) => {
+        if (!target) return;
+        setSelectedProduct({ id: target.productId, name: target.productName });
+        setSearchParams({
+          productId: target.productId,
+          productName: encodeURIComponent(target.productName),
+          [ATTENTION_PARAM]: 'pending-reviews',
+        });
+      });
+    }
+  }, [searchParams, user?.id, setSearchParams]);
+
   // Load categories
   useEffect(() => {
     getCategories().then(cats => setCategories(cats));
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setPendingReviewsCount(0);
+      return;
+    }
+    void countPendingReviewsForOwner(user.id).then(setPendingReviewsCount);
+  }, [user?.id, loadedProducts.length]);
 
   // Restore saved filters once (skip when arriving from add-product)
   useEffect(() => {
@@ -142,15 +177,6 @@ const Products = () => {
   const handleBackToList = () => {
     setSelectedProduct(null);
     setSearchParams({});
-  };
-
-  const handleExport = () => {
-    if (loadedProducts.length === 0) {
-      toast.error("لا توجد منتجات للتصدير");
-      return;
-    }
-    exportProductsToCSV(loadedProducts);
-    toast.success(`تم تصدير ${loadedProducts.length} منتج بنجاح`);
   };
 
   // Stats (memoized)
@@ -243,6 +269,15 @@ const Products = () => {
               </Button>
             </div>
 
+            <AttentionStrip
+              attentionKey="pending-reviews"
+              visible={pendingReviewsCount > 0}
+              icon={MessageSquare}
+              message={`${pendingReviewsCount} ${
+                pendingReviewsCount === 1 ? 'تقييم' : 'تقييمات'
+              } بانتظار المعالجة — اختر منتجاً لمراجعة التعليقات`}
+            />
+
             <Tabs defaultValue="reviews" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="reviews" className="flex items-center gap-2">
@@ -275,32 +310,79 @@ const Products = () => {
             </Tabs>
           </div>
         ) : (
-          <>
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
-              <StatCard label="إجمالي المنتجات" value={stats.total} icon={Package} />
-              <StatCard label="منشور" value={stats.published} icon={Package} iconClassName="bg-emerald-500/10 [&_svg]:text-emerald-600" />
-              <StatCard label="مسودات" value={stats.drafts} icon={Package} iconClassName="bg-muted [&_svg]:text-muted-foreground" />
-              <StatCard label="مؤرشف" value={stats.archived} icon={Package} iconClassName="bg-muted [&_svg]:text-muted-foreground" />
-              <StatCard label="نفد المخزون" value={stats.outOfStock} icon={XCircle} iconClassName="bg-destructive/10 [&_svg]:text-destructive" />
+          <div className="space-y-6 min-w-0">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3 lg:gap-4">
+              <StatCard
+                label="إجمالي المنتجات"
+                value={stats.total}
+                icon={Package}
+                className="p-3.5 sm:p-5 [&_.ds-stat-value]:text-xl sm:[&_.ds-stat-value]:text-2xl lg:[&_.ds-stat-value]:text-3xl"
+              />
+              <StatCard
+                label="منشور"
+                value={stats.published}
+                icon={Package}
+                iconClassName="bg-emerald-500/10 [&_svg]:text-emerald-600"
+                className="p-3.5 sm:p-5 [&_.ds-stat-value]:text-xl sm:[&_.ds-stat-value]:text-2xl lg:[&_.ds-stat-value]:text-3xl"
+              />
+              <StatCard
+                label="مسودات"
+                value={stats.drafts}
+                icon={Package}
+                iconClassName="bg-muted [&_svg]:text-muted-foreground"
+                className="p-3.5 sm:p-5 [&_.ds-stat-value]:text-xl sm:[&_.ds-stat-value]:text-2xl lg:[&_.ds-stat-value]:text-3xl"
+              />
+              <StatCard
+                label="مؤرشف"
+                value={stats.archived}
+                icon={Package}
+                iconClassName="bg-muted [&_svg]:text-muted-foreground"
+                className="p-3.5 sm:p-5 [&_.ds-stat-value]:text-xl sm:[&_.ds-stat-value]:text-2xl lg:[&_.ds-stat-value]:text-3xl"
+              />
+              <StatCard
+                label="نفد المخزون"
+                value={stats.outOfStock}
+                icon={XCircle}
+                iconClassName="bg-destructive/10 [&_svg]:text-destructive"
+                className="col-span-2 md:col-span-1 p-3.5 sm:p-5 [&_.ds-stat-value]:text-xl sm:[&_.ds-stat-value]:text-2xl lg:[&_.ds-stat-value]:text-3xl"
+              />
             </div>
 
-            {/* Filters & Actions */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
-                  <div className="relative lg:col-span-2">
+            {stats.drafts > 0 && (
+              <AttentionStrip
+                attentionKey="draft-products"
+                message={`${stats.drafts} ${
+                  stats.drafts === 1 ? 'مسودة' : 'مسودات'
+                } غير منشورة — انشرها لتظهر في المتجر`}
+              />
+            )}
+
+            {pendingReviewsCount > 0 && (
+              <AttentionStrip
+                attentionKey="pending-reviews"
+                icon={MessageSquare}
+                message={`${pendingReviewsCount} ${
+                  pendingReviewsCount === 1 ? 'تقييم' : 'تقييمات'
+                } بانتظار المعالجة — اختر منتجاً من القائمة لمراجعة التعليقات`}
+              />
+            )}
+
+            <Card className="border-border/50 shadow-sm overflow-hidden">
+              <CardContent className="p-4 sm:p-5">
+                <div className="space-y-3 min-w-0">
+                  <div className="relative w-full min-w-0">
                     <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
                     <Input
                       placeholder="بحث عن منتج..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pr-10 rounded-xl border-border text-foreground"
+                      className="pr-10 rounded-xl border-border text-foreground w-full min-h-[44px]"
                     />
                   </div>
-                  
+
+                  <div className="grid grid-cols-1 min-[400px]:grid-cols-2 sm:grid-cols-3 gap-3 min-w-0">
                   <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger className="rounded-xl border-border text-foreground">
+                    <SelectTrigger className="rounded-xl border-border text-foreground w-full min-h-[44px]">
                       <SelectValue placeholder="الفئة" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl bg-popover border-border">
@@ -312,7 +394,7 @@ const Products = () => {
                   </Select>
 
                   <Select value={stockFilter} onValueChange={setStockFilter}>
-                    <SelectTrigger className="rounded-xl border-border text-foreground">
+                    <SelectTrigger className="rounded-xl border-border text-foreground w-full min-h-[44px]">
                       <SelectValue placeholder="المخزون" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl bg-popover border-border">
@@ -324,7 +406,7 @@ const Products = () => {
                   </Select>
 
                   <Select value={publishFilter} onValueChange={(v) => setPublishFilter(v as ProductLifecycleFilter)}>
-                    <SelectTrigger className="rounded-xl border-border text-foreground">
+                    <SelectTrigger className="rounded-xl border-border text-foreground w-full min-h-[44px]">
                       <SelectValue placeholder="الحالة" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl bg-popover border-border">
@@ -334,18 +416,6 @@ const Products = () => {
                       <SelectItem value="archived">مؤرشف</SelectItem>
                     </SelectContent>
                   </Select>
-
-                  <div className="flex gap-2 lg:col-span-2">
-                    <BulkUpload onComplete={() => reloadCatalog()} />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="rounded-xl border-border text-foreground text-xs min-h-[44px]"
-                      onClick={handleExport}
-                    >
-                      <Download className="w-3.5 h-3.5 ml-1" />
-                      تصدير
-                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -375,7 +445,7 @@ const Products = () => {
                 reloadToken={hydrationVersion}
               />
             </div>
-          </>
+          </div>
         )}
       </div>
     </DashboardLayout>

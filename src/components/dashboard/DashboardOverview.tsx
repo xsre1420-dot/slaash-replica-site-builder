@@ -2,24 +2,22 @@ import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { format } from 'date-fns';
 import {
-  Package,
   ShoppingBag,
   Clock,
   TrendingUp,
-  Plus,
-  AlertCircle,
   ArrowLeft,
   CheckCircle,
   XCircle,
+  Eye,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import StatCard from '@/components/ui/StatCard';
 import { useOrders } from '@/hooks/useOrders';
-import { useOrderDashboardStats } from '@/hooks/useOrderDashboardStats';
+import { useDashboardInsights } from '@/hooks/useDashboardInsights';
 import { useRealtimeOrders } from '@/hooks/useRealtimeOrders';
-import { getProductsSync } from '@/services/productService';
+import { formatKpiTrend } from '@/utils/dashboardInsightsUtils';
+import AttentionAlertLink from '@/components/dashboard/AttentionAlertLink';
 import { cn } from '@/lib/utils';
 
 const statusConfig = {
@@ -31,26 +29,29 @@ const statusConfig = {
 const DashboardOverview = () => {
   const { orders, loading, refetch } = useOrders();
   const [statsRefreshKey, setStatsRefreshKey] = useState(0);
-  const { stats } = useOrderDashboardStats(statsRefreshKey);
+  const { actions, today, yesterday, loading: insightsLoading } =
+    useDashboardInsights(statsRefreshKey);
 
   useRealtimeOrders(() => {
     refetch();
     setStatsRefreshKey((k) => k + 1);
   });
 
-  const productCount = getProductsSync().length;
-  const pendingCount = stats.newOrders;
-  const completedCount = stats.delivered;
-  const revenue = stats.revenue;
   const recentOrders = [...orders]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5);
 
-  if (loading && orders.length === 0) {
+  const todaySalesTrend = formatKpiTrend(today.revenue, yesterday.revenue, today.orders);
+  const todayVisitsTrend = formatKpiTrend(today.visits, yesterday.visits);
+
+  const showSkeleton = loading && orders.length === 0 && insightsLoading;
+
+  if (showSkeleton) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {[1, 2, 3, 4].map((i) => (
+        <Skeleton className="h-24 rounded-2xl" />
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          {[1, 2].map((i) => (
             <Skeleton key={i} className="h-28 rounded-2xl" />
           ))}
         </div>
@@ -61,62 +62,50 @@ const DashboardOverview = () => {
 
   return (
     <div className="space-y-6 lg:space-y-8">
-      {/* Action alerts */}
-      {productCount === 0 && (
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl border border-warning/20 bg-warning/5">
-          <div className="flex items-start gap-3 flex-1">
-            <AlertCircle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-foreground">متجرك فارغ — أضف أول منتج</p>
-              <p className="text-xs text-muted-foreground mt-0.5">لا يمكن للعملاء الشراء بدون منتجات. ابدأ بإضافة منتج واحد على الأقل.</p>
-            </div>
+      {actions.length > 0 && (
+        <div className="animate-fade-in">
+          <div className="flex items-center justify-between mb-4 px-1">
+            <h3 className="ds-section-title">يحتاج انتباهك</h3>
+            <span className="text-[11px] font-medium text-destructive/80 bg-destructive/10 px-2 py-0.5 rounded-full tabular-nums">
+              {actions.length}
+            </span>
           </div>
-          <Link to="/add-product" className="shrink-0">
-            <Button size="sm" className="rounded-xl w-full sm:w-auto min-h-[44px]">
-              <Plus className="w-4 h-4" />
-              إضافة منتج
-            </Button>
-          </Link>
+          <div className="space-y-2.5">
+            {actions.map((action) => (
+              <AttentionAlertLink
+                key={action.id}
+                id={action.id}
+                title={action.title}
+                description={action.description}
+                href={action.href}
+                icon={action.icon}
+              />
+            ))}
+          </div>
         </div>
       )}
 
-      {pendingCount > 0 && (
-        <Link to="/orders" className="block group">
-          <div className="flex items-center gap-3 p-4 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-              <Clock className="w-5 h-5 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground">
-                {pendingCount} {pendingCount === 1 ? 'طلب ينتظر' : 'طلبات تنتظر'} معالجتك
-              </p>
-              <p className="text-xs text-muted-foreground">اضغط لعرض الطلبات وتحديث حالتها</p>
-            </div>
-            <ArrowLeft className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
-          </div>
-        </Link>
-      )}
-
-      {/* KPI stats */}
       <div>
-        <h3 className="ds-section-title mb-4 px-1">ملخص المتجر</h3>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <StatCard label="الطلبات" value={orders.length} icon={ShoppingBag} />
+        <h3 className="ds-section-title mb-4 px-1">ملخص اليوم</h3>
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <StatCard
-            label="قيد الانتظار"
-            value={pendingCount}
-            icon={Clock}
-            iconClassName="bg-warning/10 [&_svg]:text-warning"
+            label="مبيعات اليوم (د.ع)"
+            value={today.revenue.toLocaleString()}
+            icon={TrendingUp}
+            trend={todaySalesTrend.trend}
+            trendUp={todaySalesTrend.trendUp}
           />
-          <StatCard label="المنتجات" value={productCount} icon={Package} />
-          <StatCard label="الإيرادات (د.ع)" value={revenue.toLocaleString()} icon={TrendingUp} />
+          <StatCard
+            label="زوار اليوم"
+            value={today.visits.toLocaleString()}
+            icon={Eye}
+            trend={todayVisitsTrend.trend}
+            trendUp={todayVisitsTrend.trendUp}
+            iconClassName="bg-violet-500/10 [&_svg]:text-violet-600"
+          />
         </div>
-        {orders.length > 0 && completedCount === 0 && pendingCount === 0 && (
-          <p className="text-xs text-muted-foreground mt-2 px-1">الإحصائيات تعكس الطلبات المحمّلة حالياً</p>
-        )}
       </div>
 
-      {/* Recent orders */}
       <div>
         <div className="flex items-center justify-between mb-4 px-1">
           <h3 className="ds-section-title">آخر الطلبات</h3>

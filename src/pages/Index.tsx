@@ -406,40 +406,54 @@ const Index = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="pb-24 pt-12 bg-background border-t border-border/40">
-        <div className="container mx-auto px-4">
+      <section className="py-24 relative overflow-hidden bg-muted/20 border-t border-border/40">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute inset-0 bg-[linear-gradient(hsl(var(--border)/0.04)_1px,transparent_1px),linear-gradient(90deg,hsl(var(--border)/0.04)_1px,transparent_1px)] bg-[size:48px_48px]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-transparent to-background/60" />
+        </div>
+
+        <div className="container mx-auto px-4 relative z-10">
           <FadeUp>
-            <div className="max-w-3xl mx-auto text-center ds-card p-10 md:p-14">
-              <div className="w-12 h-12 bg-primary/8 rounded-xl flex items-center justify-center mx-auto mb-6">
-                <Sparkles className="w-6 h-6 text-primary" strokeWidth={1.75} />
+            <div className="max-w-2xl mx-auto text-center">
+              <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 px-4 py-2 rounded-full text-sm font-semibold text-primary mb-6">
+                <Sparkles className="w-4 h-4" strokeWidth={1.75} />
+                ابدأ الآن
               </div>
-              <h2 className="ds-heading-lg mb-4">
-                جاهز لإطلاق
-                <span className="text-primary"> متجرك الاحترافي؟</span>
+
+              <h2 className="ds-heading-lg mb-3 leading-tight">
+                أطلق <span className="text-primary">متجرك</span> اليوم
               </h2>
-              <p className="text-muted-foreground mb-8 text-base md:text-lg max-w-xl mx-auto leading-relaxed">
-                انضم لمئات التجار الناجحين الذين يديرون متاجرهم بكل سهولة عبر منصة بداية
+
+              <p className="text-muted-foreground mb-8 text-base max-w-md mx-auto">
+                بيع خلال دقائق — بدون برمجة.
               </p>
-              <Link to="/signup">
-                <Button size="lg" className="min-w-[200px] group">
-                  ابدأ الآن
-                  <ArrowLeft className="mr-1 h-4 w-4 group-hover:-translate-x-0.5 transition-transform" strokeWidth={1.75} />
-                </Button>
-              </Link>
-              <div className="flex flex-wrap items-center justify-center gap-5 mt-8 pt-8 border-t border-border/40">
-                <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <Shield className="w-4 h-4 text-primary" strokeWidth={1.75} />
-                  <span>حماية كاملة</span>
+
+              <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mb-8">
+                <Link to="/signup">
+                  <Button size="lg" className="min-w-[200px] group font-semibold">
+                    أنشئ متجرك مجاناً
+                    <ArrowLeft className="mr-1 h-4 w-4 group-hover:-translate-x-0.5 transition-transform" strokeWidth={1.75} />
+                  </Button>
+                </Link>
+                <Link to="/login">
+                  <Button variant="outline" size="lg" className="min-w-[200px]">
+                    تسجيل الدخول
+                  </Button>
+                </Link>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-muted-foreground text-xs sm:text-sm">
+                <div className="flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5 text-primary shrink-0" strokeWidth={1.75} />
+                  <span>حماية</span>
                 </div>
-                <div className="w-1 h-1 rounded-full bg-border hidden sm:block" />
-                <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <Zap className="w-4 h-4 text-primary" strokeWidth={1.75} />
-                  <span>إعداد فوري</span>
+                <div className="flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-primary shrink-0" strokeWidth={1.75} />
+                  <span>إعداد سريع</span>
                 </div>
-                <div className="w-1 h-1 rounded-full bg-border hidden sm:block" />
-                <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <Headphones className="w-4 h-4 text-primary" strokeWidth={1.75} />
-                  <span>دعم مستمر</span>
+                <div className="flex items-center gap-1.5">
+                  <Headphones className="w-3.5 h-3.5 text-primary shrink-0" strokeWidth={1.75} />
+                  <span>دعم</span>
                 </div>
               </div>
             </div>

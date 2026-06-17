@@ -1,17 +1,15 @@
 
 import { Link } from "react-router-dom";
-import { List, Plus, Settings, BarChart3, Copy, Check, Package, Archive, TrendingUp, Sparkles, BookOpen } from "lucide-react";
+import { List, Plus, Settings, BarChart3, Copy, Check, Package, Archive, TrendingUp, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/context/StoreContext";
 import { useAuth } from "@/context/AuthContext";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { copyStorePublicUrl } from "@/lib/storeUrl";
 import platformLogo from "@/assets/platform-logo.png";
-import OnboardingChecklist from "@/components/OnboardingChecklist";
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
 import { usePreloadData } from "@/hooks/usePreloadData";
-import { getProductsSync } from "@/services/productService";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 
 const dashboardCards = [
@@ -27,21 +25,8 @@ export default function Builder() {
   const { storeName, storeLogo } = useStore();
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(true);
-  const [completedSteps, setCompletedSteps] = useState<string[]>([]);
 
   usePreloadData();
-
-  useEffect(() => {
-    const dismissed = localStorage.getItem('onboarding_dismissed');
-    if (dismissed) setShowOnboarding(false);
-
-    const steps: string[] = [];
-    if (getProductsSync().length > 0) steps.push('add-product');
-    if (storeLogo || (storeName && storeName !== 'متجري')) steps.push('settings');
-    if (localStorage.getItem('store_shared')) steps.push('share');
-    setCompletedSteps(steps);
-  }, [storeName, storeLogo]);
 
   const handleCopyLink = async () => {
     if (!user?.id) return;
@@ -52,8 +37,6 @@ export default function Builder() {
         return;
       }
       setCopied(true);
-      localStorage.setItem('store_shared', 'true');
-      setCompletedSteps((prev) => (prev.includes('share') ? prev : [...prev, 'share']));
       toast.success("تم نسخ الرابط — شاركه مع عملائك الآن!");
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -61,40 +44,9 @@ export default function Builder() {
     }
   };
 
-  const totalSteps = 3;
-  const onboardingComplete = completedSteps.length >= totalSteps;
-
   return (
     <DashboardLayout isHome>
       <div className="ds-page max-w-5xl">
-        {showOnboarding && (
-          <OnboardingChecklist
-            completedSteps={completedSteps}
-            onDismiss={() => {
-              setShowOnboarding(false);
-              localStorage.setItem('onboarding_dismissed', 'true');
-            }}
-            onCopyLink={handleCopyLink}
-          />
-        )}
-
-        {!showOnboarding && !onboardingComplete && (
-          <div className="flex justify-end mb-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs text-muted-foreground hover:text-primary rounded-xl gap-1.5"
-              onClick={() => {
-                setShowOnboarding(true);
-                localStorage.removeItem('onboarding_dismissed');
-              }}
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              إظهار دليل الإعداد
-            </Button>
-          </div>
-        )}
-
         {/* Compact store header with primary actions */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mb-2">
           <div className="flex items-center gap-4 flex-1 min-w-0">

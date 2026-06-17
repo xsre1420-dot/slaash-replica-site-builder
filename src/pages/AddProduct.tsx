@@ -28,10 +28,14 @@ import { PRODUCT_SAVE_LABELS } from '@/lib/productFormLabels';
 import { useAddProductForm } from '@/hooks/useAddProductForm';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import AttentionStrip from '@/components/ui/AttentionStrip';
+import { getProductsSync } from '@/services/productService';
+import { PackagePlus } from 'lucide-react';
 
 const AddProduct = () => {
   const { state, actions } = useAddProductForm();
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const catalogEmpty = getProductsSync().length === 0;
 
   return (
     <DashboardLayout>
@@ -53,7 +57,13 @@ const AddProduct = () => {
         }
       />
 
-      <div className="ds-page max-w-6xl pb-28 lg:pb-8">
+      <div className="ds-page max-w-6xl pb-28 lg:pb-8 space-y-6">
+        <AttentionStrip
+          attentionKey="empty-catalog"
+          visible={catalogEmpty}
+          icon={PackagePlus}
+          message="متجرك بدون منتجات — أضف منتجاً واحداً على الأقل لبدء البيع"
+        />
         <form id="add-product-form" onSubmit={actions.handleSubmit} className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
           {/* Main column — Shopify order */}
           <div className="space-y-5 min-w-0">

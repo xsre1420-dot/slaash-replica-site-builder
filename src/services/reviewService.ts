@@ -95,3 +95,48 @@ export async function deleteProductReview(
   if (error) return { success: false, error: error.message };
   return { success: true };
 }
+
+/** Count merchant reviews awaiting approval across all products */
+export async function countPendingReviewsForOwner(ownerId: string): Promise<number> {
+  if (!ownerId) return 0;
+
+  const { count, error } = await supabase
+    .from('product_reviews')
+    .select('id', { count: 'exact', head: true })
+    .eq('owner_id', ownerId)
+    .eq('is_approved', false);
+
+  if (error) {
+    console.warn('[reviews] pending count failed:', error.message);
+    return 0;
+  }
+
+  return count ?? 0;
+}
+
+/** First product with a pending review — for dashboard deep-link */
+export async function getFirstPendingReviewTarget(
+  ownerId: string
+): Promise<{ productId: string; productName: string } | null> {
+  if (!ownerId) return null;
+
+  const { data, error } = await supabase
+    .from('product_reviews')
+    .select('product_id, products!inner(name)')
+    .eq('owner_id', ownerId)
+    .eq('is_approved', false)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data?.product_id) {
+    if (error) console.warn('[reviews] pending target failed:', error.message);
+    return null;
+  }
+
+  const product = data.products as { name?: string } | null;
+  return {
+    productId: data.product_id,
+    productName: product?.name ?? 'منتج',
+  };
+}
