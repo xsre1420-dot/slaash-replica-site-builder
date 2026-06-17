@@ -3,6 +3,17 @@
  * @deprecated Import from here instead of `@/data/dummyData` in new code.
  */
 export {
+  checkSupabaseConnection,
+  listProducts,
+  getProductById as getProductByIdFromDb,
+  createProduct,
+  updateProduct as updateProductInDb,
+  deleteProduct as deleteProductFromDb,
+  type ProductsCrudResult,
+  type ListProductsOptions,
+} from '@/services/productsCrudService';
+
+export {
   setCurrentOwner,
   setCurrentStore,
   getCurrentStoreId,
