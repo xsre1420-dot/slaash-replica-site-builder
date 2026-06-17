@@ -9,10 +9,10 @@ export const useRealStatistics = (
   startDate?: string,
   endDate?: string
 ) => {
-  const [stats, setStats] = useState<RealStatistics | null>(getDefaultStatistics());
+  const [stats, setStats] = useState<RealStatistics | null>(null);
   const [rawOrders, setRawOrders] = useState<any[]>([]);
   const [truncated, setTruncated] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const dateBounds = useMemo(
@@ -42,6 +42,7 @@ export const useRealStatistics = (
           return d >= bounds.start && d <= bounds.end;
         })
       );
+      setError(null);
     } catch (err) {
       console.error('Error fetching statistics:', err);
       setStats(getDefaultStatistics());

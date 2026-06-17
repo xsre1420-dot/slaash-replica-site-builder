@@ -3,10 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { DatabaseData } from '@/types/statistics';
 import { cache, CacheKeys, CacheTTL, dedup } from '@/lib/cache';
 
-const withTimeout = <T>(promise: Promise<T>, ms = 10000): Promise<T> => {
+const withTimeout = <T>(promise: Promise<T>, ms = 12000): Promise<T> => {
   return Promise.race([
     promise,
-    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Request timeout')), ms))
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Request timeout')), ms)),
   ]);
 };
 
@@ -46,6 +46,52 @@ export const getStatisticsDateBounds = (
   return { start, end, days, previousStart };
 };
 
+const fetchStoreStatisticsRpc = async (
+  ownerId: string,
+  periodStart: string,
+  periodEnd: string
+): Promise<Record<string, unknown> | undefined> => {
+  try {
+    const { data, error } = await (supabase as any).rpc('get_store_statistics', {
+      p_owner_id: ownerId,
+      p_start: periodStart,
+      p_end: periodEnd,
+    });
+    if (error) {
+      console.warn('[statistics] get_store_statistics unavailable, using client fallback:', error.message);
+      return undefined;
+    }
+    return (data as Record<string, unknown>) ?? undefined;
+  } catch (err) {
+    console.warn('[statistics] get_store_statistics RPC failed:', err);
+    return undefined;
+  }
+};
+
+const fetchProductCount = async (ownerId: string): Promise<number> => {
+  const activeRes = await supabase
+    .from('products')
+    .select('id', { count: 'exact', head: true })
+    .eq('owner_id', ownerId)
+    .eq('is_active', true);
+
+  if (!activeRes.error && activeRes.count != null) {
+    return activeRes.count;
+  }
+
+  const allRes = await supabase
+    .from('products')
+    .select('id', { count: 'exact', head: true })
+    .eq('owner_id', ownerId);
+
+  if (allRes.error) {
+    console.warn('[statistics] products count failed:', allRes.error.message);
+    return 0;
+  }
+
+  return allRes.count ?? 0;
+};
+
 export const fetchStatisticsData = async (
   dateRange: string,
   customStart?: string,
@@ -74,81 +120,88 @@ export const fetchStatisticsData = async (
     const previousEnd = new Date(bounds.start.getTime() - 1);
     previousEnd.setHours(23, 59, 59, 999);
 
-    const [ordersRes, kpiRes, prevKpiRes, visitsRes, productsRes] = await withTimeout(
-      Promise.all([
-        supabase.from('orders')
-          .select(ORDER_LIST_COLUMNS)
-          .eq('owner_id', ownerId)
-          .gte('created_at', fetchFrom)
-          .lte('created_at', fetchTo)
-          .order('created_at', { ascending: false })
-          .limit(ORDERS_STATS_CAP),
-        (supabase as any).rpc('get_store_statistics', {
-          p_owner_id: ownerId,
-          p_start: periodStart,
-          p_end: periodEnd,
-        }),
-        (supabase as any).rpc('get_store_statistics', {
-          p_owner_id: ownerId,
-          p_start: bounds.previousStart.toISOString(),
-          p_end: previousEnd.toISOString(),
-        }),
-        supabase.from('store_visits')
-          .select('id, created_at, visitor_ip')
-          .eq('owner_id', ownerId)
-          .gte('created_at', fetchFrom)
-          .lte('created_at', fetchTo)
-          .limit(ORDERS_STATS_CAP),
-        supabase.from('products')
-          .select('id', { count: 'exact', head: true })
-          .eq('owner_id', ownerId)
-          .eq('is_active', true),
-      ]),
-      12000
-    );
+    try {
+      const [ordersRes, kpis, previousKpis, visitsRes, productCount] = await withTimeout(
+        Promise.all([
+          supabase
+            .from('orders')
+            .select(ORDER_LIST_COLUMNS)
+            .eq('owner_id', ownerId)
+            .gte('created_at', fetchFrom)
+            .lte('created_at', fetchTo)
+            .order('created_at', { ascending: false })
+            .limit(ORDERS_STATS_CAP),
+          fetchStoreStatisticsRpc(ownerId, periodStart, periodEnd),
+          fetchStoreStatisticsRpc(ownerId, bounds.previousStart.toISOString(), previousEnd.toISOString()),
+          supabase
+            .from('store_visits')
+            .select('id, created_at, visitor_ip')
+            .eq('owner_id', ownerId)
+            .gte('created_at', fetchFrom)
+            .lte('created_at', fetchTo)
+            .limit(ORDERS_STATS_CAP),
+          fetchProductCount(ownerId),
+        ])
+      );
 
-    if (ordersRes.error) {
-      console.error('Statistics fetch failed:', ordersRes.error);
-      throw ordersRes.error;
-    }
-    if (kpiRes.error) {
-      console.error('Statistics KPI fetch failed:', kpiRes.error);
-      throw kpiRes.error;
-    }
-
-    const orders = ordersRes.data || [];
-    const orderIds = orders.map((o: { id: string }) => o.id);
-
-    let orderItems: DatabaseData['orderItems'] = [];
-    if (orderIds.length > 0) {
-      const { data: itemsData, error: itemsError } = await supabase
-        .from('order_items')
-        .select('order_id, product_id, product_name, quantity, subtotal, created_at')
-        .eq('owner_id', ownerId)
-        .in('order_id', orderIds);
-
-      if (itemsError) {
-        console.error('Statistics order_items fetch failed:', itemsError);
+      let orders: DatabaseData['orders'] = [];
+      if (ordersRes.error) {
+        console.warn('[statistics] orders fetch failed:', ordersRes.error.message);
       } else {
-        orderItems = itemsData || [];
+        orders = ordersRes.data || [];
       }
+
+      let visits: DatabaseData['visits'] = [];
+      if (visitsRes.error) {
+        console.warn('[statistics] store_visits fetch failed:', visitsRes.error.message);
+      } else {
+        visits = visitsRes.data || [];
+      }
+
+      const orderIds = orders.map((o: { id: string }) => o.id);
+
+      let orderItems: DatabaseData['orderItems'] = [];
+      if (orderIds.length > 0) {
+        const { data: itemsData, error: itemsError } = await supabase
+          .from('order_items')
+          .select('order_id, product_id, product_name, quantity, subtotal, created_at')
+          .eq('owner_id', ownerId)
+          .in('order_id', orderIds);
+
+        if (itemsError) {
+          console.warn('[statistics] order_items fetch failed:', itemsError.message);
+        } else {
+          orderItems = itemsData || [];
+        }
+      }
+
+      const truncated =
+        orders.length >= ORDERS_STATS_CAP || visits.length >= ORDERS_STATS_CAP;
+
+      const result: DatabaseData = {
+        orders,
+        orderItems,
+        customers: [],
+        products: productCount > 0 ? Array(productCount).fill(null) : [],
+        visits,
+        kpis,
+        previousKpis,
+        truncated,
+        dateBounds: bounds,
+      };
+
+      cache.set(cacheKey, result, CacheTTL.SHORT, CacheTTL.STALE);
+      return result;
+    } catch (err) {
+      console.error('[statistics] fetch failed, returning empty dataset:', err);
+      return {
+        orders: [],
+        orderItems: [],
+        customers: [],
+        products: [],
+        visits: [],
+        dateBounds: bounds,
+      };
     }
-
-    const truncated = orders.length >= ORDERS_STATS_CAP || (visitsRes.data?.length ?? 0) >= ORDERS_STATS_CAP;
-
-    const result: DatabaseData = {
-      orders,
-      orderItems,
-      customers: [],
-      products: productsRes.count != null ? Array(productsRes.count).fill(null) : [],
-      visits: visitsRes.data || [],
-      kpis: kpiRes.data ?? undefined,
-      previousKpis: prevKpiRes.data ?? undefined,
-      truncated,
-      dateBounds: bounds,
-    };
-
-    cache.set(cacheKey, result, CacheTTL.SHORT, CacheTTL.STALE);
-    return result;
   });
 };

@@ -75,4 +75,41 @@ describe('calculateStatistics', () => {
     expect(stats.totalProducts).toBe(3);
     expect(stats.totalOrders).toBe(0);
   });
+
+  it('computes stats from orders and visits when KPI RPC is unavailable', () => {
+    const data: DatabaseData = {
+      orders: [
+        {
+          id: '1',
+          status: 'completed',
+          total_amount: '200',
+          created_at: '2026-06-02T10:00:00Z',
+          customer_phone: '07700000001',
+          payment_method: 'cash_on_delivery',
+        },
+        {
+          id: '2',
+          status: 'pending',
+          total_amount: '50',
+          created_at: '2026-06-03T10:00:00Z',
+          customer_phone: '07700000002',
+          payment_method: 'cash_on_delivery',
+        },
+      ],
+      orderItems: [{ order_id: '1', product_name: 'منتج', quantity: 1, subtotal: '200' }],
+      customers: [],
+      products: [null],
+      visits: [
+        { id: 'v1', created_at: '2026-06-02T10:00:00Z', visitor_ip: '1.2.3.4' },
+        { id: 'v2', created_at: '2026-06-03T10:00:00Z', visitor_ip: '5.6.7.8' },
+      ],
+      dateBounds: bounds,
+    };
+
+    const stats = calculateStatistics(data, bounds);
+    expect(stats.totalOrders).toBe(2);
+    expect(stats.totalRevenue).toBe(200);
+    expect(stats.totalVisitors).toBe(2);
+    expect(stats.topProducts).toHaveLength(1);
+  });
 });
