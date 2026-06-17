@@ -217,8 +217,25 @@ export const useCheckoutFlow = () => {
         );
         if (cancelled) return;
 
-        const refreshed = refreshCartFromServer(cartItems, freshMap);
-        replaceCartItems(refreshed);
+        const validation = validateAndRefreshCart(cartItems, freshMap);
+        if (cancelled) return;
+
+        if (validation.updatedItems.length === 0 && cartItems.length > 0) {
+          toast.error(
+            validation.errors[0] ||
+              'بعض المنتجات لم تعد متوفرة. حدّث الصفحة أو راجع المخزون في لوحة التحكم.'
+          );
+          return;
+        }
+
+        replaceCartItems(validation.updatedItems);
+
+        if (!cancelled && !validation.valid && validation.updatedItems.length > 0) {
+          const stockMsg = validation.errors.find(
+            (e) => e.includes('تم تعديل كمية') || e.includes('غير متوفر')
+          );
+          if (stockMsg) toast.warning(stockMsg);
+        }
       } catch {
         if (!cancelled) {
           toast.warning("تعذر تحديث أسعار السلة. سيتم التحقق عند تأكيد الطلب.");
@@ -297,14 +314,12 @@ export const useCheckoutFlow = () => {
 
     try {
       const productIds = cartItems.map((i) => i.product.id);
-      const cartFallback = new Map(cartItems.map((i) => [i.product.id, i.product]));
       let freshMap: Map<string, import('@/types').Product>;
       try {
         freshMap = await fetchFreshProducts(
           ownerId,
           productIds,
-          checkoutStoreSlug ?? undefined,
-          { cartFallback }
+          checkoutStoreSlug ?? undefined
         );
       } catch {
         toast.error("تعذر التحقق من المنتجات. تحقق من الاتصال وحاول مرة أخرى.");
@@ -453,7 +468,29 @@ export const useCheckoutFlow = () => {
       metrics.increment('checkout.submit.failed');
       reportError(error, { source: 'checkout.submit', ownerId });
       alertOnError('checkout.submit', error, { ownerId });
-      toast.error(mapOrderError(error instanceof Error ? error.message : "فشل في إنشاء الطلب"));
+
+      const rawMessage = error instanceof Error ? error.message : 'فشل في إنشاء الطلب';
+      const isStockFailure =
+        rawMessage.includes('غير متوفر') ||
+        rawMessage.toLowerCase().includes('insufficient stock') ||
+        rawMessage.includes('stock_deduction_failed');
+
+      if (isStockFailure && ownerId && cartItems.length > 0) {
+        try {
+          const productIds = cartItems.map((i) => i.product.id);
+          const freshMap = await fetchFreshProducts(
+            ownerId,
+            productIds,
+            checkoutStoreSlug ?? undefined
+          );
+          const validation = validateAndRefreshCart(cartItems, freshMap);
+          replaceCartItems(validation.updatedItems);
+        } catch {
+          /* ignore refresh failure */
+        }
+      }
+
+      toast.error(mapOrderError(rawMessage));
     } finally {
       submitLockRef.current = false;
       setIsSubmitting(false);

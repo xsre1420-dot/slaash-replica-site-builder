@@ -249,7 +249,7 @@ const ProductDetails = () => {
         storeOwnerId={isTenantMode ? tenant.storeInfo?.ownerId : user?.id}
         disabled={!isTenantMode}
       />
-      <ProductHeader productId={product.id} productName={product.name} storeSlug={storeSlug} />
+      <ProductHeader />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Hero: gallery + purchase info */}
@@ -502,6 +502,7 @@ const ProductDetails = () => {
         <StorefrontFooter
           storeName={displayStoreName || 'المتجر'}
           storeSlug={storeSlug}
+          ownerId={isTenantMode ? tenant.storeInfo?.ownerId : user?.id}
           governorate={storeGovernorate}
           whatsappNumber={whatsappNumber}
           returnPolicy={returnPolicy}

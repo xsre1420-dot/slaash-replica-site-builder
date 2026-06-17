@@ -13,6 +13,8 @@ import {
   PanelRightOpen,
   ExternalLink,
   LogOut,
+  Store,
+  X,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -22,7 +24,7 @@ import { useAuth } from '@/context/AuthContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import PlatformDbStatusBanner from '@/components/platform/PlatformDbStatusBanner';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetClose, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
   Tooltip,
   TooltipContent,
@@ -137,6 +139,43 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
       );
     }
     return link;
+  };
+
+  const MobileNavLink = ({
+    to,
+    icon: Icon,
+    label,
+  }: {
+    to: string;
+    icon: typeof LayoutDashboard;
+    label: string;
+  }) => {
+    const active = isActive(to);
+    return (
+      <Link
+        to={to}
+        onClick={() => setMenuOpen(false)}
+        className={cn(
+          'flex items-center gap-2.5 rounded-xl px-2.5 py-2 min-h-[44px] transition-all duration-200 active:scale-[0.98]',
+          active
+            ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/15'
+            : 'text-foreground/85 hover:bg-sidebar-accent/80'
+        )}
+        aria-current={active ? 'page' : undefined}
+      >
+        <span
+          className={cn(
+            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors',
+            active
+              ? 'bg-primary-foreground/15 text-primary-foreground'
+              : 'bg-muted/50 text-muted-foreground'
+          )}
+        >
+          <Icon className="w-4 h-4" strokeWidth={active ? 2.25 : 2} />
+        </span>
+        <span className="text-sm font-medium leading-none">{label}</span>
+      </Link>
+    );
   };
 
   const sidebarWidth = collapsed ? 'lg:w-[72px]' : 'lg:w-[260px]';
@@ -302,49 +341,108 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
                   <Menu className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-72 p-0 font-arabic bg-sidebar border-sidebar-border">
-                <div className="p-5 border-b border-sidebar-border">
-                  <div className="flex items-center gap-3">
-                    {storeLogo ? (
-                      <img src={storeLogo} alt="" className="w-10 h-10 rounded-xl object-cover" />
-                    ) : (
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <LayoutDashboard className="w-5 h-5 text-primary" />
+              <SheetContent
+                side="right"
+                className={cn(
+                  'w-[min(268px,80vw)] p-0 font-arabic bg-sidebar border-l border-sidebar-border/50',
+                  'flex flex-col max-h-[100dvh] shadow-2xl shadow-black/10',
+                  '[&>button]:hidden'
+                )}
+              >
+                <div className="relative shrink-0 border-b border-sidebar-border/50 bg-gradient-to-b from-primary/[0.06] via-primary/[0.02] to-transparent px-4 py-3.5">
+                  <div className="flex items-center justify-between gap-4" dir="rtl">
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-border/50 bg-card shadow-sm">
+                        {storeLogo ? (
+                          <img
+                            src={storeLogo}
+                            alt=""
+                            className="absolute inset-0 h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-primary/10">
+                            <Store className="h-4 w-4 text-primary" strokeWidth={2} />
+                          </div>
+                        )}
                       </div>
-                    )}
-                    <div>
-                      <p className="font-semibold text-foreground">{storeName || 'متجري'}</p>
-                      <p className="text-xs text-muted-foreground">{user?.username}</p>
+
+                      <div className="min-w-0 flex-1 text-right">
+                        <p className="truncate text-sm font-bold leading-snug text-foreground">
+                          {storeName || 'متجري'}
+                        </p>
+                        <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                          لوحة التحكم
+                        </p>
+                      </div>
                     </div>
+
+                    <SheetClose asChild>
+                      <button
+                        type="button"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/60 bg-muted/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        aria-label="إغلاق القائمة"
+                      >
+                        <X className="h-4 w-4" strokeWidth={2.5} />
+                      </button>
+                    </SheetClose>
                   </div>
                 </div>
-                <nav className="py-3 overflow-y-auto">
-                  {navGroups.map((group) => (
-                    <div key={group.label} className="px-3 mb-4">
-                      <p className="ds-section-title px-3 mb-2">{group.label}</p>
+
+                <nav
+                  className="flex-1 min-h-0 overflow-y-auto mobile-sidebar-scroll py-3.5 px-2.5"
+                  aria-label="القائمة الرئيسية"
+                >
+                  {navGroups.map((group, groupIndex) => (
+                    <div
+                      key={group.label}
+                      className={cn('px-0.5', groupIndex > 0 ? 'mt-4' : '')}
+                    >
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/75 px-2.5 mb-1.5">
+                        {group.label}
+                      </p>
                       <div className="space-y-0.5">
                         {group.items.map((item) => (
-                          <NavLink key={item.to} {...item} />
+                          <MobileNavLink key={item.to} {...item} />
                         ))}
                       </div>
                     </div>
                   ))}
                 </nav>
-                <div className="absolute bottom-0 inset-x-0 p-4 border-t border-sidebar-border bg-sidebar space-y-2">
+
+                <div className="shrink-0 border-t border-sidebar-border/50 bg-sidebar/95 backdrop-blur-sm p-3 space-y-2 safe-area-bottom">
                   <Link to="/preview" onClick={() => setMenuOpen(false)}>
-                    <Button variant="outline" className="w-full rounded-xl gap-2">
-                      <Eye className="w-4 h-4" />
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-xl justify-start gap-2.5 min-h-[44px] px-2.5 text-sm border-primary/20 bg-background/50 hover:bg-primary/5 hover:text-primary hover:border-primary/30"
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <Eye className="h-4 w-4 text-primary" strokeWidth={2.25} />
+                      </span>
                       معاينة المتجر
                     </Button>
                   </Link>
-                  <Button
-                    variant="ghost"
-                    onClick={() => { setMenuOpen(false); handleLogout(); }}
-                    className="w-full rounded-xl gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    تسجيل الخروج
-                  </Button>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        void handleLogout();
+                      }}
+                      className="h-11 flex-1 min-h-0 min-w-0 justify-start gap-2.5 rounded-xl border border-border/50 bg-background/40 px-3 text-muted-foreground hover:border-destructive/30 hover:text-destructive hover:bg-destructive/10"
+                      aria-label="تسجيل الخروج"
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-destructive/10 ring-1 ring-destructive/15">
+                        <LogOut className="h-4 w-4 text-destructive" strokeWidth={2.25} />
+                      </span>
+                      <span className="text-xs font-medium">تسجيل الخروج</span>
+                    </Button>
+                    <ThemeToggle
+                      yellowSun
+                      iconClassName="h-3.5 w-3.5"
+                      className="h-9 w-9 shrink-0 rounded-xl border border-border/50 bg-background/40 hover:bg-background [&_svg]:h-3.5 [&_svg]:w-3.5"
+                    />
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>

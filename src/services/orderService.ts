@@ -179,11 +179,19 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const isRetryableOrderError = (message: string): boolean => {
   const lower = message.toLowerCase();
+  if (
+    lower.includes('insufficient stock') ||
+    lower.includes('stock_deduction_failed') ||
+    lower.includes('total_amount_mismatch') ||
+    message.includes('غير متوفر') ||
+    message.includes('مخزون')
+  ) {
+    return false;
+  }
   return (
     lower.includes('timeout') ||
     lower.includes('lock') ||
     lower.includes('could not be processed') ||
-    lower.includes('stock') ||
     lower.includes('connection')
   );
 };

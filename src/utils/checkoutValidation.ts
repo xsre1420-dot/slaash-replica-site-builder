@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { CartItem, Product } from '@/types';
-import { getAvailableQty, validateVariantSelection } from './inventoryUtils';
+import { getAvailableQty, validateVariantSelection, normalizeProductStock } from './inventoryUtils';
 import { AppliedCoupon, validateCoupon } from '@/services/couponService';
 import { mapDbProduct } from '@/mappers/productMapper';
 import {
@@ -20,44 +20,13 @@ export type FetchFreshProductsOptions = {
 const variantStockSum = (variants?: Product['variants']) =>
   (variants ?? []).reduce((sum, v) => sum + (v.quantity || 0), 0);
 
-/** Reconcile server/cart stock when variant rows and stock_quantity drift. */
+/** Merge server row with cart metadata; stock always comes from server. */
 export function mergeProductStock(server: Product, cartProduct: Product): Product {
-  let stockQuantity =
-    server.stockQuantity != null ? server.stockQuantity : cartProduct.stockQuantity;
-
-  let variants =
-    server.variants != null && server.variants.length > 0
-      ? server.variants
-      : cartProduct.variants ?? server.variants;
-
-  let variantSum = variantStockSum(variants);
-  const cartAggregate = cartProduct.stockQuantity ?? 0;
-  const cartVariantSum = variantStockSum(cartProduct.variants);
-
-  if ((stockQuantity ?? 0) <= 0 && variantSum <= 0) {
-    if (cartVariantSum > 0) {
-      variants = cartProduct.variants;
-      variantSum = cartVariantSum;
-      stockQuantity = cartVariantSum;
-    } else if (cartAggregate > 0) {
-      stockQuantity = cartAggregate;
-      if (variants?.length && variantSum <= 0) {
-        variants = undefined;
-      }
-    }
-  }
-
-  if ((stockQuantity ?? 0) > 0 && variants?.length && variantSum <= 0) {
-    variants = undefined;
-  }
-
-  return {
+  return normalizeProductStock({
     ...server,
-    stockQuantity,
-    variants,
     sizes: server.sizes?.length ? server.sizes : cartProduct.sizes,
     colors: server.colors?.length ? server.colors : cartProduct.colors,
-  };
+  });
 }
 
 /** Update prices/stock from server without removing cart lines (background checkout sync). */
@@ -138,15 +107,19 @@ export async function fetchFreshProducts(
     }
   }
 
+  if (ownerId && uniqueIds.length > 0) {
+    const authoritative = await fetchOwnerActiveProductsByIds(ownerId, uniqueIds);
+    for (const [id, dbProduct] of authoritative) {
+      const existing = map.get(id);
+      map.set(id, existing ? mergeProductStock(dbProduct, existing) : dbProduct);
+    }
+  }
+
   if (options.cartFallback) {
     for (const id of uniqueIds) {
+      if (map.has(id)) continue;
       const cartProduct = options.cartFallback.get(id);
-      if (!cartProduct) continue;
-      if (map.has(id)) {
-        map.set(id, mergeProductStock(map.get(id)!, cartProduct));
-      } else {
-        map.set(id, cartProduct);
-      }
+      if (cartProduct) map.set(id, cartProduct);
     }
   }
 
@@ -222,6 +195,7 @@ export function validateAndRefreshCart(
     }
 
     fresh = mergeProductStock(fresh, item.product);
+    fresh = normalizeProductStock(fresh);
 
     if (!isStorefrontVisible(fresh)) {
       errors.push(`المنتج "${fresh.name}" لم يعد متوفراً`);

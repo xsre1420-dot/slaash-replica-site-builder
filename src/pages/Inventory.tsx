@@ -14,8 +14,9 @@ import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { Product, ProductVariant } from "@/types";
-import { scaleVariantsToTotal } from "@/utils/inventoryUtils";
+import { Product, ProductVariant, ColorOption } from "@/types";
+import { scaleVariantsToTotal, buildVariantsForStock, getAvailableQty } from "@/utils/inventoryUtils";
+import { isStorefrontVisible } from "@/lib/productLifecycle";
 import { loadAllMerchantProducts, syncMerchantProductCatalog, invalidateProducts } from "@/services/productService";
 import { getProductLifecycleStatus, lifecycleStatusLabel } from "@/lib/productLifecycle";
 import { useRealtimeProducts } from '@/hooks/useRealtimeProducts';
@@ -34,6 +35,8 @@ interface InventoryRow {
   image_url?: string;
   stock_quantity?: number;
   min_stock_level?: number;
+  sizes?: string[];
+  colors?: ColorOption[];
   variants?: ProductVariant[];
   created_at: string;
   lifecycle: ReturnType<typeof getProductLifecycleStatus>;
@@ -81,6 +84,8 @@ function Inventory() {
           image_url: p.image,
           stock_quantity: p.stockQuantity,
           min_stock_level: p.lowStockThreshold,
+          sizes: p.sizes,
+          colors: p.colors,
           variants: p.variants,
           created_at: (p as Product & { created_at?: string }).created_at || new Date().toISOString(),
           lifecycle: getProductLifecycleStatus(p),
@@ -116,8 +121,24 @@ function Inventory() {
         updateData.min_stock_level = minLevel;
       }
 
-      if (current?.variants?.length) {
-        updateData.variants = scaleVariantsToTotal(current.variants, quantity);
+      const hasOptions = (current?.sizes?.length ?? 0) > 0 || (current?.colors?.length ?? 0) > 0;
+      const syncedVariants = hasOptions
+        ? buildVariantsForStock(
+            {
+              sizes: current?.sizes,
+              colors: current?.colors,
+              variants: current?.variants,
+            },
+            quantity
+          )
+        : current?.variants?.length
+          ? scaleVariantsToTotal(current.variants, quantity)
+          : undefined;
+
+      if (syncedVariants?.length) {
+        updateData.variants = syncedVariants;
+      } else if (!hasOptions) {
+        updateData.variants = null;
       }
 
       const { error } = await (supabase as any)
@@ -150,13 +171,32 @@ function Inventory() {
     }
   };
 
+  const inventoryProduct = (row: InventoryRow): Product => ({
+    id: row.id,
+    name: row.name,
+    description: '',
+    category: row.category,
+    price: row.price,
+    image: row.image_url || '',
+    stockQuantity: row.stock_quantity,
+    sizes: row.sizes,
+    colors: row.colors,
+    variants: row.variants,
+    isActive: row.lifecycle === 'published',
+    archivedAt: row.lifecycle === 'archived' ? row.created_at : undefined,
+  });
+
   const getStockStatus = (product: InventoryRow) => {
-    const quantity = product.stock_quantity || 0;
+    const sellable = isStorefrontVisible(inventoryProduct(product));
+    const quantity = getAvailableQty(inventoryProduct(product));
     const minLevel = product.min_stock_level || 5;
 
-    if (quantity === 0) return { status: 'out' as const, label: 'نفد المخزون' };
-    if (quantity <= minLevel) return { status: 'low' as const, label: 'مخزون منخفض' };
-    return { status: 'good' as const, label: 'متوفر' };
+    if (!sellable) {
+      return { status: 'out' as const, label: 'غير معروض للبيع', sellable: false };
+    }
+    if (quantity === 0) return { status: 'out' as const, label: 'نفد المخزون', sellable: true };
+    if (quantity <= minLevel) return { status: 'low' as const, label: 'مخزون منخفض', sellable: true };
+    return { status: 'good' as const, label: 'متوفر', sellable: true };
   };
 
   const filteredProducts = useMemo(() => {
@@ -174,7 +214,10 @@ function Inventory() {
     good: products.filter((p) => getStockStatus(p).status === 'good').length,
     low: products.filter((p) => getStockStatus(p).status === 'low').length,
     out: products.filter((p) => getStockStatus(p).status === 'out').length,
-    totalStock: products.reduce((sum, p) => sum + (p.stock_quantity || 0), 0),
+    totalStock: products.reduce(
+      (sum, p) => sum + getAvailableQty(inventoryProduct(p)),
+      0
+    ),
   }), [products]);
 
   const lowStockProducts = useMemo(
@@ -344,8 +387,8 @@ function Inventory() {
                     </div>
                     <div className="flex items-center gap-4 shrink-0">
                       <div className="text-center">
-                        <p className="text-xs text-muted-foreground">الكمية</p>
-                        <p className="text-lg font-bold">{product.stock_quantity || 0}</p>
+                        <p className="text-xs text-muted-foreground">المتوفر للبيع</p>
+                        <p className="text-lg font-bold">{getAvailableQty(inventoryProduct(product))}</p>
                       </div>
                       <Dialog open={dialogOpen && selectedProduct?.id === product.id} onOpenChange={setDialogOpen}>
                         <DialogTrigger asChild>

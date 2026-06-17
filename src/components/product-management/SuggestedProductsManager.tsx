@@ -370,7 +370,9 @@ const SuggestedProductsManager = ({ productId, productName }: SuggestedProductsM
           <div className="text-center text-gray-500 py-8">
             لم تتم إضافة منتجات مقترحة لهذا المنتج حتى الآن
             <br />
-            <span className="text-sm">ستظهر المنتجات المقترحة في صفحة تفاصيل المنتج للعملاء</span>
+            <span className="text-sm">ستظهر المنتجات المقترحة في صفحة تفاصيل المنتج</span>
+            <br />
+            <span className="text-sm">لتذييل المتجر، اختر المنتجات من قائمة «إدارة المنتجات» الرئيسية</span>
           </div>
         ) : (
           <div className="grid gap-4">

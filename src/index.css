@@ -233,6 +233,26 @@
     display: none;
   }
 
+  /* Slim scrollbar for mobile dashboard sidebar only */
+  .mobile-sidebar-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary) / 0.4) transparent;
+  }
+  .mobile-sidebar-scroll::-webkit-scrollbar {
+    width: 4px;
+  }
+  .mobile-sidebar-scroll::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 10px 0;
+  }
+  .mobile-sidebar-scroll::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.35);
+    border-radius: 9999px;
+  }
+  .mobile-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.55);
+  }
+
   .text-gradient {
     @apply text-primary;
   }

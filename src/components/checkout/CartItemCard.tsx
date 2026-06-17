@@ -25,17 +25,17 @@ const CartItemCard = memo(({ item, index, maxQuantity, onRemove, onUpdateQuantit
       className={`transition-all duration-300 ${removing ? "opacity-0 scale-95 -translate-x-4" : "opacity-100"}`}
       style={{ animationDelay: `${index * 80}ms` }}
     >
-      <div className="flex gap-3 p-3 rounded-xl bg-muted/30 border border-border/50">
+      <div className="flex gap-2.5 p-2.5 rounded-xl bg-muted/30 border border-border/50">
         <OptimizedImage
           src={item.product.image}
           alt={item.product.name}
-          className="w-20 h-20 rounded-lg shrink-0"
-          width={80}
-          height={80}
+          className="w-16 h-16 rounded-lg shrink-0"
+          width={64}
+          height={64}
           loading="lazy"
         />
         <div className="flex-1 text-right min-w-0">
-          <h3 className="font-bold text-foreground text-sm truncate">{item.product.name}</h3>
+          <h3 className="font-semibold text-foreground text-sm truncate leading-snug">{item.product.name}</h3>
 
           {(item.selectedSize || item.selectedColor) && (
             <div className="flex gap-1.5 mt-1 justify-end flex-wrap">
@@ -52,33 +52,36 @@ const CartItemCard = memo(({ item, index, maxQuantity, onRemove, onUpdateQuantit
             </div>
           )}
 
-          <div className="flex items-center justify-between mt-2">
-            <div className="flex items-center gap-1.5">
+          <div className="flex items-center justify-between mt-1.5">
+            <div className="flex items-center gap-1">
               <button
                 onClick={handleRemove}
-                className="text-destructive/70 hover:text-destructive transition-colors p-1"
+                className="text-destructive/70 hover:text-destructive transition-colors p-1.5 rounded-lg hover:bg-destructive/10"
+                aria-label="حذف من السلة"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5" />
               </button>
-              <div className="flex items-center gap-1 bg-background rounded-full px-1 py-0.5 border border-border/50">
+              <div className="flex items-center gap-0.5 bg-background rounded-full px-0.5 py-0.5 border border-border/50">
                 <button
                   onClick={() => onUpdateQuantity(item.product.id, item.quantity - 1, item.selectedSize, item.selectedColor)}
-                  className="rounded-full w-6 h-6 flex items-center justify-center bg-primary text-primary-foreground text-xs hover:opacity-80 transition-opacity"
+                  className="rounded-full w-7 h-7 flex items-center justify-center bg-primary text-primary-foreground hover:opacity-80 transition-opacity"
+                  aria-label="تقليل الكمية"
                 >
                   <Minus className="w-3 h-3" />
                 </button>
-                <span className="w-6 text-center text-foreground font-semibold text-sm">{item.quantity}</span>
+                <span className="w-5 text-center text-foreground font-semibold text-xs">{item.quantity}</span>
                 <button
                   onClick={() => onUpdateQuantity(item.product.id, item.quantity + 1, item.selectedSize, item.selectedColor)}
                   disabled={atMax}
-                  className="rounded-full w-6 h-6 flex items-center justify-center bg-primary text-primary-foreground text-xs hover:opacity-80 transition-opacity disabled:opacity-40"
+                  className="rounded-full w-7 h-7 flex items-center justify-center bg-primary text-primary-foreground hover:opacity-80 transition-opacity disabled:opacity-40"
+                  aria-label="زيادة الكمية"
                 >
                   <Plus className="w-3 h-3" />
                 </button>
               </div>
             </div>
             <div className="text-right">
-              <p className="font-bold text-foreground text-sm">{(item.product.price * item.quantity).toLocaleString()} د.ع</p>
+              <p className="font-semibold text-foreground text-sm">{(item.product.price * item.quantity).toLocaleString()} د.ع</p>
               {item.quantity > 1 && (
                 <p className="text-[10px] text-muted-foreground">{item.product.price.toLocaleString()} × {item.quantity}</p>
               )}

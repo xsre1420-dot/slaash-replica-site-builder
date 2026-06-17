@@ -1,5 +1,5 @@
 import { Product, ColorOption, ProductVariant } from '@/types';
-import { applyActiveDiscount } from '@/utils/inventoryUtils';
+import { applyActiveDiscount, normalizeProductStock } from '@/utils/inventoryUtils';
 
 export const parseJsonField = <T>(value: unknown): T | undefined => {
   if (value == null) return undefined;
@@ -52,7 +52,8 @@ export const mapDbProduct = (
     archivedAt: (row.archived_at as string) || undefined,
   };
 
-  return options.applyDiscount ? applyActiveDiscount(product) : product;
+  const normalized = normalizeProductStock(product);
+  return options.applyDiscount ? applyActiveDiscount(normalized) : normalized;
 };
 export const safeMapDbProduct = (
   row: unknown,

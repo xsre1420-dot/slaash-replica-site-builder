@@ -81,8 +81,8 @@ const CouponInput = ({ ownerId, storeSlug, subtotal, appliedCoupon, onApply }: C
 
   if (appliedCoupon) {
     return (
-      <div className="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-xl p-3">
-        <Button type="button" variant="ghost" size="icon" onClick={handleRemove} aria-label="إزالة كود الخصم" className="min-h-[44px] min-w-[44px]">
+      <div className="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-lg p-2.5">
+        <Button type="button" variant="ghost" size="icon" onClick={handleRemove} aria-label="إزالة كود الخصم" className="h-8 w-8 min-h-0 min-w-0 shrink-0">
           <X className="w-4 h-4" />
         </Button>
         <div className="text-right flex-1 mr-2">
@@ -98,15 +98,15 @@ const CouponInput = ({ ownerId, storeSlug, subtotal, appliedCoupon, onApply }: C
 
   return (
     <div className="space-y-2">
-      <div className="flex gap-2">
+      <div className="flex gap-1.5">
         <Button
           type="button"
           variant="outline"
           onClick={handleApply}
           disabled={loading || !code.trim()}
-          className="rounded-xl shrink-0"
+          className="rounded-lg shrink-0 h-9 px-3 text-xs"
         >
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "تطبيق"}
+          {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "تطبيق"}
         </Button>
         <Input
           placeholder="كود الخصم"
@@ -116,7 +116,7 @@ const CouponInput = ({ ownerId, storeSlug, subtotal, appliedCoupon, onApply }: C
             setError("");
           }}
           onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleApply())}
-          className="text-right rounded-xl"
+          className="text-right rounded-lg h-9 text-sm"
         />
       </div>
       {error && <p className="text-xs text-destructive text-right">{error}</p>}

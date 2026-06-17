@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { cn } from "@/lib/utils";
 
 interface StoreThemeColors {
   backgroundColor: string;
@@ -10,6 +11,7 @@ interface StoreThemeColors {
 interface StoreThemeProviderProps {
   colors: StoreThemeColors;
   children: React.ReactNode;
+  className?: string;
 }
 
 /**
@@ -76,7 +78,7 @@ const FONT_MAP: Record<string, string> = {
  * Wraps children in a themed container that applies store-specific colors as CSS variables.
  * This creates an isolated theme scope without affecting the admin dashboard.
  */
-const StoreThemeProvider = ({ colors, children }: StoreThemeProviderProps) => {
+const StoreThemeProvider = ({ colors, children, className }: StoreThemeProviderProps) => {
   const style = useMemo(() => {
     const bg = colors.backgroundColor || '#ffffff';
     const text = colors.textColor || '#333333';
@@ -112,7 +114,7 @@ const StoreThemeProvider = ({ colors, children }: StoreThemeProviderProps) => {
   }, [colors.backgroundColor, colors.textColor, colors.accentColor, colors.font]);
 
   return (
-    <div style={style} className="store-theme-scope">
+    <div style={style} className={cn("store-theme-scope w-full", className)}>
       {children}
     </div>
   );

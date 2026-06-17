@@ -28,6 +28,7 @@ import { ATTENTION_PARAM } from "@/lib/attentionHighlight";
 // Suggestion #8: Lazy load sub-managers
 const ProductReviewsManager = lazy(() => import("@/components/product-management/ProductReviewsManager"));
 const SuggestedProductsManager = lazy(() => import("@/components/product-management/SuggestedProductsManager"));
+const FooterSuggestedProductsManager = lazy(() => import("@/components/product-management/FooterSuggestedProductsManager"));
 
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -258,7 +259,7 @@ const Products = () => {
       <div className="ds-page max-w-6xl">
         {selectedProduct ? (
           <div className="ds-card p-4 sm:p-8 space-y-6">
-            <div className="flex justify-start items-center">
+            <div className="flex justify-end items-center" dir="rtl">
               <Button
                 variant="outline"
                 onClick={handleBackToList}
@@ -347,6 +348,10 @@ const Products = () => {
                 className="col-span-2 md:col-span-1 p-3.5 sm:p-5 [&_.ds-stat-value]:text-xl sm:[&_.ds-stat-value]:text-2xl lg:[&_.ds-stat-value]:text-3xl"
               />
             </div>
+
+            <Suspense fallback={null}>
+              <FooterSuggestedProductsManager />
+            </Suspense>
 
             {stats.drafts > 0 && (
               <AttentionStrip

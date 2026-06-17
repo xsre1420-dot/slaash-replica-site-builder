@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { getAvailableQty, computeDiscountedPrice, applyActiveDiscount } from '@/utils/inventoryUtils';
+import {
+  getAvailableQty,
+  computeDiscountedPrice,
+  applyActiveDiscount,
+  scaleVariantsToTotal,
+  normalizeProductStock,
+} from '@/utils/inventoryUtils';
 import { Product } from '@/types';
 
 const baseProduct = (overrides: Partial<Product> = {}): Product => ({
@@ -53,6 +59,33 @@ describe('inventoryUtils', () => {
       variants: [{ size: 'M', quantity: 12 }],
     });
     expect(getAvailableQty(product, 'M')).toBe(12);
+  });
+
+  it('distributes stock evenly when rescaling from zero variants', () => {
+    const scaled = scaleVariantsToTotal(
+      [
+        { size: 'S', quantity: 0 },
+        { size: 'M', quantity: 0 },
+        { size: 'L', quantity: 0 },
+      ],
+      10
+    );
+    expect(scaled.reduce((s, v) => s + v.quantity, 0)).toBe(10);
+    expect(scaled.every((v) => v.quantity > 0)).toBe(true);
+  });
+
+  it('normalizeProductStock drops zero-qty variants when aggregate has stock', () => {
+    const normalized = normalizeProductStock(
+      baseProduct({
+        stockQuantity: 12,
+        variants: [
+          { size: 'M', quantity: 0 },
+          { size: 'L', quantity: 0 },
+        ],
+      })
+    );
+    expect(normalized.stockQuantity).toBe(12);
+    expect(normalized.variants).toBeUndefined();
   });
 
   it('computes percentage discount when active', () => {

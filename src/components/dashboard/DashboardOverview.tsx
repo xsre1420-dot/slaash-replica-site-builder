@@ -16,7 +16,6 @@ import StatCard from '@/components/ui/StatCard';
 import { useOrders } from '@/hooks/useOrders';
 import { useDashboardInsights } from '@/hooks/useDashboardInsights';
 import { useRealtimeOrders } from '@/hooks/useRealtimeOrders';
-import { formatKpiTrend } from '@/utils/dashboardInsightsUtils';
 import AttentionAlertLink from '@/components/dashboard/AttentionAlertLink';
 import { cn } from '@/lib/utils';
 
@@ -29,7 +28,7 @@ const statusConfig = {
 const DashboardOverview = () => {
   const { orders, loading, refetch } = useOrders();
   const [statsRefreshKey, setStatsRefreshKey] = useState(0);
-  const { actions, today, yesterday, loading: insightsLoading } =
+  const { actions, today, loading: insightsLoading } =
     useDashboardInsights(statsRefreshKey);
 
   useRealtimeOrders(() => {
@@ -40,9 +39,6 @@ const DashboardOverview = () => {
   const recentOrders = [...orders]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5);
-
-  const todaySalesTrend = formatKpiTrend(today.revenue, yesterday.revenue, today.orders);
-  const todayVisitsTrend = formatKpiTrend(today.visits, yesterday.visits);
 
   const showSkeleton = loading && orders.length === 0 && insightsLoading;
 
@@ -92,16 +88,13 @@ const DashboardOverview = () => {
             label="مبيعات اليوم (د.ع)"
             value={today.revenue.toLocaleString()}
             icon={TrendingUp}
-            trend={todaySalesTrend.trend}
-            trendUp={todaySalesTrend.trendUp}
+            iconClassName="bg-emerald-500/10 ring-emerald-500/15 [&_svg]:text-emerald-600"
           />
           <StatCard
             label="زوار اليوم"
             value={today.visits.toLocaleString()}
             icon={Eye}
-            trend={todayVisitsTrend.trend}
-            trendUp={todayVisitsTrend.trendUp}
-            iconClassName="bg-violet-500/10 [&_svg]:text-violet-600"
+            iconClassName="bg-violet-500/10 ring-violet-500/15 [&_svg]:text-violet-600"
           />
         </div>
       </div>

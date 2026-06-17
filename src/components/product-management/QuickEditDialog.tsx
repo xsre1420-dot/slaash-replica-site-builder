@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { Product } from "@/types";
 import { updateProduct, fetchProductById } from "@/services/productService";
-import { scaleVariantsToTotal } from "@/utils/inventoryUtils";
+import { buildVariantsForStock } from "@/utils/inventoryUtils";
 import { mapProductInsertError } from "@/lib/productUpdateUtils";
 
 interface QuickEditDialogProps {
@@ -55,8 +55,8 @@ export const QuickEditDialog = ({ product, open, onOpenChange, onSaved }: QuickE
       cost: cost ? parseFloat(cost) || undefined : undefined,
     };
 
-    if (latest.variants?.length) {
-      patch.variants = scaleVariantsToTotal(latest.variants, stockQty);
+    if ((latest.sizes?.length ?? 0) > 0 || (latest.colors?.length ?? 0) > 0 || latest.variants?.length) {
+      patch.variants = buildVariantsForStock(latest, stockQty);
     }
 
     const result = await updateProduct(product.id, patch);

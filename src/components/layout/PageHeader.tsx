@@ -30,8 +30,9 @@ const PageHeader = ({
   className,
 }: PageHeaderProps) => (
   <header
+    dir="rtl"
     className={cn(
-      'border-b border-border/50 bg-card lg:sticky lg:top-0 z-30',
+      'border-b border-border/50 bg-card lg:sticky lg:top-0 z-30 font-arabic',
       className
     )}
   >

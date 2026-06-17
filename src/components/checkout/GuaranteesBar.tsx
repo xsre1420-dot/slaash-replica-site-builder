@@ -1,5 +1,6 @@
 import { Truck, Shield, RotateCcw } from "lucide-react";
 import ScrollReveal from "@/components/product-details/ScrollReveal";
+import { cn } from "@/lib/utils";
 
 const guarantees = [
   { icon: Truck, label: "توصيل سريع" },
@@ -7,15 +8,26 @@ const guarantees = [
   { icon: RotateCcw, label: "إرجاع سهل" },
 ];
 
-const GuaranteesBar = () => (
+interface GuaranteesBarProps {
+  compact?: boolean;
+}
+
+const GuaranteesBar = ({ compact = false }: GuaranteesBarProps) => (
   <ScrollReveal delay={100} animation="slide-up">
-    <div className="flex justify-around py-3 px-4 bg-muted/40 rounded-xl border border-border/50">
+    <div
+      className={cn(
+        "flex justify-around bg-muted/40 rounded-lg border border-border/50",
+        compact ? "py-2 px-3" : "py-3 px-4 rounded-xl"
+      )}
+    >
       {guarantees.map((g, i) => (
-        <div key={i} className="flex flex-col items-center gap-1.5">
-          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-            <g.icon className="w-4 h-4 text-primary" />
+        <div key={i} className="flex flex-col items-center gap-1">
+          <div className={cn("rounded-full bg-primary/10 flex items-center justify-center", compact ? "w-7 h-7" : "w-8 h-8")}>
+            <g.icon className={cn("text-primary", compact ? "w-3.5 h-3.5" : "w-4 h-4")} />
           </div>
-          <span className="text-[10px] text-muted-foreground font-medium">{g.label}</span>
+          <span className={cn("text-muted-foreground font-medium", compact ? "text-[9px]" : "text-[10px]")}>
+            {g.label}
+          </span>
         </div>
       ))}
     </div>

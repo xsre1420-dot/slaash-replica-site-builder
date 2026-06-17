@@ -16,7 +16,6 @@ import { useCheckoutFlow } from "@/hooks/useCheckoutFlow";
 import MarketingScripts from "@/components/MarketingScripts";
 import { useStoreVisitTracking } from "@/hooks/useStoreVisitTracking";
 import StoreThemeProvider from "@/components/StoreThemeProvider";
-import StorefrontFooter from "@/components/storefront/StorefrontFooter";
 import StorefrontTrustBar from "@/components/storefront/StorefrontTrustBar";
 import { useStoreDisplay } from "@/hooks/useStoreDisplay";
 import { useTenantStore } from "@/hooks/useTenantStore";
@@ -83,17 +82,21 @@ const Checkout = () => {
   }
 
   return (
-    <StoreThemeProvider colors={themeColors}>
-    <div className="min-h-screen bg-background font-arabic" dir="rtl">
+    <StoreThemeProvider colors={themeColors} className="min-h-dvh flex flex-col">
+    <div className="flex flex-col flex-1 min-h-dvh w-full bg-background font-arabic" dir="rtl">
       <MarketingScripts
         storeSlug={isTenantMode ? storeSlug : undefined}
         storeOwnerId={ownerId}
         disabled={!isTenantMode}
       />
       <CheckoutHeader cartCount={cartCount} backTo={storeHomePath} />
-      <StorefrontTrustBar />
+      <StorefrontTrustBar compact fullWidth />
 
-      <div className="max-w-xl mx-auto px-4 pb-36">
+      {cartItems.length > 0 && (
+        <ProgressSteps currentStep={currentStep} fullWidth />
+      )}
+
+      <div className="flex-1 w-full px-4 sm:px-5 pt-2 pb-36 space-y-3 md:pb-10">
         {cartItems.length === 0 ? (
           <ScrollReveal>
             <div className="text-center py-16 mt-8">
@@ -108,15 +111,14 @@ const Checkout = () => {
             </div>
           </ScrollReveal>
         ) : (
-          <form id="checkout-form" onSubmit={handleSubmitOrder}>
-            <ScrollReveal>
-              <ProgressSteps currentStep={currentStep} />
-            </ScrollReveal>
+          <form id="checkout-form" onSubmit={handleSubmitOrder} className="space-y-3">
 
             <ScrollReveal delay={100}>
-              <div className="bg-card rounded-2xl border border-border/50 p-4 mt-2">
-                <h2 className="text-lg font-bold mb-3 text-right text-foreground">طلبك ({cartCount})</h2>
-                <div className="space-y-3">
+              <section className="bg-card rounded-xl border border-border/50 p-3.5 sm:p-4">
+                <h2 className="text-base font-semibold mb-2.5 text-right text-foreground">
+                  طلبك ({cartCount})
+                </h2>
+                <div className="space-y-2">
                   {cartItems.map((item, index) => (
                     <CartItemCard
                       key={`${item.product.id}-${item.selectedSize || ""}-${item.selectedColor || ""}-${index}`}
@@ -128,14 +130,14 @@ const Checkout = () => {
                     />
                   ))}
                 </div>
-                <div className="flex justify-between mt-4 pt-3 border-t border-border/50">
-                  <span className="font-bold text-lg text-foreground">{cartTotal.toLocaleString()} د.ع</span>
-                  <span className="font-bold text-foreground">المجموع:</span>
+                <div className="flex justify-between items-center mt-3 pt-2.5 border-t border-border/50">
+                  <span className="font-semibold text-base text-foreground">{cartTotal.toLocaleString()} د.ع</span>
+                  <span className="text-sm font-medium text-muted-foreground">المجموع</span>
                 </div>
 
                 {ownerId && (
-                  <div className="mt-4 pt-3 border-t border-border/50">
-                    <p className="text-sm font-medium text-foreground mb-2 text-right">كود الخصم</p>
+                  <div className="mt-3 pt-2.5 border-t border-border/50">
+                    <p className="text-xs font-medium text-muted-foreground mb-2 text-right">كود الخصم</p>
                     <CouponInput
                       ownerId={ownerId}
                       storeSlug={isTenantMode ? storeSlug : undefined}
@@ -147,34 +149,34 @@ const Checkout = () => {
                 )}
 
                 {discountAmount > 0 && (
-                  <div className="flex justify-between mt-2 text-sm text-primary">
+                  <div className="flex justify-between mt-2 text-xs text-primary">
                     <span>-{discountAmount.toLocaleString()} د.ع</span>
                     <span>الخصم ({appliedCoupon?.code})</span>
                   </div>
                 )}
 
                 {deliveryPrices.length > 0 && !selectedGovernorate && (
-                  <p className="text-xs text-muted-foreground mt-3 text-right">
+                  <p className="text-[11px] text-muted-foreground mt-2.5 text-right leading-relaxed">
                     اختر المحافظة لعرض رسوم التوصيل والمجموع النهائي
                   </p>
                 )}
-              </div>
+              </section>
             </ScrollReveal>
 
             <ScrollReveal delay={150}>
-              <div className="bg-card rounded-2xl border border-border/50 p-4 mt-4">
-                <h2 className="text-lg font-bold mb-3 text-right text-foreground">طريقة الدفع</h2>
+              <section className="bg-card rounded-xl border border-border/50 p-3.5 sm:p-4">
+                <h2 className="text-base font-semibold mb-2.5 text-right text-foreground">طريقة الدفع</h2>
                 <PaymentMethodSelector
                   methods={paymentMethodOptions}
                   selected={selectedPaymentMethod}
                   onSelect={setSelectedPaymentMethod}
                 />
-              </div>
+              </section>
             </ScrollReveal>
 
             <ScrollReveal delay={200}>
-              <div className="bg-card rounded-2xl border border-border/50 p-4 mt-4" ref={formRef}>
-                <h2 className="text-lg font-bold mb-3 text-right text-foreground">معلومات التوصيل</h2>
+              <section className="bg-card rounded-xl border border-border/50 p-3.5 sm:p-4" ref={formRef}>
+                <h2 className="text-base font-semibold mb-2.5 text-right text-foreground">معلومات التوصيل</h2>
                 <DeliveryForm
                   customerInfo={customerInfo}
                   onInputChange={handleInputChange}
@@ -184,66 +186,81 @@ const Checkout = () => {
                   deliveryFee={deliveryFee}
                   formErrors={formErrors}
                 />
-              </div>
+              </section>
             </ScrollReveal>
 
             {selectedGovernorate && (
               <ScrollReveal delay={300}>
-                <div className="bg-card rounded-2xl border border-border/50 p-4 mt-4 space-y-3">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-foreground">
-                      {deliveryFee > 0 ? `${deliveryFee.toLocaleString()} د.ع` : "مجاني"}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {deliveryFee > 0
-                        ? `رسوم التوصيل (${selectedGovernorate})`
-                        : `توصيل مجاني (${selectedGovernorate})`}
+                <section
+                  dir="rtl"
+                  className="rounded-xl border border-primary/25 bg-primary/[0.04] p-3.5 sm:p-4 space-y-2.5"
+                >
+                  <h3 className="text-base font-semibold text-right text-foreground">ملخص الدفع</h3>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-xs text-muted-foreground">مجموع المنتجات</span>
+                      <span className="text-sm font-semibold tabular-nums text-foreground">
+                        {cartTotal.toLocaleString()} د.ع
+                      </span>
+                    </div>
+
+                    {discountAmount > 0 && (
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="text-xs text-primary">الخصم ({appliedCoupon?.code})</span>
+                        <span className="text-sm font-semibold tabular-nums text-primary">
+                          -{discountAmount.toLocaleString()} د.ع
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-xs text-muted-foreground">رسوم التوصيل</span>
+                      <span
+                        className={`text-sm font-semibold tabular-nums ${
+                          deliveryFee > 0 ? "text-foreground" : "text-emerald-600"
+                        }`}
+                      >
+                        {deliveryFee > 0 ? `${deliveryFee.toLocaleString()} د.ع` : "مجاني"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4 pt-2.5 border-t border-primary/20">
+                    <span className="text-sm font-bold text-foreground">المجموع النهائي</span>
+                    <span className="text-lg font-bold tabular-nums text-primary">
+                      {totalWithDelivery.toLocaleString()} د.ع
                     </span>
                   </div>
-                  <div className="flex justify-between items-center pt-2 border-t border-border/50">
-                    <span className="font-bold text-lg text-primary">{totalWithDelivery.toLocaleString()} د.ع</span>
-                    <span className="font-bold text-foreground">المجموع النهائي</span>
-                  </div>
-                </div>
+                </section>
               </ScrollReveal>
             )}
 
-            <div className="mt-4">
-              <GuaranteesBar />
-            </div>
+            <GuaranteesBar compact />
 
             <ScrollReveal delay={400}>
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full mt-4 rounded-2xl py-3 text-base font-bold h-14 bg-primary hover:bg-primary/90 transition-colors"
+                className="w-full rounded-xl py-2.5 text-sm font-bold h-12 bg-primary hover:bg-primary/90 transition-colors"
               >
-                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "تأكيد الطلب"}
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "تأكيد الطلب"}
               </Button>
             </ScrollReveal>
           </form>
         )}
+        <div className="h-5 shrink-0 bg-background md:h-8" aria-hidden />
       </div>
-
-      {cartItems.length > 0 && (
-        <StorefrontFooter
-          storeName={display.storeName || 'المتجر'}
-          storeSlug={storeSlug}
-          whatsappNumber={display.storeSettings.whatsappNumber || tenant.storeInfo?.whatsappNumber}
-          returnPolicy={tenant.storeInfo?.returnPolicy}
-          privacyPolicy={tenant.storeInfo?.privacyPolicy}
-        />
-      )}
 
       {cartItems.length > 0 && !orderCompleted && (
         <div
-          className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t border-border/50 p-3 z-30 md:hidden safe-area-bottom"
+          className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t border-border/50 px-3 py-2.5 z-30 md:hidden safe-area-bottom"
           dir="rtl"
         >
-          <div className="max-w-xl mx-auto flex items-center gap-3">
+          <div className="w-full flex items-center gap-2">
             <div className="text-right flex-1 min-w-0">
-              <span className="text-xs text-muted-foreground">{cartCount} منتج</span>
-              <p className="font-bold text-foreground">
+              <span className="text-[11px] text-muted-foreground">{cartCount} منتج</span>
+              <p className="text-sm font-bold text-foreground leading-tight">
                 {deliveryPrices.length > 0 && !selectedGovernorate
                   ? `${cartTotal.toLocaleString()} د.ع`
                   : `${totalWithDelivery.toLocaleString()} د.ع`}
@@ -255,9 +272,8 @@ const Checkout = () => {
             <Button
               type="button"
               onClick={() => formRef.current?.scrollIntoView({ behavior: "smooth" })}
-              size="sm"
               variant="outline"
-              className="rounded-xl text-xs shrink-0"
+              className="h-10 min-h-0 min-w-0 rounded-xl px-3 text-xs font-semibold shrink-0 border-primary/30 text-primary hover:bg-primary/5 hover:text-primary hover:border-primary/40"
             >
               التوصيل
             </Button>
@@ -265,9 +281,9 @@ const Checkout = () => {
               type="button"
               disabled={isSubmitting}
               onClick={() => document.getElementById('checkout-form')?.requestSubmit()}
-              className="rounded-xl font-bold shrink-0 bg-primary min-h-[44px]"
+              className="h-10 min-h-0 min-w-0 rounded-xl px-3 text-xs font-semibold shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground"
             >
-              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'تأكيد'}
+              {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'تأكيد'}
             </Button>
           </div>
         </div>

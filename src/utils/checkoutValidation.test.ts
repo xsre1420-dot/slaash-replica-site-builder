@@ -5,6 +5,7 @@ vi.mock('@/integrations/supabase/client', () => ({
 }));
 
 import { validateAndRefreshCart, buildCartFingerprint, validateCheckoutItemStock, mergeProductStock } from '@/utils/checkoutValidation';
+import { normalizeProductStock } from '@/utils/inventoryUtils';
 import { CartItem, Product } from '@/types';
 
 const product = (id: string, price: number, stock = 10): Product => ({
@@ -41,13 +42,13 @@ describe('checkoutValidation', () => {
     expect(result.subtotal).toBe(1000);
   });
 
-  it('trusts cart aggregate when server fetch returns zero but storefront had stock', () => {
+  it('rejects when server stock is zero even if cart had stale stock', () => {
     const staleCart = product('p1', 500, 10);
     const freshServer = product('p1', 500, 0);
-    const items: CartItem[] = [{ product: staleCart, quantity: 1 }];
+    const items: CartItem[] = [{ product: staleCart, quantity: 2 }];
     const result = validateAndRefreshCart(items, new Map([['p1', freshServer]]));
-    expect(result.updatedItems).toHaveLength(1);
-    expect(result.valid).toBe(true);
+    expect(result.updatedItems).toHaveLength(0);
+    expect(result.errors[0]).toContain('غير متوفر');
   });
 
   it('uses aggregate stock when variant rows are zero', () => {
@@ -98,20 +99,30 @@ describe('checkoutValidation', () => {
     if (!result.ok) expect(result.error).toContain('Product p1');
   });
 
-  it('mergeProductStock restores availability from cart when variant rows are stale', () => {
+  it('mergeProductStock keeps server stock and only merges metadata from cart', () => {
     const merged = mergeProductStock(
       {
-        ...product('p1', 500, 0),
-        sizes: ['M'],
+        ...product('p1', 500, 10),
+        sizes: [],
         variants: [{ size: 'M', quantity: 0 }],
       },
       {
         ...product('p1', 500, 40),
-        sizes: ['M'],
+        sizes: ['M', 'L'],
         variants: [{ size: 'M', quantity: 0 }],
       }
     );
-    expect(merged.stockQuantity).toBe(40);
+    expect(merged.stockQuantity).toBe(10);
     expect(merged.variants).toBeUndefined();
+    expect(merged.sizes).toEqual(['M', 'L']);
+  });
+
+  it('normalizeProductStock lifts aggregate when variants hold inventory', () => {
+    const normalized = normalizeProductStock({
+      ...product('p1', 500, 0),
+      sizes: ['M'],
+      variants: [{ size: 'M', quantity: 8 }],
+    });
+    expect(normalized.stockQuantity).toBe(8);
   });
 });

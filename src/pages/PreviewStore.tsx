@@ -1,4 +1,4 @@
-import { X, ShoppingCart, Plus, Trash2, Search, Heart, Star } from "lucide-react";
+import { ArrowRight, ShoppingCart, Plus, Search } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { getCategories } from "@/services/productService";
@@ -30,6 +30,10 @@ const PreviewStore = () => {
   const navigate = useNavigate();
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const cartTotal = useMemo(
+    () => cartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
+    [cartItems]
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [productsLoading, setProductsLoading] = useState(true);
@@ -175,6 +179,8 @@ const PreviewStore = () => {
     }
   };
 
+  const isStoreOwnerView = Boolean(user?.id);
+
   return (
     <div className="min-h-screen bg-background font-arabic" dir="rtl">
       <MarketingScripts storeOwnerId={user?.id} disabled />
@@ -182,23 +188,30 @@ const PreviewStore = () => {
       {/* Header with Logo and Store Name */}
       <div className="bg-background sticky top-0 z-40 border-b border-border">
         <div className="px-4 py-3">
-          <div className="flex justify-between items-center gap-3">
-            <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center justify-between gap-3">
+            {isStoreOwnerView ? (
+              <Link
+                to="/builder"
+                aria-label="العودة للوحة التحكم"
+                className="w-10 h-10 shrink-0 rounded-full bg-muted/80 border border-border/60 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+            ) : (
+              <div className="w-10 shrink-0" aria-hidden />
+            )}
+
+            <div className="flex items-center justify-center gap-2 min-w-0 flex-1">
               {storeLogo && (
-                <img src={storeLogo} alt={storeName} className="w-10 h-10 rounded-full object-cover shrink-0" />
+                <img src={storeLogo} alt={storeName} className="w-9 h-9 rounded-full object-cover shrink-0" />
               )}
-              <div className="flex items-center gap-1 min-w-0">
-                <span className="font-bold text-foreground text-base truncate">{storeName}</span>
-                <svg className="w-4 h-4 text-primary shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
-                </svg>
-              </div>
+              <span className="font-bold text-foreground text-base truncate">{storeName}</span>
             </div>
-            
-            <button 
+
+            <button
               type="button"
               onClick={() => setShowSearch((v) => !v)}
-              className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl hover:bg-muted transition-colors shrink-0"
+              className="w-10 h-10 shrink-0 flex items-center justify-center rounded-full bg-muted/80 border border-border/60 hover:bg-muted transition-colors"
               aria-label={showSearch ? "إخفاء البحث" : "البحث عن منتج"}
               aria-expanded={showSearch}
             >
@@ -236,11 +249,6 @@ const PreviewStore = () => {
               {category.name}
             </button>
           ))}
-          <button className="p-2 flex-shrink-0">
-            <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
         </div>
       </div>
 
@@ -371,33 +379,29 @@ const PreviewStore = () => {
         )}
       </div>
 
-      {/* Horizontal Cart Bar */}
+      {/* Cart bar */}
       {cartCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-6 pt-2 bg-gradient-to-t from-background via-background to-transparent">
-          <Link to="/checkout">
-            <div className="bg-primary rounded-full shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4">
-                <div className="flex items-center gap-3">
-                  <div className="relative rounded-full p-3">
-                    <ShoppingCart className="w-6 h-6 text-white" />
-                    <span className="absolute -top-1 -right-1 bg-white text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shadow-md">
+        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background/95 to-transparent safe-area-bottom">
+          <Link to="/checkout" className="block w-full max-w-3xl mx-auto">
+            <div className="rounded-2xl bg-primary shadow-md shadow-primary/15">
+              <div className="flex items-center justify-between gap-3 px-4 py-3" dir="rtl">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-foreground/15">
+                    <ShoppingCart className="h-4 w-4 text-primary-foreground" />
+                    <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-card text-[10px] font-bold text-primary ring-2 ring-primary">
                       {cartCount}
                     </span>
                   </div>
-                  <div className="text-left">
-                    <div className="text-xs text-white/70">المبلغ الكلي</div>
-                    <div className="text-lg font-bold text-white">
-                      {cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0).toLocaleString()} د.ع
-                    </div>
+                  <div className="min-w-0 text-right">
+                    <p className="text-sm font-bold tabular-nums text-primary-foreground leading-tight">
+                      {cartTotal.toLocaleString()} د.ع
+                    </p>
+                    <p className="text-[10px] text-primary-foreground/75">
+                      {cartCount} {cartCount === 1 ? "منتج" : "منتجات"}
+                    </p>
                   </div>
                 </div>
-                
-                <div className="flex items-center gap-2 text-white font-bold text-base">
-                  <span>عرض السلة</span>
-                  <svg className="w-5 h-5 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </div>
+                <span className="shrink-0 text-xs font-semibold text-primary-foreground">عرض السلة</span>
               </div>
             </div>
           </Link>

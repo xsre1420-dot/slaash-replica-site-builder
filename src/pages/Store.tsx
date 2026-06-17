@@ -543,6 +543,7 @@ const Store = () => {
       <StorefrontFooter
         storeName={storeName || 'المتجر'}
         storeSlug={storeSlug}
+        ownerId={isTenantMode ? tenant.storeInfo?.ownerId : displayOwnerId}
         whatsappNumber={(storeSettings as any).whatsappNumber || tenant.storeInfo?.whatsappNumber}
         returnPolicy={tenant.storeInfo?.returnPolicy}
         privacyPolicy={tenant.storeInfo?.privacyPolicy}
