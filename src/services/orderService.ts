@@ -3,7 +3,8 @@ import { Order, CartItem } from '@/types';
 import { mapDbOrder } from '@/mappers/orderMapper';
 import { clearCheckoutIdempotencyKey, getOrCreateIdempotencyKey } from '@/utils/checkoutSession';
 import { mapOrderRpcFailure, mapOrderError } from '@/utils/orderErrors';
-import { computeOrderStats } from '@/utils/orderWorkflowUtils';
+import { computeOrderStats, normalizeOrderPhone, type OrderListFilters, type OrderWorkflowTab } from '@/utils/orderWorkflowUtils';
+import { filtersToRpcParams, filtersToRpcParamsWithoutWorkflow, serializeOrderFilters } from '@/utils/orderQueryBuilder';
 import { cache, CacheKeys, CacheTTL, dedup } from '@/lib/cache';
 import { instrumentAsync, instrumentQuery, logger, metrics } from '@/lib/observability';
 import type { MarketingAttribution } from '@/lib/attribution';
@@ -85,6 +86,242 @@ export const fetchOrdersPage = async (
   page = 0,
   pageSize = ORDERS_PER_PAGE
 ): Promise<Order[]> => {
+  const result = await fetchOrdersFiltered(ownerId, DEFAULT_LIST_FILTERS, page, pageSize);
+  return result.orders;
+};
+
+const DEFAULT_LIST_FILTERS: OrderListFilters = {
+  search: '',
+  workflowTab: 'all',
+  orderStatus: 'all',
+  paymentStatus: 'all',
+  deliveryStatus: 'all',
+  datePreset: 'all',
+};
+
+export type OrdersPageResult = {
+  orders: Order[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+};
+
+const mapRpcOrderRows = (rows: unknown[], ownerId: string): Promise<Order[]> => {
+  const mapped = rows.map((row) => mapDbOrder(row as Record<string, unknown>));
+  return enrichOrdersWithProductImages(mapped, ownerId);
+};
+
+/** Server-side filtered order list with exact total count (RPC + fallback). */
+export const fetchOrdersFiltered = async (
+  ownerId: string,
+  filters: OrderListFilters,
+  page = 0,
+  pageSize = ORDERS_PER_PAGE
+): Promise<OrdersPageResult> => {
+  return instrumentAsync('orders.fetchFiltered', async () => {
+    const filterKey = serializeOrderFilters(filters);
+    const cacheKey = CacheKeys.ordersFiltered(ownerId, filterKey, page);
+    const cached = cache.get<OrdersPageResult>(cacheKey);
+    if (cached) return cached;
+
+    const rpcParams = {
+      p_owner_id: ownerId,
+      ...filtersToRpcParams(filters, page, pageSize),
+    };
+
+    const { data, error } = await (supabase as any).rpc('list_merchant_orders', rpcParams);
+
+    if (!error && data?.orders) {
+      const orders = await mapRpcOrderRows(data.orders as unknown[], ownerId);
+      const total = Number(data.total ?? 0);
+      const result: OrdersPageResult = {
+        orders,
+        total,
+        page,
+        pageSize,
+        totalPages: Math.max(1, Math.ceil(total / pageSize)),
+      };
+      cache.set(cacheKey, result, CacheTTL.SHORT, CacheTTL.STALE);
+      return result;
+    }
+
+    if (error) {
+      logger.warn('orders.fetchFiltered.rpc_fallback', { message: error.message });
+    }
+
+    return fetchOrdersFilteredFallback(ownerId, filters, page, pageSize, filterKey);
+  }, { ownerId, page, pageSize });
+};
+
+const fetchOrdersFilteredFallback = async (
+  ownerId: string,
+  filters: OrderListFilters,
+  page: number,
+  pageSize: number,
+  filterKey: string
+): Promise<OrdersPageResult> => {
+  const { filterOrdersList } = await import('@/utils/orderWorkflowUtils');
+
+  let query = supabase
+    .from('orders')
+    .select(ORDER_LIST_SELECT, { count: 'exact' })
+    .eq('owner_id', ownerId);
+
+  if (filters.orderStatus !== 'all') query = query.eq('status', filters.orderStatus);
+  if (filters.paymentStatus !== 'all') query = query.eq('payment_status', filters.paymentStatus);
+  if (filters.deliveryStatus !== 'all') query = query.eq('delivery_status', filters.deliveryStatus);
+  if (filters.minValue != null) query = query.gte('total_amount', filters.minValue);
+  if (filters.maxValue != null) query = query.lte('total_amount', filters.maxValue);
+
+  const { getDateRangeForPreset } = await import('@/utils/orderQueryBuilder');
+  const range = getDateRangeForPreset(filters.datePreset);
+  if (range.from) query = query.gte('created_at', range.from);
+  if (range.to) query = query.lte('created_at', range.to);
+
+  const search = filters.search.trim();
+  if (search) {
+    const pattern = `%${search.replace(/-/g, '')}%`;
+    query = query.or(
+      `customer_name.ilike.%${search}%,customer_phone.ilike.%${search}%,id.ilike.${pattern}`
+    );
+  }
+
+  query = query.order('created_at', { ascending: false });
+
+  const { data, error, count } = await query.range(0, 4999);
+
+  if (error) {
+    logger.error('orders.fetchFiltered.fallback failed', { message: error.message });
+    return { orders: [], total: 0, page, pageSize, totalPages: 1 };
+  }
+
+  const allMapped = await mapRpcOrderRows(
+    (data ?? []).map((row) => row as Record<string, unknown>),
+    ownerId
+  );
+  const filtered = filterOrdersList(allMapped, filters);
+  const total = filtered.length;
+  const from = page * pageSize;
+  const orders = filtered.slice(from, from + pageSize);
+
+  const result: OrdersPageResult = {
+    orders,
+    total,
+    page,
+    pageSize,
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
+  };
+  cache.set(CacheKeys.ordersFiltered(ownerId, filterKey, page), result, CacheTTL.SHORT, CacheTTL.STALE);
+  return result;
+};
+
+export type WorkflowTabCounts = Record<OrderWorkflowTab, number>;
+
+const EMPTY_WORKFLOW_COUNTS: WorkflowTabCounts = {
+  all: 0,
+  new: 0,
+  processing: 0,
+  paid: 0,
+  shipped: 0,
+  delivered: 0,
+  cancelled: 0,
+  refunded: 0,
+};
+
+export const fetchWorkflowTabCounts = async (
+  ownerId: string,
+  filters: OrderListFilters
+): Promise<WorkflowTabCounts> => {
+  const baseKey = serializeOrderFilters({ ...filters, workflowTab: 'all' });
+  const cacheKey = CacheKeys.ordersWorkflowCounts(ownerId, baseKey);
+  const cached = cache.get<WorkflowTabCounts>(cacheKey);
+  if (cached) return cached;
+
+  const params = {
+    p_owner_id: ownerId,
+    ...filtersToRpcParamsWithoutWorkflow(filters),
+  };
+
+  const { data, error } = await (supabase as any).rpc('count_merchant_orders_by_workflow', params);
+
+  if (!error && data) {
+    const counts = data as WorkflowTabCounts;
+    cache.set(cacheKey, counts, CacheTTL.SHORT, CacheTTL.STALE);
+    return counts;
+  }
+
+  const { filterOrdersList, countOrdersByWorkflowTab } = await import('@/utils/orderWorkflowUtils');
+  const { getDateRangeForPreset } = await import('@/utils/orderQueryBuilder');
+
+  let query = supabase
+    .from('orders')
+    .select(ORDER_LIST_SELECT)
+    .eq('owner_id', ownerId);
+
+  if (filters.orderStatus !== 'all') query = query.eq('status', filters.orderStatus);
+  if (filters.paymentStatus !== 'all') query = query.eq('payment_status', filters.paymentStatus);
+  if (filters.deliveryStatus !== 'all') query = query.eq('delivery_status', filters.deliveryStatus);
+  if (filters.minValue != null) query = query.gte('total_amount', filters.minValue);
+  if (filters.maxValue != null) query = query.lte('total_amount', filters.maxValue);
+
+  const range = getDateRangeForPreset(filters.datePreset);
+  if (range.from) query = query.gte('created_at', range.from);
+  if (range.to) query = query.lte('created_at', range.to);
+
+  const search = filters.search.trim();
+  if (search) {
+    const pattern = `%${search.replace(/-/g, '')}%`;
+    query = query.or(
+      `customer_name.ilike.%${search}%,customer_phone.ilike.%${search}%,id.ilike.${pattern}`
+    );
+  }
+
+  const { data: fallbackRows, error: fallbackError } = await query
+    .order('created_at', { ascending: false })
+    .range(0, ORDERS_STATS_CAP - 1);
+
+  if (fallbackError || !fallbackRows) {
+    logger.warn('orders.workflowCounts.fallback failed', { message: fallbackError?.message });
+    return EMPTY_WORKFLOW_COUNTS;
+  }
+
+  const allMapped = await mapRpcOrderRows(
+    fallbackRows.map((row) => row as Record<string, unknown>),
+    ownerId
+  );
+  const baseFiltered = filterOrdersList(allMapped, { ...filters, workflowTab: 'all' });
+  const counts = countOrdersByWorkflowTab(baseFiltered);
+  cache.set(cacheKey, counts, CacheTTL.SHORT, CacheTTL.STALE);
+  return counts;
+};
+
+export const fetchRecentOrders = async (ownerId: string, limit = 5): Promise<Order[]> => {
+  const cacheKey = CacheKeys.ordersRecent(ownerId);
+  const cached = cache.get<Order[]>(cacheKey);
+  if (cached) return cached;
+
+  const { data, error } = await supabase
+    .from('orders')
+    .select(ORDER_LIST_SELECT)
+    .eq('owner_id', ownerId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error || !data) return [];
+
+  const mapped = data.map((row) => mapDbOrder(row as Record<string, unknown>));
+  const enriched = await enrichOrdersWithProductImages(mapped, ownerId);
+  cache.set(cacheKey, enriched, CacheTTL.SHORT, CacheTTL.STALE);
+  return enriched;
+};
+
+/** @deprecated Use fetchOrdersFiltered for paginated lists */
+export const fetchOrdersPageLegacy = async (
+  ownerId: string,
+  page = 0,
+  pageSize = ORDERS_PER_PAGE
+): Promise<Order[]> => {
   return instrumentAsync('orders.fetchPage', async () => {
     const from = page * pageSize;
     const to = from + pageSize - 1;
@@ -136,6 +373,69 @@ export const ORDER_STATS_SELECT =
 
 export type OrderDashboardStats = ReturnType<typeof computeOrderStats>;
 
+export type CustomerOrderInsights = {
+  orderCount: number;
+  totalSpent: number;
+};
+
+/** Customer history by phone (same store, tenant-isolated). */
+export const fetchCustomerInsightsByPhone = async (
+  ownerId: string,
+  phone: string
+): Promise<CustomerOrderInsights> => {
+  const digits = normalizeOrderPhone(phone);
+  if (!digits) return { orderCount: 0, totalSpent: 0 };
+
+  const { data, error } = await supabase
+    .from('orders')
+    .select('total_amount, status, customer_phone')
+    .eq('owner_id', ownerId)
+    .neq('status', 'cancelled')
+    .order('created_at', { ascending: false })
+    .limit(500);
+
+  if (error || !data) return { orderCount: 0, totalSpent: 0 };
+
+  const matched = data.filter(
+    (row) => normalizeOrderPhone(String(row.customer_phone ?? '')) === digits
+  );
+
+  return {
+    orderCount: matched.length,
+    totalSpent: matched.reduce((sum, row) => sum + Number(row.total_amount ?? 0), 0),
+  };
+};
+
+/** Lightweight order rows for period metrics fallback (not paginated list). */
+export const fetchOrderStatsRows = async (ownerId: string): Promise<Order[]> => {
+  const cacheKey = CacheKeys.ordersStatsSummary(ownerId) + ':rows';
+  const cached = cache.get<Order[]>(cacheKey);
+  if (cached) return cached;
+
+  const { data, error } = await supabase
+    .from('orders')
+    .select(ORDER_STATS_SELECT)
+    .eq('owner_id', ownerId)
+    .order('created_at', { ascending: false })
+    .limit(ORDERS_STATS_CAP);
+
+  if (error || !data) return [];
+
+  const orders: Order[] = data.map((row) => ({
+    id: String(row.id),
+    status: row.status as Order['status'],
+    total: Number(row.total_amount ?? 0),
+    paymentStatus: row.payment_status ?? undefined,
+    deliveryStatus: row.delivery_status ?? undefined,
+    date: String(row.created_at),
+    customerInfo: { name: '', phone: '', address: '' },
+    items: [],
+  }));
+
+  cache.set(cacheKey, orders, CacheTTL.SHORT, CacheTTL.STALE);
+  return orders;
+};
+
 /** Aggregate order stats across the full store (not paginated list). */
 export const fetchOrderStatsSummary = async (ownerId: string): Promise<OrderDashboardStats> => {
   const cacheKey = CacheKeys.ordersStatsSummary(ownerId);
@@ -144,29 +444,7 @@ export const fetchOrderStatsSummary = async (ownerId: string): Promise<OrderDash
 
   return dedup(`orders-stats-${ownerId}`, async () => {
     const stats = await instrumentAsync('orders.statsSummary', async () => {
-      const { data, error } = await supabase
-        .from('orders')
-        .select(ORDER_STATS_SELECT)
-        .eq('owner_id', ownerId)
-        .order('created_at', { ascending: false })
-        .limit(ORDERS_STATS_CAP);
-
-      if (error) {
-        logger.error('orders.statsSummary.failed', { ownerId, message: error.message });
-        throw new Error(mapOrderError(error.message));
-      }
-
-      const orders: Order[] = (data ?? []).map((row) => ({
-        id: String(row.id),
-        status: row.status as Order['status'],
-        total: Number(row.total_amount ?? 0),
-        paymentStatus: row.payment_status ?? undefined,
-        deliveryStatus: row.delivery_status ?? undefined,
-        date: String(row.created_at),
-        customerInfo: { name: '', phone: '', address: '' },
-        items: [],
-      }));
-
+      const orders = await fetchOrderStatsRows(ownerId);
       return computeOrderStats(orders);
     }, { ownerId });
 

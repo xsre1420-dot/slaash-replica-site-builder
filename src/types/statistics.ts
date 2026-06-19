@@ -62,5 +62,6 @@ export interface DatabaseData {
   kpis?: Record<string, unknown>;
   previousKpis?: Record<string, unknown>;
   truncated?: boolean;
+  fetchWarnings?: string[];
   dateBounds?: StatisticsDateBounds;
 }

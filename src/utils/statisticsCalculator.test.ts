@@ -76,6 +76,36 @@ describe('calculateStatistics', () => {
     expect(stats.totalOrders).toBe(0);
   });
 
+  it('prefers client counts when KPI RPC returns zeros but orders exist', () => {
+    const data: DatabaseData = {
+      orders: [
+        {
+          id: '1',
+          status: 'completed',
+          total_amount: '150',
+          created_at: '2026-06-02T10:00:00Z',
+          customer_phone: '07700000001',
+        },
+      ],
+      orderItems: [{ order_id: '1', product_name: 'منتج', quantity: 1, subtotal: '150' }],
+      customers: [],
+      products: [null],
+      visits: [{ id: 'v1', created_at: '2026-06-02T10:00:00Z', visitor_ip: '1.2.3.4' }],
+      kpis: {
+        order_count: 0,
+        completed_revenue: 0,
+        unique_visitors: 0,
+        product_count: 1,
+      },
+      dateBounds: bounds,
+    };
+
+    const stats = calculateStatistics(data, bounds);
+    expect(stats.totalOrders).toBe(1);
+    expect(stats.totalRevenue).toBe(150);
+    expect(stats.totalVisitors).toBe(1);
+  });
+
   it('computes stats from orders and visits when KPI RPC is unavailable', () => {
     const data: DatabaseData = {
       orders: [

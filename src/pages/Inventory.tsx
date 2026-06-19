@@ -248,7 +248,7 @@ function Inventory() {
         }
       />
 
-      <div className="ds-page space-y-5 sm:space-y-6">
+      <div className="ds-page space-y-5 sm:space-y-6 min-w-0">
         <InventoryAutoDeductionNotice />
 
         <AttentionStrip

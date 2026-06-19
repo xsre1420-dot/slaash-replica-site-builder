@@ -1,89 +1,111 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { Order } from "@/types";
-import { cache, CacheKeys, CacheTTL, dedup, flushOwnerCache, clearInflight } from "@/lib/cache";
-import { useAuth } from "@/context/AuthContext";
-import { useStoreHydration } from "@/context/StoreBootstrapContext";
-import { mapOrderError } from "@/utils/orderErrors";
-import { canTransitionOrderStatus } from "@/utils/orderStatusUtils";
-import { fetchOrdersPage, updateOrderStatus, ORDERS_PER_PAGE } from "@/services/orderService";
-import { toast } from "sonner";
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { Order } from '@/types';
+import { dedup, flushOwnerCache } from '@/lib/cache';
+import { useAuth } from '@/context/AuthContext';
+import { useStoreHydration } from '@/context/StoreBootstrapContext';
+import { mapOrderError } from '@/utils/orderErrors';
+import { canTransitionOrderStatus } from '@/utils/orderStatusUtils';
+import {
+  fetchOrdersFiltered,
+  fetchWorkflowTabCounts,
+  updateOrderStatus,
+  ORDERS_PER_PAGE,
+  type WorkflowTabCounts,
+} from '@/services/orderService';
+import {
+  DEFAULT_ORDER_FILTERS,
+  OrderListFilters,
+  OrderWorkflowTab,
+} from '@/utils/orderWorkflowUtils';
+import { serializeOrderFilters } from '@/utils/orderQueryBuilder';
+import { toast } from 'sonner';
 
-export const useOrders = () => {
+const EMPTY_TAB_COUNTS: WorkflowTabCounts = {
+  all: 0,
+  new: 0,
+  processing: 0,
+  paid: 0,
+  shipped: 0,
+  delivered: 0,
+  cancelled: 0,
+  refunded: 0,
+};
+
+export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS) => {
   const { user } = useAuth();
   const { isReady, hydrationVersion } = useStoreHydration();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(true);
-  const pageRef = useRef(0);
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [tabCounts, setTabCounts] = useState<WorkflowTabCounts>(EMPTY_TAB_COUNTS);
   const knownOrderIdsRef = useRef<Set<string>>(new Set());
 
-  const fetchOrders = useCallback(async (page = 0, append = false) => {
-    const ownerId = user?.id;
-    if (!ownerId) {
-      setOrders([]);
-      setHasMore(false);
-      setLoading(false);
-      return;
-    }
+  const filterKey = useMemo(() => serializeOrderFilters(listFilters), [listFilters]);
 
-    const cacheKey = CacheKeys.orders(ownerId, page);
-    const dedupKey = `fetch-orders-${ownerId}-${page}`;
-
-    const loadPage = async () => {
-      const fresh = await fetchOrdersPage(ownerId, page, ORDERS_PER_PAGE);
-      cache.set(cacheKey, fresh, CacheTTL.SHORT, CacheTTL.STALE);
-      return fresh;
-    };
-
-    if (!append) {
-      const cached = cache.get<Order[]>(cacheKey, loadPage);
-      if (cached) {
-        setOrders(cached);
-        cached.forEach((o) => knownOrderIdsRef.current.add(o.id));
-        setHasMore(cached.length === ORDERS_PER_PAGE);
-        pageRef.current = page;
+  const loadPage = useCallback(
+    async (pageNum: number) => {
+      const ownerId = user?.id;
+      if (!ownerId) {
+        setOrders([]);
+        setTotal(0);
+        setTotalPages(1);
         setLoading(false);
         return;
       }
-      setLoading(true);
-    } else {
-      setLoading(true);
-    }
 
-    const mapped = await dedup(dedupKey, loadPage);
+      setLoading(true);
+      const dedupKey = `fetch-orders-${ownerId}-${filterKey}-${pageNum}`;
 
-    if (append) {
-      setOrders((prev) => [...prev, ...mapped]);
-    } else {
-      setOrders(mapped);
-    }
-    mapped.forEach((o) => knownOrderIdsRef.current.add(o.id));
-    setHasMore(mapped.length === ORDERS_PER_PAGE);
-    pageRef.current = page;
-    setLoading(false);
-  }, [user?.id]);
+      try {
+        const [result, counts] = await Promise.all([
+          dedup(dedupKey, () => fetchOrdersFiltered(ownerId, listFilters, pageNum, ORDERS_PER_PAGE)),
+          dedup(`fetch-wc-${ownerId}-${filterKey}`, () =>
+            fetchWorkflowTabCounts(ownerId, listFilters)
+          ),
+        ]);
+
+        setOrders(result.orders);
+        setTotal(result.total);
+        setTotalPages(result.totalPages);
+        setPage(pageNum);
+        setTabCounts(counts);
+        result.orders.forEach((o) => knownOrderIdsRef.current.add(o.id));
+      } catch (err) {
+        console.error('[useOrders] load failed:', err);
+        toast.error('تعذر تحميل الطلبات');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user?.id, filterKey, listFilters]
+  );
 
   useEffect(() => {
     if (!isReady) return;
-    fetchOrders(0);
-  }, [isReady, hydrationVersion, fetchOrders]);
+    setPage(0);
+    void loadPage(0);
+  }, [isReady, hydrationVersion, loadPage]);
 
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState === 'visible' && user?.id) {
-        clearInflight(`fetch-orders-${user.id}-0`);
-        fetchOrders(0);
+        flushOwnerCache(user.id);
+        void loadPage(page);
       }
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [fetchOrders, user?.id]);
+  }, [loadPage, page, user?.id]);
 
-  const loadMore = useCallback(() => {
-    if (hasMore && !loading) {
-      fetchOrders(pageRef.current + 1, true);
-    }
-  }, [hasMore, loading, fetchOrders]);
+  const goToPage = useCallback(
+    (next: number) => {
+      const clamped = Math.max(0, Math.min(next, totalPages - 1));
+      if (clamped !== page && !loading) void loadPage(clamped);
+    },
+    [page, totalPages, loading, loadPage]
+  );
 
   const updateOrderStatusLocal = async (
     orderId: string,
@@ -108,12 +130,12 @@ export const useOrders = () => {
                 ...o,
                 status: newStatus,
                 ...(newStatus === 'completed' ? { deliveryStatus: 'delivered' } : {}),
-                ...(newStatus === 'cancelled' ? { deliveryStatus: o.deliveryStatus || 'pending' } : {}),
               }
             : o
         )
       );
       flushOwnerCache(ownerId);
+      void loadPage(page);
       return true;
     }
 
@@ -121,19 +143,10 @@ export const useOrders = () => {
     return false;
   };
 
-  const patchOrderInList = useCallback((orderId: string, patch: Partial<Order>) => {
-    setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, ...patch } : o))
-    );
-  }, []);
-
   const refetch = useCallback(() => {
-    if (user?.id) {
-      flushOwnerCache(user.id);
-      clearInflight(`fetch-orders-${user.id}-0`);
-    }
-    fetchOrders(0);
-  }, [fetchOrders, user?.id]);
+    if (user?.id) flushOwnerCache(user.id);
+    void loadPage(page);
+  }, [loadPage, page, user?.id]);
 
   const isNewOrder = useCallback((orderId: string) => {
     return !knownOrderIdsRef.current.has(orderId);
@@ -146,12 +159,20 @@ export const useOrders = () => {
   return {
     orders,
     updateOrderStatus: updateOrderStatusLocal,
-    patchOrderInList,
     loading,
-    hasMore,
-    loadMore,
+    page,
+    total,
+    totalPages,
+    tabCounts,
+    goToPage,
     refetch,
     isNewOrder,
     markOrderKnown,
+    /** @deprecated use goToPage */
+    hasMore: page < totalPages - 1,
+    /** @deprecated use goToPage */
+    loadMore: () => goToPage(page + 1),
   };
 };
+
+export type { WorkflowTabCounts, OrderWorkflowTab };

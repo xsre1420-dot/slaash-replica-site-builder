@@ -39,6 +39,13 @@ const inPeriod = (createdAt: string, start: Date, end: Date) => {
 const num = (value: unknown): number | null =>
   value != null && value !== '' ? Number(value) : null;
 
+/** Prefer KPI when present; if KPI is 0 but client has data, trust client (broken/stale RPC). */
+const mergeMetric = (kpi: number | null, client: number): number => {
+  if (kpi == null) return client;
+  if (kpi === 0 && client > 0) return client;
+  return kpi;
+};
+
 const growthCalc = (current: number, previous: number) => {
   if (previous === 0) return current > 0 ? 100 : 0;
   return ((current - previous) / previous) * 100;
@@ -79,11 +86,11 @@ export const calculateStatistics = (
     periodVisits.map(v => v.visitor_ip).filter(Boolean)
   ).size;
 
-  const totalOrders = kpiOrderCount ?? clientOrderCount;
-  const grossRevenue = kpiRevenue ?? clientRevenue;
+  const totalOrders = mergeMetric(kpiOrderCount, clientOrderCount);
+  const grossRevenue = mergeMetric(kpiRevenue, clientRevenue);
   const totalRevenue = Math.max(0, grossRevenue - kpiRefunds);
-  const totalVisitors = kpiUniqueVisitors ?? clientUniqueVisitors;
-  const totalProducts = kpiProductCount ?? products.length;
+  const totalVisitors = mergeMetric(kpiUniqueVisitors, clientUniqueVisitors);
+  const totalProducts = mergeMetric(kpiProductCount, products.length);
   const completedCount = completedOrders.length;
   const kpiCompletedOrderCount = num(kpis?.completed_order_count);
   const completedCountForConversion = kpiCompletedOrderCount ?? completedOrders.length;
@@ -132,11 +139,11 @@ export const calculateStatistics = (
   );
   const ordersGrowth = growthCalc(
     totalOrders,
-    prevOrderCount ?? previousOrderCountClient
+    mergeMetric(prevOrderCount, previousOrderCountClient)
   );
   const visitorsGrowth = growthCalc(
     totalVisitors,
-    prevVisitors ?? previousVisitorsClient
+    mergeMetric(prevVisitors, previousVisitorsClient)
   );
 
   const productSales: { [key: string]: { name: string; orders: number; revenue: number } } = {};

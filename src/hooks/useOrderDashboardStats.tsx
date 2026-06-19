@@ -8,6 +8,9 @@ const EMPTY_STATS: OrderDashboardStats = {
   pendingFulfillment: 0,
   delivered: 0,
   revenue: 0,
+  todayOrders: 0,
+  weekOrders: 0,
+  monthOrders: 0,
 };
 
 export const useOrderDashboardStats = (refreshKey = 0) => {

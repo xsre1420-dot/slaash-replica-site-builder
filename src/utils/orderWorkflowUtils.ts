@@ -240,12 +240,71 @@ export const computeOrderStats = (orders: Order[]) => {
     })
     .reduce((sum, o) => sum + o.total, 0);
 
+  const todayOrders = orders.filter((o) => isToday(new Date(o.date))).length;
+  const weekOrders = orders.filter((o) => isThisWeek(new Date(o.date), { weekStartsOn: 6 })).length;
+  const monthOrders = orders.filter((o) => isThisMonth(new Date(o.date))).length;
+
   return {
     total: orders.length,
     newOrders: workflowCounts.new,
     pendingFulfillment: workflowCounts.new + workflowCounts.processing + workflowCounts.paid,
     delivered: workflowCounts.delivered,
     revenue,
+    todayOrders,
+    weekOrders,
+    monthOrders,
+  };
+};
+
+/** Fulfillment pipeline steps shown in order details and list. */
+export type FulfillmentStepId =
+  | 'new'
+  | 'confirmed'
+  | 'preparing'
+  | 'ready'
+  | 'shipped'
+  | 'delivered';
+
+export const FULFILLMENT_STEPS: { id: FulfillmentStepId; label: string }[] = [
+  { id: 'new', label: 'جديد' },
+  { id: 'confirmed', label: 'مؤكد' },
+  { id: 'preparing', label: 'تجهيز' },
+  { id: 'ready', label: 'جاهز للشحن' },
+  { id: 'shipped', label: 'مشحون' },
+  { id: 'delivered', label: 'مُسلّم' },
+];
+
+export const getOrderFulfillmentStep = (order: Order): FulfillmentStepId => {
+  if (order.status === 'cancelled') return 'new';
+  const delivery = getEffectiveDeliveryStatus(order);
+  const payment = getEffectivePaymentStatus(order);
+
+  if (delivery === 'delivered' || order.status === 'completed') return 'delivered';
+  if (delivery === 'shipped' || delivery === 'out_for_delivery') return 'shipped';
+  if (delivery === 'preparing') return 'preparing';
+  if (payment === 'paid' || payment === 'collected') return 'confirmed';
+  if (order.status === 'pending') return 'new';
+  return 'new';
+};
+
+export const getFulfillmentStepIndex = (step: FulfillmentStepId): number =>
+  FULFILLMENT_STEPS.findIndex((s) => s.id === step);
+
+export const computeCustomerInsights = (
+  orders: Order[],
+  phone: string
+): { orderCount: number; totalSpent: number; lastOrderDate?: string } => {
+  const digits = normalizeOrderPhone(phone);
+  if (!digits) return { orderCount: 0, totalSpent: 0 };
+
+  const matched = orders.filter(
+    (o) => normalizeOrderPhone(o.customerInfo.phone) === digits && o.status !== 'cancelled'
+  );
+
+  return {
+    orderCount: matched.length,
+    totalSpent: matched.reduce((sum, o) => sum + o.total, 0),
+    lastOrderDate: matched[0]?.date,
   };
 };
 

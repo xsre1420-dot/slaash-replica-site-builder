@@ -32,11 +32,11 @@ const PageHeader = ({
   <header
     dir="rtl"
     className={cn(
-      'border-b border-border/50 bg-card lg:sticky lg:top-0 z-30 font-arabic',
+      'border-b border-border/50 bg-card lg:sticky lg:top-0 z-30 font-arabic w-full min-w-0 max-w-full overflow-x-hidden',
       className
     )}
   >
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-5">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-5 w-full min-w-0 box-border">
       {breadcrumbs && breadcrumbs.length > 0 && (
         <nav aria-label="مسار التنقل" className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3">
           {breadcrumbs.map((crumb, i) => (

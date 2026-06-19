@@ -183,7 +183,7 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-background font-arabic flex" dir="rtl">
+      <div className="min-h-screen bg-background font-arabic flex w-full max-w-[100vw] overflow-x-hidden" dir="rtl">
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:right-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-xl focus:outline-none"
@@ -327,9 +327,9 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
         </aside>
 
         {/* Main content */}
-        <div className={cn('flex-1 flex flex-col min-h-screen transition-all duration-300', mainOffset)}>
+        <div className={cn('flex-1 flex flex-col min-h-screen min-w-0 w-full max-w-full transition-all duration-300', mainOffset)}>
           {/* Mobile top bar */}
-          <header className="lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card">
+          <header className="lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card w-full min-w-0 shrink-0">
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
               <SheetTrigger asChild>
                 <Button
@@ -453,12 +453,12 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
 
             <ThemeToggle />
           </header>
-        </div>
 
-        <main id="main-content" className="flex-1">
-          <PlatformDbStatusBanner />
-          {children}
-        </main>
+          <main id="main-content" className="flex-1 min-w-0 w-full max-w-full overflow-x-hidden">
+            <PlatformDbStatusBanner />
+            {children}
+          </main>
+        </div>
       </div>
     </TooltipProvider>
   );

@@ -27,8 +27,9 @@ import {
   summarizeInventoryAlerts,
   type PeriodMetrics,
 } from '@/utils/dashboardInsightsUtils';
-import { useOrders } from '@/hooks/useOrders';
+import { fetchOrderStatsRows } from '@/services/orderService';
 import { useOrderDashboardStats } from '@/hooks/useOrderDashboardStats';
+import type { Order } from '@/types';
 
 export type DashboardActionItem = {
   id: AttentionKey;
@@ -71,7 +72,8 @@ const fetchRpcPeriod = async (
 
 export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
   const { user } = useAuth();
-  const { orders, loading: ordersLoading } = useOrders();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
   const { stats } = useOrderDashboardStats(refreshKey);
 
   const [periods, setPeriods] = useState({
@@ -83,6 +85,18 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
   const [hasSlug, setHasSlug] = useState<boolean | null>(null);
   const [pendingReviewsCount, setPendingReviewsCount] = useState(0);
   const [kpiLoading, setKpiLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setOrders([]);
+      setOrdersLoading(false);
+      return;
+    }
+    setOrdersLoading(true);
+    void fetchOrderStatsRows(user.id)
+      .then(setOrders)
+      .finally(() => setOrdersLoading(false));
+  }, [user?.id, refreshKey]);
 
   useEffect(() => {
     if (!user?.id) return;

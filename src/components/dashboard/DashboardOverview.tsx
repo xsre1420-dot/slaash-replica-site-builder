@@ -13,7 +13,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import StatCard from '@/components/ui/StatCard';
-import { useOrders } from '@/hooks/useOrders';
+import { useRecentOrders } from '@/hooks/useRecentOrders';
 import { useDashboardInsights } from '@/hooks/useDashboardInsights';
 import { useRealtimeOrders } from '@/hooks/useRealtimeOrders';
 import AttentionAlertLink from '@/components/dashboard/AttentionAlertLink';
@@ -26,7 +26,7 @@ const statusConfig = {
 };
 
 const DashboardOverview = () => {
-  const { orders, loading, refetch } = useOrders();
+  const { orders, loading, refetch } = useRecentOrders(5);
   const [statsRefreshKey, setStatsRefreshKey] = useState(0);
   const { actions, today, loading: insightsLoading } =
     useDashboardInsights(statsRefreshKey);
@@ -36,9 +36,7 @@ const DashboardOverview = () => {
     setStatsRefreshKey((k) => k + 1);
   });
 
-  const recentOrders = [...orders]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 5);
+  const recentOrders = orders;
 
   const showSkeleton = loading && orders.length === 0 && insightsLoading;
 

@@ -1,34 +1,73 @@
-
-import { useState, useEffect, useMemo, useCallback, lazy, Suspense, useRef } from "react";
-import { isProductLowStock } from '@/lib/productUpdateUtils';
-import { Link, useSearchParams, useLocation, useNavigate } from "react-router-dom";
-import { MessageSquare, Lightbulb, Plus, Search, ArrowRight, Package, XCircle } from "lucide-react";
-import DashboardLayout from "@/components/layout/DashboardLayout";
-import PageHeader from "@/components/layout/PageHeader";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
-import { ProductsList } from "@/components/ProductsList";
-import StatCard from "@/components/ui/StatCard";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Product } from "@/types";
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense, useRef } from 'react';
+import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
+import {
+  MessageSquare,
+  Lightbulb,
+  Plus,
+  ArrowRight,
+  Package,
+  XCircle,
+  FileEdit,
+  Archive,
+  AlertTriangle,
+  Download,
+  Wallet,
+} from 'lucide-react';
+import DashboardLayout from '@/components/layout/DashboardLayout';
+import PageHeader from '@/components/layout/PageHeader';
+import { Button } from '@/components/ui/button';
+import { ProductsList } from '@/components/ProductsList';
+import StatCard from '@/components/ui/StatCard';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ProductsWorkflowTabs from '@/components/products/ProductsWorkflowTabs';
+import ProductsToolbar, { type ProductViewMode } from '@/components/products/ProductsToolbar';
+import ProductsBulkBar from '@/components/products/ProductsBulkBar';
+import ProductsDataTable from '@/components/products/ProductsDataTable';
+import { BulkUpload } from '@/components/product-management/BulkUpload';
+import { QuickEditDialog } from '@/components/product-management/QuickEditDialog';
+import { Product } from '@/types';
 import { toast } from 'sonner';
-import { getCategories, invalidateProducts, loadAllMerchantProducts as reloadProductsData } from "@/services/productService";
-import { getFirstPendingReviewTarget, countPendingReviewsForOwner } from "@/services/reviewService";
-import { getProductLifecycleStatus, matchesLifecycleFilter, type ProductLifecycleFilter } from "@/lib/productLifecycle";
-import type { ProductSaveMode } from "@/lib/productFormLabels";
-import { useAuth } from "@/context/AuthContext";
-import { useRealtimeProducts } from "@/hooks/useRealtimeProducts";
-import { useScrollPersistence, saveFilters, loadFilters } from "@/hooks/useScrollPersistence";
-import { useStoreHydration } from "@/context/StoreBootstrapContext";
-import AttentionStrip from "@/components/ui/AttentionStrip";
-import { ATTENTION_PARAM } from "@/lib/attentionHighlight";
+import {
+  getCategories,
+  invalidateProducts,
+  loadAllMerchantProducts as reloadProductsData,
+  publishProduct,
+  setProductLifecycle,
+  addProduct,
+} from '@/services/productService';
+import { getFirstPendingReviewTarget, countPendingReviewsForOwner } from '@/services/reviewService';
+import { getProductLifecycleStatus } from '@/lib/productLifecycle';
+import type { ProductSaveMode } from '@/lib/productFormLabels';
+import { useAuth } from '@/context/AuthContext';
+import { useRealtimeProducts } from '@/hooks/useRealtimeProducts';
+import { useScrollPersistence, saveFilters, loadFilters } from '@/hooks/useScrollPersistence';
+import { useStoreHydration } from '@/context/StoreBootstrapContext';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import AttentionStrip from '@/components/ui/AttentionStrip';
+import { ATTENTION_PARAM } from '@/lib/attentionHighlight';
+import EmptyState from '@/components/ui/EmptyState';
+import {
+  applyProductCatalogFilters,
+  computeProductCatalogStats,
+  countProductsByLifecycle,
+  DEFAULT_PRODUCT_CATALOG_FILTERS,
+  filterProductCatalog,
+  formatProductInventoryValue,
+  type ProductCatalogFilters,
+} from '@/utils/productCatalogPageUtils';
+import {
+  buildProductsExportFilename,
+  exportProductsToCsv,
+} from '@/utils/productExportUtils';
+import { generateUUID } from '@/lib/uuid';
 
-// Suggestion #8: Lazy load sub-managers
-const ProductReviewsManager = lazy(() => import("@/components/product-management/ProductReviewsManager"));
-const SuggestedProductsManager = lazy(() => import("@/components/product-management/SuggestedProductsManager"));
-const FooterSuggestedProductsManager = lazy(() => import("@/components/product-management/FooterSuggestedProductsManager"));
+const ProductReviewsManager = lazy(() => import('@/components/product-management/ProductReviewsManager'));
+const SuggestedProductsManager = lazy(() => import('@/components/product-management/SuggestedProductsManager'));
+const FooterSuggestedProductsManager = lazy(
+  () => import('@/components/product-management/FooterSuggestedProductsManager')
+);
+
+const VIEW_MODE_KEY = 'products_view_mode';
 
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -36,28 +75,37 @@ const Products = () => {
   const navigate = useNavigate();
   const { isReady, hydrationVersion } = useStoreHydration();
   const { user } = useAuth();
-  const [selectedProduct, setSelectedProduct] = useState<{id: string, name: string} | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<{ id: string; name: string } | null>(null);
   const [loadedProducts, setLoadedProducts] = useState<Product[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [stockFilter, setStockFilter] = useState("all");
-  const [publishFilter, setPublishFilter] = useState<ProductLifecycleFilter>("all");
-  const [catalogTotal, setCatalogTotal] = useState(0);
-  const [categories, setCategories] = useState<{id: string; name: string}[]>([]);
+  const [catalogFilters, setCatalogFilters] = useState<ProductCatalogFilters>(DEFAULT_PRODUCT_CATALOG_FILTERS);
+  const debouncedSearch = useDebouncedValue(catalogFilters.search, 350);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [pendingReviewsCount, setPendingReviewsCount] = useState(0);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [viewMode, setViewMode] = useState<ProductViewMode>(() => {
+    try {
+      return (localStorage.getItem(VIEW_MODE_KEY) as ProductViewMode) || 'grid';
+    } catch {
+      return 'grid';
+    }
+  });
+  const [quickEditProduct, setQuickEditProduct] = useState<Product | null>(null);
+  const [quickEditOpen, setQuickEditOpen] = useState(false);
   const attentionApplied = useRef(false);
-  
-  // Suggestion #17: Scroll & filter persistence
+
   useScrollPersistence('products');
 
-  // Realtime subscriptions
+  const listFilters = useMemo(
+    () => ({ ...catalogFilters, search: debouncedSearch }),
+    [catalogFilters, debouncedSearch]
+  );
+
   const handleRealtimeUpdate = useCallback(async () => {
     await invalidateProducts();
     const result = await reloadProductsData(true);
     setLoadedProducts(result.products);
-    setCatalogTotal(result.total);
   }, []);
   useRealtimeProducts(handleRealtimeUpdate);
 
@@ -73,7 +121,6 @@ const Products = () => {
       await invalidateProducts();
       const result = await reloadProductsData(true);
       setLoadedProducts(result.products);
-      setCatalogTotal(result.total);
       return result.products;
     } catch (err) {
       console.error('[Products] failed to load catalog:', err);
@@ -85,7 +132,6 @@ const Products = () => {
     }
   }, [user?.id]);
 
-  // Initial load + re-hydration after login
   useEffect(() => {
     if (!isReady || !user?.id) return;
     void reloadCatalog();
@@ -93,10 +139,10 @@ const Products = () => {
 
   const productIdParam = searchParams.get('productId');
   const productNameParam = searchParams.get('productName');
-  
+
   useEffect(() => {
     if (productIdParam && productNameParam) {
-      setSelectedProduct({id: productIdParam, name: decodeURIComponent(productNameParam)});
+      setSelectedProduct({ id: productIdParam, name: decodeURIComponent(productNameParam) });
     }
   }, [productIdParam, productNameParam]);
 
@@ -106,7 +152,7 @@ const Products = () => {
 
     if (attention === 'draft-products') {
       attentionApplied.current = true;
-      setPublishFilter('draft');
+      setCatalogFilters((prev) => ({ ...prev, lifecycle: 'draft' }));
       return;
     }
 
@@ -124,9 +170,8 @@ const Products = () => {
     }
   }, [searchParams, user?.id, setSearchParams]);
 
-  // Load categories
   useEffect(() => {
-    getCategories().then(cats => setCategories(cats));
+    getCategories().then((cats) => setCategories(cats));
   }, []);
 
   useEffect(() => {
@@ -137,42 +182,55 @@ const Products = () => {
     void countPendingReviewsForOwner(user.id).then(setPendingReviewsCount);
   }, [user?.id, loadedProducts.length]);
 
-  // Restore saved filters once (skip when arriving from add-product)
   useEffect(() => {
     const state = location.state as { refreshProducts?: boolean } | null;
     if (state?.refreshProducts) return;
-    const saved = loadFilters('products');
+    const saved = loadFilters('products') as Record<string, string> | null;
     if (!saved) return;
-    if (saved.categoryFilter) setCategoryFilter(saved.categoryFilter);
-    if (saved.stockFilter) setStockFilter(saved.stockFilter);
-    if (saved.publishFilter === 'published' || saved.publishFilter === 'draft' || saved.publishFilter === 'archived' || saved.publishFilter === 'all') {
-      setPublishFilter(saved.publishFilter);
-    }
-    if (saved.searchQuery) setSearchQuery(saved.searchQuery);
+    setCatalogFilters((prev) => ({
+      ...prev,
+      category: saved.categoryFilter || saved.category || prev.category,
+      stock: (saved.stockFilter as ProductCatalogFilters['stock']) || prev.stock,
+      lifecycle:
+        saved.publishFilter === 'published' ||
+        saved.publishFilter === 'draft' ||
+        saved.publishFilter === 'archived' ||
+        saved.publishFilter === 'all'
+          ? saved.publishFilter
+          : prev.lifecycle,
+      search: saved.searchQuery || saved.search || prev.search,
+      sort: (saved.sort as ProductCatalogFilters['sort']) || prev.sort,
+    }));
   }, []);
 
-  // Drop stale category filter values (e.g. old UUIDs) that hide all products
   useEffect(() => {
-    if (categoryFilter === 'all' || categories.length === 0) return;
-    if (!categories.some((c) => c.name === categoryFilter)) {
-      setCategoryFilter('all');
+    if (catalogFilters.category === 'all' || categories.length === 0) return;
+    if (!categories.some((c) => c.name === catalogFilters.category)) {
+      setCatalogFilters((prev) => ({ ...prev, category: 'all' }));
     }
-  }, [categories, categoryFilter]);
+  }, [categories, catalogFilters.category]);
 
-  // Save filters when they change
   useEffect(() => {
-    saveFilters('products', { categoryFilter, stockFilter, searchQuery, publishFilter });
-  }, [categoryFilter, stockFilter, searchQuery, publishFilter]);
+    saveFilters('products', {
+      categoryFilter: catalogFilters.category,
+      stockFilter: catalogFilters.stock,
+      searchQuery: catalogFilters.search,
+      publishFilter: catalogFilters.lifecycle,
+      sort: catalogFilters.sort,
+    });
+  }, [catalogFilters]);
 
-  // Debounce search
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+    try {
+      localStorage.setItem(VIEW_MODE_KEY, viewMode);
+    } catch {
+      /* ignore */
+    }
+  }, [viewMode]);
 
-  const handleProductSelect = (product: {id: string, name: string}) => {
+  const handleProductSelect = (product: { id: string; name: string }) => {
     setSelectedProduct(product);
-    setSearchParams({productId: product.id, productName: encodeURIComponent(product.name)});
+    setSearchParams({ productId: product.id, productName: encodeURIComponent(product.name) });
   };
 
   const handleBackToList = () => {
@@ -180,27 +238,60 @@ const Products = () => {
     setSearchParams({});
   };
 
-  // Stats (memoized)
-  const stats = useMemo(() => ({
-    total: catalogTotal || loadedProducts.length,
-    published: loadedProducts.filter((p) => getProductLifecycleStatus(p) === 'published').length,
-    drafts: loadedProducts.filter((p) => getProductLifecycleStatus(p) === 'draft').length,
-    archived: loadedProducts.filter((p) => getProductLifecycleStatus(p) === 'archived').length,
-    inStock: loadedProducts.filter((p) => !isProductLowStock(p) && (p.stockQuantity ?? 0) > 0).length,
-    lowStock: loadedProducts.filter((p) => isProductLowStock(p)).length,
-    outOfStock: loadedProducts.filter(p => p.stockQuantity !== undefined && p.stockQuantity === 0).length,
-    totalValue: loadedProducts.reduce((sum, p) => sum + p.price * (p.stockQuantity ?? 1), 0),
-  }), [loadedProducts, catalogTotal]);
+  const stats = useMemo(
+    () => computeProductCatalogStats(loadedProducts),
+    [loadedProducts]
+  );
 
-  const clearFilters = () => {
-    setSearchQuery("");
-    setCategoryFilter("all");
-    setStockFilter("all");
-    setPublishFilter("all");
-    saveFilters('products', { categoryFilter: 'all', stockFilter: 'all', searchQuery: '', publishFilter: 'all' });
+  const tabCountBase = useMemo(
+    () => filterProductCatalog(loadedProducts, { ...listFilters, lifecycle: 'all' }),
+    [loadedProducts, listFilters]
+  );
+  const tabCounts = useMemo(() => countProductsByLifecycle(tabCountBase), [tabCountBase]);
+
+  const visibleProducts = useMemo(
+    () => applyProductCatalogFilters(loadedProducts, listFilters),
+    [loadedProducts, listFilters]
+  );
+
+  const categoryNames = useMemo(() => {
+    const fromDb = categories.map((c) => c.name);
+    const fromProducts = loadedProducts.map((p) => p.category).filter(Boolean);
+    return [...new Set([...fromDb, ...fromProducts])].sort((a, b) => a.localeCompare(b, 'ar'));
+  }, [categories, loadedProducts]);
+
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      const next = new Set([...prev].filter((id) => visibleProducts.some((p) => p.id === id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [visibleProducts]);
+
+  const updateFilters = (patch: Partial<ProductCatalogFilters>) => {
+    setCatalogFilters((prev) => ({ ...prev, ...patch }));
+    if ('lifecycle' in patch || 'category' in patch || 'stock' in patch || 'search' in patch) {
+      setSelectedIds(new Set());
+    }
   };
 
-  // After add-product: clear saved filters and reload from DB
+  const clearFilters = () => {
+    setCatalogFilters(DEFAULT_PRODUCT_CATALOG_FILTERS);
+    setSelectedIds(new Set());
+    saveFilters('products', {
+      categoryFilter: 'all',
+      stockFilter: 'all',
+      searchQuery: '',
+      publishFilter: 'all',
+      sort: 'recent',
+    });
+  };
+
+  const filtersActive =
+    catalogFilters.category !== 'all' ||
+    catalogFilters.stock !== 'all' ||
+    catalogFilters.lifecycle !== 'all' ||
+    !!debouncedSearch.trim();
+
   useEffect(() => {
     const state = location.state as {
       refreshProducts?: boolean;
@@ -218,26 +309,128 @@ const Products = () => {
     navigate('/products', { replace: true, state: {} });
   }, [location.state, navigate, reloadCatalog]);
 
-  const filtersActive =
-    categoryFilter !== 'all' || stockFilter !== 'all' || publishFilter !== 'all' || !!debouncedSearch.trim();
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
-  const filteredProducts = useMemo(() => loadedProducts.filter(p => {
-    const matchesSearch = !debouncedSearch || 
-      p.name.includes(debouncedSearch) || 
-      p.description?.includes(debouncedSearch) ||
-      p.category?.includes(debouncedSearch);
-    
-    const matchesCategory = categoryFilter === "all" || p.category === categoryFilter;
+  const toggleSelectAll = () => {
+    if (selectedIds.size === visibleProducts.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(visibleProducts.map((p) => p.id)));
+  };
 
-    const matchesPublish = matchesLifecycleFilter(p, publishFilter);
-    
-    let matchesStock = true;
-    if (stockFilter === "in_stock") matchesStock = !isProductLowStock(p) && (p.stockQuantity ?? 0) > 0;
-    else if (stockFilter === "low") matchesStock = isProductLowStock(p);
-    else if (stockFilter === "out") matchesStock = p.stockQuantity !== undefined && p.stockQuantity === 0;
+  const runProductAction = async (
+    product: Product,
+    action: () => Promise<{ success: boolean; error?: string }>,
+    successMsg: string
+  ) => {
+    const result = await action();
+    if (result.success) {
+      toast.success(successMsg);
+      await reloadCatalog();
+    } else {
+      toast.error(result.error || 'فشلت العملية');
+    }
+  };
 
-    return matchesSearch && matchesCategory && matchesPublish && matchesStock;
-  }), [loadedProducts, debouncedSearch, categoryFilter, stockFilter, publishFilter]);
+  const handlePublish = (product: Product) =>
+    runProductAction(product, () => publishProduct(product.id), `تم نشر "${product.name}"`);
+
+  const handleArchive = (product: Product) =>
+    runProductAction(product, () => setProductLifecycle(product.id, 'archive'), `تم أرشفة "${product.name}"`);
+
+  const handleRestore = (product: Product) =>
+    runProductAction(
+      product,
+      () => setProductLifecycle(product.id, 'restore'),
+      `تم استرجاع "${product.name}" كمسودة`
+    );
+
+  const handleDuplicate = async (product: Product) => {
+    const duplicated: Product = {
+      ...product,
+      id: generateUUID(),
+      name: `${product.name} (نسخة)`,
+      isActive: false,
+      archivedAt: undefined,
+    };
+    const result = await addProduct(duplicated);
+    if (result.success) {
+      toast.success('تم تكرار المنتج');
+      await reloadCatalog();
+    } else {
+      toast.error('فشل في تكرار المنتج');
+    }
+  };
+
+  const runBulkLifecycle = async (mode: 'publish' | 'archive') => {
+    const targets = visibleProducts.filter((p) => {
+      if (!selectedIds.has(p.id)) return false;
+      const lifecycle = getProductLifecycleStatus(p);
+      if (mode === 'publish') return lifecycle === 'draft';
+      return lifecycle === 'published';
+    });
+
+    if (targets.length === 0) {
+      toast.error('لا توجد منتجات قابلة للتحديث');
+      return;
+    }
+
+    setBulkProcessing(true);
+    let ok = 0;
+    for (const product of targets) {
+      const result =
+        mode === 'publish'
+          ? await publishProduct(product.id)
+          : await setProductLifecycle(product.id, 'archive');
+      if (result.success) ok += 1;
+    }
+    setBulkProcessing(false);
+    setSelectedIds(new Set());
+    await reloadCatalog();
+    toast.success(`تم تحديث ${ok} من ${targets.length} منتج`);
+  };
+
+  const handleExport = (products: Product[]) => {
+    if (products.length === 0) {
+      toast.error('لا توجد منتجات للتصدير');
+      return;
+    }
+    exportProductsToCsv(products, buildProductsExportFilename());
+    toast.success(`تم تصدير ${products.length} منتج`);
+  };
+
+  const headerActions = (
+    <div className="flex items-center gap-2 flex-wrap justify-end">
+      <BulkUpload onComplete={() => void reloadCatalog()} />
+      <Button
+        variant="outline"
+        size="sm"
+        className="rounded-xl min-h-[40px] gap-1.5"
+        onClick={() =>
+          handleExport(
+            selectedIds.size > 0
+              ? visibleProducts.filter((p) => selectedIds.has(p.id))
+              : visibleProducts
+          )
+        }
+        disabled={visibleProducts.length === 0}
+      >
+        <Download className="w-4 h-4" />
+        <span className="hidden sm:inline">تصدير</span>
+      </Button>
+      <Link to="/add-product">
+        <Button size="sm" className="rounded-xl min-h-[40px] gap-1.5">
+          <Plus className="w-4 h-4" />
+          إضافة
+        </Button>
+      </Link>
+    </div>
+  );
 
   return (
     <DashboardLayout>
@@ -246,17 +439,10 @@ const Products = () => {
         description="أضف وعدّل وتابع منتجات متجرك"
         hideBack
         breadcrumbs={[{ label: 'لوحة التحكم', href: '/builder' }, { label: 'المنتجات' }]}
-        actions={
-          <Link to="/add-product">
-            <Button size="sm" className="rounded-xl min-h-[44px]">
-              <Plus className="w-4 h-4" />
-              إضافة
-            </Button>
-          </Link>
-        }
+        actions={headerActions}
       />
 
-      <div className="ds-page max-w-6xl">
+      <div className="ds-page max-w-6xl min-w-0">
         {selectedProduct ? (
           <div className="ds-card p-4 sm:p-8 space-y-6">
             <div className="flex justify-end items-center" dir="rtl">
@@ -290,20 +476,20 @@ const Products = () => {
                   المنتجات المقترحة
                 </TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="reviews" className="mt-6">
                 <Suspense fallback={<div className="py-8 text-center text-muted-foreground">جاري التحميل...</div>}>
-                  <ProductReviewsManager 
-                    productId={selectedProduct.id} 
+                  <ProductReviewsManager
+                    productId={selectedProduct.id}
                     productName={selectedProduct.name}
                   />
                 </Suspense>
               </TabsContent>
-              
+
               <TabsContent value="suggestions" className="mt-6">
                 <Suspense fallback={<div className="py-8 text-center text-muted-foreground">جاري التحميل...</div>}>
-                  <SuggestedProductsManager 
-                    productId={selectedProduct.id} 
+                  <SuggestedProductsManager
+                    productId={selectedProduct.id}
                     productName={selectedProduct.name}
                   />
                 </Suspense>
@@ -311,43 +497,71 @@ const Products = () => {
             </Tabs>
           </div>
         ) : (
-          <div className="space-y-6 min-w-0">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3 lg:gap-4">
+          <div className="space-y-5 sm:space-y-6 min-w-0 pb-24 sm:pb-6">
+            {/* Primary stats — lifecycle */}
+            <section className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 min-w-0">
               <StatCard
                 label="إجمالي المنتجات"
                 value={stats.total}
                 icon={Package}
-                className="p-3.5 sm:p-5 [&_.ds-stat-value]:text-xl sm:[&_.ds-stat-value]:text-2xl lg:[&_.ds-stat-value]:text-3xl"
+                onClick={() => updateFilters({ lifecycle: 'all', stock: 'all' })}
+                active={catalogFilters.lifecycle === 'all' && catalogFilters.stock === 'all'}
               />
               <StatCard
                 label="منشور"
                 value={stats.published}
                 icon={Package}
-                iconClassName="bg-emerald-500/10 [&_svg]:text-emerald-600"
-                className="p-3.5 sm:p-5 [&_.ds-stat-value]:text-xl sm:[&_.ds-stat-value]:text-2xl lg:[&_.ds-stat-value]:text-3xl"
+                iconClassName="bg-emerald-500/10 ring-emerald-500/15 [&_svg]:text-emerald-600"
+                onClick={() => updateFilters({ lifecycle: 'published' })}
+                active={catalogFilters.lifecycle === 'published'}
               />
               <StatCard
                 label="مسودات"
                 value={stats.drafts}
-                icon={Package}
-                iconClassName="bg-muted [&_svg]:text-muted-foreground"
-                className="p-3.5 sm:p-5 [&_.ds-stat-value]:text-xl sm:[&_.ds-stat-value]:text-2xl lg:[&_.ds-stat-value]:text-3xl"
+                icon={FileEdit}
+                iconClassName="bg-amber-500/10 ring-amber-500/15 [&_svg]:text-amber-600"
+                onClick={() => updateFilters({ lifecycle: 'draft' })}
+                active={catalogFilters.lifecycle === 'draft'}
               />
               <StatCard
                 label="مؤرشف"
                 value={stats.archived}
-                icon={Package}
-                iconClassName="bg-muted [&_svg]:text-muted-foreground"
-                className="p-3.5 sm:p-5 [&_.ds-stat-value]:text-xl sm:[&_.ds-stat-value]:text-2xl lg:[&_.ds-stat-value]:text-3xl"
+                icon={Archive}
+                iconClassName="bg-muted ring-border/30 [&_svg]:text-muted-foreground"
+                onClick={() => updateFilters({ lifecycle: 'archived' })}
+                active={catalogFilters.lifecycle === 'archived'}
+              />
+            </section>
+
+            {/* Secondary stats — inventory */}
+            <section className="grid grid-cols-3 gap-2 sm:gap-3 min-w-0">
+              <StatCard
+                label="مخزون منخفض"
+                value={stats.lowStock}
+                icon={AlertTriangle}
+                iconClassName="bg-warning/10 ring-warning/15 [&_svg]:text-warning"
+                className="p-3 sm:p-5"
+                onClick={() => updateFilters({ stock: 'low', lifecycle: 'all' })}
+                active={catalogFilters.stock === 'low'}
               />
               <StatCard
                 label="نفد المخزون"
                 value={stats.outOfStock}
                 icon={XCircle}
-                iconClassName="bg-destructive/10 [&_svg]:text-destructive"
-                className="col-span-2 md:col-span-1 p-3.5 sm:p-5 [&_.ds-stat-value]:text-xl sm:[&_.ds-stat-value]:text-2xl lg:[&_.ds-stat-value]:text-3xl"
+                iconClassName="bg-destructive/10 ring-destructive/15 [&_svg]:text-destructive"
+                className="p-3 sm:p-5"
+                onClick={() => updateFilters({ stock: 'out', lifecycle: 'all' })}
+                active={catalogFilters.stock === 'out'}
               />
-            </div>
+              <StatCard
+                label="قيمة المخزون"
+                value={formatProductInventoryValue(stats.inventoryValue)}
+                icon={Wallet}
+                iconClassName="bg-violet-500/10 ring-violet-500/15 [&_svg]:text-violet-600"
+                className="p-3 sm:p-5"
+                onClick={() => navigate('/inventory')}
+              />
+            </section>
 
             <Suspense fallback={null}>
               <FooterSuggestedProductsManager />
@@ -372,63 +586,34 @@ const Products = () => {
               />
             )}
 
-            <Card className="border-border/50 shadow-sm overflow-hidden">
-              <CardContent className="p-4 sm:p-5">
-                <div className="space-y-3 min-w-0">
-                  <div className="relative w-full min-w-0">
-                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <Input
-                      placeholder="بحث عن منتج..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pr-10 rounded-xl border-border text-foreground w-full min-h-[44px]"
-                    />
-                  </div>
+            <section className="rounded-2xl border border-border/50 bg-card shadow-sm overflow-hidden min-w-0">
+              <div className="px-3 sm:px-4 pt-3 sm:pt-3.5 pb-2 border-b border-border/40 bg-muted/20">
+                <p className="text-[11px] font-semibold text-muted-foreground mb-2 px-0.5">
+                  حالة العرض
+                </p>
+                <ProductsWorkflowTabs
+                  tabCounts={tabCounts}
+                  activeTab={catalogFilters.lifecycle}
+                  onTabChange={(tab) => updateFilters({ lifecycle: tab })}
+                  className="-mx-1"
+                />
+              </div>
+              <ProductsToolbar
+                filters={catalogFilters}
+                onChange={updateFilters}
+                categories={categoryNames}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+                resultCount={visibleProducts.length}
+                totalCount={loadedProducts.length}
+                embedded
+                filtersActive={filtersActive}
+                onClearFilters={clearFilters}
+              />
+            </section>
 
-                  <div className="grid grid-cols-1 min-[400px]:grid-cols-2 sm:grid-cols-3 gap-3 min-w-0">
-                  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger className="rounded-xl border-border text-foreground w-full min-h-[44px]">
-                      <SelectValue placeholder="الفئة" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl bg-popover border-border">
-                      <SelectItem value="all">جميع الفئات</SelectItem>
-                      {categories.map(cat => (
-                        <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Select value={stockFilter} onValueChange={setStockFilter}>
-                    <SelectTrigger className="rounded-xl border-border text-foreground w-full min-h-[44px]">
-                      <SelectValue placeholder="المخزون" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl bg-popover border-border">
-                      <SelectItem value="all">جميع الحالات</SelectItem>
-                      <SelectItem value="in_stock">متوفر</SelectItem>
-                      <SelectItem value="low">منخفض المخزون</SelectItem>
-                      <SelectItem value="out">نفد المخزون</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Select value={publishFilter} onValueChange={(v) => setPublishFilter(v as ProductLifecycleFilter)}>
-                    <SelectTrigger className="rounded-xl border-border text-foreground w-full min-h-[44px]">
-                      <SelectValue placeholder="الحالة" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl bg-popover border-border">
-                      <SelectItem value="all">كل الحالات</SelectItem>
-                      <SelectItem value="published">منشور</SelectItem>
-                      <SelectItem value="draft">مسودة</SelectItem>
-                      <SelectItem value="archived">مؤرشف</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Products List */}
-            {!catalogLoading && loadedProducts.length > 0 && filteredProducts.length === 0 && filtersActive && (
-              <div className="mb-4 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            {!catalogLoading && loadedProducts.length > 0 && visibleProducts.length === 0 && filtersActive && (
+              <div className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm text-foreground">
                   الفلاتر الحالية تخفي كل المنتجات ({loadedProducts.length} منتج في متجرك)
                 </p>
@@ -438,21 +623,96 @@ const Products = () => {
               </div>
             )}
 
-            <div className="ds-card p-4 sm:p-6">
-              <ProductsList 
-                onProductSelect={handleProductSelect} 
-                products={loadedProducts}
-                filteredProducts={filteredProducts}
-                filtersActive={filtersActive}
-                onProductsChange={setLoadedProducts}
-                onClearFilters={clearFilters}
-                isLoading={!isReady || catalogLoading}
-                reloadToken={hydrationVersion}
+            {catalogLoading && loadedProducts.length === 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="h-64 rounded-2xl bg-muted animate-pulse" />
+                ))}
+              </div>
+            ) : visibleProducts.length === 0 && !filtersActive ? (
+              <EmptyState
+                icon={Package}
+                title="لا توجد منتجات بعد"
+                description="ابدأ بإضافة أول منتج أو استورد قائمة من ملف CSV"
+                actionLabel="إضافة منتج"
+                onAction={() => navigate('/add-product')}
               />
-            </div>
+            ) : (
+              <div className="space-y-3 min-w-0">
+                {viewMode === 'table' && (
+                  <ProductsDataTable
+                    products={visibleProducts}
+                    selectedIds={selectedIds}
+                    onToggleSelect={toggleSelect}
+                    onToggleSelectAll={toggleSelectAll}
+                    allSelected={
+                      selectedIds.size === visibleProducts.length && visibleProducts.length > 0
+                    }
+                    onQuickEdit={(p) => {
+                      setQuickEditProduct(p);
+                      setQuickEditOpen(true);
+                    }}
+                    onDuplicate={handleDuplicate}
+                    onPublish={handlePublish}
+                    onArchive={handleArchive}
+                    onRestore={handleRestore}
+                    onProductSelect={handleProductSelect}
+                  />
+                )}
+
+                {(viewMode === 'grid' || visibleProducts.length > 0) && (
+                  <div className={viewMode === 'table' ? 'sm:hidden' : ''}>
+                    <div className="ds-card p-4 sm:p-6">
+                      <ProductsList
+                        onProductSelect={handleProductSelect}
+                        products={loadedProducts}
+                        filteredProducts={visibleProducts}
+                        filtersActive
+                        onProductsChange={setLoadedProducts}
+                        onClearFilters={clearFilters}
+                        isLoading={!isReady || catalogLoading}
+                        reloadToken={hydrationVersion}
+                        selectedIds={selectedIds}
+                        onToggleSelect={toggleSelect}
+                        onToggleSelectAll={toggleSelectAll}
+                        selectionEnabled
+                        onQuickEdit={(p) => {
+                          setQuickEditProduct(p);
+                          setQuickEditOpen(true);
+                        }}
+                        onPublish={handlePublish}
+                        onArchive={handleArchive}
+                        onRestore={handleRestore}
+                        onDuplicate={handleDuplicate}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <ProductsBulkBar
+                  selectedCount={selectedIds.size}
+                  totalVisible={visibleProducts.length}
+                  onSelectAll={toggleSelectAll}
+                  onClearSelection={() => setSelectedIds(new Set())}
+                  onBulkPublish={() => void runBulkLifecycle('publish')}
+                  onBulkArchive={() => void runBulkLifecycle('archive')}
+                  onBulkExport={() =>
+                    handleExport(visibleProducts.filter((p) => selectedIds.has(p.id)))
+                  }
+                  processing={bulkProcessing}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      <QuickEditDialog
+        product={quickEditProduct}
+        open={quickEditOpen}
+        onOpenChange={setQuickEditOpen}
+        onSaved={() => void reloadCatalog()}
+      />
     </DashboardLayout>
   );
 };

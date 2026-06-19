@@ -74,7 +74,7 @@ const OrderDetails = () => {
             { label: 'غير موجود' },
           ]}
         />
-        <div className="ds-page max-w-6xl">
+        <div className="ds-page max-w-6xl min-w-0">
           <OrderNotFound />
         </div>
       </DashboardLayout>
@@ -101,7 +101,7 @@ const OrderDetails = () => {
           { label: formatOrderNumber(order.id) },
         ]}
       />
-      <div className="ds-page max-w-6xl">
+      <div className="ds-page max-w-6xl min-w-0">
         <OrderDetailsCard
           order={order}
           paymentSummary={paymentSummary}

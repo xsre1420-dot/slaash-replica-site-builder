@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { DatabaseData } from '@/types/statistics';
-import { cache, CacheKeys, CacheTTL, dedup } from '@/lib/cache';
+import { cache, CacheKeys, CacheTTL, clearInflight, dedup } from '@/lib/cache';
 
 const withTimeout = <T>(promise: Promise<T>, ms = 12000): Promise<T> => {
   return Promise.race([
@@ -49,7 +49,8 @@ export const getStatisticsDateBounds = (
 const fetchStoreStatisticsRpc = async (
   ownerId: string,
   periodStart: string,
-  periodEnd: string
+  periodEnd: string,
+  daysFallback?: number
 ): Promise<Record<string, unknown> | undefined> => {
   try {
     const { data, error } = await (supabase as any).rpc('get_store_statistics', {
@@ -57,15 +58,44 @@ const fetchStoreStatisticsRpc = async (
       p_start: periodStart,
       p_end: periodEnd,
     });
+    if (!error && data) {
+      return data as Record<string, unknown>;
+    }
+
+    if (error && daysFallback != null) {
+      console.warn(
+        '[statistics] get_store_statistics(date range) unavailable, trying p_days fallback:',
+        error.message
+      );
+      const legacy = await (supabase as any).rpc('get_store_statistics', {
+        p_owner_id: ownerId,
+        p_days: daysFallback,
+      });
+      if (!legacy.error && legacy.data) {
+        return legacy.data as Record<string, unknown>;
+      }
+    }
+
     if (error) {
       console.warn('[statistics] get_store_statistics unavailable, using client fallback:', error.message);
-      return undefined;
     }
-    return (data as Record<string, unknown>) ?? undefined;
+    return undefined;
   } catch (err) {
     console.warn('[statistics] get_store_statistics RPC failed:', err);
     return undefined;
   }
+};
+
+export const invalidateStatisticsCache = (
+  ownerId: string,
+  dateRange: string,
+  customStart?: string,
+  customEnd?: string
+): void => {
+  const rangeKey = dateRange === 'custom' ? `${customStart}_${customEnd}` : dateRange;
+  const cacheKey = CacheKeys.statistics(ownerId, rangeKey);
+  cache.del(cacheKey);
+  clearInflight(cacheKey);
 };
 
 const fetchProductCount = async (ownerId: string): Promise<number> => {
@@ -95,7 +125,8 @@ const fetchProductCount = async (ownerId: string): Promise<number> => {
 export const fetchStatisticsData = async (
   dateRange: string,
   customStart?: string,
-  customEnd?: string
+  customEnd?: string,
+  options?: { skipCache?: boolean }
 ): Promise<DatabaseData> => {
   const { data: { user } } = await supabase.auth.getUser();
   const ownerId = user?.id;
@@ -109,7 +140,12 @@ export const fetchStatisticsData = async (
     return { orders: [], orderItems: [], customers: [], products: [], visits: [], dateBounds: bounds };
   }
 
-  const cached = cache.get<DatabaseData>(cacheKey);
+  if (options?.skipCache) {
+    cache.del(cacheKey);
+    clearInflight(cacheKey);
+  }
+
+  const cached = options?.skipCache ? null : cache.get<DatabaseData>(cacheKey);
   if (cached) return cached;
 
   return dedup(cacheKey, async () => {
@@ -131,8 +167,8 @@ export const fetchStatisticsData = async (
             .lte('created_at', fetchTo)
             .order('created_at', { ascending: false })
             .limit(ORDERS_STATS_CAP),
-          fetchStoreStatisticsRpc(ownerId, periodStart, periodEnd),
-          fetchStoreStatisticsRpc(ownerId, bounds.previousStart.toISOString(), previousEnd.toISOString()),
+          fetchStoreStatisticsRpc(ownerId, periodStart, periodEnd, bounds.days),
+          fetchStoreStatisticsRpc(ownerId, bounds.previousStart.toISOString(), previousEnd.toISOString(), bounds.days),
           supabase
             .from('store_visits')
             .select('id, created_at, visitor_ip')
@@ -144,9 +180,12 @@ export const fetchStatisticsData = async (
         ])
       );
 
+      const fetchWarnings: string[] = [];
+
       let orders: DatabaseData['orders'] = [];
       if (ordersRes.error) {
         console.warn('[statistics] orders fetch failed:', ordersRes.error.message);
+        fetchWarnings.push('تعذّر تحميل الطلبات — قد تظهر الأرقام ناقصة.');
       } else {
         orders = ordersRes.data || [];
       }
@@ -154,6 +193,7 @@ export const fetchStatisticsData = async (
       let visits: DatabaseData['visits'] = [];
       if (visitsRes.error) {
         console.warn('[statistics] store_visits fetch failed:', visitsRes.error.message);
+        fetchWarnings.push('تعذّر تحميل بيانات الزوار.');
       } else {
         visits = visitsRes.data || [];
       }
@@ -187,6 +227,7 @@ export const fetchStatisticsData = async (
         kpis,
         previousKpis,
         truncated,
+        fetchWarnings: fetchWarnings.length > 0 ? fetchWarnings : undefined,
         dateBounds: bounds,
       };
 
@@ -200,6 +241,7 @@ export const fetchStatisticsData = async (
         customers: [],
         products: [],
         visits: [],
+        fetchWarnings: ['تعذّر تحميل الإحصائيات. اضغط «تحديث» أو تحقق من اتصال قاعدة البيانات.'],
         dateBounds: bounds,
       };
     }

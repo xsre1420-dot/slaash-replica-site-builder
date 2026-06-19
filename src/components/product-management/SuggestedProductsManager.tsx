@@ -372,7 +372,9 @@ const SuggestedProductsManager = ({ productId, productName }: SuggestedProductsM
             <br />
             <span className="text-sm">ستظهر المنتجات المقترحة في صفحة تفاصيل المنتج</span>
             <br />
-            <span className="text-sm">لتذييل المتجر، اختر المنتجات من قائمة «إدارة المنتجات» الرئيسية</span>
+            <span className="text-sm">
+              ولأسفل صفحة المتجر، اختر المنتجات من قائمة «إدارة المنتجات» الرئيسية
+            </span>
           </div>
         ) : (
           <div className="grid gap-4">

@@ -58,7 +58,7 @@ const Statistics = () => {
   const [selectedMetric, setSelectedMetric] = useState("revenue");
   const [activeTab, setActiveTab] = useState("overview");
 
-  const { stats, rawOrders, loading, error, refetch, dateBounds, truncated } = useRealStatistics(
+  const { stats, rawOrders, loading, error, refetch, dateBounds, truncated, fetchWarnings } = useRealStatistics(
     dateRange,
     startDate,
     endDate
@@ -109,10 +109,17 @@ const Statistics = () => {
   const insightMessage = useMemo(() => {
     if (!stats) return null;
     if (stats.totalOrders === 0 && stats.totalVisitors === 0) {
+      if (stats.totalProducts > 0) {
+        return {
+          type: 'empty' as const,
+          title: 'لا طلبات أو زيارات في هذه الفترة',
+          description: `لديك ${stats.totalProducts.toLocaleString()} منتج${stats.totalProducts === 1 ? '' : 'اً'} منشور${stats.totalProducts === 1 ? '' : 'اً'}. شارك رابط متجرك لبدء تتبع المبيعات، أو جرّب «آخر 30 يوماً» إذا كانت لديك طلبات أقدم.`,
+        };
+      }
       return {
         type: 'empty' as const,
         title: 'لا توجد بيانات بعد',
-        description: 'شارك رابط متجرك أو أضف منتجات لبدء تتبع المبيعات والزوار.',
+        description: 'أضف منتجات وشارك رابط متجرك لبدء تتبع المبيعات والزوار.',
       };
     }
     if (stats.totalVisitors > 0 && stats.totalOrders === 0) {
@@ -195,6 +202,14 @@ const Statistics = () => {
           selectedMetric={selectedMetric}
           setSelectedMetric={setSelectedMetric}
         />
+
+        {fetchWarnings.length > 0 && (
+          <div className="rounded-xl border border-destructive/25 bg-destructive/5 p-3 mb-6 text-xs text-muted-foreground text-right space-y-1">
+            {fetchWarnings.map((warning) => (
+              <p key={warning}>{warning}</p>
+            ))}
+          </div>
+        )}
 
         {truncated && (
           <div className="rounded-xl border border-warning/30 bg-warning/5 p-3 mb-6 text-xs text-muted-foreground text-right">

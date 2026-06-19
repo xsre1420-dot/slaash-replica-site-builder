@@ -12,6 +12,7 @@ export const useRealStatistics = (
   const [stats, setStats] = useState<RealStatistics | null>(null);
   const [rawOrders, setRawOrders] = useState<any[]>([]);
   const [truncated, setTruncated] = useState(false);
+  const [fetchWarnings, setFetchWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,7 +21,7 @@ export const useRealStatistics = (
     [dateRange, startDate, endDate]
   );
 
-  const fetchRealStatistics = useCallback(async () => {
+  const fetchRealStatistics = useCallback(async (skipCache = false) => {
     if (dateRange === 'custom' && (!startDate || !endDate)) {
       setError('يرجى اختيار تاريخ البداية والنهاية');
       return;
@@ -30,11 +31,12 @@ export const useRealStatistics = (
     setError(null);
 
     try {
-      const data = await fetchStatisticsData(dateRange, startDate, endDate);
+      const data = await fetchStatisticsData(dateRange, startDate, endDate, { skipCache });
       const bounds = data.dateBounds || dateBounds;
       const calculatedStats = calculateStatistics(data, bounds);
       setStats(calculatedStats);
       setTruncated(Boolean(data.truncated));
+      setFetchWarnings(data.fetchWarnings ?? []);
 
       setRawOrders(
         data.orders.filter(o => {
@@ -48,6 +50,7 @@ export const useRealStatistics = (
       setStats(getDefaultStatistics());
       setRawOrders([]);
       setTruncated(false);
+      setFetchWarnings([]);
       setError('تعذر تحميل الإحصائيات. يرجى المحاولة مرة أخرى.');
     } finally {
       setLoading(false);
@@ -58,5 +61,7 @@ export const useRealStatistics = (
     fetchRealStatistics();
   }, [fetchRealStatistics]);
 
-  return { stats, rawOrders, loading, error, refetch: fetchRealStatistics, dateBounds, truncated };
+  const refetch = useCallback(() => fetchRealStatistics(true), [fetchRealStatistics]);
+
+  return { stats, rawOrders, loading, error, refetch, dateBounds, truncated, fetchWarnings };
 };

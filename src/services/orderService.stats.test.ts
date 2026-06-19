@@ -48,5 +48,8 @@ describe('computeOrderStats sanity', () => {
     const stats = computeOrderStats([]);
     expect(stats).toHaveProperty('total');
     expect(stats).toHaveProperty('revenue');
+    expect(stats).toHaveProperty('todayOrders');
+    expect(stats).toHaveProperty('weekOrders');
+    expect(stats).toHaveProperty('monthOrders');
   });
 });

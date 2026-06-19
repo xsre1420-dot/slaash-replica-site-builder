@@ -1,15 +1,32 @@
 
 import { Button } from "@/components/ui/button";
-import { Edit, Plus, Star, MessageSquare, GripVertical, Copy, Zap, Eye, Archive, ArchiveRestore } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Edit,
+  Plus,
+  Star,
+  MessageSquare,
+  GripVertical,
+  Copy,
+  Zap,
+  Eye,
+  Archive,
+  ArchiveRestore,
+  MoreHorizontal,
+} from "lucide-react";
+import { Link } from "react-router-dom";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   loadProducts,
   loadAllMerchantProducts,
-  addProduct,
   invalidateProducts,
-  publishProduct,
-  setProductLifecycle,
 } from "@/services/productService";
 import { useStoreHydration } from "@/context/StoreBootstrapContext";
 import { Product } from "@/types";
@@ -17,9 +34,7 @@ import { isProductLowStock } from '@/lib/productUpdateUtils';
 import { getProductLifecycleStatus, lifecycleStatusLabel } from '@/lib/productLifecycle';
 import { toast } from "sonner";
 import React from "react";
-import { QuickEditDialog } from "@/components/product-management/QuickEditDialog";
 import OptimizedImage from "@/components/OptimizedImage";
-import { generateUUID } from "@/lib/uuid";
 
 const DragDropContext = React.lazy(() => import("@hello-pangea/dnd").then(m => ({ default: m.DragDropContext })));
 const Droppable = React.lazy(() => import("@hello-pangea/dnd").then(m => ({ default: m.Droppable })));
@@ -28,16 +43,23 @@ type DropResult = import("@hello-pangea/dnd").DropResult;
 
 interface ProductsListProps {
   onProductSelect?: (product: {id: string, name: string}) => void;
-  /** Full catalog from parent (preferred — avoids duplicate/stale loads) */
   products?: Product[];
   filteredProducts?: Product[];
   filtersActive?: boolean;
   onProductsChange?: (products: Product[]) => void;
-  /** @deprecated Use onProductsChange */
   onProductsLoaded?: (products: Product[]) => void;
   onClearFilters?: () => void;
   reloadToken?: number;
   isLoading?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
+  onToggleSelectAll?: () => void;
+  selectionEnabled?: boolean;
+  onQuickEdit?: (product: Product) => void;
+  onPublish?: (product: Product) => void;
+  onArchive?: (product: Product) => void;
+  onRestore?: (product: Product) => void;
+  onDuplicate?: (product: Product) => void;
 }
 
 const applyDisplayOrder = (items: Product[]): Product[] => {
@@ -61,13 +83,19 @@ export const ProductsList = ({
   onClearFilters,
   reloadToken = 0,
   isLoading: isLoadingFromParent,
+  selectedIds,
+  onToggleSelect,
+  onToggleSelectAll,
+  selectionEnabled = false,
+  onQuickEdit,
+  onPublish,
+  onArchive,
+  onRestore,
+  onDuplicate,
 }: ProductsListProps = {}) => {
   const [localProducts, setLocalProducts] = useState<Product[]>([]);
   const [isLoadingLocal, setIsLoadingLocal] = useState(!productsFromParent);
   const [isDragEnabled, setIsDragEnabled] = useState(false);
-  const [quickEditProduct, setQuickEditProduct] = useState<Product | null>(null);
-  const [quickEditOpen, setQuickEditOpen] = useState(false);
-  const navigate = useNavigate();
   const { isReady } = useStoreHydration();
   const managedByParent = productsFromParent !== undefined;
   const syncProducts = onProductsChange ?? onProductsLoaded;
@@ -131,64 +159,6 @@ export const ProductsList = ({
     toast.success("تم حفظ ترتيب المنتجات", { duration: 1500 });
   }, [allProducts, managedByParent, syncProducts]);
 
-  const refreshCatalog = useCallback(async () => {
-    await invalidateProducts();
-    const { products: productsData } = await loadAllMerchantProducts(true);
-    const ordered = applyDisplayOrder(productsData);
-    if (managedByParent) {
-      syncProducts?.(ordered);
-    } else {
-      setLocalProducts(ordered);
-      syncProducts?.(ordered);
-    }
-    return ordered;
-  }, [managedByParent, syncProducts]);
-
-  const handlePublish = async (product: Product) => {
-    const result = await publishProduct(product.id);
-    if (result.success) {
-      toast.success(`تم نشر "${product.name}" في المتجر`);
-      await refreshCatalog();
-    } else {
-      toast.error(result.error || "فشل في نشر المنتج");
-    }
-  };
-
-  const handleArchive = async (product: Product) => {
-    const result = await setProductLifecycle(product.id, 'archive');
-    if (result.success) {
-      toast.success(`تم أرشفة "${product.name}"`);
-      await refreshCatalog();
-    } else {
-      toast.error(result.error || "فشل في أرشفة المنتج");
-    }
-  };
-
-  const handleRestore = async (product: Product) => {
-    const result = await setProductLifecycle(product.id, 'restore');
-    if (result.success) {
-      toast.success(`تم استرجاع "${product.name}" كمسودة`);
-      await refreshCatalog();
-    } else {
-      toast.error(result.error || "فشل في استرجاع المنتج");
-    }
-  };
-
-  const handleDuplicate = async (product: Product) => {
-    const duplicated: Product = {
-      ...product,
-      id: generateUUID(),
-      name: `${product.name} (نسخة)`,
-    };
-    const result = await addProduct(duplicated);
-    if (result.success) {
-      toast.success("تم تكرار المنتج بنجاح");
-      await refreshCatalog();
-    } else {
-      toast.error("فشل في تكرار المنتج");
-    }
-  };
-
   if (!isReady || isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -236,187 +206,179 @@ export const ProductsList = ({
     );
   }
 
-  const renderProductCard = (product: Product, index: number, dragHandleProps?: any) => (
-    <div 
-      className={`bg-card rounded-2xl overflow-hidden shadow-sm border border-border hover:shadow-md transition-all duration-300 ${
-        onProductSelect ? 'cursor-pointer' : ''
-      }`}
-      onClick={onProductSelect ? () => onProductSelect({id: product.id, name: product.name}) : undefined}
-    >
-      <div className="relative overflow-hidden">
-        {isDragEnabled && dragHandleProps && (
-          <div 
-            {...dragHandleProps} 
-            className="absolute top-4 left-4 z-10 w-10 h-10 bg-background/90 backdrop-blur-sm rounded-xl flex items-center justify-center cursor-grab active:cursor-grabbing shadow-md"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <GripVertical className="w-5 h-5 text-muted-foreground" />
-          </div>
-        )}
-        <OptimizedImage
-          src={product.image}
-          alt={product.name}
-          className="w-full h-48"
-          loading="lazy"
-        />
-        {(() => {
-          const lifecycle = getProductLifecycleStatus(product);
-          if (lifecycle === 'archived') {
-            return (
-              <div className="absolute top-3 left-3 bg-muted text-muted-foreground text-xs px-2.5 py-1 rounded-lg font-semibold border border-border">
-                {lifecycleStatusLabel.archived}
-              </div>
-            );
-          }
-          if (lifecycle === 'draft') {
-            return (
-              <div className="absolute top-3 left-3 bg-amber-500/15 text-amber-700 text-xs px-2.5 py-1 rounded-lg font-semibold border border-amber-500/25">
-                {lifecycleStatusLabel.draft}
-              </div>
-            );
-          }
-          return (
-            <div className="absolute top-3 left-3 bg-emerald-500/10 text-emerald-700 text-xs px-2.5 py-1 rounded-lg font-semibold border border-emerald-500/20">
-              {lifecycleStatusLabel.published}
-            </div>
-          );
-        })()}
-        <div className="absolute top-4 right-4 flex gap-1.5" onClick={(e) => e.stopPropagation()}>
-          <Link to={`/edit-product/${product.id}`}>
-            <Button 
-              size="icon"
-              variant="secondary"
-              className="min-h-[44px] min-w-[44px] bg-background/90 backdrop-blur-sm hover:bg-background text-foreground rounded-xl shadow-md"
-              aria-label={`تعديل ${product.name}`}
+  const renderProductCard = (product: Product, dragHandleProps?: React.HTMLAttributes<HTMLElement>) => {
+    const lifecycle = getProductLifecycleStatus(product);
+    const selected = selectedIds?.has(product.id) ?? false;
+
+    return (
+      <div
+        className={`bg-card rounded-2xl overflow-hidden shadow-sm border transition-all duration-300 min-w-0 ${
+          selected ? 'border-primary/40 ring-2 ring-primary/10' : 'border-border hover:shadow-md'
+        } ${onProductSelect ? 'cursor-pointer' : ''}`}
+        onClick={onProductSelect ? () => onProductSelect({ id: product.id, name: product.name }) : undefined}
+      >
+        <div className="relative overflow-hidden">
+          {isDragEnabled && dragHandleProps && (
+            <div
+              {...dragHandleProps}
+              className="absolute top-4 left-4 z-10 w-10 h-10 bg-background/90 backdrop-blur-sm rounded-xl flex items-center justify-center cursor-grab active:cursor-grabbing shadow-md hidden sm:flex"
+              onClick={(e) => e.stopPropagation()}
             >
-              <Edit className="w-4 h-4" />
-            </Button>
-          </Link>
-          <Button 
-            size="icon"
-            variant="secondary"
-            className="min-h-[44px] min-w-[44px] bg-background/90 backdrop-blur-sm hover:bg-background text-foreground rounded-xl shadow-md"
-            onClick={() => { setQuickEditProduct(product); setQuickEditOpen(true); }}
-            aria-label={`تعديل سريع ${product.name}`}
-          >
-            <Zap className="w-4 h-4" />
-          </Button>
-          <Button 
-            size="icon"
-            variant="secondary"
-            className="min-h-[44px] min-w-[44px] bg-background/90 backdrop-blur-sm hover:bg-background text-foreground rounded-xl shadow-md"
-            onClick={() => handleDuplicate(product)}
-            aria-label={`تكرار ${product.name}`}
-          >
-            <Copy className="w-4 h-4" />
-          </Button>
-        </div>
-        {/* Stock badge */}
-        {product.stockQuantity !== undefined && product.stockQuantity === 0 && (
-          <div className="absolute bottom-3 right-3 bg-red-500 text-white text-xs px-2 py-1 rounded-lg">
-            نفد المخزون
-          </div>
-        )}
-        {isProductLowStock(product) && (
-          <div className="absolute bottom-3 right-3 bg-yellow-500 text-white text-xs px-2 py-1 rounded-lg">
-            كمية منخفضة
-          </div>
-        )}
-      </div>
-      
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-1.5">
-          {product.rating != null && product.rating > 0 ? (
-            <div className="flex items-center gap-1">
-              <Star className="w-3.5 h-3.5 text-yellow-400 fill-current" />
-              <span className="text-xs font-medium text-muted-foreground">{product.rating.toFixed(1)}</span>
+              <GripVertical className="w-5 h-5 text-muted-foreground" />
             </div>
-          ) : (
-            <span />
           )}
-          <h3 className="text-sm font-bold text-foreground text-right truncate flex-1 mr-2">{product.name}</h3>
-        </div>
-        
-        <p className="text-xs text-muted-foreground mb-3 text-right line-clamp-1">{product.description}</p>
-        
-        <div className="flex items-end justify-between">
-          <div className="flex flex-col items-start">
-            <span className="text-lg font-bold text-foreground">{product.price.toLocaleString()} <span className="text-xs text-muted-foreground">د.ع</span></span>
-            {product.stockQuantity !== undefined && (
-              <span className="text-xs text-muted-foreground">الكمية: {product.stockQuantity}</span>
-            )}
+
+          {selectionEnabled && onToggleSelect && (
+            <div
+              className="absolute top-3 right-3 z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Checkbox
+                checked={selected}
+                onCheckedChange={() => onToggleSelect(product.id)}
+                className="h-5 w-5 rounded-md bg-background/90 border-border shadow-sm data-[state=checked]:bg-primary"
+                aria-label={`تحديد ${product.name}`}
+              />
+            </div>
+          )}
+
+          <OptimizedImage src={product.image} alt={product.name} className="w-full h-40 sm:h-48" loading="lazy" />
+
+          <div
+            className={`absolute top-3 left-3 text-xs px-2.5 py-1 rounded-lg font-semibold border ${
+              lifecycle === 'archived'
+                ? 'bg-muted text-muted-foreground border-border'
+                : lifecycle === 'draft'
+                  ? 'bg-amber-500/15 text-amber-700 border-amber-500/25'
+                  : 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20'
+            }`}
+          >
+            {lifecycleStatusLabel[lifecycle]}
           </div>
-          <div className="flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
-            {getProductLifecycleStatus(product) === 'draft' && (
-              <Button size="sm" className="rounded-lg text-xs px-2 h-8 gap-1" onClick={() => handlePublish(product)}>
-                <Eye className="w-3 h-3" />
-                نشر
-              </Button>
-            )}
-            {getProductLifecycleStatus(product) === 'archived' && (
-              <Button size="sm" variant="outline" className="rounded-lg text-xs px-2 h-8 gap-1" onClick={() => handleRestore(product)}>
-                <ArchiveRestore className="w-3 h-3" />
-                استرجاع
-              </Button>
-            )}
-            {getProductLifecycleStatus(product) === 'published' && (
-              <Button size="sm" variant="outline" className="rounded-lg text-xs px-2 h-8 gap-1" onClick={() => handleArchive(product)}>
-                <Archive className="w-3 h-3" />
-                أرشفة
-              </Button>
-            )}
-            {onProductSelect && (
-              <Button 
-                size="sm"
-                variant="outline"
-                className="rounded-lg border-border text-foreground text-xs px-2 h-8"
-                onClick={() => onProductSelect({id: product.id, name: product.name})}
-              >
-                <MessageSquare className="w-3 h-3 ml-1" />
-                التعليقات
-              </Button>
-            )}
-          </div>
+
+          {product.stockQuantity !== undefined && product.stockQuantity === 0 && (
+            <div className="absolute bottom-3 right-3 bg-red-500 text-white text-xs px-2 py-1 rounded-lg">
+              نفد المخزون
+            </div>
+          )}
+          {isProductLowStock(product) && product.stockQuantity !== 0 && (
+            <div className="absolute bottom-3 right-3 bg-yellow-500 text-white text-xs px-2 py-1 rounded-lg">
+              كمية منخفضة
+            </div>
+          )}
         </div>
 
-        {(product.colors || product.sizes) && (
-          <div className="mt-2.5 pt-2.5 border-t border-border flex flex-wrap gap-2">
-            {product.colors && product.colors.length > 0 && (
-              <div className="flex items-center gap-1">
-                {product.colors.slice(0, 4).map((color, i) => (
-                  <div key={i} className="w-3.5 h-3.5 rounded-full border border-border" style={{ backgroundColor: color.value }} />
-                ))}
-                {product.colors.length > 4 && <span className="text-xs text-muted-foreground">+{product.colors.length - 4}</span>}
-              </div>
-            )}
-            {product.sizes && product.sizes.length > 0 && (
-              <div className="flex items-center gap-1">
-                {product.sizes.slice(0, 3).map((size, i) => (
-                  <span key={i} className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">{size}</span>
-                ))}
-                {product.sizes.length > 3 && <span className="text-xs text-muted-foreground">+{product.sizes.length - 3}</span>}
+        <div className="p-3 sm:p-4">
+          <div className="flex items-start justify-between gap-2 mb-1.5">
+            <h3 className="text-sm font-bold text-foreground text-right line-clamp-2 flex-1">{product.name}</h3>
+            {product.rating != null && product.rating > 0 && (
+              <div className="flex items-center gap-1 shrink-0">
+                <Star className="w-3.5 h-3.5 text-yellow-400 fill-current" />
+                <span className="text-xs font-medium text-muted-foreground">{product.rating.toFixed(1)}</span>
               </div>
             )}
           </div>
-        )}
+
+          {product.category && (
+            <p className="text-[10px] text-muted-foreground mb-2 text-right">{product.category}</p>
+          )}
+
+          <div className="flex items-end justify-between gap-2">
+            <div className="flex flex-col items-start min-w-0">
+              <span className="text-base sm:text-lg font-bold text-foreground tabular-nums">
+                {product.price.toLocaleString()} <span className="text-xs text-muted-foreground">د.ع</span>
+              </span>
+              {product.stockQuantity !== undefined && (
+                <span className="text-xs text-muted-foreground tabular-nums">المخزون: {product.stockQuantity}</span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+              <Link to={`/edit-product/${product.id}`}>
+                <Button size="icon" variant="outline" className="h-9 w-9 rounded-lg" aria-label="تعديل">
+                  <Edit className="w-3.5 h-3.5" />
+                </Button>
+              </Link>
+              {onQuickEdit && (
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="h-9 w-9 rounded-lg"
+                  onClick={() => onQuickEdit(product)}
+                  aria-label="تعديل سريع"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                </Button>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="icon" variant="outline" className="h-9 w-9 rounded-lg">
+                    <MoreHorizontal className="w-3.5 h-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="rounded-xl">
+                  {lifecycle === 'draft' && onPublish && (
+                    <DropdownMenuItem onClick={() => onPublish(product)}>
+                      <Eye className="w-4 h-4 ml-2" />
+                      نشر
+                    </DropdownMenuItem>
+                  )}
+                  {lifecycle === 'published' && onArchive && (
+                    <DropdownMenuItem onClick={() => onArchive(product)}>
+                      <Archive className="w-4 h-4 ml-2" />
+                      أرشفة
+                    </DropdownMenuItem>
+                  )}
+                  {lifecycle === 'archived' && onRestore && (
+                    <DropdownMenuItem onClick={() => onRestore(product)}>
+                      <ArchiveRestore className="w-4 h-4 ml-2" />
+                      استرجاع
+                    </DropdownMenuItem>
+                  )}
+                  {onDuplicate && (
+                    <DropdownMenuItem onClick={() => onDuplicate(product)}>
+                      <Copy className="w-4 h-4 ml-2" />
+                      تكرار
+                    </DropdownMenuItem>
+                  )}
+                  {onProductSelect && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => onProductSelect({ id: product.id, name: product.name })}>
+                        <MessageSquare className="w-4 h-4 ml-2" />
+                        التعليقات
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
-    <div className="space-y-4">
-      {/* Controls */}
-      <div className="flex items-center justify-between">
-        <Button
-          variant={isDragEnabled ? "default" : "outline"}
-          size="sm"
-          className="rounded-xl text-xs"
-          onClick={() => setIsDragEnabled(!isDragEnabled)}
-        >
-          <GripVertical className="w-3.5 h-3.5 ml-1" />
-          {isDragEnabled ? "إنهاء الترتيب" : "ترتيب المنتجات"}
-        </Button>
-        <span className="text-sm text-muted-foreground">{catalog.length} منتج</span>
+    <div className="space-y-4 min-w-0">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          {selectionEnabled && onToggleSelectAll && selectedIds && (
+            <Button variant="ghost" size="sm" className="rounded-xl text-xs h-9" onClick={onToggleSelectAll}>
+              {selectedIds.size === catalog.length ? 'إلغاء التحديد' : 'تحديد الكل'}
+            </Button>
+          )}
+          <Button
+            variant={isDragEnabled ? 'default' : 'outline'}
+            size="sm"
+            className="rounded-xl text-xs hidden sm:inline-flex"
+            onClick={() => setIsDragEnabled(!isDragEnabled)}
+          >
+            <GripVertical className="w-3.5 h-3.5 ml-1" />
+            {isDragEnabled ? 'إنهاء الترتيب' : 'ترتيب المنتجات'}
+          </Button>
+        </div>
+        <span className="text-sm text-muted-foreground tabular-nums">{catalog.length} منتج</span>
       </div>
 
       {isDragEnabled ? (
@@ -424,10 +386,10 @@ export const ProductsList = ({
           <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable droppableId="products" direction="vertical">
               {(provided) => (
-                <div 
-                  ref={provided.innerRef} 
+                <div
+                  ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 min-w-0"
                 >
                   {allProducts.map((product, index) => (
                     <Draggable key={product.id} draggableId={product.id} index={index}>
@@ -437,7 +399,7 @@ export const ProductsList = ({
                           {...provided.draggableProps}
                           className={snapshot.isDragging ? 'opacity-80 scale-[1.02] z-50' : ''}
                         >
-                          {renderProductCard(product, index, provided.dragHandleProps)}
+                          {renderProductCard(product, provided.dragHandleProps ?? undefined)}
                         </div>
                       )}
                     </Draggable>
@@ -449,21 +411,12 @@ export const ProductsList = ({
           </DragDropContext>
         </React.Suspense>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {catalog.map((product, index) => (
-            <div key={product.id}>
-              {renderProductCard(product, index)}
-            </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 min-w-0">
+          {catalog.map((product) => (
+            <div key={product.id}>{renderProductCard(product)}</div>
           ))}
         </div>
       )}
-
-      <QuickEditDialog
-        product={quickEditProduct}
-        open={quickEditOpen}
-        onOpenChange={setQuickEditOpen}
-        onSaved={refreshCatalog}
-      />
     </div>
   );
 };

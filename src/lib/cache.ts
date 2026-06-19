@@ -106,6 +106,11 @@ export const CacheKeys = {
   storeSettings: (ownerId: string) => `store_settings:${ownerId}`,
   store: (userId: string) => `store:${userId}`,
   orders: (ownerId: string, page: number) => `orders:${ownerId}:${page}`,
+  ordersFiltered: (ownerId: string, filterKey: string, page: number) =>
+    `orders:${ownerId}:f:${filterKey}:${page}`,
+  ordersWorkflowCounts: (ownerId: string, filterKey: string) =>
+    `orders:${ownerId}:wc:${filterKey}`,
+  ordersRecent: (ownerId: string) => `orders:${ownerId}:recent`,
   ordersStatsSummary: (ownerId: string) => `orders:stats:${ownerId}`,
   statistics: (ownerId: string, range: string) => `stats:${ownerId}:${range}`,
   tenantMeta: (slug: string) => `tenant-meta:${slug}`,

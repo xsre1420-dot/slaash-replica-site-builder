@@ -162,12 +162,13 @@ const OrderActionsBar = ({
   if (visibleActions.length === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-border/60 bg-card p-4">
+    <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
       <h3 className="text-sm font-bold text-foreground mb-3 text-right">إجراءات سريعة</h3>
-      <div className="flex flex-wrap gap-2 justify-end">
+      <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 justify-end">
         {visibleActions.map((action) => {
           const Icon = action.icon;
           const isLoading = loadingAction === action.id;
+          const isPrimary = action.id === 'delivered' || action.id === 'confirm';
           return (
             <Button
               key={action.id}
@@ -176,9 +177,11 @@ const OrderActionsBar = ({
               disabled={!!loadingAction}
               onClick={action.onClick}
               className={cn(
-                'rounded-xl gap-1.5 min-h-[40px] font-semibold',
+                'rounded-xl gap-1.5 min-h-[44px] font-semibold text-xs sm:text-sm',
+                isPrimary && 'col-span-2 sm:col-span-1',
                 action.id === 'delivered' && 'bg-success hover:bg-success/90 text-success-foreground',
-                action.id === 'confirm' && 'bg-primary'
+                action.id === 'confirm' && 'bg-primary',
+                action.id === 'cancel' && 'col-span-2 sm:col-span-1'
               )}
             >
               {isLoading ? (
