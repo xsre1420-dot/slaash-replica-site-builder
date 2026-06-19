@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +23,7 @@ export const QuickEditDialog = ({ product, open, onOpenChange, onSaved }: QuickE
   const { user } = useAuth();
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
-  const [stock, setStock] = useState("");
+  const [stockAdd, setStockAdd] = useState("");
   const [cost, setCost] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -30,7 +31,7 @@ export const QuickEditDialog = ({ product, open, onOpenChange, onSaved }: QuickE
     if (isOpen && product) {
       setName(product.name);
       setPrice(String(product.price));
-      setStock(String(product.stockQuantity ?? 0));
+      setStockAdd("");
       setCost(String(product.cost ?? ""));
     }
     onOpenChange(isOpen);
@@ -45,18 +46,22 @@ export const QuickEditDialog = ({ product, open, onOpenChange, onSaved }: QuickE
     }
 
     setSaving(true);
-    const stockQty = parseInt(stock, 10) || 0;
+    const addQty = parseInt(stockAdd, 10) || 0;
     const latest = (await fetchProductById(product.id)) ?? product;
+    const currentStock = latest.stockQuantity ?? 0;
 
     const patch: Partial<Product> = {
       name: name.trim(),
       price: priceNum,
-      stockQuantity: stockQty,
       cost: cost ? parseFloat(cost) || undefined : undefined,
     };
 
-    if ((latest.sizes?.length ?? 0) > 0 || (latest.colors?.length ?? 0) > 0 || latest.variants?.length) {
-      patch.variants = buildVariantsForStock(latest, stockQty);
+    if (addQty > 0) {
+      const newStock = currentStock + addQty;
+      patch.stockQuantity = newStock;
+      if ((latest.sizes?.length ?? 0) > 0 || (latest.colors?.length ?? 0) > 0 || latest.variants?.length) {
+        patch.variants = buildVariantsForStock(latest, newStock);
+      }
     }
 
     const result = await updateProduct(product.id, patch);
@@ -67,7 +72,16 @@ export const QuickEditDialog = ({ product, open, onOpenChange, onSaved }: QuickE
       return;
     }
 
-    toast.success("تم حفظ التغييرات");
+    if (addQty > 0) {
+      await (supabase as any).from('inventory_movements').insert({
+        product_id: product.id,
+        owner_id: user.id,
+        quantity_delta: addQty,
+        reason: 'restock',
+      });
+    }
+
+    toast.success(addQty > 0 ? `تمت إضافة ${addQty} وحدة للمخزون` : "تم حفظ التغييرات");
     onSaved();
     onOpenChange(false);
   };
@@ -94,8 +108,24 @@ export const QuickEditDialog = ({ product, open, onOpenChange, onSaved }: QuickE
             </div>
           </div>
           <div>
-            <Label className="text-xs">الكمية في المخزون</Label>
-            <Input type="number" value={stock} onChange={e => setStock(e.target.value)} className="rounded-xl mt-1 text-sm" min="0" />
+            <Label className="text-xs">المخزون الحالي</Label>
+            <p className="mt-1 text-sm font-semibold tabular-nums rounded-xl border border-border/50 bg-muted/30 px-3 py-2">
+              {product?.stockQuantity ?? 0} وحدة
+            </p>
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              يُخصم تلقائياً عند الطلب
+            </p>
+          </div>
+          <div>
+            <Label className="text-xs">إضافة للمخزون</Label>
+            <Input
+              type="number"
+              min="0"
+              value={stockAdd}
+              onChange={(e) => setStockAdd(e.target.value)}
+              className="rounded-xl mt-1 text-sm"
+              placeholder="0"
+            />
           </div>
           <Button className="w-full rounded-xl" onClick={handleSave} disabled={saving}>
             {saving ? "جاري الحفظ..." : "حفظ التغييرات"}

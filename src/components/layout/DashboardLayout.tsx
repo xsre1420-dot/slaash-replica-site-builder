@@ -453,12 +453,12 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
 
             <ThemeToggle />
           </header>
-
-          <main id="main-content" className="flex-1">
-            <PlatformDbStatusBanner />
-            {children}
-          </main>
         </div>
+
+        <main id="main-content" className="flex-1">
+          <PlatformDbStatusBanner />
+          {children}
+        </main>
       </div>
     </TooltipProvider>
   );

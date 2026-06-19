@@ -7,6 +7,8 @@ interface StatCardProps {
   icon: LucideIcon;
   iconClassName?: string;
   className?: string;
+  onClick?: () => void;
+  active?: boolean;
 }
 
 const StatCard = ({
@@ -15,14 +17,23 @@ const StatCard = ({
   icon: Icon,
   iconClassName,
   className,
-}: StatCardProps) => (
-  <div
-    className={cn(
-      'group rounded-2xl border border-border/50 bg-card p-4 sm:p-5',
-      'shadow-sm hover:border-primary/15 hover:shadow-md transition-all duration-200',
-      className
-    )}
-  >
+  onClick,
+  active,
+}: StatCardProps) => {
+  const Comp = onClick ? 'button' : 'div';
+
+  return (
+    <Comp
+      type={onClick ? 'button' : undefined}
+      onClick={onClick}
+      className={cn(
+        'group rounded-2xl border border-border/50 bg-card p-4 sm:p-5 w-full text-right',
+        'shadow-sm hover:border-primary/15 hover:shadow-md transition-all duration-200',
+        onClick && 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30',
+        active && 'border-primary/40 ring-2 ring-primary/15',
+        className
+      )}
+    >
     <div className="flex items-start justify-between gap-3" dir="rtl">
       <div
         className={cn(
@@ -41,7 +52,8 @@ const StatCard = ({
         </p>
       </div>
     </div>
-  </div>
-);
+  </Comp>
+  );
+};
 
 export default StatCard;
