@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { buildAttentionHref, type AttentionKey } from '@/lib/attentionHighlight';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { getProductsSync, loadProducts } from '@/services/productService';
 import { countPendingReviewsForOwner } from '@/services/reviewService';
 import { getStorePublicSlug } from '@/lib/storeUrl';
@@ -29,6 +28,7 @@ import {
 } from '@/utils/dashboardInsightsUtils';
 import { fetchOrderStatsRows } from '@/services/orderService';
 import { useOrderDashboardStats } from '@/hooks/useOrderDashboardStats';
+import { supabase } from '@/integrations/supabase/client';
 import type { Order } from '@/types';
 
 export type DashboardActionItem = {
@@ -73,7 +73,6 @@ const fetchRpcPeriod = async (
 export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
-  const [ordersLoading, setOrdersLoading] = useState(true);
   const { stats } = useOrderDashboardStats(refreshKey);
 
   const [periods, setPeriods] = useState({
@@ -85,18 +84,6 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
   const [hasSlug, setHasSlug] = useState<boolean | null>(null);
   const [pendingReviewsCount, setPendingReviewsCount] = useState(0);
   const [kpiLoading, setKpiLoading] = useState(true);
-
-  useEffect(() => {
-    if (!user?.id) {
-      setOrders([]);
-      setOrdersLoading(false);
-      return;
-    }
-    setOrdersLoading(true);
-    void fetchOrderStatsRows(user.id)
-      .then(setOrders)
-      .finally(() => setOrdersLoading(false));
-  }, [user?.id, refreshKey]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -115,6 +102,7 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
 
   const loadPeriods = useCallback(async () => {
     if (!user?.id) {
+      setOrders([]);
       setPeriods({
         today: EMPTY_PERIOD,
         yesterday: EMPTY_PERIOD,
@@ -139,19 +127,36 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
       fetchRpcPeriod(user.id, prevWeekBounds.start, prevWeekBounds.end),
     ]);
 
-    const fallbackToday = computePeriodMetricsFromOrders(orders, { today: true });
-    const fallbackYesterday = computePeriodMetricsFromOrders(orders, { yesterday: true });
-    const fallbackWeek = computePeriodMetricsFromOrders(orders, { thisWeek: true });
-    const fallbackPrevWeek = computePeriodMetricsFromOrders(orders, { previousWeek: true });
+    const rpcComplete =
+      todayRpc != null &&
+      yesterdayRpc != null &&
+      weekRpc != null &&
+      prevWeekRpc != null;
+
+    if (rpcComplete) {
+      setOrders([]);
+      setPeriods({
+        today: todayRpc,
+        yesterday: yesterdayRpc,
+        week: weekRpc,
+        previousWeek: prevWeekRpc,
+      });
+      setKpiLoading(false);
+      return;
+    }
+
+    const fallbackOrders = await fetchOrderStatsRows(user.id);
+    setOrders(fallbackOrders);
 
     setPeriods({
-      today: todayRpc ?? fallbackToday,
-      yesterday: yesterdayRpc ?? fallbackYesterday,
-      week: weekRpc ?? fallbackWeek,
-      previousWeek: prevWeekRpc ?? fallbackPrevWeek,
+      today: todayRpc ?? computePeriodMetricsFromOrders(fallbackOrders, { today: true }),
+      yesterday: yesterdayRpc ?? computePeriodMetricsFromOrders(fallbackOrders, { yesterday: true }),
+      week: weekRpc ?? computePeriodMetricsFromOrders(fallbackOrders, { thisWeek: true }),
+      previousWeek:
+        prevWeekRpc ?? computePeriodMetricsFromOrders(fallbackOrders, { previousWeek: true }),
     });
     setKpiLoading(false);
-  }, [user?.id, orders]);
+  }, [user?.id]);
 
   useEffect(() => {
     void loadPeriods();
@@ -253,6 +258,6 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
     inventoryOutCount: inventorySummary.out,
     pendingOrdersCount: stats.pendingFulfillment,
     pendingReviewsCount,
-    loading: ordersLoading || kpiLoading,
+    loading: kpiLoading,
   };
 };

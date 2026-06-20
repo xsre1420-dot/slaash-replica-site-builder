@@ -189,7 +189,7 @@ const fetchOrdersFilteredFallback = async (
 
   query = query.order('created_at', { ascending: false });
 
-  const { data, error, count } = await query.range(0, 4999);
+  const { data, error, count } = await query.range(0, 999);
 
   if (error) {
     logger.error('orders.fetchFiltered.fallback failed', { message: error.message });
@@ -378,7 +378,7 @@ export type CustomerOrderInsights = {
   totalSpent: number;
 };
 
-/** Customer history by phone (same store, tenant-isolated). */
+/** Customer history by phone (same store, tenant-isolated). Uses indexed phone lookup. */
 export const fetchCustomerInsightsByPhone = async (
   ownerId: string,
   phone: string
@@ -391,8 +391,8 @@ export const fetchCustomerInsightsByPhone = async (
     .select('total_amount, status, customer_phone')
     .eq('owner_id', ownerId)
     .neq('status', 'cancelled')
-    .order('created_at', { ascending: false })
-    .limit(500);
+    .or(`customer_phone.eq.${phone},customer_phone.ilike.%${digits}%`)
+    .limit(200);
 
   if (error || !data) return { orderCount: 0, totalSpent: 0 };
 
@@ -417,7 +417,7 @@ export const fetchOrderStatsRows = async (ownerId: string): Promise<Order[]> => 
     .select(ORDER_STATS_SELECT)
     .eq('owner_id', ownerId)
     .order('created_at', { ascending: false })
-    .limit(ORDERS_STATS_CAP);
+    .limit(2000);
 
   if (error || !data) return [];
 
@@ -436,6 +436,60 @@ export const fetchOrderStatsRows = async (ownerId: string): Promise<Order[]> => 
   return orders;
 };
 
+const fetchStoreStatisticsMetrics = async (
+  ownerId: string,
+  start: string,
+  end: string
+): Promise<Record<string, unknown> | null> => {
+  try {
+    const { data, error } = await (supabase as any).rpc('get_store_statistics', {
+      p_owner_id: ownerId,
+      p_start: start,
+      p_end: end,
+    });
+    if (error || !data) return null;
+    return data as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+};
+
+const buildOrderStatsFromRpc = async (ownerId: string): Promise<OrderDashboardStats | null> => {
+  const { getTodayBoundsIso, getWeekBoundsIso, getMonthBoundsIso } = await import(
+    '@/utils/dashboardInsightsUtils'
+  );
+
+  const today = getTodayBoundsIso();
+  const week = getWeekBoundsIso();
+  const month = getMonthBoundsIso();
+  const allTimeStart = '2000-01-01T00:00:00.000Z';
+  const nowEnd = new Date().toISOString();
+
+  const [counts, todayRpc, weekRpc, monthRpc, revenueRpc] = await Promise.all([
+    fetchWorkflowTabCounts(ownerId, DEFAULT_LIST_FILTERS),
+    fetchStoreStatisticsMetrics(ownerId, today.start, today.end),
+    fetchStoreStatisticsMetrics(ownerId, week.start, week.end),
+    fetchStoreStatisticsMetrics(ownerId, month.start, month.end),
+    fetchStoreStatisticsMetrics(ownerId, allTimeStart, nowEnd),
+  ]);
+
+  if (!todayRpc && !weekRpc && !monthRpc && !revenueRpc) {
+    return null;
+  }
+
+  return {
+    total: counts?.all ?? Number(monthRpc?.order_count ?? 0),
+    newOrders: counts?.new ?? 0,
+    pendingFulfillment:
+      (counts?.new ?? 0) + (counts?.processing ?? 0) + (counts?.paid ?? 0),
+    delivered: counts?.delivered ?? 0,
+    revenue: Number(revenueRpc?.completed_revenue ?? 0),
+    todayOrders: Number(todayRpc?.order_count ?? 0),
+    weekOrders: Number(weekRpc?.order_count ?? 0),
+    monthOrders: Number(monthRpc?.order_count ?? 0),
+  };
+};
+
 /** Aggregate order stats across the full store (not paginated list). */
 export const fetchOrderStatsSummary = async (ownerId: string): Promise<OrderDashboardStats> => {
   const cacheKey = CacheKeys.ordersStatsSummary(ownerId);
@@ -444,6 +498,9 @@ export const fetchOrderStatsSummary = async (ownerId: string): Promise<OrderDash
 
   return dedup(`orders-stats-${ownerId}`, async () => {
     const stats = await instrumentAsync('orders.statsSummary', async () => {
+      const fromRpc = await buildOrderStatsFromRpc(ownerId);
+      if (fromRpc) return fromRpc;
+
       const orders = await fetchOrderStatsRows(ownerId);
       return computeOrderStats(orders);
     }, { ownerId });

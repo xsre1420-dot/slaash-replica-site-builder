@@ -10,8 +10,16 @@ const withTimeout = <T>(promise: Promise<T>, ms = 12000): Promise<T> => {
   ]);
 };
 
-const ORDER_LIST_COLUMNS = 'id,status,total_amount,created_at,customer_name,customer_phone,payment_method';
-const ORDERS_STATS_CAP = 5000;
+/** Columns needed for chart, payment mix, peak hours, and client KPI fallback. */
+const CHART_ORDER_COLUMNS =
+  'id,status,total_amount,created_at,customer_name,customer_phone,payment_method';
+
+/** When RPC supplies KPIs, only load current-period rows for charts/breakdowns. */
+const CHART_ORDERS_CAP = 1000;
+const VISITS_CAP = 1000;
+/** Full client-side fallback when RPC is unavailable. */
+const FALLBACK_ORDERS_CAP = 5000;
+const FALLBACK_VISITS_CAP = 5000;
 
 export interface StatisticsDateBounds {
   start: Date;
@@ -19,6 +27,9 @@ export interface StatisticsDateBounds {
   days: number;
   previousStart: Date;
 }
+
+export const hasUsableStatisticsKpis = (kpis?: Record<string, unknown>): boolean =>
+  kpis != null && typeof kpis === 'object';
 
 export const getStatisticsDateBounds = (
   dateRange: string,
@@ -98,7 +109,16 @@ export const invalidateStatisticsCache = (
   clearInflight(cacheKey);
 };
 
-const fetchProductCount = async (ownerId: string): Promise<number> => {
+const fetchProductCount = async (
+  ownerId: string,
+  kpis?: Record<string, unknown>
+): Promise<number> => {
+  const fromKpi = kpis?.product_count;
+  if (fromKpi != null && fromKpi !== '') {
+    const n = Number(fromKpi);
+    if (Number.isFinite(n)) return n;
+  }
+
   const activeRes = await supabase
     .from('products')
     .select('id', { count: 'exact', head: true })
@@ -120,6 +140,73 @@ const fetchProductCount = async (ownerId: string): Promise<number> => {
   }
 
   return allRes.count ?? 0;
+};
+
+const fetchOrdersForStatistics = async (
+  ownerId: string,
+  fromIso: string,
+  toIso: string,
+  cap: number
+): Promise<{ orders: DatabaseData['orders']; error?: string }> => {
+  const { data, error } = await supabase
+    .from('orders')
+    .select(CHART_ORDER_COLUMNS)
+    .eq('owner_id', ownerId)
+    .gte('created_at', fromIso)
+    .lte('created_at', toIso)
+    .order('created_at', { ascending: false })
+    .limit(cap);
+
+  if (error) {
+    return { orders: [], error: error.message };
+  }
+
+  return { orders: data || [] };
+};
+
+const fetchVisitsForStatistics = async (
+  ownerId: string,
+  fromIso: string,
+  toIso: string,
+  cap: number
+): Promise<{ visits: DatabaseData['visits']; error?: string }> => {
+  const { data, error } = await supabase
+    .from('store_visits')
+    .select('id, created_at, visitor_ip')
+    .eq('owner_id', ownerId)
+    .gte('created_at', fromIso)
+    .lte('created_at', toIso)
+    .limit(cap);
+
+  if (error) {
+    return { visits: [], error: error.message };
+  }
+
+  return { visits: data || [] };
+};
+
+const fetchOrderItemsForStatistics = async (
+  ownerId: string,
+  orders: DatabaseData['orders']
+): Promise<DatabaseData['orderItems']> => {
+  const completedIds = orders
+    .filter((o) => o.status === 'completed')
+    .map((o) => o.id);
+
+  if (completedIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('order_items')
+    .select('order_id, product_id, product_name, quantity, subtotal, created_at')
+    .eq('owner_id', ownerId)
+    .in('order_id', completedIds);
+
+  if (error) {
+    console.warn('[statistics] order_items fetch failed:', error.message);
+    return [];
+  }
+
+  return data || [];
 };
 
 export const fetchStatisticsData = async (
@@ -149,74 +236,62 @@ export const fetchStatisticsData = async (
   if (cached) return cached;
 
   return dedup(cacheKey, async () => {
-    const fetchFrom = bounds.previousStart.toISOString();
-    const fetchTo = bounds.end.toISOString();
     const periodStart = bounds.start.toISOString();
     const periodEnd = bounds.end.toISOString();
     const previousEnd = new Date(bounds.start.getTime() - 1);
     previousEnd.setHours(23, 59, 59, 999);
+    const fallbackFrom = bounds.previousStart.toISOString();
 
     try {
-      const [ordersRes, kpis, previousKpis, visitsRes, productCount] = await withTimeout(
+      const [kpis, previousKpis] = await withTimeout(
         Promise.all([
-          supabase
-            .from('orders')
-            .select(ORDER_LIST_COLUMNS)
-            .eq('owner_id', ownerId)
-            .gte('created_at', fetchFrom)
-            .lte('created_at', fetchTo)
-            .order('created_at', { ascending: false })
-            .limit(ORDERS_STATS_CAP),
           fetchStoreStatisticsRpc(ownerId, periodStart, periodEnd, bounds.days),
-          fetchStoreStatisticsRpc(ownerId, bounds.previousStart.toISOString(), previousEnd.toISOString(), bounds.days),
-          supabase
-            .from('store_visits')
-            .select('id, created_at, visitor_ip')
-            .eq('owner_id', ownerId)
-            .gte('created_at', fetchFrom)
-            .lte('created_at', fetchTo)
-            .limit(ORDERS_STATS_CAP),
-          fetchProductCount(ownerId),
+          fetchStoreStatisticsRpc(
+            ownerId,
+            bounds.previousStart.toISOString(),
+            previousEnd.toISOString(),
+            bounds.days
+          ),
+        ])
+      );
+
+      const rpcReady = hasUsableStatisticsKpis(kpis);
+      const ordersCap = rpcReady ? CHART_ORDERS_CAP : FALLBACK_ORDERS_CAP;
+      const visitsCap = rpcReady ? VISITS_CAP : FALLBACK_VISITS_CAP;
+      const ordersFrom = rpcReady ? periodStart : fallbackFrom;
+      const visitsFrom = rpcReady ? periodStart : fallbackFrom;
+      const skipVisits = rpcReady && hasUsableStatisticsKpis(previousKpis);
+
+      const [ordersResult, visitsResult, productCount] = await withTimeout(
+        Promise.all([
+          fetchOrdersForStatistics(ownerId, ordersFrom, periodEnd, ordersCap),
+          skipVisits
+            ? Promise.resolve({ visits: [] as DatabaseData['visits'] })
+            : fetchVisitsForStatistics(ownerId, visitsFrom, periodEnd, visitsCap),
+          fetchProductCount(ownerId, kpis),
         ])
       );
 
       const fetchWarnings: string[] = [];
 
-      let orders: DatabaseData['orders'] = [];
-      if (ordersRes.error) {
-        console.warn('[statistics] orders fetch failed:', ordersRes.error.message);
+      if (ordersResult.error) {
+        console.warn('[statistics] orders fetch failed:', ordersResult.error);
         fetchWarnings.push('تعذّر تحميل الطلبات — قد تظهر الأرقام ناقصة.');
-      } else {
-        orders = ordersRes.data || [];
       }
 
-      let visits: DatabaseData['visits'] = [];
-      if (visitsRes.error) {
-        console.warn('[statistics] store_visits fetch failed:', visitsRes.error.message);
+      if (visitsResult.error) {
+        console.warn('[statistics] store_visits fetch failed:', visitsResult.error);
         fetchWarnings.push('تعذّر تحميل بيانات الزوار.');
-      } else {
-        visits = visitsRes.data || [];
       }
 
-      const orderIds = orders.map((o: { id: string }) => o.id);
-
-      let orderItems: DatabaseData['orderItems'] = [];
-      if (orderIds.length > 0) {
-        const { data: itemsData, error: itemsError } = await supabase
-          .from('order_items')
-          .select('order_id, product_id, product_name, quantity, subtotal, created_at')
-          .eq('owner_id', ownerId)
-          .in('order_id', orderIds);
-
-        if (itemsError) {
-          console.warn('[statistics] order_items fetch failed:', itemsError.message);
-        } else {
-          orderItems = itemsData || [];
-        }
-      }
+      const orders = ordersResult.orders;
+      const visits = visitsResult.visits;
+      const orderItems = await fetchOrderItemsForStatistics(ownerId, orders);
 
       const truncated =
-        orders.length >= ORDERS_STATS_CAP || visits.length >= ORDERS_STATS_CAP;
+        orders.length >= ordersCap ||
+        visits.length >= visitsCap ||
+        (!rpcReady && orders.length >= FALLBACK_ORDERS_CAP);
 
       const result: DatabaseData = {
         orders,

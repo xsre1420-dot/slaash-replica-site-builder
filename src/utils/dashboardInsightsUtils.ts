@@ -1,4 +1,4 @@
-import { isToday, isYesterday, isThisWeek, subDays, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
+import { isToday, isYesterday, isThisWeek, subDays, startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth } from 'date-fns';
 import { Order } from '@/types';
 import { Product } from '@/types';
 import { getProductLifecycleStatus } from '@/lib/productLifecycle';
@@ -152,6 +152,14 @@ export const getYesterdayBoundsIso = () => {
   const start = subDays(new Date(), 1);
   start.setHours(0, 0, 0, 0);
   const end = subDays(new Date(), 1);
+  end.setHours(23, 59, 59, 999);
+  return { start: start.toISOString(), end: end.toISOString() };
+};
+
+export const getMonthBoundsIso = () => {
+  const start = startOfMonth(new Date());
+  start.setHours(0, 0, 0, 0);
+  const end = endOfMonth(new Date());
   end.setHours(23, 59, 59, 999);
   return { start: start.toISOString(), end: end.toISOString() };
 };

@@ -2,10 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { computeOrderStats } from '@/utils/orderWorkflowUtils';
 
 const mockFrom = vi.fn();
+const mockRpc = vi.fn();
 
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     from: (...args: unknown[]) => mockFrom(...args),
+    rpc: (...args: unknown[]) => mockRpc(...args),
   },
 }));
 
@@ -19,9 +21,44 @@ import { fetchOrderStatsSummary } from '@/services/orderService';
 describe('fetchOrderStatsSummary', () => {
   beforeEach(() => {
     mockFrom.mockReset();
+    mockRpc.mockReset();
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'RPC unavailable' } });
   });
 
-  it('aggregates stats from full order query not paginated slice', async () => {
+  it('aggregates stats from RPC when available', async () => {
+    mockRpc.mockImplementation((name: string) => {
+      if (name === 'get_store_statistics') {
+        return Promise.resolve({
+          data: { order_count: 2, completed_revenue: 500, pending_count: 1 },
+          error: null,
+        });
+      }
+      if (name === 'count_merchant_orders_by_workflow') {
+        return Promise.resolve({
+          data: {
+            all: 2,
+            new: 1,
+            processing: 0,
+            paid: 0,
+            shipped: 0,
+            delivered: 1,
+            cancelled: 0,
+            refunded: 0,
+          },
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: null, error: { message: 'unknown' } });
+    });
+
+    const stats = await fetchOrderStatsSummary('owner-1');
+    expect(stats.total).toBe(2);
+    expect(stats.revenue).toBe(500);
+    expect(stats.newOrders).toBe(1);
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+
+  it('falls back to order rows when RPC is unavailable', async () => {
     const chain = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),

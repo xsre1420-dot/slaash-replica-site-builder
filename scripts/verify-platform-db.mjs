@@ -11,9 +11,9 @@ const loadEnv = () => {
   const envPath = join(process.cwd(), '.env');
   if (!existsSync(envPath)) return {};
   const out = {};
-  for (const line of readFileSync(envPath, 'utf8').split('\n')) {
+  for (const line of readFileSync(envPath, 'utf8').replace(/^\uFEFF/, '').split(/\r?\n/)) {
     const m = line.match(/^([A-Z0-9_]+)="?(.*?)"?\s*$/);
-    if (m) out[m[1]] = m[2];
+    if (m) out[m[1]] = m[2].trim().replace(/^"|"$/g, '');
   }
   return out;
 };

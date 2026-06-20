@@ -25,6 +25,7 @@
     "db:types": "supabase gen types typescript --linked > src/integrations/supabase/types.generated.ts",
     "db:deploy": "powershell -ExecutionPolicy Bypass -File scripts/db-push.ps1",
     "db:verify": "node scripts/verify-platform-db.mjs",
+    "db:check": "node scripts/platform-check.mjs",
     "db:bundle": "node scripts/bundle-platform-migrations.mjs"
   },
   "dependencies": {
