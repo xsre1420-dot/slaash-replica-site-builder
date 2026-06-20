@@ -28,7 +28,13 @@ export const submitAccessLead = async (input: {
   });
 
   if (error) {
-    throw new LeadSubmitError(error.message);
+    const msg = error.message ?? '';
+    if (/column|function|schema cache/i.test(msg)) {
+      throw new LeadSubmitError(
+        'قاعدة البيانات تحتاج تحديث — شغّل: npm run db:deploy'
+      );
+    }
+    throw new LeadSubmitError(msg);
   }
 
   const payload = data as { success?: boolean; error?: string; lead_id?: string };

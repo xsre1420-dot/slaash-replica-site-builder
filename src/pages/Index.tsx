@@ -318,30 +318,21 @@ const Index = () => {
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className="relative overflow-hidden bg-muted/20 py-24 sm:py-28">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-[linear-gradient(hsl(var(--border)/0.04)_1px,transparent_1px),linear-gradient(90deg,hsl(var(--border)/0.04)_1px,transparent_1px)] bg-[size:48px_48px]" />
-          <div className="absolute -left-24 top-1/3 h-72 w-72 rounded-full bg-primary/[0.05] blur-3xl" />
-        </div>
-
-        <div className="container relative z-10 mx-auto px-4">
+      <section id="pricing" className="border-t border-border bg-neutral-50/80 py-24 sm:py-28 dark:bg-neutral-950/30">
+        <div className="container mx-auto px-4 sm:px-6">
           <FadeUp>
-            <div className="mx-auto mb-14 max-w-3xl text-center sm:mb-16">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
-                <Sparkles className="h-4 w-4" strokeWidth={1.75} />
+            <div className="mx-auto mb-12 max-w-2xl text-right sm:mb-14">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-xs font-semibold text-foreground/80">
                 باقات الاشتراك
               </div>
-              <h2 className="ds-heading-lg mb-4">
-                <span className="text-primary">باقة النخبة</span> — كل ما يحتاجه متجرك
-              </h2>
-              <p className="mx-auto max-w-2xl text-lg leading-relaxed text-muted-foreground">
-                اختر مدة الاشتراك المناسبة — 6 أشهر أو سنة — ثم أرسل بياناتك
-                ونتواصل معك عبر واتساب لإكمال التفعيل.
+              <h2 className="ds-heading-lg mb-3">باقة النخبة — كل ما يحتاجه متجرك</h2>
+              <p className="text-base leading-relaxed text-muted-foreground sm:text-lg">
+                اختر مدّة الاشتراك — 6 أشهر أو سنة — ثم أرسل بياناتك ونتواصل معك عبر واتساب.
               </p>
             </div>
           </FadeUp>
 
-          <FadeUp delay={0.1}>
+          <FadeUp delay={0.08}>
             <ElitePricingCard />
           </FadeUp>
         </div>
