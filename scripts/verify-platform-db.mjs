@@ -20,7 +20,7 @@ const loadEnv = () => {
 
 const env = { ...process.env, ...loadEnv() };
 const url = env.VITE_SUPABASE_URL;
-const key = env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const key = env.VITE_SUPABASE_PUBLISHABLE_KEY || env.VITE_SUPABASE_ANON_KEY;
 
 const fail = (msg) => {
   console.error(`✗ ${msg}`);
@@ -30,7 +30,7 @@ const fail = (msg) => {
 const pass = (msg) => console.log(`✓ ${msg}`);
 
 if (!url || !key) {
-  fail('Missing VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY in .env');
+  fail('Missing VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY (or VITE_SUPABASE_ANON_KEY) in .env');
 }
 
 pass(`Supabase URL: ${url}`);
