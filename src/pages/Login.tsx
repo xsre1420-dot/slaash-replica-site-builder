@@ -221,7 +221,7 @@ const Login = () => {
 
       <p className="mt-8 text-center text-sm text-muted-foreground">
         ليس لديك حساب؟{' '}
-        <Link to="/signup" className="font-semibold text-primary hover:text-primary/80">
+        <Link to="/request-access" className="font-semibold text-primary hover:text-primary/80">
           أنشئ حساباً مجانياً
         </Link>
       </p>

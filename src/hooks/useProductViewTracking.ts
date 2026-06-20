@@ -30,12 +30,12 @@ export function useProductViewTracking(storeSlug?: string, productId?: string | 
 
     void (supabase as any)
       .rpc('track_product_view_by_slug', {
-        p_store_slug: normalizedSlug,
+        p_slug: normalizedSlug,
         p_product_id: normalizedProductId,
-        p_user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+        p_page_path: typeof window !== 'undefined' ? window.location.pathname : null,
       })
-      .then(({ data }: { data?: { success?: boolean } }) => {
-        if (data?.success) {
+      .then(({ error }: { error?: { message?: string } | null }) => {
+        if (!error) {
           try {
             sessionStorage.setItem(key, String(Date.now()));
           } catch {

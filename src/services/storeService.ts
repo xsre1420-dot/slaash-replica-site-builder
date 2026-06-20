@@ -118,6 +118,24 @@ export const fetchStoreByUserId = async (userId: string): Promise<StoreRecord | 
     // RPC may not exist until migration applied — fall through
   }
 
+  const { data: storeRow } = await supabase
+    .from('stores')
+    .select('id, user_id, store_name, store_slug, theme_id')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (storeRow) {
+    const record: StoreRecord = {
+      id: storeRow.id,
+      userId: storeRow.user_id,
+      storeName: storeRow.store_name || '',
+      storeSlug: storeRow.store_slug || null,
+      themeId: storeRow.theme_id || 'default',
+    };
+    cache.set(cacheKey, record, CacheTTL.LONG, CacheTTL.STALE);
+    return record;
+  }
+
   const { data: settings } = await supabase
     .from('store_settings')
     .select('id, owner_id, store_name, store_slug')

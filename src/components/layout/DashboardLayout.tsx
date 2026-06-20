@@ -15,12 +15,14 @@ import {
   LogOut,
   Store,
   X,
+  Shield,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useStore } from '@/context/StoreContext';
 import { useAuth } from '@/context/AuthContext';
+import { useSubscription } from '@/context/SubscriptionContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import PlatformDbStatusBanner from '@/components/platform/PlatformDbStatusBanner';
 import { Button } from '@/components/ui/button';
@@ -67,6 +69,7 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
   const navigate = useNavigate();
   const { storeName, storeLogo } = useStore();
   const { user, logout } = useAuth();
+  const { isAdmin } = useSubscription();
   const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
     return localStorage.getItem('sidebar_collapsed') === 'true';
@@ -242,6 +245,12 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
                 </div>
               </div>
             ))}
+            {isAdmin && (
+              <div className={cn('mb-4', collapsed ? 'px-2' : 'px-3')}>
+                {!collapsed && <p className="ds-section-title px-3 mb-2">المنصة</p>}
+                <NavLink to="/admin/leads" icon={Shield} label="إدارة العملاء المحتملين" collapsed={collapsed} />
+              </div>
+            )}
           </nav>
 
           <div className={cn('border-t border-sidebar-border space-y-2', collapsed ? 'p-2' : 'p-3')}>

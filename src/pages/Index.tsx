@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Check, Star, Zap, Package, BarChart3, Lock, Palette, Headphones, TrendingUp, Sparkles, ShoppingBag, Globe, Shield } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, Zap, Package, BarChart3, Lock, Palette, Headphones, TrendingUp, Sparkles, Globe, Shield } from "lucide-react";
+import { Link } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useState, useEffect, useRef } from "react";
 import { motion, useInView } from "framer-motion";
@@ -38,15 +38,12 @@ const features = [
 ];
 
 const steps = [
-  { step: "01", title: "سجّل حسابك", desc: "إنشاء حساب مجاني خلال ثوانٍ", icon: Globe },
-  { step: "02", title: "أضف منتجاتك", desc: "ارفع صور وأسعار منتجاتك بسهولة", icon: ShoppingBag },
-  { step: "03", title: "ابدأ البيع", desc: "شارك رابط متجرك واستقبل الطلبات", icon: TrendingUp },
+  { step: "01", title: "اطلب الوصول", desc: "أرسل اسمك ورقم واتساب", icon: Globe },
+  { step: "02", title: "تواصل مع المبيعات", desc: "نحدد الباقة المناسبة لك", icon: Headphones },
+  { step: "03", title: "ابدأ البيع", desc: "نفعّل حسابك ومتجرك", icon: TrendingUp },
 ];
 
 const Index = () => {
-  const navigate = useNavigate();
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [billingType, setBillingType] = useState<'monthly' | 'semiannual'>('monthly');
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -70,9 +67,9 @@ const Index = () => {
                 تسجيل الدخول
               </Button>
             </Link>
-            <Link to="/signup">
+            <Link to="/request-access">
               <Button size="sm" className="rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground px-5 font-semibold">
-                ابدأ الآن
+                طلب الوصول
               </Button>
             </Link>
           </div>
@@ -122,9 +119,9 @@ const Index = () => {
               transition={{ duration: 0.45, delay: 0.28 }}
               className="flex flex-col sm:flex-row gap-3 justify-center items-center"
             >
-              <Link to="/signup">
+              <Link to="/request-access">
                 <Button size="lg" className="min-w-[200px] sm:min-w-[220px] group">
-                  ابدأ الآن
+                  طلب الوصول
                   <ArrowLeft className="mr-1 h-4 w-4 group-hover:-translate-x-0.5 transition-transform" strokeWidth={1.75} />
                 </Button>
               </Link>
@@ -220,188 +217,34 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section id="pricing" className="py-24 bg-muted/20">
+      {/* Contact / Request Access — no public pricing */}
+      <section id="contact" className="py-24 bg-muted/20">
         <div className="container mx-auto px-4">
           <FadeUp>
-            <div className="text-center mb-16">
+            <div className="max-w-2xl mx-auto text-center">
               <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 px-4 py-2 rounded-full text-sm font-medium text-primary mb-6">
-                <Star className="w-4 h-4" strokeWidth={1.75} />
-                الباقات
+                <Headphones className="w-4 h-4" strokeWidth={1.75} />
+                تواصل معنا
               </div>
-              <h2 className="ds-heading-lg mb-3">خطط تسعير بسيطة وشفافة</h2>
-              <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-                اختر الخطة المناسبة لعملك وابدأ بثقة — بدون رسوم خفية
+              <h2 className="ds-heading-lg mb-3">باقات مخصصة لاحتياجاتك</h2>
+              <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-8 leading-relaxed">
+                لا نعرض الأسعار علناً — فريق المبيعات يتواصل معك عبر واتساب لتحديد الباقة
+                المناسبة لحجم متجرك وأهدافك.
+              </p>
+              <Link to="/request-access">
+                <Button size="lg" className="min-w-[220px] rounded-xl py-6 text-base font-semibold group">
+                  طلب الوصول
+                  <ArrowLeft className="mr-2 h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
+                </Button>
+              </Link>
+              <p className="text-sm text-muted-foreground mt-6">
+                لديك حساب مفعّل؟{' '}
+                <Link to="/login" className="text-primary hover:underline font-medium">
+                  تسجيل الدخول
+                </Link>
               </p>
             </div>
           </FadeUp>
-
-          {/* Billing Toggle */}
-          <FadeUp delay={0.1}>
-            <div className="flex justify-center mb-14">
-              <div className="bg-card border border-border/50 rounded-2xl p-1.5 flex shadow-sm">
-                <button
-                  onClick={() => setBillingType('monthly')}
-                  className={`px-8 py-3 rounded-xl font-semibold text-sm transition-all duration-300 ${
-                    billingType === 'monthly'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  شهري
-                </button>
-                <button
-                  onClick={() => setBillingType('semiannual')}
-                  className={`px-8 py-3 rounded-xl font-semibold text-sm transition-all duration-300 relative ${
-                    billingType === 'semiannual'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  6 أشهر
-                  <span className="absolute -top-2.5 -left-2 bg-destructive text-destructive-foreground text-[10px] px-2 py-0.5 rounded-full font-bold">-49%</span>
-                </button>
-              </div>
-            </div>
-          </FadeUp>
-
-          {billingType === 'monthly' && (
-            <FadeUp>
-              <div className="max-w-lg mx-auto">
-                <div
-                  onClick={() => setSelectedPlan('elite')}
-                  className={`bg-card rounded-2xl p-8 md:p-10 border relative transition-colors cursor-pointer ${
-                    selectedPlan === 'elite'
-                      ? 'border-primary'
-                      : 'border-border/50 hover:border-primary/25'
-                  }`}
-                >
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-5 py-1.5 rounded-full text-xs font-medium">
-                    ✨ الباقة المميزة
-                  </div>
-
-                  {/* Header */}
-                  <div className="flex items-center gap-3 mb-6 pt-4">
-                    <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center">
-                      <Star className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-semibold text-foreground">باقة النخبة</h3>
-                      <p className="text-xs text-foreground/60">كل ما تحتاجه لمتجر ناجح</p>
-                    </div>
-                  </div>
-
-                  {/* Price - Centered */}
-                  <div className="text-center py-6 mb-6 bg-muted/30 rounded-2xl">
-                    <div className="flex items-baseline gap-2 justify-center">
-                      <span className="text-4xl font-semibold text-foreground tabular-nums">50</span>
-                      <span className="text-foreground/70 text-sm font-medium">ألف د.ع / شهرياً</span>
-                    </div>
-                  </div>
-
-                  {/* Features */}
-                  <div className="mb-6">
-                    <p className="text-xs font-bold text-foreground/60 mb-4 tracking-wider">المميزات المتضمنة</p>
-                    <ul className="space-y-3">
-                      {[
-                        "عدد الطلبات: غير محدود",
-                        "عدد المنتجات: غير محدود",
-                        "تحليل البيانات المتقدم",
-                        "إدارة الطلبات المتكاملة",
-                        "دعم فني أولوية عالية",
-                        "عدد الأصناف غير محدود",
-                        "شهادة حماية SSL متقدمة",
-                        "تخصيص كامل للمتجر",
-                      ].map((item, i) => (
-                        <li key={i} className="flex items-center gap-3 text-sm">
-                          <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                            <Check className="w-3 h-3 text-primary" />
-                          </div>
-                          <span className="text-foreground">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <Button
-                    className="w-full rounded-xl py-6 text-base font-semibold"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate('/signup', { state: { selectedPlan: { id: 'elite', name: 'باقة النخبة', price: '50 ألف د.ع' } } });
-                    }}
-                  >
-                    ابدأ الآن
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </FadeUp>
-          )}
-
-          {billingType === 'semiannual' && (
-            <FadeUp>
-              <div className="max-w-lg mx-auto">
-                <div
-                  onClick={() => setSelectedPlan('annual')}
-                  className={`bg-card rounded-2xl p-8 md:p-10 border transition-colors cursor-pointer ${
-                    selectedPlan === 'annual'
-                      ? 'border-primary'
-                      : 'border-border/50 hover:border-primary/25'
-                  }`}
-                >
-                  {/* Header */}
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center">
-                      <Zap className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-semibold text-foreground">باقة 6 أشهر</h3>
-                      <p className="text-xs text-foreground/60">أفضل قيمة لمتجرك</p>
-                    </div>
-                  </div>
-
-                  {/* Price - Centered */}
-                  <div className="text-center py-6 mb-4 bg-muted/30 rounded-2xl">
-                    <div className="text-foreground/50 line-through text-sm mb-1">300 ألف د.ع</div>
-                    <div className="flex items-baseline gap-2 justify-center">
-                      <span className="text-4xl font-semibold text-foreground tabular-nums">125</span>
-                      <span className="text-foreground/70 text-sm font-medium">ألف د.ع / لـ 6 أشهر</span>
-                    </div>
-                  </div>
-                  <div className="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-xs font-bold mb-6 inline-block">
-                    وفّر 49% مقارنة بالدفع الشهري
-                  </div>
-
-                  {/* Features */}
-                  <div className="mb-6">
-                    <p className="text-xs font-bold text-foreground/60 mb-4 tracking-wider">المميزات المتضمنة</p>
-                    <ul className="space-y-3">
-                      {["عدد الطلبات: غير محدود", "عدد المنتجات: غير محدود", "تحليل البيانات", "إدارة الطلبات", "دعم فني", "عدد الأصناف غير محدود", "شهادة حماية SSL"].map((item, i) => (
-                        <li key={i} className="flex items-center gap-3 text-sm">
-                          <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                            <Check className="w-3 h-3 text-primary" />
-                          </div>
-                          <span className="text-foreground">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <Button
-                    size="lg"
-                    className="w-full rounded-xl py-6 text-base font-semibold"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate('/signup', { state: { selectedPlan: { id: 'annual', name: 'باقة 6 أشهر', price: '125 ألف د.ع' } } });
-                    }}
-                  >
-                    ابدأ الآن
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </FadeUp>
-          )}
         </div>
       </section>
 
@@ -429,9 +272,9 @@ const Index = () => {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mb-8">
-                <Link to="/signup">
+                <Link to="/request-access">
                   <Button size="lg" className="min-w-[200px] group font-semibold">
-                    أنشئ متجرك مجاناً
+                    طلب الوصول
                     <ArrowLeft className="mr-1 h-4 w-4 group-hover:-translate-x-0.5 transition-transform" strokeWidth={1.75} />
                   </Button>
                 </Link>

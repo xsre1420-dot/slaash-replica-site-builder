@@ -93,12 +93,21 @@ export type InventoryMovementRow = {
 
 export const fetchProductMovements = async (
   productId: string,
-  limit = 20
+  limit = 20,
+  ownerId?: string
 ): Promise<InventoryMovementRow[]> => {
+  let tenantId = ownerId;
+  if (!tenantId) {
+    const { data: authData } = await supabase.auth.getUser();
+    tenantId = authData.user?.id;
+  }
+  if (!tenantId) return [];
+
   const { data, error } = await (supabase as any)
     .from('inventory_movements')
     .select('id, quantity_delta, reason, created_at')
     .eq('product_id', productId)
+    .eq('owner_id', tenantId)
     .order('created_at', { ascending: false })
     .limit(limit);
 

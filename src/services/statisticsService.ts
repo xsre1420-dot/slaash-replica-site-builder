@@ -60,8 +60,7 @@ export const getStatisticsDateBounds = (
 const fetchStoreStatisticsRpc = async (
   ownerId: string,
   periodStart: string,
-  periodEnd: string,
-  daysFallback?: number
+  periodEnd: string
 ): Promise<Record<string, unknown> | undefined> => {
   try {
     const { data, error } = await (supabase as any).rpc('get_store_statistics', {
@@ -71,20 +70,6 @@ const fetchStoreStatisticsRpc = async (
     });
     if (!error && data) {
       return data as Record<string, unknown>;
-    }
-
-    if (error && daysFallback != null) {
-      console.warn(
-        '[statistics] get_store_statistics(date range) unavailable, trying p_days fallback:',
-        error.message
-      );
-      const legacy = await (supabase as any).rpc('get_store_statistics', {
-        p_owner_id: ownerId,
-        p_days: daysFallback,
-      });
-      if (!legacy.error && legacy.data) {
-        return legacy.data as Record<string, unknown>;
-      }
     }
 
     if (error) {
@@ -245,12 +230,11 @@ export const fetchStatisticsData = async (
     try {
       const [kpis, previousKpis] = await withTimeout(
         Promise.all([
-          fetchStoreStatisticsRpc(ownerId, periodStart, periodEnd, bounds.days),
+          fetchStoreStatisticsRpc(ownerId, periodStart, periodEnd),
           fetchStoreStatisticsRpc(
             ownerId,
             bounds.previousStart.toISOString(),
-            previousEnd.toISOString(),
-            bounds.days
+            previousEnd.toISOString()
           ),
         ])
       );

@@ -59,6 +59,17 @@ const resolveStoreIdForOwner = async (ownerId: string): Promise<string | null> =
     /* RPC may be unavailable before migration */
   }
 
+  const { data: storeRow } = await supabase
+    .from('stores')
+    .select('id')
+    .eq('user_id', ownerId)
+    .maybeSingle();
+
+  if (storeRow?.id) {
+    _currentStoreId = storeRow.id;
+    return storeRow.id;
+  }
+
   const { data: settings } = await supabase
     .from('store_settings')
     .select('id')

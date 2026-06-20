@@ -1,7 +1,8 @@
+import { ReactNode } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useStoreHydration } from '@/context/StoreBootstrapContext';
-import { Navigate, useLocation } from 'react-router-dom';
-import { ReactNode } from 'react';
+import { useSubscription } from '@/context/SubscriptionContext';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -10,9 +11,10 @@ interface ProtectedRouteProps {
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { user, loading: authLoading } = useAuth();
   const { isReady, isHydrating } = useStoreHydration();
+  const { hasAccess, isAdmin, loading: subLoading } = useSubscription();
   const location = useLocation();
 
-  if (authLoading || (user && !isReady && isHydrating)) {
+  if (authLoading || subLoading || (user && !isReady && isHydrating)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -38,6 +40,10 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       );
     }
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+
+  if (!hasAccess && !isAdmin) {
+    return <Navigate to="/subscription-expired" replace />;
   }
 
   return <>{children}</>;

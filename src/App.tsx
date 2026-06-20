@@ -10,7 +10,9 @@ import RouteObserver from "./components/RouteObserver";
 import { CartProvider } from "./context/CartContext";
 import { StoreProvider } from "./context/StoreContext";
 import { AuthProvider } from "./context/AuthContext";
+import { SubscriptionProvider } from "./context/SubscriptionContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AdminRoute } from "./components/AdminRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 import OfflineBanner from "./components/OfflineBanner";
 import RecoveryBanner from "./components/RecoveryBanner";
@@ -20,7 +22,12 @@ import SubdomainRouter from "./components/SubdomainRouter";
 // Lazy load ALL pages
 const Index = lazy(() => import("./pages/Index"));
 const Login = lazy(() => import("./pages/Login"));
-const Signup = lazy(() => import("./pages/Signup"));
+const RequestAccess = lazy(() => import("./pages/RequestAccess"));
+const SubscriptionExpired = lazy(() => import("./pages/SubscriptionExpired"));
+const AdminLeads = lazy(() => import("./pages/admin/AdminLeads"));
+const AdminLeadDetail = lazy(() => import("./pages/admin/AdminLeadDetail"));
+const AdminSubscriptions = lazy(() => import("./pages/admin/AdminSubscriptions"));
+const AdminCustomers = lazy(() => import("./pages/admin/AdminCustomers"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const Builder = lazy(() => import("./pages/Builder"));
@@ -78,6 +85,7 @@ const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <SubscriptionProvider>
         <StoreBootstrapProvider>
         <StoreProvider>
           <TooltipProvider>
@@ -93,7 +101,9 @@ const App = () => (
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/login" element={<Login />} />
-                    <Route path="/signup" element={<Signup />} />
+                    <Route path="/request-access" element={<RequestAccess />} />
+                    <Route path="/signup" element={<RequestAccess />} />
+                    <Route path="/subscription-expired" element={<SubscriptionExpired />} />
                     <Route path="/auth/callback" element={<AuthCallback />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/builder" element={<ProtectedRoute><Builder /></ProtectedRoute>} />
@@ -106,6 +116,10 @@ const App = () => (
                     <Route path="/orders/:orderId" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
                     <Route path="/marketing" element={<ProtectedRoute><Marketing /></ProtectedRoute>} />
                     <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+                    <Route path="/admin/leads" element={<AdminRoute><AdminLeads /></AdminRoute>} />
+                    <Route path="/admin/leads/:leadId" element={<AdminRoute><AdminLeadDetail /></AdminRoute>} />
+                    <Route path="/admin/subscriptions" element={<AdminRoute><AdminSubscriptions /></AdminRoute>} />
+                    <Route path="/admin/customers" element={<AdminRoute><AdminCustomers /></AdminRoute>} />
                     <Route path="/store/:username" element={<Store />} />
                     <Route path="/store/:username/product/:productId" element={<ProductDetails />} />
                     <Route path="/product-details/:productId" element={<ProductDetails />} />
@@ -121,6 +135,7 @@ const App = () => (
           </TooltipProvider>
         </StoreProvider>
         </StoreBootstrapProvider>
+        </SubscriptionProvider>
       </AuthProvider>
     </QueryClientProvider>
   </ErrorBoundary>
