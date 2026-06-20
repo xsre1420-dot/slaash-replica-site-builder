@@ -10,7 +10,8 @@ if (-not (Get-Command supabase -ErrorAction SilentlyContinue)) {
   exit 1
 }
 
-$linkFile = Join-Path $PSScriptRoot ".." "supabase" ".temp" "project-ref"
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$linkFile = Join-Path $repoRoot "supabase\.temp\project-ref"
 if (-not (Test-Path $linkFile)) {
   Write-Host ""
   Write-Host "Project not linked. Run first:" -ForegroundColor Yellow
@@ -18,17 +19,25 @@ if (-not (Test-Path $linkFile)) {
   Write-Host "  supabase link --project-ref YOUR_PROJECT_REF" -ForegroundColor White
   Write-Host ""
   Write-Host "Or paste migrations manually in Supabase Dashboard > SQL Editor:" -ForegroundColor Yellow
-  Get-ChildItem (Join-Path $PSScriptRoot ".." "supabase" "migrations" "20260616*.sql") | ForEach-Object {
+  Get-ChildItem (Join-Path $repoRoot "supabase\migrations\20260616*.sql") | ForEach-Object {
     Write-Host "  - $($_.Name)" -ForegroundColor Gray
   }
   exit 1
 }
 
-Push-Location (Join-Path $PSScriptRoot "..")
+Push-Location $repoRoot
 try {
   Write-Host "Pushing migrations..." -ForegroundColor Green
-  supabase db push
-  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+  supabase db push --yes
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host ""
+    Write-Host "Push failed. If objects already exist on remote, try baseline then redeploy:" -ForegroundColor Yellow
+    Write-Host "  npm run db:baseline -- -UpTo 20250823232602" -ForegroundColor White
+    Write-Host "  npm run db:deploy" -ForegroundColor White
+    Write-Host ""
+    Write-Host "Or use idempotent reconcile migration 20250628180100 (included in repo)." -ForegroundColor Yellow
+    exit $LASTEXITCODE
+  }
 
   Write-Host ""
   Write-Host "Regenerating TypeScript types..." -ForegroundColor Green

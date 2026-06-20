@@ -10,6 +10,26 @@ supabase link --project-ref YOUR_PROJECT_REF
 npm run db:deploy
 ```
 
+### Existing remote DB (tables already created — no data loss)
+
+If `db push` fails with **relation already exists** (e.g. `restaurant_owners`):
+
+**Option A — recommended:** migrations are idempotent; retry:
+
+```powershell
+npm run db:deploy
+```
+
+**Option B — baseline:** mark old migrations as applied, then push the rest:
+
+```powershell
+npm run db:baseline -- -UpTo 20250823232602
+npm run db:deploy
+npm run db:verify
+```
+
+Use `-DryRun` first to preview: `npm run db:baseline -- -UpTo 20250823232602 -DryRun`
+
 Or manually:
 
 ```powershell

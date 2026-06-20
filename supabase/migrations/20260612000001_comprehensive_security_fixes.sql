@@ -287,25 +287,35 @@ CREATE POLICY "Owners can view their own categories"
   USING (owner_id = auth.uid());
 
 -- =============================================================================
--- Fix suggested products public leak
--- =============================================================================
-
-DROP POLICY IF EXISTS "Public can view suggested products" ON public.suggested_products;
-
-CREATE POLICY "Owners manage suggested products"
-  ON public.suggested_products FOR ALL
-  USING (EXISTS (
-    SELECT 1 FROM products p WHERE p.id = suggested_products.product_id AND p.owner_id = auth.uid()
-  ));
+-- Fix suggested products public leak (skip if table not created yet)
+DO $$
+BEGIN
+  IF to_regclass('public.suggested_products') IS NOT NULL THEN
+    DROP POLICY IF EXISTS "Public can view suggested products" ON public.suggested_products;
+    DROP POLICY IF EXISTS "Owners manage suggested products" ON public.suggested_products;
+    CREATE POLICY "Owners manage suggested products"
+      ON public.suggested_products FOR ALL
+      USING (EXISTS (
+        SELECT 1 FROM products p WHERE p.id = suggested_products.product_id AND p.owner_id = auth.uid()
+      ));
+  END IF;
+END $$;
 
 -- =============================================================================
 -- Revoke dangerous SECURITY DEFINER functions from public
 -- =============================================================================
 
-REVOKE ALL ON FUNCTION public.cleanup_orphaned_reviews() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.cleanup_orphaned_suggestions() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.cleanup_orphaned_reviews() TO service_role;
-GRANT EXECUTE ON FUNCTION public.cleanup_orphaned_suggestions() TO service_role;
+DO $$
+BEGIN
+  IF to_regprocedure('public.cleanup_orphaned_reviews()') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.cleanup_orphaned_reviews() FROM PUBLIC;
+    GRANT EXECUTE ON FUNCTION public.cleanup_orphaned_reviews() TO service_role;
+  END IF;
+  IF to_regprocedure('public.cleanup_orphaned_suggestions()') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.cleanup_orphaned_suggestions() FROM PUBLIC;
+    GRANT EXECUTE ON FUNCTION public.cleanup_orphaned_suggestions() TO service_role;
+  END IF;
+END $$;
 
 -- =============================================================================
 -- Remove security audit triggers polluting store_visits
@@ -429,22 +439,25 @@ REVOKE ALL ON FUNCTION public.get_store_product_by_id(TEXT, UUID) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_store_product_by_id(TEXT, UUID) TO anon, authenticated;
 
 -- =============================================================================
--- Product reviews: public insert pending approval only
--- =============================================================================
-
-DROP POLICY IF EXISTS "Anyone can insert product reviews" ON public.product_reviews;
-DROP POLICY IF EXISTS "Public can insert reviews" ON public.product_reviews;
-
-CREATE POLICY "Public can submit pending reviews"
-  ON public.product_reviews FOR INSERT
-  WITH CHECK (
-    is_approved = false
-    AND EXISTS (
-      SELECT 1 FROM products p
-      WHERE p.id = product_id AND COALESCE(p.is_active, true) = true
-    )
-  );
-
-CREATE POLICY "Owners approve reviews"
-  ON public.product_reviews FOR UPDATE
-  USING (owner_id = auth.uid());
+-- Product reviews: public insert pending approval only (skip if table absent)
+DO $$
+BEGIN
+  IF to_regclass('public.product_reviews') IS NOT NULL THEN
+    DROP POLICY IF EXISTS "Anyone can insert product reviews" ON public.product_reviews;
+    DROP POLICY IF EXISTS "Public can insert reviews" ON public.product_reviews;
+    DROP POLICY IF EXISTS "Public can submit pending reviews" ON public.product_reviews;
+    DROP POLICY IF EXISTS "Owners approve reviews" ON public.product_reviews;
+    CREATE POLICY "Public can submit pending reviews"
+      ON public.product_reviews FOR INSERT
+      WITH CHECK (
+        is_approved = false
+        AND EXISTS (
+          SELECT 1 FROM products p
+          WHERE p.id = product_id AND COALESCE(p.is_active, true) = true
+        )
+      );
+    CREATE POLICY "Owners approve reviews"
+      ON public.product_reviews FOR UPDATE
+      USING (owner_id = auth.uid());
+  END IF;
+END $$;

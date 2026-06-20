@@ -16,20 +16,45 @@ CREATE TABLE IF NOT EXISTS public.stores (
   CONSTRAINT stores_user_id_unique UNIQUE (user_id)
 );
 
+ALTER TABLE public.stores ADD COLUMN IF NOT EXISTS user_id UUID;
+ALTER TABLE public.stores ADD COLUMN IF NOT EXISTS store_name TEXT DEFAULT 'متجري';
+ALTER TABLE public.stores ADD COLUMN IF NOT EXISTS store_slug TEXT;
+ALTER TABLE public.stores ADD COLUMN IF NOT EXISTS theme_id TEXT DEFAULT 'default';
+ALTER TABLE public.stores ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();
+ALTER TABLE public.stores ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'stores_user_id_unique'
+  ) THEN
+    ALTER TABLE public.stores ADD CONSTRAINT stores_user_id_unique UNIQUE (user_id);
+  END IF;
+EXCEPTION WHEN OTHERS THEN
+  NULL;
+END $$;
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_stores_slug_lower
   ON public.stores (LOWER(store_slug))
   WHERE store_slug IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_stores_user_id ON public.stores(user_id);
 
+ALTER TABLE public.store_settings ADD COLUMN IF NOT EXISTS store_slug TEXT;
+
 -- Backfill from existing store_settings (preserve ids for FK consistency)
-INSERT INTO public.stores (id, user_id, store_name, store_slug)
-SELECT ss.id, ss.owner_id, COALESCE(ss.store_name, 'متجري'), ss.store_slug
-FROM public.store_settings ss
-ON CONFLICT (user_id) DO UPDATE SET
-  store_name = EXCLUDED.store_name,
-  store_slug = EXCLUDED.store_slug,
-  updated_at = now();
+DO $$
+BEGIN
+  IF to_regclass('public.store_settings') IS NOT NULL THEN
+    INSERT INTO public.stores (id, user_id, store_name, store_slug)
+    SELECT ss.id, ss.owner_id, COALESCE(ss.store_name, 'متجري'), ss.store_slug
+    FROM public.store_settings ss
+    ON CONFLICT (user_id) DO UPDATE SET
+      store_name = EXCLUDED.store_name,
+      store_slug = EXCLUDED.store_slug,
+      updated_at = now();
+  END IF;
+END $$;
 
 -- ---------------------------------------------------------------------------
 -- store_id on products & categories

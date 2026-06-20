@@ -16,16 +16,24 @@ CREATE INDEX IF NOT EXISTS idx_products_owner_category_created
 CREATE INDEX IF NOT EXISTS idx_orders_owner_status_created
   ON public.orders (owner_id, status, created_at DESC);
 
+ALTER TABLE public.products
+  ADD COLUMN IF NOT EXISTS discount_type TEXT DEFAULT 'none',
+  ADD COLUMN IF NOT EXISTS discount_value NUMERIC DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS discount_start_date TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS discount_end_date TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS original_price NUMERIC;
+
 -- =============================================================================
 -- Slim storefront product JSON (excludes cost)
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION public.storefront_product_json(p public.products)
 RETURNS JSONB
-LANGUAGE sql
+LANGUAGE plpgsql
 IMMUTABLE
 AS $$
-  SELECT jsonb_build_object(
+BEGIN
+  RETURN jsonb_build_object(
     'id', p.id,
     'name', p.name,
     'description', p.description,
@@ -44,6 +52,7 @@ AS $$
     'original_price', p.original_price,
     'created_at', p.created_at
   );
+END;
 $$;
 
 -- =============================================================================

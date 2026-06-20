@@ -40,6 +40,8 @@ AS $$
   );
 $$;
 
+DROP FUNCTION IF EXISTS public.platform_health_check();
+
 CREATE OR REPLACE FUNCTION public.platform_health_check()
 RETURNS JSONB
 LANGUAGE plpgsql

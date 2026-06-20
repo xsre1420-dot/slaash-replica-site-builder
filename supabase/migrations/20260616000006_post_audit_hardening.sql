@@ -3,6 +3,8 @@
 GRANT EXECUTE ON FUNCTION public.get_owner_products_page(UUID, INT, INT, TEXT, TEXT) TO authenticated;
 
 -- Align product view tracking with storefront visibility
+DROP FUNCTION IF EXISTS public.track_product_view_by_slug(TEXT, UUID, TEXT);
+
 CREATE OR REPLACE FUNCTION public.track_product_view_by_slug(
   p_slug TEXT,
   p_product_id UUID,

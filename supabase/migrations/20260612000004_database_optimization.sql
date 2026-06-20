@@ -1,6 +1,69 @@
 -- Database optimization: schema baseline, FKs, indexes, constraints, variant stock, RLS
 
 -- =============================================================================
+-- Legacy tables skipped by baseline (create if absent — no data loss)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS public.marketing_coupons (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  owner_id UUID NOT NULL,
+  code TEXT NOT NULL,
+  discount_type TEXT NOT NULL CHECK (discount_type IN ('percentage', 'fixed_amount')),
+  discount_value NUMERIC NOT NULL CHECK (discount_value > 0),
+  minimum_order_amount NUMERIC DEFAULT 0,
+  usage_limit INTEGER,
+  used_count INTEGER DEFAULT 0,
+  start_date TIMESTAMPTZ DEFAULT now(),
+  end_date TIMESTAMPTZ,
+  is_active BOOLEAN DEFAULT true,
+  description TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.marketing_settings (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  owner_id UUID NOT NULL UNIQUE,
+  meta_pixel_id TEXT,
+  facebook_access_token TEXT,
+  google_analytics_id TEXT,
+  marketing_enabled BOOLEAN DEFAULT false,
+  email_marketing_enabled BOOLEAN DEFAULT false,
+  sms_marketing_enabled BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.product_reviews (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  product_id UUID NOT NULL,
+  owner_id UUID NOT NULL,
+  reviewer_name TEXT NOT NULL,
+  reviewer_email TEXT,
+  rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+  comment TEXT NOT NULL,
+  is_approved BOOLEAN NOT NULL DEFAULT true,
+  is_featured BOOLEAN NOT NULL DEFAULT false,
+  helpful_count INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.suggested_products (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  product_id UUID NOT NULL,
+  suggested_product_id UUID NOT NULL,
+  owner_id UUID NOT NULL,
+  display_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.marketing_coupons ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.marketing_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.product_reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.suggested_products ENABLE ROW LEVEL SECURITY;
+
+-- =============================================================================
 -- Schema baseline (columns referenced by RPCs but missing from early migrations)
 -- =============================================================================
 
@@ -113,11 +176,17 @@ CREATE INDEX IF NOT EXISTS idx_order_items_owner_order
 -- =============================================================================
 
 DELETE FROM public.product_reviews pr
-WHERE NOT EXISTS (SELECT 1 FROM public.products p WHERE p.id = pr.product_id);
+WHERE to_regclass('public.product_reviews') IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM public.products p WHERE p.id = pr.product_id);
 
-DELETE FROM public.suggested_products sp
-WHERE NOT EXISTS (SELECT 1 FROM public.products p WHERE p.id = sp.product_id)
-   OR NOT EXISTS (SELECT 1 FROM public.products p WHERE p.id = sp.suggested_product_id);
+DO $$
+BEGIN
+  IF to_regclass('public.suggested_products') IS NOT NULL THEN
+    DELETE FROM public.suggested_products sp
+    WHERE NOT EXISTS (SELECT 1 FROM public.products p WHERE p.id = sp.product_id)
+       OR NOT EXISTS (SELECT 1 FROM public.products p WHERE p.id = sp.suggested_product_id);
+  END IF;
+END $$;
 
 DO $$
 BEGIN

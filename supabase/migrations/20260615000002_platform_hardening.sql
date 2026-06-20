@@ -231,5 +231,9 @@ REVOKE ALL ON FUNCTION public.is_payment_method_allowed(UUID, TEXT) FROM anon;
 
 -- ---------------------------------------------------------------------------
 -- P1: Deprecate legacy get_store_by_slug (UUID leak, no slug validation)
--- ---------------------------------------------------------------------------
-REVOKE ALL ON FUNCTION public.get_store_by_slug(TEXT) FROM PUBLIC, anon, authenticated;
+DO $$
+BEGIN
+  IF to_regprocedure('public.get_store_by_slug(text)') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.get_store_by_slug(TEXT) FROM PUBLIC, anon, authenticated;
+  END IF;
+END $$;

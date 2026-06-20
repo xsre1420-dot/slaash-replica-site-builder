@@ -375,11 +375,18 @@ GRANT EXECUTE ON FUNCTION public.submit_product_review_for_store(TEXT, UUID, TEX
 REVOKE ALL ON FUNCTION public.validate_store_coupon_by_slug(TEXT, TEXT, DECIMAL) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.validate_store_coupon_by_slug(TEXT, TEXT, DECIMAL) TO anon, authenticated;
 
--- Revoke raw owner_id enumeration RPCs from public clients
-REVOKE ALL ON FUNCTION public.get_store_products(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_store_categories(UUID) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.get_store_products(UUID) TO service_role;
-GRANT EXECUTE ON FUNCTION public.get_store_categories(UUID) TO service_role;
+-- Revoke raw owner_id enumeration RPCs from public clients (legacy functions may be absent)
+DO $$
+BEGIN
+  IF to_regprocedure('public.get_store_products(uuid)') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.get_store_products(UUID) FROM PUBLIC;
+    GRANT EXECUTE ON FUNCTION public.get_store_products(UUID) TO service_role;
+  END IF;
+  IF to_regprocedure('public.get_store_categories(uuid)') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.get_store_categories(UUID) FROM PUBLIC;
+    GRANT EXECUTE ON FUNCTION public.get_store_categories(UUID) TO service_role;
+  END IF;
+END $$;
 
 -- Restrict legacy coupon validation: authenticated merchants may only validate their own coupons
 CREATE OR REPLACE FUNCTION public.validate_store_coupon(

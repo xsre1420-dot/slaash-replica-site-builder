@@ -58,6 +58,7 @@ $$;
 DROP POLICY IF EXISTS "Restaurant owners can view their own profile" ON public.restaurant_owners;
 
 -- 4. Create a new restrictive SELECT policy that denies all direct SELECT access
+DROP POLICY IF EXISTS "Deny direct SELECT access to restaurant_owners" ON public.restaurant_owners;
 CREATE POLICY "Deny direct SELECT access to restaurant_owners" 
 ON public.restaurant_owners 
 FOR SELECT 

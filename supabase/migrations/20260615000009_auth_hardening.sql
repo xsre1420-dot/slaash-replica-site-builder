@@ -1,5 +1,7 @@
 -- Auth hardening: username availability check + profile user_id alignment
 
+DROP FUNCTION IF EXISTS public.is_username_available(TEXT);
+
 CREATE OR REPLACE FUNCTION public.is_username_available(p_username TEXT)
 RETURNS BOOLEAN
 LANGUAGE sql
