@@ -1,6 +1,7 @@
 
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Zap, Package, BarChart3, Lock, Palette, Headphones, TrendingUp, Sparkles, Globe, Shield } from "lucide-react";
+import { ArrowLeft, Zap, Package, BarChart3, Lock, Palette, Headphones, TrendingUp, Sparkles, Smartphone, Check, Rocket, Phone } from "lucide-react";
+import ElitePricingCard from "@/components/landing/ElitePricingCard";
 import { Link } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useState, useEffect, useRef } from "react";
@@ -29,19 +30,119 @@ const stats = [
 ];
 
 const features = [
-  { icon: Package, title: "إدارة منتجات ذكية", desc: "نظّم مخزونك وتابع منتجاتك بخطوات بسيطة وبدون أخطاء", color: "from-primary/20 to-primary/5" },
-  { icon: BarChart3, title: "تحليلات لحظية", desc: "لوحات بيانات تفاعلية لتتبع الأداء المالي والتشغيلي", color: "from-secondary/20 to-secondary/5" },
-  { icon: Lock, title: "أمان متكامل", desc: "بياناتك وبيانات عملائك محمية بنظام حماية متقدم", color: "from-primary/20 to-primary/5" },
-  { icon: Palette, title: "تصميم بدون برمجة", desc: "صمّم متجرك بنفسك بواجهة سهلة دون أي خبرة تقنية", color: "from-secondary/20 to-secondary/5" },
-  { icon: Headphones, title: "دعم فني متواصل", desc: "فريق دعم متجاوب يساعدك في كل خطوة", color: "from-primary/20 to-primary/5" },
-  { icon: TrendingUp, title: "تقارير الأداء", desc: "تحليلات حيّة تساعدك على اتخاذ قرارات ذكية", color: "from-secondary/20 to-secondary/5" },
+  {
+    icon: Package,
+    tag: "مخزون",
+    title: "منتجات ومخزون في مكان واحد",
+    desc: "أضف منتجاتك، عدّل الكميات، وتابع الحركة — دون جداول معقدة أو أخطاء يدوية.",
+    iconBg: "bg-primary/10 group-hover:bg-primary/15",
+    iconColor: "text-primary",
+    ring: "ring-primary/10 group-hover:ring-primary/25",
+    featured: true,
+  },
+  {
+    icon: BarChart3,
+    tag: "تحليلات",
+    title: "لوحة تحكم لحظية",
+    desc: "شاهد مبيعاتك وزياراتك وأداء متجرك لحظة بلحظة من شاشة واحدة واضحة.",
+    iconBg: "bg-emerald-500/10 group-hover:bg-emerald-500/15",
+    iconColor: "text-emerald-600 dark:text-emerald-400",
+    ring: "ring-emerald-500/10 group-hover:ring-emerald-500/25",
+  },
+  {
+    icon: Lock,
+    tag: "أمان",
+    title: "حماية لبياناتك وبيانات عملائك",
+    desc: "تشفير، صلاحيات، ونسخ احتياطي — ركّز على البيع واترك الأمان لنا.",
+    iconBg: "bg-violet-500/10 group-hover:bg-violet-500/15",
+    iconColor: "text-violet-600 dark:text-violet-400",
+    ring: "ring-violet-500/10 group-hover:ring-violet-500/25",
+  },
+  {
+    icon: Palette,
+    tag: "تصميم",
+    title: "صمّم متجرك بنفسك",
+    desc: "غيّر الألوان والشعار والصفحات بسهولة — بدون مطوّر ولا سطر كود.",
+    iconBg: "bg-amber-500/10 group-hover:bg-amber-500/15",
+    iconColor: "text-amber-600 dark:text-amber-400",
+    ring: "ring-amber-500/10 group-hover:ring-amber-500/25",
+  },
+  {
+    icon: Headphones,
+    tag: "دعم",
+    title: "دعم يرافقك خطوة بخطوة",
+    desc: "فريقنا جاهز عندما تحتاج مساعدة في الإعداد، التشغيل، أو حل أي عائق.",
+    iconBg: "bg-sky-500/10 group-hover:bg-sky-500/15",
+    iconColor: "text-sky-600 dark:text-sky-400",
+    ring: "ring-sky-500/10 group-hover:ring-sky-500/25",
+  },
+  {
+    icon: Smartphone,
+    tag: "جوال",
+    title: "تجربة مثالية على الهاتف",
+    desc: "متجرك يبدو احترافياً على الجوال والتابلت — لأن أغلب زبائنك يتصفحون من هناك.",
+    iconBg: "bg-rose-500/10 group-hover:bg-rose-500/15",
+    iconColor: "text-rose-600 dark:text-rose-400",
+    ring: "ring-rose-500/10 group-hover:ring-rose-500/25",
+  },
 ];
 
 const steps = [
-  { step: "01", title: "اطلب الوصول", desc: "أرسل اسمك ورقم واتساب", icon: Globe },
-  { step: "02", title: "تواصل مع المبيعات", desc: "نحدد الباقة المناسبة لك", icon: Headphones },
+  { step: "01", title: "اختر مدة اشتراكك", desc: "6 أشهر أو سنة — بسعر واضح", icon: Package },
+  { step: "02", title: "أرسل بياناتك", desc: "الاسم ورقم واتساب للتواصل", icon: Phone },
   { step: "03", title: "ابدأ البيع", desc: "نفعّل حسابك ومتجرك", icon: TrendingUp },
 ];
+
+type FeatureItem = (typeof features)[number];
+
+const FeatureCard = ({ feature, index }: { feature: FeatureItem; index: number }) => {
+  const Icon = feature.icon;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-40px" }}
+      transition={{ duration: 0.5, delay: index * 0.07, ease: [0.22, 1, 0.36, 1] }}
+      whileHover={{ y: -6 }}
+      className={feature.featured ? "md:col-span-2 lg:col-span-2" : undefined}
+    >
+      <div
+        className={`group relative h-full overflow-hidden rounded-2xl border border-border/50 bg-card p-6 sm:p-7 ring-1 ring-inset transition-all duration-300 hover:border-primary/25 hover:shadow-lg hover:shadow-primary/[0.06] ${feature.ring}`}
+      >
+        <div className="pointer-events-none absolute -left-16 -top-16 h-40 w-40 rounded-full bg-primary/[0.04] blur-3xl transition-opacity duration-500 group-hover:opacity-100 opacity-0" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/[0.03] via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+        <div className={`relative flex h-full flex-col ${feature.featured ? "sm:flex-row sm:items-start sm:gap-6" : ""}`}>
+          <div className={`mb-4 flex items-start justify-between gap-3 ${feature.featured ? "sm:mb-0 sm:shrink-0" : ""}`}>
+            <motion.div
+              whileHover={{ scale: 1.08, rotate: -4 }}
+              transition={{ type: "spring", stiffness: 400, damping: 18 }}
+              className={`flex h-12 w-12 items-center justify-center rounded-xl transition-colors duration-300 ${feature.iconBg}`}
+            >
+              <Icon className={`h-6 w-6 ${feature.iconColor}`} strokeWidth={1.75} />
+            </motion.div>
+            <span className="rounded-full border border-border/60 bg-muted/50 px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors group-hover:border-primary/20 group-hover:text-primary">
+              {feature.tag}
+            </span>
+          </div>
+
+          <div className="flex flex-1 flex-col">
+            <h3 className="mb-2 text-base font-semibold text-foreground transition-colors group-hover:text-primary sm:text-lg">
+              {feature.title}
+            </h3>
+            <p className="flex-1 text-sm leading-relaxed text-muted-foreground">{feature.desc}</p>
+
+            <div className="mt-5 flex items-center gap-1.5 text-xs font-medium text-primary opacity-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-100">
+              <span>اكتشف المزيد</span>
+              <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
 
 const Index = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -67,11 +168,11 @@ const Index = () => {
                 تسجيل الدخول
               </Button>
             </Link>
-            <Link to="/request-access">
+            <a href="#pricing">
               <Button size="sm" className="rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground px-5 font-semibold">
-                طلب الوصول
+                الباقات
               </Button>
-            </Link>
+            </a>
           </div>
         </div>
       </header>
@@ -119,12 +220,12 @@ const Index = () => {
               transition={{ duration: 0.45, delay: 0.28 }}
               className="flex flex-col sm:flex-row gap-3 justify-center items-center"
             >
-              <Link to="/request-access">
+              <a href="#pricing">
                 <Button size="lg" className="min-w-[200px] sm:min-w-[220px] group">
-                  طلب الوصول
+                  ابدأ الآن
                   <ArrowLeft className="mr-1 h-4 w-4 group-hover:-translate-x-0.5 transition-transform" strokeWidth={1.75} />
                 </Button>
-              </Link>
+              </a>
               <Link to="/login">
                 <Button variant="outline" size="lg" className="min-w-[200px] sm:min-w-[220px]">
                   لدي حساب بالفعل
@@ -184,119 +285,146 @@ const Index = () => {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-24 bg-background relative">
-        <div className="container mx-auto px-4">
+      <section id="features" className="relative overflow-hidden bg-background py-24">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute inset-0 bg-[linear-gradient(hsl(var(--border)/0.04)_1px,transparent_1px),linear-gradient(90deg,hsl(var(--border)/0.04)_1px,transparent_1px)] bg-[size:56px_56px]" />
+          <div className="absolute -right-24 top-1/4 h-72 w-72 rounded-full bg-primary/[0.04] blur-3xl" />
+          <div className="absolute -left-24 bottom-0 h-64 w-64 rounded-full bg-secondary/[0.06] blur-3xl" />
+        </div>
+
+        <div className="container relative z-10 mx-auto px-4">
           <FadeUp>
-            <div className="text-center mb-16">
-              <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 px-4 py-2 rounded-full text-sm font-semibold text-primary mb-6">
-                <Shield className="w-4 h-4" />
-                المميزات
+            <div className="mx-auto mb-14 max-w-3xl text-center sm:mb-16">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
+                <Sparkles className="h-4 w-4" strokeWidth={1.75} />
+                لماذا بداية؟
               </div>
-              <h2 className="ds-heading-lg mb-3">كل ما يحتاجه متجرك</h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                أدوات متكاملة لإدارة متجرك من الألف إلى الياء
+              <h2 className="ds-heading-lg mb-4">
+                كل ما تحتاجه <span className="text-primary">لتنمية متجرك</span>
+              </h2>
+              <p className="mx-auto max-w-2xl text-lg leading-relaxed text-muted-foreground">
+                من إدارة المنتجات إلى تتبع المبيعات — أدوات عملية مصمّمة لتجّار التجزئة
+                الذين يريدون النمو بسرعة دون تعقيد.
               </p>
             </div>
           </FadeUp>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 max-w-6xl mx-auto">
+          <div className="mx-auto grid max-w-6xl gap-4 md:grid-cols-2 lg:grid-cols-3">
             {features.map((feature, i) => (
-              <FadeUp key={i} delay={i * 0.08}>
-                <div className="bg-card p-6 rounded-xl border border-border/50 hover:border-primary/20 transition-colors group">
-                  <div className="relative">
-                    <div className="w-11 h-11 bg-primary/8 rounded-lg flex items-center justify-center mb-4">
-                      <feature.icon className="w-5 h-5 text-primary" strokeWidth={1.75} />
-                    </div>
-                    <h3 className="text-base font-semibold mb-2 text-foreground">{feature.title}</h3>
-                    <p className="text-muted-foreground text-sm leading-relaxed">{feature.desc}</p>
-                  </div>
-                </div>
-              </FadeUp>
+              <FeatureCard key={feature.title} feature={feature} index={i} />
             ))}
           </div>
         </div>
       </section>
 
-      {/* Contact / Request Access — no public pricing */}
-      <section id="contact" className="py-24 bg-muted/20">
-        <div className="container mx-auto px-4">
+      {/* Pricing */}
+      <section id="pricing" className="relative overflow-hidden bg-muted/20 py-24 sm:py-28">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute inset-0 bg-[linear-gradient(hsl(var(--border)/0.04)_1px,transparent_1px),linear-gradient(90deg,hsl(var(--border)/0.04)_1px,transparent_1px)] bg-[size:48px_48px]" />
+          <div className="absolute -left-24 top-1/3 h-72 w-72 rounded-full bg-primary/[0.05] blur-3xl" />
+        </div>
+
+        <div className="container relative z-10 mx-auto px-4">
           <FadeUp>
-            <div className="max-w-2xl mx-auto text-center">
-              <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 px-4 py-2 rounded-full text-sm font-medium text-primary mb-6">
-                <Headphones className="w-4 h-4" strokeWidth={1.75} />
-                تواصل معنا
+            <div className="mx-auto mb-14 max-w-3xl text-center sm:mb-16">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
+                <Sparkles className="h-4 w-4" strokeWidth={1.75} />
+                باقات الاشتراك
               </div>
-              <h2 className="ds-heading-lg mb-3">باقات مخصصة لاحتياجاتك</h2>
-              <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-8 leading-relaxed">
-                لا نعرض الأسعار علناً — فريق المبيعات يتواصل معك عبر واتساب لتحديد الباقة
-                المناسبة لحجم متجرك وأهدافك.
-              </p>
-              <Link to="/request-access">
-                <Button size="lg" className="min-w-[220px] rounded-xl py-6 text-base font-semibold group">
-                  طلب الوصول
-                  <ArrowLeft className="mr-2 h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
-                </Button>
-              </Link>
-              <p className="text-sm text-muted-foreground mt-6">
-                لديك حساب مفعّل؟{' '}
-                <Link to="/login" className="text-primary hover:underline font-medium">
-                  تسجيل الدخول
-                </Link>
+              <h2 className="ds-heading-lg mb-4">
+                <span className="text-primary">باقة النخبة</span> — كل ما يحتاجه متجرك
+              </h2>
+              <p className="mx-auto max-w-2xl text-lg leading-relaxed text-muted-foreground">
+                اختر مدة الاشتراك المناسبة — 6 أشهر أو سنة — ثم أرسل بياناتك
+                ونتواصل معك عبر واتساب لإكمال التفعيل.
               </p>
             </div>
+          </FadeUp>
+
+          <FadeUp delay={0.1}>
+            <ElitePricingCard />
           </FadeUp>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-24 relative overflow-hidden bg-muted/20 border-t border-border/40">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute inset-0 bg-[linear-gradient(hsl(var(--border)/0.04)_1px,transparent_1px),linear-gradient(90deg,hsl(var(--border)/0.04)_1px,transparent_1px)] bg-[size:48px_48px]" />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-transparent to-background/60" />
+      {/* Final CTA */}
+      <section id="contact" className="relative overflow-hidden py-24 sm:py-28">
+        <div className="pointer-events-none absolute inset-0 bg-muted/30" />
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute inset-0 bg-[linear-gradient(hsl(var(--border)/0.05)_1px,transparent_1px),linear-gradient(90deg,hsl(var(--border)/0.05)_1px,transparent_1px)] bg-[size:48px_48px]" />
+          <div className="absolute left-1/2 top-0 h-96 w-96 -translate-x-1/2 rounded-full bg-primary/[0.07] blur-3xl" />
         </div>
 
-        <div className="container mx-auto px-4 relative z-10">
+        <div className="container relative z-10 mx-auto px-4">
           <FadeUp>
-            <div className="max-w-2xl mx-auto text-center">
-              <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 px-4 py-2 rounded-full text-sm font-semibold text-primary mb-6">
-                <Sparkles className="w-4 h-4" strokeWidth={1.75} />
-                ابدأ الآن
-              </div>
+            <div className="mx-auto max-w-3xl">
+              <div className="relative rounded-3xl p-[1px] bg-gradient-to-br from-primary/30 via-border/40 to-primary/10 shadow-xl shadow-primary/[0.06]">
+                <div className="relative overflow-hidden rounded-[calc(1.5rem-1px)] bg-card/95 p-8 text-center backdrop-blur-sm sm:p-12">
+                  <div className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full bg-primary/[0.06] blur-3xl" />
+                  <div className="pointer-events-none absolute -bottom-20 -left-20 h-48 w-48 rounded-full bg-secondary/[0.08] blur-3xl" />
 
-              <h2 className="ds-heading-lg mb-3 leading-tight">
-                أطلق <span className="text-primary">متجرك</span> اليوم
-              </h2>
+                  <div className="relative">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      whileInView={{ opacity: 1, scale: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.4 }}
+                      className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary"
+                    >
+                      <Rocket className="h-4 w-4" strokeWidth={1.75} />
+                      خطوتك الأولى نحو البيع أونلاين
+                    </motion.div>
 
-              <p className="text-muted-foreground mb-8 text-base max-w-md mx-auto">
-                بيع خلال دقائق — بدون برمجة.
-              </p>
+                    <h2 className="ds-heading-lg mb-5 leading-tight">
+                      لا تنتظر الفرصة —{' '}
+                      <span className="text-primary">ابنِ متجرك وابدأ البيع</span>
+                    </h2>
 
-              <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mb-8">
-                <Link to="/request-access">
-                  <Button size="lg" className="min-w-[200px] group font-semibold">
-                    طلب الوصول
-                    <ArrowLeft className="mr-1 h-4 w-4 group-hover:-translate-x-0.5 transition-transform" strokeWidth={1.75} />
-                  </Button>
-                </Link>
-                <Link to="/login">
-                  <Button variant="outline" size="lg" className="min-w-[200px]">
-                    تسجيل الدخول
-                  </Button>
-                </Link>
-              </div>
+                    <p className="mx-auto mb-8 max-w-xl text-lg leading-relaxed text-muted-foreground">
+                      اخترت باقتك؟ أرسل بياناتك الآن — فريقنا يتواصل معك عبر واتساب لتأكيد الباقة
+                      وتفعيل متجرك{' '}
+                      <span className="font-medium text-foreground">في أسرع وقت.</span>
+                    </p>
 
-              <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-muted-foreground text-xs sm:text-sm">
-                <div className="flex items-center gap-1.5">
-                  <Shield className="w-3.5 h-3.5 text-primary shrink-0" strokeWidth={1.75} />
-                  <span>حماية</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Zap className="w-3.5 h-3.5 text-primary shrink-0" strokeWidth={1.75} />
-                  <span>إعداد سريع</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Headphones className="w-3.5 h-3.5 text-primary shrink-0" strokeWidth={1.75} />
-                  <span>دعم</span>
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="inline-block">
+                      <Link to="/request-access">
+                        <Button
+                          size="lg"
+                          className="group min-h-[52px] min-w-[240px] rounded-xl px-10 py-6 text-base font-bold shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30"
+                        >
+                          ابدأ الآن
+                          <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" strokeWidth={2} />
+                        </Button>
+                      </Link>
+                    </motion.div>
+
+                    <p className="mt-4 text-xs text-muted-foreground/80">
+                      مجاني طلب الوصول — لا بطاقة ائتمان
+                    </p>
+
+                    <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-3 sm:gap-x-8">
+                      {[
+                        "أسعار واضحة على الموقع",
+                        "رد سريع عبر واتساب",
+                        "تفعيل ودعم من اليوم الأول",
+                      ].map((item) => (
+                        <span
+                          key={item}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-muted/40 px-3 py-1.5 text-xs font-medium text-muted-foreground sm:text-sm"
+                        >
+                          <Check className="h-3.5 w-3.5 shrink-0 text-primary" strokeWidth={2.5} />
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+
+                    <p className="mt-8 text-sm text-muted-foreground">
+                      لديك حساب مفعّل؟{' '}
+                      <Link to="/login" className="font-semibold text-primary transition-colors hover:underline">
+                        سجّل دخولك من هنا
+                      </Link>
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

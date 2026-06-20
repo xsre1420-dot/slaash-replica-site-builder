@@ -8,15 +8,23 @@ export class LeadSubmitError extends Error {
   }
 }
 
-export const submitAccessLead = async (
-  fullName: string,
-  whatsappNumber: string,
-  source = 'website'
-): Promise<{ leadId: string }> => {
+export const submitAccessLead = async (input: {
+  fullName: string;
+  whatsappNumber: string;
+  selectedPlanId: string;
+  governorate: string;
+  expectedMonthlyOrders: string;
+  instagramUrl?: string;
+  source?: string;
+}): Promise<{ leadId: string }> => {
   const { data, error } = await (supabase as any).rpc('submit_access_lead', {
-    p_full_name: fullName.trim(),
-    p_whatsapp_number: whatsappNumber.trim(),
-    p_source: source,
+    p_full_name: input.fullName.trim(),
+    p_whatsapp_number: input.whatsappNumber.trim(),
+    p_source: input.source ?? 'website',
+    p_selected_plan_id: input.selectedPlanId.trim(),
+    p_governorate: input.governorate.trim(),
+    p_instagram_url: input.instagramUrl?.trim() || null,
+    p_expected_monthly_orders: input.expectedMonthlyOrders.trim(),
   });
 
   if (error) {
@@ -28,6 +36,9 @@ export const submitAccessLead = async (
     const code = payload?.error;
     if (code === 'invalid_name') throw new LeadSubmitError('يرجى إدخال الاسم الكامل');
     if (code === 'invalid_whatsapp') throw new LeadSubmitError('يرجى إدخال رقم واتساب صحيح');
+    if (code === 'invalid_plan') throw new LeadSubmitError('يرجى اختيار باقة صحيحة');
+    if (code === 'invalid_governorate') throw new LeadSubmitError('يرجى اختيار المحافظة');
+    if (code === 'invalid_monthly_orders') throw new LeadSubmitError('يرجى تحديد عدد الطلبات المتوقع');
     throw new LeadSubmitError('تعذر إرسال الطلب، حاول مرة أخرى');
   }
 

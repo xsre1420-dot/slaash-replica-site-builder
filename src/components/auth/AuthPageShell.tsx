@@ -6,6 +6,9 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 interface AuthPageShellProps {
   children: ReactNode;
   footer?: ReactNode;
+  wide?: boolean;
+  /** Wider form layout (~576px) for multi-field pages */
+  form?: boolean;
 }
 
 export const AuthLoadingScreen = () => (
@@ -17,7 +20,7 @@ export const AuthLoadingScreen = () => (
   </div>
 );
 
-export const AuthPageShell = ({ children, footer }: AuthPageShellProps) => (
+export const AuthPageShell = ({ children, footer, wide = false, form = false }: AuthPageShellProps) => (
   <div className="min-h-screen bg-white font-arabic" dir="rtl">
     <div className="flex min-h-screen flex-col">
       <header className="flex items-center justify-between px-5 py-4 sm:px-8 sm:py-5">
@@ -40,7 +43,13 @@ export const AuthPageShell = ({ children, footer }: AuthPageShellProps) => (
       </header>
 
       <main className="flex flex-1 flex-col items-center justify-center px-5 pb-6 pt-2 sm:px-8 sm:pb-10">
-        <div className="w-full max-w-[400px]">{children}</div>
+        <div
+          className={
+            wide ? 'w-full max-w-5xl' : form ? 'w-full max-w-xl' : 'w-full max-w-[400px]'
+          }
+        >
+          {children}
+        </div>
       </main>
 
       <footer className="py-4 text-center text-xs text-muted-foreground/60 sm:py-5">

@@ -7,6 +7,11 @@ export type LeadRecord = {
   status: LeadStatus;
   source: string;
   notes: string | null;
+  selected_plan_id: string | null;
+  selected_plan_name: string | null;
+  governorate: string | null;
+  instagram_url: string | null;
+  expected_monthly_orders: string | null;
   admin_read_at: string | null;
   converted_user_id: string | null;
   converted_at: string | null;

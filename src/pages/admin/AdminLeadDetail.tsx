@@ -35,6 +35,7 @@ import {
   type LeadRecord,
   type LeadStatus,
 } from '@/types/leads';
+import { getMonthlyOrderLabel } from '@/data/leadFormOptions';
 import { toast } from 'sonner';
 
 const AdminLeadDetail = () => {
@@ -69,6 +70,11 @@ const AdminLeadDetail = () => {
       setLead(data);
       setNotes(data.notes || '');
       setStatus(data.status);
+      setConvertForm((f) => ({
+        ...f,
+        storeName: data.full_name,
+        planName: data.selected_plan_id || data.selected_plan_name || 'standard',
+      }));
       if (!data.admin_read_at) {
         await updateLead(leadId, { markRead: true });
       }
@@ -141,6 +147,49 @@ const AdminLeadDetail = () => {
               </p>
             </div>
             <Badge>{LEAD_STATUS_LABELS[lead.status]}</Badge>
+          </div>
+
+          {lead.selected_plan_name && (
+            <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
+              <span className="text-muted-foreground">الباقة المختارة: </span>
+              <span className="font-semibold text-foreground">{lead.selected_plan_name}</span>
+              {lead.selected_plan_id && (
+                <span className="mr-2 text-xs text-muted-foreground">({lead.selected_plan_id})</span>
+              )}
+            </div>
+          )}
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {lead.governorate && (
+              <div className="rounded-xl border border-border/50 bg-muted/30 px-4 py-3 text-sm">
+                <p className="text-xs text-muted-foreground mb-1">المحافظة</p>
+                <p className="font-medium">{lead.governorate}</p>
+              </div>
+            )}
+            {lead.expected_monthly_orders && (
+              <div className="rounded-xl border border-border/50 bg-muted/30 px-4 py-3 text-sm">
+                <p className="text-xs text-muted-foreground mb-1">الطلبات الشهرية</p>
+                <p className="font-medium">{getMonthlyOrderLabel(lead.expected_monthly_orders)}</p>
+              </div>
+            )}
+            {lead.instagram_url && (
+              <div className="rounded-xl border border-border/50 bg-muted/30 px-4 py-3 text-sm sm:col-span-2">
+                <p className="text-xs text-muted-foreground mb-1">إنستغرام</p>
+                <a
+                  href={
+                    lead.instagram_url.startsWith('http')
+                      ? lead.instagram_url
+                      : `https://instagram.com/${lead.instagram_url.replace(/^@/, '')}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-primary hover:underline break-all"
+                  dir="ltr"
+                >
+                  {lead.instagram_url}
+                </a>
+              </div>
+            )}
           </div>
 
           <p className="text-sm text-muted-foreground">
@@ -258,7 +307,7 @@ const AdminLeadDetail = () => {
               <Input
                 value={convertForm.planName}
                 onChange={(e) => setConvertForm((f) => ({ ...f, planName: e.target.value }))}
-                placeholder="standard / elite / annual"
+                placeholder="annual / yearly"
                 className="rounded-xl"
               />
             </div>

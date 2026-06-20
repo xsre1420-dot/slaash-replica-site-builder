@@ -105,6 +105,8 @@ const AdminLeads = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-right">الاسم</TableHead>
+                  <TableHead className="text-right">الباقة</TableHead>
+                  <TableHead className="text-right">المحافظة</TableHead>
                   <TableHead className="text-right">واتساب</TableHead>
                   <TableHead className="text-right">الحالة</TableHead>
                   <TableHead className="text-right">تاريخ التسجيل</TableHead>
@@ -114,13 +116,13 @@ const AdminLeads = () => {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                       جاري التحميل...
                     </TableCell>
                   </TableRow>
                 ) : rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                       لا توجد نتائج
                     </TableCell>
                   </TableRow>
@@ -134,6 +136,16 @@ const AdminLeads = () => {
                             <Badge className="h-5 text-[10px]">جديد</Badge>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {lead.selected_plan_name ? (
+                          <Badge variant="outline">{lead.selected_plan_name}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {lead.governorate || '—'}
                       </TableCell>
                       <TableCell dir="ltr" className="text-left font-mono text-sm">
                         {lead.whatsapp_number}
