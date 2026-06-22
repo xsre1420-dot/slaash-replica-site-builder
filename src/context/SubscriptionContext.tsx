@@ -3,7 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { fetchMerchantAccess, type MerchantAccessState } from '@/services/subscriptionService';
 
 type SubscriptionContextValue = MerchantAccessState & {
-  refresh: () => Promise<void>;
+  refresh: () => Promise<MerchantAccessState | void>;
 };
 
 const SubscriptionContext = createContext<SubscriptionContextValue | undefined>(undefined);
@@ -25,6 +25,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     setState((s) => ({ ...s, loading: true }));
     const next = await fetchMerchantAccess();
     setState(next);
+    return next;
   };
 
   useEffect(() => {

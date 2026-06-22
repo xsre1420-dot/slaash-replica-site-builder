@@ -30,6 +30,7 @@ import {
 } from '@/types/leads';
 import { type AccessCodeRecord } from '@/types/accessCodes';
 import { getMonthlyOrderLabel } from '@/data/leadFormOptions';
+import { canCreateAccessCodeForLead } from '@/utils/leadAccessCodeUtils';
 import { toast } from 'sonner';
 
 const AdminLeadDetail = () => {
@@ -173,20 +174,35 @@ const AdminLeadDetail = () => {
             {format(new Date(lead.created_at), 'EEEE dd MMMM yyyy، HH:mm', { locale: ar })}
           </p>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            {canCreateAccessCodeForLead(lead) ? (
+              <Button
+                size="lg"
+                className="rounded-xl gap-2 w-full sm:w-auto sm:min-w-[200px]"
+                onClick={() => setCodeOpen(true)}
+              >
+                <KeyRound className="w-5 h-5" />
+                إنشاء رمز دخول
+              </Button>
+            ) : (
+              <Badge variant="outline" className="self-start px-3 py-2">
+                العميل مُفعّل — لا يمكن إنشاء رمز جديد
+              </Badge>
+            )}
             <a
               href={buildWhatsAppUrl(lead.whatsapp_number, `مرحباً ${lead.full_name}، بخصوص طلب الاشتراك في بداية`)}
               target="_blank"
               rel="noopener noreferrer"
+              className="w-full sm:w-auto"
             >
-              <Button className="rounded-xl gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-white">
+              <Button variant="outline" className="rounded-xl gap-2 w-full sm:w-auto bg-[#25D366]/5 text-[#128C7E] border-[#25D366]/30">
                 <MessageCircle className="w-4 h-4" />
                 تواصل واتساب
               </Button>
             </a>
             <Button
               variant="outline"
-              className="rounded-xl gap-2"
+              className="rounded-xl gap-2 w-full sm:w-auto"
               onClick={() => {
                 void navigator.clipboard.writeText(lead.whatsapp_number);
                 toast.success('تم نسخ الرقم');
@@ -195,12 +211,6 @@ const AdminLeadDetail = () => {
               <Copy className="w-4 h-4" />
               نسخ الرقم
             </Button>
-            {lead.status !== 'customer' && (
-              <Button className="rounded-xl gap-2" onClick={() => setCodeOpen(true)}>
-                <KeyRound className="w-4 h-4" />
-                إنشاء رمز
-              </Button>
-            )}
           </div>
         </div>
 

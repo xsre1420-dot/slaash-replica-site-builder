@@ -1,42 +1,79 @@
-import { Link } from 'react-router-dom';
-import { MessageCircle, Phone } from 'lucide-react';
+import { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { KeyRound, MessageCircle, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AuthPageShell } from '@/components/auth/AuthPageShell';
+import { useAuth } from '@/context/AuthContext';
+import { useSubscription } from '@/context/SubscriptionContext';
 import { buildWhatsAppUrl } from '@/types/leads';
 
 const SUPPORT_WHATSAPP = import.meta.env.VITE_SALES_WHATSAPP || '9647700000000';
 
 const SubscriptionExpired = () => {
+  const navigate = useNavigate();
+  const { user, logout, loading: authLoading } = useAuth();
+  const { hasAccess, isAdmin, loading: subLoading } = useSubscription();
+
+  useEffect(() => {
+    if (authLoading || subLoading) return;
+    if (user && (hasAccess || isAdmin)) {
+      navigate(isAdmin ? '/admin/leads' : '/builder', { replace: true });
+    }
+  }, [user, hasAccess, isAdmin, authLoading, subLoading, navigate]);
+
   const waUrl = buildWhatsAppUrl(
     SUPPORT_WHATSAPP,
-    'مرحباً، أريد تجديد اشتراكي في منصة بداية'
+    'مرحباً، أريد تفعيل أو تجديد اشتراكي في منصة بداية'
   );
+
+  const handleEnterCode = async () => {
+    await logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <AuthPageShell>
       <div className="text-center space-y-6 py-6 font-arabic" dir="rtl">
-        <div className="mx-auto w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center">
-          <Phone className="w-8 h-8 text-amber-600" />
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+          <KeyRound className="h-8 w-8 text-primary" />
         </div>
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold">انتهى اشتراكك</h1>
-          <p className="text-muted-foreground leading-relaxed max-w-md mx-auto">
-            للاستمرار في استخدام لوحة التحكم وإدارة متجرك، يرجى التواصل مع فريق المبيعات
-            لتجديد الاشتراك أو ترقية الباقة.
+          <h1 className="text-2xl font-bold">فعّل دخولك للمنصة</h1>
+          <p className="mx-auto max-w-md leading-relaxed text-muted-foreground">
+            أدخل <span className="font-semibold text-foreground">رمز التفعيل</span> الذي أرسله لك فريق
+            المبيعات بعد الاتفاق على الاشتراك. الرمز يفعّل حسابك مباشرة.
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+        <div className="flex flex-col gap-3">
+          <Button className="rounded-xl gap-2 w-full" size="lg" onClick={() => void handleEnterCode()}>
+            <KeyRound className="h-4 w-4" />
+            إدخال رمز التفعيل
+          </Button>
           <a href={waUrl} target="_blank" rel="noopener noreferrer">
-            <Button className="rounded-xl gap-2 w-full sm:w-auto bg-[#25D366] hover:bg-[#20bd5a] text-white">
-              <MessageCircle className="w-4 h-4" />
-              تواصل عبر واتساب
+            <Button
+              variant="outline"
+              className="rounded-xl w-full gap-2 border-[#25D366]/30 text-[#128C7E] hover:bg-[#25D366]/5"
+            >
+              <MessageCircle className="h-4 w-4" />
+              ليس لديك رمز؟ تواصل عبر واتساب
             </Button>
           </a>
-          <Link to="/login">
-            <Button variant="outline" className="rounded-xl w-full sm:w-auto">
-              تسجيل الدخول بحساب آخر
+          <Link to="/request-access">
+            <Button variant="ghost" className="rounded-xl w-full text-muted-foreground">
+              اطلب اشتراكاً جديداً
             </Button>
           </Link>
+          {user && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="rounded-xl gap-2 text-muted-foreground"
+              onClick={() => void logout().then(() => navigate('/login'))}
+            >
+              <LogOut className="h-4 w-4" />
+              خروج والدخول بحساب آخر
+            </Button>
+          )}
         </div>
       </div>
     </AuthPageShell>

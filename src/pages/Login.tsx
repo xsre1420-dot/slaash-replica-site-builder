@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react';
-import { ArrowLeft, Eye, EyeOff, KeyRound, Mail } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -7,20 +7,15 @@ import { Label } from '@/components/ui/label';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/context/AuthContext';
+import { useSubscription } from '@/context/SubscriptionContext';
+import { fetchMerchantAccess } from '@/services/subscriptionService';
 import { useToast } from '@/hooks/use-toast';
 import { AuthPageShell, AuthLoadingScreen } from '@/components/auth/AuthPageShell';
-import { AuthEmailField, AuthPageHeader } from '@/components/auth/AuthFormFields';
-import {
-  authHintClass,
-  authLabelClass,
-  authPasswordInputClass,
-  authSubmitClass,
-  authToggleButtonClass,
-} from '@/components/auth/authFormStyles';
-import { clearAuthUrlParams, parseAuthUrlError, validateEmail, sanitizeInternalRedirect } from '@/lib/authUtils';
+import { AuthPageHeader } from '@/components/auth/AuthFormFields';
+import { authHintClass, authSubmitClass } from '@/components/auth/authFormStyles';
+import { clearAuthUrlParams, parseAuthUrlError, sanitizeInternalRedirect } from '@/lib/authUtils';
 import { env } from '@/lib/env';
 import { formatAccessCodeInput } from '@/types/accessCodes';
-import { cn } from '@/lib/utils';
 
 const redirectAuthTokensToCallback = (navigate: (path: string, opts?: { replace?: boolean }) => void) => {
   if (typeof window === 'undefined') return false;
@@ -40,22 +35,18 @@ const redirectAuthTokensToCallback = (navigate: (path: string, opts?: { replace?
 };
 
 const Login = () => {
-  const [mode, setMode] = useState<'email' | 'code'>('code');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [accessCode, setAccessCode] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [emailNotConfirmed, setEmailNotConfirmed] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [resending, setResending] = useState(false);
-
-  const { login, loginWithAccessCode, user, loading, resendVerificationEmail } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = sanitizeInternalRedirect((location.state as { from?: string } | null)?.from);
   const { toast } = useToast();
+
+  const [accessCode, setAccessCode] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const { loginWithAccessCode, user, loading, logout } = useAuth();
+  const { hasAccess, isAdmin, loading: subLoading, refresh: refreshSubscription } = useSubscription();
 
   useEffect(() => {
     if (redirectAuthTokensToCallback(navigate)) return;
@@ -67,10 +58,18 @@ const Login = () => {
   }, []);
 
   useEffect(() => {
-    if (!loading && user) navigate(from, { replace: true });
-  }, [user, loading, navigate, from]);
+    if (loading || subLoading) return;
+    if (!user) return;
+    if (isAdmin) {
+      navigate('/admin/leads', { replace: true });
+      return;
+    }
+    if (hasAccess) {
+      navigate(from, { replace: true });
+    }
+  }, [user, loading, subLoading, hasAccess, isAdmin, navigate, from]);
 
-  if (loading) return <AuthLoadingScreen />;
+  if (loading || subLoading) return <AuthLoadingScreen />;
 
   const handleCodeSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -87,57 +86,29 @@ const Login = () => {
       const result = await loginWithAccessCode(accessCode, rememberMe);
       if (result.error) {
         setError(result.error);
-      } else {
-        toast({ title: 'مرحباً بك!', description: 'تم تفعيل الدخول بنجاح' });
-        navigate(from, { replace: true });
+        return;
       }
+
+      await refreshSubscription();
+      const access = await fetchMerchantAccess();
+
+      if (access.isAdmin) {
+        navigate('/admin/leads', { replace: true });
+        return;
+      }
+
+      if (access.hasAccess) {
+        toast({ title: 'مرحباً بك!', description: 'تم تفعيل حسابك بنجاح' });
+        navigate('/builder', { replace: true });
+        return;
+      }
+
+      setError('تم قبول الرمز لكن الاشتراك غير نشط — تواصل مع فريق المبيعات');
+      await logout();
     } catch {
       setError('حدث خطأ غير متوقع');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    const emailError = validateEmail(email);
-    if (emailError) {
-      setError(emailError);
-      return;
-    }
-    if (!password.trim()) {
-      setError('يرجى إدخال كلمة المرور');
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-    setEmailNotConfirmed(false);
-
-    try {
-      const result = await login(email, password, rememberMe);
-      if (result.error) {
-        setError(result.error);
-        setEmailNotConfirmed(!!result.emailNotConfirmed);
-      } else {
-        toast({ title: 'تم تسجيل الدخول بنجاح', description: 'مرحباً بك مرة أخرى' });
-        navigate(from, { replace: true });
-      }
-    } catch {
-      setError('حدث خطأ غير متوقع');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleResendVerification = async () => {
-    setResending(true);
-    const result = await resendVerificationEmail(email);
-    setResending(false);
-    if (result.error) {
-      toast({ title: 'خطأ', description: result.error, variant: 'destructive' });
-    } else {
-      toast({ title: 'تم الإرسال', description: 'تحقق من بريدك الإلكتروني' });
     }
   };
 
@@ -145,11 +116,7 @@ const Login = () => {
     <AuthPageShell>
       <AuthPageHeader
         title="تسجيل الدخول"
-        subtitle={
-          mode === 'code'
-            ? 'أدخل رمز التفعيل الذي أرسله لك فريق المبيعات'
-            : 'أدخل بريدك وكلمة المرور (للمسؤولين)'
-        }
+        subtitle="أدخل رمز التفعيل الذي أرسله لك فريق المبيعات"
         meta={
           env.VITE_SUPABASE_PUBLISHABLE_KEY === 'missing-anon-key' ? (
             <p className="text-xs text-destructive mt-2">إعدادات Supabase غير مكتملة — راجع ملف .env</p>
@@ -157,165 +124,37 @@ const Login = () => {
         }
       />
 
-      <div className="mb-6 flex rounded-xl border border-border bg-muted/40 p-1">
-        <button
-          type="button"
-          onClick={() => {
-            setMode('code');
-            setError(null);
-          }}
-          className={cn(
-            'flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-colors',
-            mode === 'code' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
-          )}
-        >
-          <KeyRound className="h-4 w-4" />
-          رمز التفعيل
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setMode('email');
-            setError(null);
-          }}
-          className={cn(
-            'flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-colors',
-            mode === 'email' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
-          )}
-        >
-          <Mail className="h-4 w-4" />
-          بريد إلكتروني
-        </button>
-      </div>
-
-      {mode === 'code' ? (
-        <form onSubmit={handleCodeSubmit} className="space-y-5">
-          {error && (
-            <Alert variant="destructive" className="rounded-lg border text-right">
-              <AlertDescription className="text-sm">{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <div>
-            <Label htmlFor="access-code" className="mb-1.5 block text-sm font-medium">
-              رمز التفعيل
-            </Label>
-            <Input
-              id="access-code"
-              value={accessCode}
-              onChange={(e) => setAccessCode(formatAccessCodeInput(e.target.value))}
-              placeholder="BDY-XXXX-XXXX"
-              className="h-12 rounded-xl text-center font-mono text-lg tracking-widest"
-              dir="ltr"
-              autoComplete="off"
-              disabled={isLoading}
-              required
-            />
-            <p className={authHintClass}>الرمز صالح لمدة اشتراكك (6 أشهر أو سنة)</p>
-          </div>
-
-          <div className="flex items-center justify-end gap-2.5">
-            <Label htmlFor="remember-me-code" className="cursor-pointer text-sm font-normal text-muted-foreground">
-              تذكرني على هذا الجهاز
-            </Label>
-            <Checkbox
-              id="remember-me-code"
-              checked={rememberMe}
-              onCheckedChange={(v) => setRememberMe(v === true)}
-            />
-          </div>
-
-          <Button type="submit" className={authSubmitClass} disabled={isLoading}>
-            {isLoading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
-                جارٍ التحقق…
-              </span>
-            ) : (
-              <span className="flex items-center justify-center gap-2">
-                دخول للمنصة
-                <ArrowLeft className="h-4 w-4" />
-              </span>
-            )}
-          </Button>
-        </form>
-      ) : (
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleCodeSubmit} className="space-y-5">
         {error && (
           <Alert variant="destructive" className="rounded-lg border text-right">
-            <AlertDescription className="space-y-2 text-sm">
-              <p>{error}</p>
-              {emailNotConfirmed && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-9 w-full rounded-lg border-destructive/30 text-sm"
-                  disabled={resending}
-                  onClick={handleResendVerification}
-                >
-                  {resending ? 'جاري الإرسال…' : 'إعادة إرسال رسالة التحقق'}
-                </Button>
-              )}
-            </AlertDescription>
+            <AlertDescription className="text-sm">{error}</AlertDescription>
           </Alert>
         )}
 
-        <AuthEmailField
-          id="login-email"
-          label="البريد الإلكتروني"
-          value={email}
-          onChange={setEmail}
-          disabled={isLoading}
-          required
-        />
-
         <div>
-          <div className="mb-1.5 flex items-center justify-between gap-3">
-            <Link
-              to="/reset-password"
-              className="text-xs font-medium text-primary hover:text-primary/80"
-            >
-              نسيت كلمة المرور؟
-            </Link>
-            <label htmlFor="login-password" className="text-sm font-medium text-foreground">
-              كلمة المرور
-            </label>
-          </div>
-          <div className="relative">
-            <Input
-              id="login-password"
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className={authPasswordInputClass}
-              disabled={isLoading}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className={authToggleButtonClass}
-              aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
-              aria-pressed={showPassword}
-            >
-              {showPassword ? (
-                <EyeOff className="h-[18px] w-[18px]" />
-              ) : (
-                <Eye className="h-[18px] w-[18px]" />
-              )}
-            </button>
-          </div>
-          <p className={authHintClass}>8 أحرف على الأقل</p>
+          <Label htmlFor="access-code" className="mb-1.5 block text-sm font-medium">
+            رمز التفعيل
+          </Label>
+          <Input
+            id="access-code"
+            value={accessCode}
+            onChange={(e) => setAccessCode(formatAccessCodeInput(e.target.value))}
+            placeholder="BDY-XXXX-XXXX"
+            className="h-12 rounded-xl text-center font-mono text-lg tracking-widest"
+            dir="ltr"
+            autoComplete="off"
+            disabled={isLoading}
+            required
+          />
+          <p className={authHintClass}>الرمز صالح لمدة اشتراكك (6 أشهر أو سنة)</p>
         </div>
 
         <div className="flex items-center justify-end gap-2.5">
-          <Label htmlFor="remember-me" className="cursor-pointer text-sm font-normal text-muted-foreground">
+          <Label htmlFor="remember-me-code" className="cursor-pointer text-sm font-normal text-muted-foreground">
             تذكرني على هذا الجهاز
           </Label>
           <Checkbox
-            id="remember-me"
+            id="remember-me-code"
             checked={rememberMe}
             onCheckedChange={(v) => setRememberMe(v === true)}
           />
@@ -325,17 +164,16 @@ const Login = () => {
           {isLoading ? (
             <span className="flex items-center justify-center gap-2">
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
-              جارٍ تسجيل الدخول…
+              جارٍ التحقق…
             </span>
           ) : (
             <span className="flex items-center justify-center gap-2">
-              تسجيل الدخول
+              دخول للمنصة
               <ArrowLeft className="h-4 w-4" />
             </span>
           )}
         </Button>
       </form>
-      )}
 
       <p className="mt-8 text-center text-sm text-muted-foreground">
         ليس لديك رمز؟{' '}

@@ -23,6 +23,8 @@ export const ACCESS_CODE_ERROR_MESSAGES: Record<string, string> = {
   code_revoked: 'تم إلغاء هذا الرمز',
   subscription_expired: 'انتهى اشتراكك — تواصل معنا للتجديد',
   activation_failed: 'تعذر تفعيل الحساب، حاول لاحقاً',
+  lead_already_converted: 'هذا العميل مُفعّل مسبقاً',
+  forbidden: 'ليس لديك صلاحية — أضف حسابك كمسؤول',
   login_failed: 'تعذر تسجيل الدخول، حاول مرة أخرى',
 };
 

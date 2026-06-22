@@ -43,7 +43,13 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   if (!hasAccess && !isAdmin) {
-    return <Navigate to="/subscription-expired" replace />;
+    return (
+      <Navigate
+        to="/subscription-expired"
+        replace
+        state={{ from: location.pathname }}
+      />
+    );
   }
 
   return <>{children}</>;

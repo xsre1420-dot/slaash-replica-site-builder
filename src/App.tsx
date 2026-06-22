@@ -24,6 +24,7 @@ const Index = lazy(() => import("./pages/Index"));
 const Login = lazy(() => import("./pages/Login"));
 const RequestAccess = lazy(() => import("./pages/RequestAccess"));
 const SubscriptionExpired = lazy(() => import("./pages/SubscriptionExpired"));
+const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 const AdminLeads = lazy(() => import("./pages/admin/AdminLeads"));
 const AdminLeadDetail = lazy(() => import("./pages/admin/AdminLeadDetail"));
 const AdminSubscriptions = lazy(() => import("./pages/admin/AdminSubscriptions"));
@@ -116,6 +117,7 @@ const App = () => (
                     <Route path="/orders/:orderId" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
                     <Route path="/marketing" element={<ProtectedRoute><Marketing /></ProtectedRoute>} />
                     <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+                    <Route path="/admin/login" element={<AdminLogin />} />
                     <Route path="/admin" element={<AdminRoute><Navigate to="/admin/leads" replace /></AdminRoute>} />
                     <Route path="/admin/leads" element={<AdminRoute><AdminLeads /></AdminRoute>} />
                     <Route path="/admin/leads/:leadId" element={<AdminRoute><AdminLeadDetail /></AdminRoute>} />

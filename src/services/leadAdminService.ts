@@ -223,7 +223,14 @@ export const redeemAccessCode = async (code: string): Promise<{
     body: { code: code.trim() },
   });
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    const msg = error.message ?? '';
+    if (/failed to fetch|network/i.test(msg)) {
+      throw new Error('تعذر الاتصال بالخادم — تحقق من الإنترنت');
+    }
+    throw new Error(msg);
+  }
+
   const result = data as {
     success?: boolean;
     error?: string;

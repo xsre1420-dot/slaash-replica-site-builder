@@ -122,7 +122,7 @@ const AdminLayout = ({ children, title = 'لوحة الإدارة' }: AdminLayou
               className="rounded-xl"
               onClick={async () => {
                 await logout();
-                navigate('/login');
+                navigate('/admin/login');
               }}
             >
               <LogOut className="w-4 h-4 ml-1" />

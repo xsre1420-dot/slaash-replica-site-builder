@@ -31,11 +31,12 @@ import {
   type LeadRecord,
   type LeadStatus,
 } from '@/types/leads';
+import { canCreateAccessCodeForLead } from '@/utils/leadAccessCodeUtils';
 import { toast } from 'sonner';
 
 const STEPS = [
   { n: '1', title: 'تواصل', desc: 'واتساب العميل' },
-  { n: '2', title: 'أنشئ رمز', desc: 'زر واحد' },
+  { n: '2', title: 'أنشئ رمز', desc: 'الزر الأزرق' },
   { n: '3', title: 'أرسل', desc: 'نسخ أو واتساب' },
 ];
 
@@ -70,6 +71,10 @@ const AdminLeads = () => {
   }, [load]);
 
   const openCodeDialog = (lead: LeadRecord) => {
+    if (!canCreateAccessCodeForLead(lead)) {
+      toast.info('هذا العميل مُفعّل مسبقاً — راجع تفاصيل الطلب');
+      return;
+    }
     setCodeLead(lead);
     setCodeOpen(true);
   };
@@ -79,16 +84,40 @@ const AdminLeads = () => {
     toast.success('تم نسخ الرقم');
   };
 
+  const renderCodeButton = (lead: LeadRecord, fullWidth = false) => {
+    if (!canCreateAccessCodeForLead(lead)) {
+      return (
+        <Badge variant="outline" className="text-xs">
+          مُفعّل
+        </Badge>
+      );
+    }
+    return (
+      <Button
+        size={fullWidth ? 'default' : 'sm'}
+        className={fullWidth ? 'w-full rounded-xl gap-2' : 'rounded-lg h-9 gap-1.5 text-xs sm:text-sm px-3'}
+        onClick={() => openCodeDialog(lead)}
+      >
+        <KeyRound className="w-4 h-4" />
+        إنشاء رمز
+      </Button>
+    );
+  };
+
   return (
     <AdminLayout title="طلبات الاشتراك">
       <div className="space-y-5">
-        <div className="rounded-2xl border border-border/60 bg-card p-4 sm:p-5">
-          <p className="text-sm font-semibold mb-3">خطوات بسيطة</p>
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:p-5">
+          <p className="text-sm font-semibold text-foreground mb-1">كيف تنشئ رمزاً؟</p>
+          <p className="text-sm text-muted-foreground mb-3">
+            بجانب كل عميل اضغط الزر الأزرق <span className="font-semibold text-primary">«إنشاء رمز»</span> — ليس
+            من Supabase، بل من هذه الصفحة في الموقع.
+          </p>
           <div className="grid grid-cols-3 gap-2 sm:gap-4">
             {STEPS.map((step) => (
               <div
                 key={step.n}
-                className="rounded-xl bg-muted/40 px-3 py-3 text-center sm:text-right sm:flex sm:items-center sm:gap-3"
+                className="rounded-xl bg-background/80 px-3 py-3 text-center sm:text-right sm:flex sm:items-center sm:gap-3"
               >
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold sm:shrink-0">
                   {step.n}
@@ -130,7 +159,54 @@ const AdminLeads = () => {
           </Button>
         </div>
 
-        <div className="rounded-2xl border border-border/50 bg-card overflow-hidden">
+        {/* Mobile cards — زر واضح بدون تمرير أفقي */}
+        <div className="space-y-3 md:hidden">
+          {loading ? (
+            <div className="rounded-2xl border bg-card p-8 text-center text-muted-foreground">جاري التحميل...</div>
+          ) : rows.length === 0 ? (
+            <div className="rounded-2xl border bg-card p-8 text-center text-muted-foreground">لا توجد طلبات</div>
+          ) : (
+            rows.map((lead) => (
+              <div key={lead.id} className="rounded-2xl border border-border/60 bg-card p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-bold">{lead.full_name}</p>
+                    <p className="text-xs text-muted-foreground font-mono mt-0.5" dir="ltr">
+                      {lead.whatsapp_number}
+                    </p>
+                  </div>
+                  <Badge variant="secondary">{LEAD_STATUS_LABELS[lead.status]}</Badge>
+                </div>
+                {lead.selected_plan_name && (
+                  <Badge variant="outline">{lead.selected_plan_name}</Badge>
+                )}
+                {renderCodeButton(lead, true)}
+                <div className="flex gap-2">
+                  <a
+                    href={buildWhatsAppUrl(lead.whatsapp_number, `مرحباً ${lead.full_name}`)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1"
+                  >
+                    <Button variant="outline" className="w-full rounded-xl gap-2 text-[#25D366] border-[#25D366]/30">
+                      <MessageCircle className="w-4 h-4" />
+                      واتساب
+                    </Button>
+                  </a>
+                  <Link to={`/admin/leads/${lead.id}`} className="flex-1">
+                    <Button variant="outline" className="w-full rounded-xl gap-2">
+                      <Eye className="w-4 h-4" />
+                      التفاصيل
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden md:block rounded-2xl border border-border/50 bg-card overflow-hidden">
           <div className="px-4 py-3 border-b border-border/50 text-sm text-muted-foreground">
             {total} طلب
           </div>
@@ -139,11 +215,11 @@ const AdminLeads = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-right">الاسم</TableHead>
-                  <TableHead className="text-right hidden md:table-cell">الباقة</TableHead>
+                  <TableHead className="text-right">الباقة</TableHead>
                   <TableHead className="text-right hidden lg:table-cell">المحافظة</TableHead>
                   <TableHead className="text-right">الحالة</TableHead>
                   <TableHead className="text-right hidden sm:table-cell">التاريخ</TableHead>
-                  <TableHead className="text-right min-w-[200px]">إجراء</TableHead>
+                  <TableHead className="text-right min-w-[240px]">إنشاء رمز / إجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -173,7 +249,7 @@ const AdminLeads = () => {
                           </p>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">
+                      <TableCell>
                         {lead.selected_plan_name ? (
                           <Badge variant="outline">{lead.selected_plan_name}</Badge>
                         ) : (
@@ -190,37 +266,28 @@ const AdminLeads = () => {
                         {format(new Date(lead.created_at), 'dd MMM yyyy', { locale: ar })}
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          {lead.status !== 'customer' && (
-                            <Button
-                              size="sm"
-                              className="rounded-lg h-8 gap-1.5 text-xs"
-                              onClick={() => openCodeDialog(lead)}
-                            >
-                              <KeyRound className="w-3.5 h-3.5" />
-                              إنشاء رمز
-                            </Button>
-                          )}
+                        <div className="flex flex-wrap items-center gap-2">
+                          {renderCodeButton(lead)}
                           <a
                             href={buildWhatsAppUrl(lead.whatsapp_number, `مرحباً ${lead.full_name}`)}
                             target="_blank"
                             rel="noopener noreferrer"
                           >
-                            <Button size="sm" variant="outline" className="rounded-lg h-8 px-2 text-[#25D366] border-[#25D366]/30">
-                              <MessageCircle className="w-3.5 h-3.5" />
+                            <Button size="sm" variant="outline" className="rounded-lg h-9 px-2.5 text-[#25D366] border-[#25D366]/30">
+                              <MessageCircle className="w-4 h-4" />
                             </Button>
                           </a>
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="rounded-lg h-8 px-2"
+                            className="rounded-lg h-9 px-2.5"
                             onClick={() => copyNumber(lead.whatsapp_number)}
                           >
-                            <Copy className="w-3.5 h-3.5" />
+                            <Copy className="w-4 h-4" />
                           </Button>
                           <Link to={`/admin/leads/${lead.id}`}>
-                            <Button size="sm" variant="ghost" className="rounded-lg h-8 px-2">
-                              <Eye className="w-3.5 h-3.5" />
+                            <Button size="sm" variant="ghost" className="rounded-lg h-9 px-2.5">
+                              <Eye className="w-4 h-4" />
                             </Button>
                           </Link>
                         </div>
