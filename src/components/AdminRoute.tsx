@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/context/SubscriptionContext';
+import NotFound from '@/pages/NotFound';
 
 interface AdminRouteProps {
   children: ReactNode;
@@ -24,8 +25,9 @@ export const AdminRoute = ({ children }: AdminRouteProps) => {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
+  // Hide admin area from regular merchants — show 404 instead of redirecting
   if (!isAdmin) {
-    return <Navigate to="/builder" replace />;
+    return <NotFound />;
   }
 
   return <>{children}</>;

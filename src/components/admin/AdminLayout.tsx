@@ -15,9 +15,10 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { fetchUnreadLeadsCount } from '@/services/leadAdminService';
+import AdminPrivateMeta from '@/components/admin/AdminPrivateMeta';
 
 const adminNav = [
-  { to: '/admin/leads', icon: Users, label: 'العملاء المحتملون' },
+  { to: '/admin/leads', icon: Users, label: 'طلبات الاشتراك' },
   { to: '/admin/subscriptions', icon: CreditCard, label: 'الاشتراكات' },
   { to: '/admin/customers', icon: UserCheck, label: 'العملاء' },
 ];
@@ -84,6 +85,7 @@ const AdminLayout = ({ children, title = 'لوحة الإدارة' }: AdminLayou
 
   return (
     <div className="min-h-screen bg-muted/20 font-arabic" dir="rtl">
+      <AdminPrivateMeta title={title} />
       <header className="sticky top-0 z-40 border-b border-border/50 bg-card/95 backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -94,13 +96,17 @@ const AdminLayout = ({ children, title = 'لوحة الإدارة' }: AdminLayou
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[280px] p-4 font-arabic">
-                <p className="font-bold mb-4">{title}</p>
+                <p className="font-bold mb-1">{title}</p>
+                <p className="text-xs text-muted-foreground mb-4">للمسؤولين فقط</p>
                 <nav className="space-y-1">
                   <NavItems mobile />
                 </nav>
               </SheetContent>
             </Sheet>
-            <h1 className="font-bold text-foreground">{title}</h1>
+            <div>
+              <h1 className="font-bold text-foreground">{title}</h1>
+              <p className="text-[11px] text-muted-foreground hidden sm:block">لوحة المبيعات — للمسؤولين فقط</p>
+            </div>
             {unread > 0 && (
               <Badge variant="secondary" className="gap-1 hidden sm:flex">
                 <Bell className="w-3 h-3" />

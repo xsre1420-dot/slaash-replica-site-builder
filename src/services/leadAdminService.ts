@@ -99,43 +99,6 @@ export const fetchUnreadLeadsCount = async (): Promise<number> => {
   return typeof data === 'number' ? data : 0;
 };
 
-export interface ConvertLeadPayload {
-  leadId: string;
-  email: string;
-  username: string;
-  password: string;
-  storeName?: string;
-  planName?: string;
-  endDate?: string | null;
-}
-
-export const convertLeadToCustomer = async (payload: ConvertLeadPayload): Promise<{
-  userId: string;
-  email: string;
-  username: string;
-}> => {
-  const { data, error } = await supabase.functions.invoke('convert-lead', {
-    body: {
-      lead_id: payload.leadId,
-      email: payload.email,
-      username: payload.username,
-      password: payload.password,
-      store_name: payload.storeName,
-      plan_name: payload.planName ?? 'standard',
-      end_date: payload.endDate ?? null,
-    },
-  });
-
-  if (error) throw new Error(error.message);
-  const result = data as { success?: boolean; error?: string; user_id?: string; email?: string; username?: string };
-  if (!result?.success) throw new Error(result?.error || 'conversion_failed');
-  return {
-    userId: result.user_id!,
-    email: result.email!,
-    username: result.username!,
-  };
-};
-
 export const fetchSubscriptions = async (opts: {
   search?: string;
   status?: string;
@@ -180,3 +143,122 @@ export const checkIsPlatformAdmin = async (): Promise<boolean> => {
   if (error) return false;
   return Boolean(data);
 };
+
+export interface GenerateAccessCodePayload {
+  leadId: string;
+  planId: 'annual' | 'yearly';
+  agreedPrice?: number;
+  storeName?: string;
+  username?: string;
+  notes?: string;
+}
+
+export const generateAccessCode = async (
+  payload: GenerateAccessCodePayload
+): Promise<{
+  accessCode: string;
+  codeId: string;
+  planId: string;
+  durationMonths: number;
+  agreedPrice: number | null;
+  codeExpiresAt: string;
+  storeName: string;
+  username: string;
+  message?: string;
+}> => {
+  const { data, error } = await (supabase as any).rpc('admin_generate_access_code', {
+    p_lead_id: payload.leadId,
+    p_plan_id: payload.planId,
+    p_agreed_price: payload.agreedPrice ?? null,
+    p_store_name: payload.storeName ?? null,
+    p_notes: payload.notes ?? null,
+  });
+
+  if (error) {
+    const msg = error.message ?? '';
+    if (/function|schema cache/i.test(msg)) {
+      throw new Error('قاعدة البيانات تحتاج تحديث — npm run db:deploy');
+    }
+    throw new Error(msg);
+  }
+
+  const result = data as {
+    success?: boolean;
+    error?: string;
+    access_code?: string;
+    plan_id?: string;
+    duration_months?: number;
+    agreed_price?: number | null;
+    code_expires_at?: string;
+    message?: string;
+  };
+
+  if (!result?.success || !result.access_code) {
+    throw new Error(result?.error || 'generate_failed');
+  }
+
+  return {
+    accessCode: result.access_code,
+    codeId: payload.leadId,
+    planId: result.plan_id ?? payload.planId,
+    durationMonths: result.duration_months ?? (payload.planId === 'yearly' ? 12 : 6),
+    agreedPrice: result.agreed_price ?? null,
+    codeExpiresAt: result.code_expires_at ?? '',
+    storeName: payload.storeName ?? '',
+    username: '',
+    message: result.message,
+  };
+};
+
+export const redeemAccessCode = async (code: string): Promise<{
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  expiresAt?: number;
+  username: string;
+  storeName: string;
+  subscriptionEndAt?: string | null;
+}> => {
+  const { data, error } = await supabase.functions.invoke('redeem-access-code', {
+    body: { code: code.trim() },
+  });
+
+  if (error) throw new Error(error.message);
+  const result = data as {
+    success?: boolean;
+    error?: string;
+    session?: {
+      access_token: string;
+      refresh_token: string;
+      expires_in: number;
+      expires_at?: number;
+    };
+    user?: { username: string; store_name: string };
+    subscription_end_at?: string | null;
+  };
+
+  if (!result?.success || !result.session) {
+    throw new Error(result?.error || 'redeem_failed');
+  }
+
+  return {
+    accessToken: result.session.access_token,
+    refreshToken: result.session.refresh_token,
+    expiresIn: result.session.expires_in,
+    expiresAt: result.session.expires_at,
+    username: result.user?.username ?? 'مستخدم',
+    storeName: result.user?.store_name ?? 'متجري',
+    subscriptionEndAt: result.subscription_end_at,
+  };
+};
+
+export const fetchLeadAccessCodes = async (leadId: string) => {
+  const { data, error } = await (supabase as any).rpc('admin_list_lead_access_codes', {
+    p_lead_id: leadId,
+  });
+  if (error) throw error;
+  const payload = data as { success?: boolean; rows?: unknown[]; error?: string };
+  if (!payload?.success) throw new Error(payload?.error || 'forbidden');
+  return (payload.rows ?? []) as import('@/types/accessCodes').AccessCodeRecord[];
+};
+

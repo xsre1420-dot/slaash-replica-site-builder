@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { MessageCircle, Copy, ArrowRight, UserPlus } from 'lucide-react';
+import { MessageCircle, Copy, ArrowRight, KeyRound } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import GenerateAccessCodeDialog from '@/components/admin/GenerateAccessCodeDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -17,14 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import {
-  convertLeadToCustomer,
+  fetchLeadAccessCodes,
   fetchLeadById,
   updateLead,
 } from '@/services/leadAdminService';
@@ -35,6 +28,7 @@ import {
   type LeadRecord,
   type LeadStatus,
 } from '@/types/leads';
+import { type AccessCodeRecord } from '@/types/accessCodes';
 import { getMonthlyOrderLabel } from '@/data/leadFormOptions';
 import { toast } from 'sonner';
 
@@ -42,41 +36,39 @@ const AdminLeadDetail = () => {
   const { leadId } = useParams<{ leadId: string }>();
   const navigate = useNavigate();
   const [lead, setLead] = useState<LeadRecord | null>(null);
+  const [codes, setCodes] = useState<AccessCodeRecord[]>([]);
   const [notes, setNotes] = useState('');
   const [status, setStatus] = useState<LeadStatus>('new');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [convertOpen, setConvertOpen] = useState(false);
-  const [convertForm, setConvertForm] = useState({
-    email: '',
-    username: '',
-    password: '',
-    storeName: '',
-    planName: 'standard',
-    endDate: '',
-  });
-  const [converting, setConverting] = useState(false);
+  const [codeOpen, setCodeOpen] = useState(false);
+
+  const loadLead = async (id: string) => {
+    const data = await fetchLeadById(id);
+    if (!data) {
+      toast.error('الطلب غير موجود');
+      navigate('/admin/leads');
+      return null;
+    }
+    setLead(data);
+    setNotes(data.notes || '');
+    setStatus(data.status);
+    if (!data.admin_read_at) {
+      await updateLead(id, { markRead: true });
+    }
+    return data;
+  };
 
   useEffect(() => {
     if (!leadId) return;
     void (async () => {
       setLoading(true);
-      const data = await fetchLeadById(leadId);
-      if (!data) {
-        toast.error('الطلب غير موجود');
-        navigate('/admin/leads');
-        return;
-      }
-      setLead(data);
-      setNotes(data.notes || '');
-      setStatus(data.status);
-      setConvertForm((f) => ({
-        ...f,
-        storeName: data.full_name,
-        planName: data.selected_plan_id || data.selected_plan_name || 'standard',
-      }));
-      if (!data.admin_read_at) {
-        await updateLead(leadId, { markRead: true });
+      await loadLead(leadId);
+      try {
+        const rows = await fetchLeadAccessCodes(leadId);
+        setCodes(rows);
+      } catch {
+        setCodes([]);
       }
       setLoading(false);
     })();
@@ -95,26 +87,14 @@ const AdminLeadDetail = () => {
     }
   };
 
-  const handleConvert = async () => {
+  const refreshCodes = async () => {
     if (!leadId) return;
-    setConverting(true);
     try {
-      const result = await convertLeadToCustomer({
-        leadId,
-        email: convertForm.email,
-        username: convertForm.username,
-        password: convertForm.password,
-        storeName: convertForm.storeName || lead?.full_name,
-        planName: convertForm.planName,
-        endDate: convertForm.endDate || null,
-      });
-      toast.success(`تم إنشاء حساب ${result.username}`);
-      setConvertOpen(false);
-      navigate('/admin/leads');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'فشل التحويل');
-    } finally {
-      setConverting(false);
+      const rows = await fetchLeadAccessCodes(leadId);
+      setCodes(rows);
+      setLead((prev) => (prev ? { ...prev, status: 'interested' } : prev));
+    } catch {
+      setCodes([]);
     }
   };
 
@@ -151,11 +131,8 @@ const AdminLeadDetail = () => {
 
           {lead.selected_plan_name && (
             <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
-              <span className="text-muted-foreground">الباقة المختارة: </span>
+              <span className="text-muted-foreground">الباقة المطلوبة: </span>
               <span className="font-semibold text-foreground">{lead.selected_plan_name}</span>
-              {lead.selected_plan_id && (
-                <span className="mr-2 text-xs text-muted-foreground">({lead.selected_plan_id})</span>
-              )}
             </div>
           )}
 
@@ -198,13 +175,13 @@ const AdminLeadDetail = () => {
 
           <div className="flex flex-wrap gap-2">
             <a
-              href={buildWhatsAppUrl(lead.whatsapp_number, `مرحباً ${lead.full_name}`)}
+              href={buildWhatsAppUrl(lead.whatsapp_number, `مرحباً ${lead.full_name}، بخصوص طلب الاشتراك في بداية`)}
               target="_blank"
               rel="noopener noreferrer"
             >
               <Button className="rounded-xl gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-white">
                 <MessageCircle className="w-4 h-4" />
-                فتح واتساب
+                تواصل واتساب
               </Button>
             </a>
             <Button
@@ -219,13 +196,42 @@ const AdminLeadDetail = () => {
               نسخ الرقم
             </Button>
             {lead.status !== 'customer' && (
-              <Button className="rounded-xl gap-2" onClick={() => setConvertOpen(true)}>
-                <UserPlus className="w-4 h-4" />
-                تحويل إلى عميل
+              <Button className="rounded-xl gap-2" onClick={() => setCodeOpen(true)}>
+                <KeyRound className="w-4 h-4" />
+                إنشاء رمز
               </Button>
             )}
           </div>
         </div>
+
+        {codes.length > 0 && (
+          <div className="rounded-2xl border border-border/50 bg-card p-6 space-y-3">
+            <h3 className="font-semibold">رموز الدخول</h3>
+            {codes.map((code) => (
+              <div
+                key={code.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/50 bg-muted/20 px-4 py-3 text-sm"
+              >
+                <div>
+                  <p className="font-mono font-semibold" dir="ltr">
+                    BDY-****-{code.code_hint}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {code.plan_id === 'yearly' ? 'سنة' : '6 أشهر'}
+                    {code.agreed_price ? ` · ${code.agreed_price.toLocaleString('ar-IQ')} د.ع` : ''}
+                    {' · '}
+                    {code.status === 'redeemed' ? 'مُفعّل' : code.status === 'active' ? 'بانتظار التفعيل' : code.status}
+                  </p>
+                </div>
+                {code.subscription_end_at && (
+                  <p className="text-xs text-muted-foreground">
+                    ينتهي {format(new Date(code.subscription_end_at), 'dd/MM/yyyy')}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="rounded-2xl border border-border/50 bg-card p-6 space-y-4">
           <div className="space-y-2">
@@ -250,7 +256,7 @@ const AdminLeadDetail = () => {
               onChange={(e) => setNotes(e.target.value)}
               rows={5}
               className="rounded-xl font-arabic"
-              placeholder="ملاحظات محادثة المبيعات..."
+              placeholder="ملاحظات محادثة المبيعات — السعر المتفق عليه، موعد التفعيل..."
             />
           </div>
           <Button onClick={() => void saveNotes()} disabled={saving} className="rounded-xl">
@@ -259,78 +265,12 @@ const AdminLeadDetail = () => {
         </div>
       </div>
 
-      <Dialog open={convertOpen} onOpenChange={setConvertOpen}>
-        <DialogContent className="font-arabic max-w-md" dir="rtl">
-          <DialogHeader>
-            <DialogTitle>تحويل إلى عميل</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="space-y-1">
-              <Label>البريد الإلكتروني</Label>
-              <Input
-                type="email"
-                value={convertForm.email}
-                onChange={(e) => setConvertForm((f) => ({ ...f, email: e.target.value }))}
-                className="rounded-xl"
-                dir="ltr"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>اسم المستخدم</Label>
-              <Input
-                value={convertForm.username}
-                onChange={(e) => setConvertForm((f) => ({ ...f, username: e.target.value }))}
-                className="rounded-xl"
-                dir="ltr"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>كلمة المرور المؤقتة</Label>
-              <Input
-                type="password"
-                value={convertForm.password}
-                onChange={(e) => setConvertForm((f) => ({ ...f, password: e.target.value }))}
-                className="rounded-xl"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>اسم المتجر</Label>
-              <Input
-                value={convertForm.storeName}
-                onChange={(e) => setConvertForm((f) => ({ ...f, storeName: e.target.value }))}
-                placeholder={lead.full_name}
-                className="rounded-xl"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>اسم الباقة</Label>
-              <Input
-                value={convertForm.planName}
-                onChange={(e) => setConvertForm((f) => ({ ...f, planName: e.target.value }))}
-                placeholder="annual / yearly"
-                className="rounded-xl"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>تاريخ انتهاء الاشتراك (اختياري)</Label>
-              <Input
-                type="date"
-                value={convertForm.endDate}
-                onChange={(e) => setConvertForm((f) => ({ ...f, endDate: e.target.value }))}
-                className="rounded-xl"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConvertOpen(false)} className="rounded-xl">
-              إلغاء
-            </Button>
-            <Button onClick={() => void handleConvert()} disabled={converting} className="rounded-xl">
-              {converting ? 'جاري الإنشاء...' : 'إنشاء الحساب'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <GenerateAccessCodeDialog
+        lead={lead}
+        open={codeOpen}
+        onOpenChange={setCodeOpen}
+        onGenerated={() => void refreshCodes()}
+      />
     </AdminLayout>
   );
 };

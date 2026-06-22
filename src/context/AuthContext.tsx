@@ -11,6 +11,8 @@ import {
   getAuthCallbackUrl,
   logAuthFailure,
 } from '@/lib/authUtils';
+import { redeemAccessCode } from '@/services/leadAdminService';
+import { ACCESS_CODE_ERROR_MESSAGES } from '@/types/accessCodes';
 
 interface User {
   id: string;
@@ -27,6 +29,7 @@ interface AuthResult {
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<{ error?: string; emailNotConfirmed?: boolean }>;
+  loginWithAccessCode: (code: string, rememberMe?: boolean) => Promise<{ error?: string }>;
   register: (
     email: string,
     password: string,
@@ -192,6 +195,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const loginWithAccessCode = async (code: string, rememberMe = true) => {
+    try {
+      setAuthRememberMe(rememberMe);
+      const result = await redeemAccessCode(code);
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: result.accessToken,
+        refresh_token: result.refreshToken,
+      });
+
+      if (sessionError) {
+        logAuthFailure('login.access_code.session', sessionError);
+        return { error: ACCESS_CODE_ERROR_MESSAGES.login_failed };
+      }
+
+      return {};
+    } catch (err) {
+      logAuthFailure('login.access_code', err);
+      const code = err instanceof Error ? err.message : '';
+      return { error: ACCESS_CODE_ERROR_MESSAGES[code] || 'رمز التفعيل غير صحيح أو منتهي الصلاحية' };
+    }
+  };
+
   const checkUsernameAvailable = async (username: string) => {
     try {
       const normalized = normalizeUsername(username);
@@ -300,6 +325,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value = {
     user,
     login,
+    loginWithAccessCode,
     register,
     resetPassword,
     updatePassword,

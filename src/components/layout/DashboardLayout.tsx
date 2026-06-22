@@ -248,7 +248,7 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
             {isAdmin && (
               <div className={cn('mb-4', collapsed ? 'px-2' : 'px-3')}>
                 {!collapsed && <p className="ds-section-title px-3 mb-2">المنصة</p>}
-                <NavLink to="/admin/leads" icon={Shield} label="إدارة العملاء المحتملين" collapsed={collapsed} />
+                <NavLink to="/admin/leads" icon={Shield} label="طلبات الاشتراك" collapsed={collapsed} />
               </div>
             )}
           </nav>
@@ -416,6 +416,14 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
                       </div>
                     </div>
                   ))}
+                  {isAdmin && (
+                    <div className="mt-4 px-0.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/75 px-2.5 mb-1.5">
+                        المنصة
+                      </p>
+                      <MobileNavLink to="/admin/leads" icon={Shield} label="طلبات الاشتراك" />
+                    </div>
+                  )}
                 </nav>
 
                 <div className="shrink-0 border-t border-sidebar-border/50 bg-sidebar/95 backdrop-blur-sm p-3 space-y-2 safe-area-bottom">

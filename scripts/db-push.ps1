@@ -3,7 +3,7 @@
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "=== Slaash Platform — Database Deploy ===" -ForegroundColor Cyan
+Write-Host "=== Slaash Platform - Database Deploy ===" -ForegroundColor Cyan
 
 if (-not (Get-Command supabase -ErrorAction SilentlyContinue)) {
   Write-Host "Supabase CLI not found. Install: https://supabase.com/docs/guides/cli" -ForegroundColor Red

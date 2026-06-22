@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react';
-import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, KeyRound, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -19,6 +19,8 @@ import {
 } from '@/components/auth/authFormStyles';
 import { clearAuthUrlParams, parseAuthUrlError, validateEmail, sanitizeInternalRedirect } from '@/lib/authUtils';
 import { env } from '@/lib/env';
+import { formatAccessCodeInput } from '@/types/accessCodes';
+import { cn } from '@/lib/utils';
 
 const redirectAuthTokensToCallback = (navigate: (path: string, opts?: { replace?: boolean }) => void) => {
   if (typeof window === 'undefined') return false;
@@ -38,8 +40,10 @@ const redirectAuthTokensToCallback = (navigate: (path: string, opts?: { replace?
 };
 
 const Login = () => {
+  const [mode, setMode] = useState<'email' | 'code'>('code');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [accessCode, setAccessCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +51,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [resending, setResending] = useState(false);
 
-  const { login, user, loading, resendVerificationEmail } = useAuth();
+  const { login, loginWithAccessCode, user, loading, resendVerificationEmail } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = sanitizeInternalRedirect((location.state as { from?: string } | null)?.from);
@@ -67,6 +71,32 @@ const Login = () => {
   }, [user, loading, navigate, from]);
 
   if (loading) return <AuthLoadingScreen />;
+
+  const handleCodeSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    const normalized = accessCode.replace(/[^A-Za-z0-9]/g, '');
+    if (normalized.length < 11) {
+      setError('يرجى إدخال رمز التفعيل كاملاً');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await loginWithAccessCode(accessCode, rememberMe);
+      if (result.error) {
+        setError(result.error);
+      } else {
+        toast({ title: 'مرحباً بك!', description: 'تم تفعيل الدخول بنجاح' });
+        navigate(from, { replace: true });
+      }
+    } catch {
+      setError('حدث خطأ غير متوقع');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -115,7 +145,11 @@ const Login = () => {
     <AuthPageShell>
       <AuthPageHeader
         title="تسجيل الدخول"
-        subtitle="أدخل بياناتك للوصول إلى لوحة التحكم"
+        subtitle={
+          mode === 'code'
+            ? 'أدخل رمز التفعيل الذي أرسله لك فريق المبيعات'
+            : 'أدخل بريدك وكلمة المرور (للمسؤولين)'
+        }
         meta={
           env.VITE_SUPABASE_PUBLISHABLE_KEY === 'missing-anon-key' ? (
             <p className="text-xs text-destructive mt-2">إعدادات Supabase غير مكتملة — راجع ملف .env</p>
@@ -123,6 +157,89 @@ const Login = () => {
         }
       />
 
+      <div className="mb-6 flex rounded-xl border border-border bg-muted/40 p-1">
+        <button
+          type="button"
+          onClick={() => {
+            setMode('code');
+            setError(null);
+          }}
+          className={cn(
+            'flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-colors',
+            mode === 'code' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
+          )}
+        >
+          <KeyRound className="h-4 w-4" />
+          رمز التفعيل
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setMode('email');
+            setError(null);
+          }}
+          className={cn(
+            'flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-colors',
+            mode === 'email' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
+          )}
+        >
+          <Mail className="h-4 w-4" />
+          بريد إلكتروني
+        </button>
+      </div>
+
+      {mode === 'code' ? (
+        <form onSubmit={handleCodeSubmit} className="space-y-5">
+          {error && (
+            <Alert variant="destructive" className="rounded-lg border text-right">
+              <AlertDescription className="text-sm">{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <div>
+            <Label htmlFor="access-code" className="mb-1.5 block text-sm font-medium">
+              رمز التفعيل
+            </Label>
+            <Input
+              id="access-code"
+              value={accessCode}
+              onChange={(e) => setAccessCode(formatAccessCodeInput(e.target.value))}
+              placeholder="BDY-XXXX-XXXX"
+              className="h-12 rounded-xl text-center font-mono text-lg tracking-widest"
+              dir="ltr"
+              autoComplete="off"
+              disabled={isLoading}
+              required
+            />
+            <p className={authHintClass}>الرمز صالح لمدة اشتراكك (6 أشهر أو سنة)</p>
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5">
+            <Label htmlFor="remember-me-code" className="cursor-pointer text-sm font-normal text-muted-foreground">
+              تذكرني على هذا الجهاز
+            </Label>
+            <Checkbox
+              id="remember-me-code"
+              checked={rememberMe}
+              onCheckedChange={(v) => setRememberMe(v === true)}
+            />
+          </div>
+
+          <Button type="submit" className={authSubmitClass} disabled={isLoading}>
+            {isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" />
+                جارٍ التحقق…
+              </span>
+            ) : (
+              <span className="flex items-center justify-center gap-2">
+                دخول للمنصة
+                <ArrowLeft className="h-4 w-4" />
+              </span>
+            )}
+          </Button>
+        </form>
+      ) : (
       <form onSubmit={handleSubmit} className="space-y-5">
         {error && (
           <Alert variant="destructive" className="rounded-lg border text-right">
@@ -218,11 +335,12 @@ const Login = () => {
           )}
         </Button>
       </form>
+      )}
 
       <p className="mt-8 text-center text-sm text-muted-foreground">
-        ليس لديك حساب؟{' '}
+        ليس لديك رمز؟{' '}
         <Link to="/request-access" className="font-semibold text-primary hover:text-primary/80">
-          أنشئ حساباً مجانياً
+          اطلب اشتراكاً
         </Link>
       </p>
     </AuthPageShell>

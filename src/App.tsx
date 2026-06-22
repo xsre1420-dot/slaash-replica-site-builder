@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { reportError } from "@/lib/observability";
 import RouteObserver from "./components/RouteObserver";
 import { CartProvider } from "./context/CartContext";
@@ -116,6 +116,7 @@ const App = () => (
                     <Route path="/orders/:orderId" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
                     <Route path="/marketing" element={<ProtectedRoute><Marketing /></ProtectedRoute>} />
                     <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+                    <Route path="/admin" element={<AdminRoute><Navigate to="/admin/leads" replace /></AdminRoute>} />
                     <Route path="/admin/leads" element={<AdminRoute><AdminLeads /></AdminRoute>} />
                     <Route path="/admin/leads/:leadId" element={<AdminRoute><AdminLeadDetail /></AdminRoute>} />
                     <Route path="/admin/subscriptions" element={<AdminRoute><AdminSubscriptions /></AdminRoute>} />
