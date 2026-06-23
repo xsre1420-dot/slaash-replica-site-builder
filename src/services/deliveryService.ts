@@ -32,24 +32,24 @@ export interface OrderShipmentData {
 export const fetchDeliveryFee = async (
   ownerId: string,
   governorate: string
-): Promise<number> => {
+): Promise<number | null> => {
   const { data, error } = await (supabase as any).rpc('calculate_delivery_fee', {
     p_owner_id: ownerId,
     p_governorate: governorate,
   });
-  if (error) return 0;
+  if (error) return null;
   return Number(data) || 0;
 };
 
 export const fetchDeliveryFeeBySlug = async (
   storeSlug: string,
   governorate: string
-): Promise<number> => {
+): Promise<number | null> => {
   const { data, error } = await (supabase as any).rpc('calculate_delivery_fee_by_slug', {
     p_store_slug: storeSlug.trim().toLowerCase(),
     p_governorate: governorate,
   });
-  if (error) return 0;
+  if (error) return null;
   return Number(data) || 0;
 };
 

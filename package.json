@@ -28,7 +28,9 @@
     "db:verify": "node scripts/verify-platform-db.mjs",
     "db:check": "node scripts/platform-check.mjs",
     "db:bundle": "node scripts/bundle-platform-migrations.mjs",
-    "functions:deploy-redeem": "supabase functions deploy redeem-access-code --no-verify-jwt"
+    "functions:deploy-redeem": "supabase functions deploy redeem-access-code --no-verify-jwt",
+    "functions:deploy-meta": "supabase functions deploy meta-conversions --no-verify-jwt",
+    "functions:deploy-security": "supabase functions deploy redeem-access-code --no-verify-jwt && supabase functions deploy meta-conversions --no-verify-jwt"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^16.3.0",

@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { appendCachedProduct, patchCachedProduct, removeCachedProduct } from '@/services/productService';
 import { invalidateStorefrontForOwner } from '@/services/storefrontProductService';
+import { mapDbProduct } from '@/mappers/productMapper';
+import { isStorefrontVisible } from '@/lib/productLifecycle';
 
 const STOCK_FIELDS = new Set([
   'stock_quantity',
@@ -47,7 +49,10 @@ export const useRealtimeProducts = (onUpdate?: () => void) => {
 
     if (payload.eventType === 'INSERT' && payload.new) {
       appendCachedProduct(ownerId, payload.new);
-      void invalidateStorefrontForOwner(ownerId);
+      const mapped = mapDbProduct(payload.new);
+      if (isStorefrontVisible(mapped)) {
+        void invalidateStorefrontForOwner(ownerId);
+      }
       onUpdate?.();
     }
   }, [user?.id, onUpdate]);

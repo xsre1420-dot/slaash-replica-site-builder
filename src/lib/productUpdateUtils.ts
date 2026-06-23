@@ -20,9 +20,9 @@ export const PRODUCT_INSERT_RETURN_SELECT =
 export const MERCHANT_PRODUCTS_LIST_SELECT =
   'id, name, description, category, price, cost, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, archived_at, min_stock_level, discount_type, discount_value, discount_start_date, discount_end_date, created_at, updated_at';
 
-/** Standard select without archived_at / discount columns */
+/** Standard select — archived_at included when migration applied; falls back if missing */
 export const MERCHANT_PRODUCTS_STANDARD_SELECT =
-  'id, name, description, category, price, cost, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, min_stock_level, created_at, updated_at';
+  'id, name, description, category, price, cost, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, archived_at, min_stock_level, created_at, updated_at';
 
 export const isSchemaColumnError = (message: string): boolean =>
   /column|schema cache|does not exist/i.test(message);

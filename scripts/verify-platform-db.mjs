@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Verify Supabase connectivity + platform schema (uses anon key from .env).
+ * Verify Supabase connectivity + platform schema.
+ * Prefers SUPABASE_SERVICE_ROLE_KEY for platform_health_check (anon is denied after v13+).
  * Usage: node scripts/verify-platform-db.mjs
  */
 
@@ -20,7 +21,9 @@ const loadEnv = () => {
 
 const env = { ...process.env, ...loadEnv() };
 const url = env.VITE_SUPABASE_URL;
-const key = env.VITE_SUPABASE_PUBLISHABLE_KEY || env.VITE_SUPABASE_ANON_KEY;
+const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
+const anonKey = env.VITE_SUPABASE_PUBLISHABLE_KEY || env.VITE_SUPABASE_ANON_KEY;
+const key = serviceKey || anonKey;
 
 const fail = (msg) => {
   console.error(`✗ ${msg}`);
@@ -30,10 +33,17 @@ const fail = (msg) => {
 const pass = (msg) => console.log(`✓ ${msg}`);
 
 if (!url || !key) {
-  fail('Missing VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY (or VITE_SUPABASE_ANON_KEY) in .env');
+  fail(
+    'Missing VITE_SUPABASE_URL and key (SUPABASE_SERVICE_ROLE_KEY or VITE_SUPABASE_PUBLISHABLE_KEY)'
+  );
 }
 
 pass(`Supabase URL: ${url}`);
+if (serviceKey) {
+  pass('Using service role key for platform_health_check');
+} else {
+  console.warn('⚠ Using anon key — platform_health_check may be denied (set SUPABASE_SERVICE_ROLE_KEY in .env)');
+}
 
 const headers = {
   apikey: key,
@@ -63,9 +73,15 @@ if (ok && json?.ok) {
   process.exit(0);
 }
 
+if (status === 403 || status === 401 || json?.code === '42501') {
+  fail(
+    'permission denied for platform_health_check — add SUPABASE_SERVICE_ROLE_KEY to .env (Dashboard → Settings → API)'
+  );
+}
+
 if (status === 404 || String(json?.message || json).includes('Could not find')) {
   fail(
-    'platform_health_check RPC missing — apply migrations: npm run db:deploy (or paste supabase/migrations/20260616*.sql in SQL Editor)'
+    'platform_health_check RPC missing — apply migrations: npm run db:deploy'
   );
 }
 

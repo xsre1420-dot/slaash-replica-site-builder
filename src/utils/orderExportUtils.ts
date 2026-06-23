@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import { Order } from '@/types';
+import { escapeHtml } from '@/lib/security/sanitize';
 import {
   formatOrderNumber,
   getEffectiveDeliveryStatus,
@@ -64,11 +65,12 @@ export const exportOrdersToCsv = (orders: Order[], filename = 'orders.csv') => {
 };
 
 export const printOrderInvoice = (order: Order) => {
+  const e = escapeHtml;
   const itemsHtml = order.items
     .map(
       (item) => `
       <tr>
-        <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">${item.product.name}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">${e(item.product.name)}</td>
         <td style="padding:8px;border-bottom:1px solid #eee;text-align:center">${item.quantity}</td>
         <td style="padding:8px;border-bottom:1px solid #eee;text-align:left">${(item.product.price * item.quantity).toLocaleString()} د.ع</td>
       </tr>`
@@ -79,7 +81,7 @@ export const printOrderInvoice = (order: Order) => {
 <html dir="rtl" lang="ar">
 <head>
   <meta charset="utf-8"/>
-  <title>فاتورة ${formatOrderNumber(order.id)}</title>
+  <title>فاتورة ${e(formatOrderNumber(order.id))}</title>
   <style>
     body { font-family: Tajawal, Arial, sans-serif; padding: 24px; color: #111; max-width: 720px; margin: 0 auto; }
     h1 { font-size: 20px; margin: 0 0 4px; }
@@ -93,17 +95,17 @@ export const printOrderInvoice = (order: Order) => {
   </style>
 </head>
 <body>
-  <h1>فاتورة طلب ${formatOrderNumber(order.id)}</h1>
-  <p class="meta">${format(new Date(order.date), 'yyyy-MM-dd HH:mm')} · ${getPaymentMethodLabel(order.paymentMethod)}</p>
+  <h1>فاتورة طلب ${e(formatOrderNumber(order.id))}</h1>
+  <p class="meta">${format(new Date(order.date), 'yyyy-MM-dd HH:mm')} · ${e(getPaymentMethodLabel(order.paymentMethod))}</p>
 
   <div class="section">
     <div class="label">العميل</div>
-    <strong>${order.customerInfo.name}</strong><br/>
-    <span dir="ltr">${order.customerInfo.phone}</span><br/>
-    ${order.customerInfo.governorate ? `${order.customerInfo.governorate} — ` : ''}${order.customerInfo.address}
+    <strong>${e(order.customerInfo.name)}</strong><br/>
+    <span dir="ltr">${e(order.customerInfo.phone)}</span><br/>
+    ${order.customerInfo.governorate ? `${e(order.customerInfo.governorate)} — ` : ''}${e(order.customerInfo.address)}
   </div>
 
-  ${order.customerInfo.notes ? `<div class="section"><div class="label">ملاحظات</div>${order.customerInfo.notes}</div>` : ''}
+  ${order.customerInfo.notes ? `<div class="section"><div class="label">ملاحظات</div>${e(order.customerInfo.notes)}</div>` : ''}
 
   <div class="section">
     <div class="label">المنتجات</div>
@@ -113,7 +115,7 @@ export const printOrderInvoice = (order: Order) => {
     </table>
   </div>
 
-  ${order.discountAmount ? `<p>خصم: -${order.discountAmount.toLocaleString()} د.ع${order.couponCode ? ` (${order.couponCode})` : ''}</p>` : ''}
+  ${order.discountAmount ? `<p>خصم: -${order.discountAmount.toLocaleString()} د.ع${order.couponCode ? ` (${e(order.couponCode)})` : ''}</p>` : ''}
   ${order.deliveryFee ? `<p>التوصيل: ${order.deliveryFee.toLocaleString()} د.ع</p>` : ''}
   <p class="total">الإجمالي: ${order.total.toLocaleString()} د.ع</p>
 
@@ -138,16 +140,17 @@ export const printShippingLabel = (
   order: Order,
   options: ShippingLabelOptions = {}
 ) => {
+  const e = escapeHtml;
   const { storeName = 'متجر', trackingNumber, carrier } = options;
   const itemsSummary = order.items
-    .map((i) => `${i.product.name} ×${i.quantity}`)
+    .map((i) => `${e(i.product.name)} ×${i.quantity}`)
     .join(' · ');
 
   const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
   <meta charset="utf-8"/>
-  <title>ملصق شحن ${formatOrderNumber(order.id)}</title>
+  <title>ملصق شحن ${e(formatOrderNumber(order.id))}</title>
   <style>
     @page { size: 100mm 150mm; margin: 8mm; }
     body { font-family: Tajawal, Arial, sans-serif; font-size: 12px; line-height: 1.4; margin: 0; }
@@ -162,26 +165,26 @@ export const printShippingLabel = (
 </head>
 <body>
   <div class="label">
-    <p class="muted">${storeName} · ${formatOrderNumber(order.id)}</p>
+    <p class="muted">${e(storeName)} · ${e(formatOrderNumber(order.id))}</p>
     <h1>ملصق الشحن</h1>
     <div class="section">
       <p class="muted">المستلم</p>
-      <p class="big">${order.customerInfo.name}</p>
-      <p dir="ltr">${order.customerInfo.phone}</p>
+      <p class="big">${e(order.customerInfo.name)}</p>
+      <p dir="ltr">${e(order.customerInfo.phone)}</p>
     </div>
     <div class="section">
       <p class="muted">العنوان</p>
-      <p><strong>${order.customerInfo.governorate || ''}</strong></p>
-      <p>${order.customerInfo.address}</p>
+      <p><strong>${e(order.customerInfo.governorate || '')}</strong></p>
+      <p>${e(order.customerInfo.address)}</p>
     </div>
-    ${order.customerInfo.notes ? `<div class="section"><p class="muted">ملاحظات</p><p>${order.customerInfo.notes}</p></div>` : ''}
+    ${order.customerInfo.notes ? `<div class="section"><p class="muted">ملاحظات</p><p>${e(order.customerInfo.notes)}</p></div>` : ''}
     <div class="section">
       <p class="muted">المحتويات</p>
       <p>${itemsSummary}</p>
-      <p><strong>${order.total.toLocaleString()} د.ع</strong> · ${getPaymentMethodLabel(order.paymentMethod)}</p>
+      <p><strong>${order.total.toLocaleString()} د.ع</strong> · ${e(getPaymentMethodLabel(order.paymentMethod))}</p>
     </div>
-    ${carrier ? `<p class="muted">الناقل: ${carrier}</p>` : ''}
-    ${trackingNumber ? `<p class="barcode">تتبع: ${trackingNumber}</p>` : `<p class="barcode">${order.id.slice(0, 13).toUpperCase()}</p>`}
+    ${carrier ? `<p class="muted">الناقل: ${e(carrier)}</p>` : ''}
+    ${trackingNumber ? `<p class="barcode">تتبع: ${e(trackingNumber)}</p>` : `<p class="barcode">${e(order.id.slice(0, 13).toUpperCase())}</p>`}
   </div>
   <script>window.onload = () => { window.print(); }</script>
 </body>

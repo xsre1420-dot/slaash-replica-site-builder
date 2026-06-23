@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.redeem-access-code]
 verify_jwt = false
+
+[functions.meta-conversions]
+verify_jwt = false

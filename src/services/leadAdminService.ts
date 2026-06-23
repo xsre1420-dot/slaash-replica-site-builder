@@ -1,4 +1,10 @@
 import { supabase } from '@/integrations/supabase/client';
+import {
+  enforceRateLimit,
+  formatRateLimitMessageAr,
+  RATE_LIMITS,
+  RateLimitExceededError,
+} from '@/lib/security/rateLimiter';
 import type { LeadRecord, LeadStatus } from '@/types/leads';
 import {
   matchesLeadQuickFilter,
@@ -332,6 +338,15 @@ export const redeemAccessCode = async (code: string): Promise<{
   storeName: string;
   subscriptionEndAt?: string | null;
 }> => {
+  try {
+    enforceRateLimit('access_code_redeem', RATE_LIMITS.accessCode);
+  } catch (err) {
+    if (err instanceof RateLimitExceededError) {
+      throw new Error(formatRateLimitMessageAr(err.retryAfterMs));
+    }
+    throw err;
+  }
+
   const { data, error } = await supabase.functions.invoke('redeem-access-code', {
     body: { code: code.trim() },
   });

@@ -112,6 +112,7 @@ export const CacheKeys = {
     `orders:${ownerId}:wc:${filterKey}`,
   ordersRecent: (ownerId: string) => `orders:${ownerId}:recent`,
   ordersStatsSummary: (ownerId: string) => `orders:stats:${ownerId}`,
+  dashboardBatch: (ownerId: string) => `dashboard-batch:${ownerId}`,
   statistics: (ownerId: string, range: string) => `stats:${ownerId}:${range}`,
   tenantMeta: (slug: string) => `tenant-meta:${slug}`,
   tenantProducts: (slug: string, pageKey: string) => `tenant-products:${slug}:${pageKey}`,
@@ -124,11 +125,17 @@ export const CacheTTL = {
   STALE: 15_000,
 } as const;
 
-/** Invalidate cached merchant data for a single tenant (avoids cross-tenant flush). */
-export function flushOwnerCache(ownerId: string): void {
+/** Invalidate order + stats caches only (preserve product catalog). */
+export function flushOrderCache(ownerId: string): void {
   cache.flushByPrefix(`orders:${ownerId}:`);
   cache.del(CacheKeys.ordersStatsSummary(ownerId));
+  cache.del(CacheKeys.dashboardBatch(ownerId));
   cache.flushByPrefix(`stats:${ownerId}:`);
+}
+
+/** Invalidate cached merchant data for a single tenant (avoids cross-tenant flush). */
+export function flushOwnerCache(ownerId: string): void {
+  flushOrderCache(ownerId);
   cache.del(CacheKeys.products(ownerId));
   cache.del(CacheKeys.categories(ownerId));
   cache.del(CacheKeys.storeSettings(ownerId));

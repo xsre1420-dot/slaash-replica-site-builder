@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
 import { logStructured, withEdgeSpan } from '../_shared/observability.ts';
+import { checkEdgeRateLimit, clientIpFromRequest } from '../_shared/rateLimiter.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
@@ -48,6 +49,15 @@ Deno.serve(async (req) => {
       });
     }
 
+    const clientIp = clientIpFromRequest(req);
+    const rate = checkEdgeRateLimit(`meta:${clientIp}`, 30, 60 * 1000);
+    if (!rate.allowed) {
+      return new Response(JSON.stringify({ success: false, error: 'rate_limited' }), {
+        status: 429,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const slug = body.store_slug?.trim().toLowerCase();
     const orderId = body.order_id?.trim();
     if (!slug || !orderId || !Number.isFinite(body.value)) {
@@ -79,6 +89,36 @@ Deno.serve(async (req) => {
     if (!ownerId) {
       return new Response(JSON.stringify({ success: false, error: 'store_not_found' }), {
         status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { data: orderVerify, error: verifyError } = await supabase.rpc(
+      'verify_order_for_meta_conversion',
+      {
+        p_order_id: orderId,
+        p_owner_id: ownerId,
+        p_expected_total: body.value,
+      }
+    );
+
+    if (verifyError) {
+      logStructured('warn', 'meta-conversions.verify_failed', { orderId, slug, message: verifyError.message });
+      return new Response(JSON.stringify({ success: false, error: 'verification_failed' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const verifyPayload = orderVerify as { success?: boolean; error?: string } | null;
+    if (!verifyPayload?.success) {
+      logStructured('warn', 'meta-conversions.order_rejected', {
+        orderId,
+        slug,
+        reason: verifyPayload?.error ?? 'unknown',
+      });
+      return new Response(JSON.stringify({ success: false, error: verifyPayload?.error ?? 'invalid_order' }), {
+        status: 403,
         headers: { 'Content-Type': 'application/json' },
       });
     }

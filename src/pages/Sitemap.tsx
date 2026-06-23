@@ -7,18 +7,21 @@ import { withRateLimit } from '@/lib/security/rateLimiter';
  * Mount on /sitemap.xml route or call from edge function
  */
 export async function generateSitemapXml(baseUrl: string): Promise<string> {
-  const { data } = await withRateLimit(
+  const { data, error } = await withRateLimit(
     'sitemap:generate',
     { maxRequests: 5, windowMs: 60_000 },
     async () =>
-      supabase
-        .from('store_settings')
-        .select('store_slug, updated_at')
-        .not('store_slug', 'is', null)
-        .limit(5000)
+      (supabase as any).rpc('list_public_store_slugs', {
+        p_limit: 5000,
+        p_offset: 0,
+      })
   );
 
-  const stores = data || [];
+  if (error) {
+    console.warn('[sitemap] list_public_store_slugs failed:', error.message);
+  }
+
+  const stores = (data as Array<{ store_slug?: string; updated_at?: string }> | null) || [];
   const urls = stores
     .filter((s) => s.store_slug)
     .map((s) => {

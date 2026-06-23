@@ -43,9 +43,10 @@ export async function fetchMerchantProductReviews(
   const { data, error } = await supabase
     .from('product_reviews')
     .select(
-      'id, reviewer_name, reviewer_email, rating, comment, is_approved, is_featured, helpful_count, created_at, owner_id'
+      'id, reviewer_name, reviewer_email, rating, comment, is_approved, is_featured, helpful_count, created_at'
     )
     .eq('product_id', productId)
+    .eq('owner_id', ownerId)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -53,9 +54,7 @@ export async function fetchMerchantProductReviews(
     return [];
   }
 
-  return (data ?? [])
-    .filter((row) => !row.owner_id || row.owner_id === ownerId)
-    .map(({ owner_id: _ownerId, ...review }) => review) as MerchantProductReview[];
+  return (data ?? []) as MerchantProductReview[];
 }
 
 export async function approveProductReview(

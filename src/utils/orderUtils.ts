@@ -3,7 +3,11 @@ import { createOrder, updateOrderStatus as updateOrderStatusInDb } from '@/servi
 import type { MarketingAttribution } from '@/lib/attribution';
 
 export { mapOrderError } from '@/utils/orderErrors';
-export { clearCheckoutIdempotencyKey } from '@/utils/checkoutSession';
+export {
+  clearCheckoutIdempotencyKey,
+  clearCheckoutSession,
+  markCheckoutCompleted,
+} from '@/utils/checkoutSession';
 
 export const saveOrderToDatabase = (
   order: Order,

@@ -1,13 +1,24 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Order, CartItem } from '@/types';
 import { mapDbOrder } from '@/mappers/orderMapper';
-import { clearCheckoutIdempotencyKey, getOrCreateIdempotencyKey } from '@/utils/checkoutSession';
+import { getOrCreateIdempotencyKey } from '@/utils/checkoutSession';
 import { mapOrderRpcFailure, mapOrderError } from '@/utils/orderErrors';
 import { computeOrderStats, normalizeOrderPhone, type OrderListFilters, type OrderWorkflowTab } from '@/utils/orderWorkflowUtils';
 import { filtersToRpcParams, filtersToRpcParamsWithoutWorkflow, serializeOrderFilters } from '@/utils/orderQueryBuilder';
 import { cache, CacheKeys, CacheTTL, dedup } from '@/lib/cache';
 import { instrumentAsync, instrumentQuery, logger, metrics } from '@/lib/observability';
+import {
+  enforceRateLimit,
+  formatRateLimitMessageAr,
+  RATE_LIMITS,
+  RateLimitExceededError,
+} from '@/lib/security/rateLimiter';
 import type { MarketingAttribution } from '@/lib/attribution';
+import { escapeIlikePattern, sanitizePostgrestFilterValue } from '@/lib/security/postgrestFilter';
+import {
+  buildOrderDashboardStatsFromBatch,
+  fetchDashboardStatisticsBatch,
+} from '@/services/dashboardStatsService';
 
 export const ORDERS_PER_PAGE = 50;
 
@@ -161,7 +172,10 @@ const fetchOrdersFilteredFallback = async (
   pageSize: number,
   filterKey: string
 ): Promise<OrdersPageResult> => {
-  const { filterOrdersList } = await import('@/utils/orderWorkflowUtils');
+  if (filters.workflowTab !== 'all') {
+    logger.warn('orders.fetchFiltered.fallback_unsupported', { workflowTab: filters.workflowTab });
+    return { orders: [], total: 0, page, pageSize, totalPages: 1 };
+  }
 
   let query = supabase
     .from('orders')
@@ -181,29 +195,30 @@ const fetchOrdersFilteredFallback = async (
 
   const search = filters.search.trim();
   if (search) {
-    const pattern = `%${search.replace(/-/g, '')}%`;
+    const safe = escapeIlikePattern(search);
+    const pattern = `%${safe.replace(/-/g, '')}%`;
     query = query.or(
-      `customer_name.ilike.%${search}%,customer_phone.ilike.%${search}%,id.ilike.${pattern}`
+      `customer_name.ilike.%${safe}%,customer_phone.ilike.%${safe}%,id.ilike.${pattern}`
     );
   }
 
-  query = query.order('created_at', { ascending: false });
+  const from = page * pageSize;
+  const to = from + pageSize - 1;
 
-  const { data, error, count } = await query.range(0, 999);
+  const { data, error, count } = await query
+    .order('created_at', { ascending: false })
+    .range(from, to);
 
   if (error) {
     logger.error('orders.fetchFiltered.fallback failed', { message: error.message });
     return { orders: [], total: 0, page, pageSize, totalPages: 1 };
   }
 
-  const allMapped = await mapRpcOrderRows(
+  const orders = await mapRpcOrderRows(
     (data ?? []).map((row) => row as Record<string, unknown>),
     ownerId
   );
-  const filtered = filterOrdersList(allMapped, filters);
-  const total = filtered.length;
-  const from = page * pageSize;
-  const orders = filtered.slice(from, from + pageSize);
+  const total = count ?? orders.length;
 
   const result: OrdersPageResult = {
     orders,
@@ -271,9 +286,10 @@ export const fetchWorkflowTabCounts = async (
 
   const search = filters.search.trim();
   if (search) {
-    const pattern = `%${search.replace(/-/g, '')}%`;
+    const safe = escapeIlikePattern(search);
+    const pattern = `%${safe.replace(/-/g, '')}%`;
     query = query.or(
-      `customer_name.ilike.%${search}%,customer_phone.ilike.%${search}%,id.ilike.${pattern}`
+      `customer_name.ilike.%${safe}%,customer_phone.ilike.%${safe}%,id.ilike.${pattern}`
     );
   }
 
@@ -386,12 +402,15 @@ export const fetchCustomerInsightsByPhone = async (
   const digits = normalizeOrderPhone(phone);
   if (!digits) return { orderCount: 0, totalSpent: 0 };
 
+  const safePhone = sanitizePostgrestFilterValue(phone);
+  const safeDigits = sanitizePostgrestFilterValue(digits);
+
   const { data, error } = await supabase
     .from('orders')
     .select('total_amount, status, customer_phone')
     .eq('owner_id', ownerId)
     .neq('status', 'cancelled')
-    .or(`customer_phone.eq.${phone},customer_phone.ilike.%${digits}%`)
+    .or(`customer_phone.eq.${safePhone},customer_phone.ilike.%${safeDigits}%`)
     .limit(200);
 
   if (error || !data) return { orderCount: 0, totalSpent: 0 };
@@ -417,7 +436,7 @@ export const fetchOrderStatsRows = async (ownerId: string): Promise<Order[]> => 
     .select(ORDER_STATS_SELECT)
     .eq('owner_id', ownerId)
     .order('created_at', { ascending: false })
-    .limit(2000);
+    .limit(ORDERS_STATS_CAP);
 
   if (error || !data) return [];
 
@@ -436,58 +455,10 @@ export const fetchOrderStatsRows = async (ownerId: string): Promise<Order[]> => 
   return orders;
 };
 
-const fetchStoreStatisticsMetrics = async (
-  ownerId: string,
-  start: string,
-  end: string
-): Promise<Record<string, unknown> | null> => {
-  try {
-    const { data, error } = await (supabase as any).rpc('get_store_statistics', {
-      p_owner_id: ownerId,
-      p_start: start,
-      p_end: end,
-    });
-    if (error || !data) return null;
-    return data as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-};
-
 const buildOrderStatsFromRpc = async (ownerId: string): Promise<OrderDashboardStats | null> => {
-  const { getTodayBoundsIso, getWeekBoundsIso, getMonthBoundsIso } = await import(
-    '@/utils/dashboardInsightsUtils'
-  );
-
-  const today = getTodayBoundsIso();
-  const week = getWeekBoundsIso();
-  const month = getMonthBoundsIso();
-  const allTimeStart = '2000-01-01T00:00:00.000Z';
-  const nowEnd = new Date().toISOString();
-
-  const [counts, todayRpc, weekRpc, monthRpc, revenueRpc] = await Promise.all([
-    fetchWorkflowTabCounts(ownerId, DEFAULT_LIST_FILTERS),
-    fetchStoreStatisticsMetrics(ownerId, today.start, today.end),
-    fetchStoreStatisticsMetrics(ownerId, week.start, week.end),
-    fetchStoreStatisticsMetrics(ownerId, month.start, month.end),
-    fetchStoreStatisticsMetrics(ownerId, allTimeStart, nowEnd),
-  ]);
-
-  if (!todayRpc && !weekRpc && !monthRpc && !revenueRpc) {
-    return null;
-  }
-
-  return {
-    total: counts?.all ?? Number(monthRpc?.order_count ?? 0),
-    newOrders: counts?.new ?? 0,
-    pendingFulfillment:
-      (counts?.new ?? 0) + (counts?.processing ?? 0) + (counts?.paid ?? 0),
-    delivered: counts?.delivered ?? 0,
-    revenue: Number(revenueRpc?.completed_revenue ?? 0),
-    todayOrders: Number(todayRpc?.order_count ?? 0),
-    weekOrders: Number(weekRpc?.order_count ?? 0),
-    monthOrders: Number(monthRpc?.order_count ?? 0),
-  };
+  const batch = await fetchDashboardStatisticsBatch(ownerId);
+  if (!batch) return null;
+  return buildOrderDashboardStatsFromBatch(batch);
 };
 
 /** Aggregate order stats across the full store (not paginated list). */
@@ -511,6 +482,14 @@ export const fetchOrderStatsSummary = async (ownerId: string): Promise<OrderDash
 };
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Deduplicate concurrent createOrder calls sharing the same idempotency key. */
+const inflightOrders = new Map<string, Promise<CreateOrderResult>>();
+
+/** @internal test helper */
+export const clearInflightOrdersForTests = (): void => {
+  inflightOrders.clear();
+};
 
 const isRetryableOrderError = (message: string): boolean => {
   const lower = message.toLowerCase();
@@ -539,6 +518,8 @@ const normalizeOrderRpcItems = (items: CartItem[]) =>
     selected_color: item.selectedColor?.trim() || null,
   }));
 
+export type CreateOrderResult = Order & { wasIdempotent?: boolean };
+
 export const createOrder = async (
   order: Order,
   ownerId: string,
@@ -546,9 +527,22 @@ export const createOrder = async (
   couponCode?: string | null,
   storeSlug?: string | null,
   marketingAttribution?: MarketingAttribution | null
-): Promise<Order> => {
-  return instrumentAsync('order.create', async () => {
-    const idempotencyKey = getOrCreateIdempotencyKey(ownerId);
+): Promise<CreateOrderResult> => {
+  const idempotencyKey = getOrCreateIdempotencyKey(ownerId);
+  const inflightKey = `${ownerId}:${idempotencyKey}`;
+  const existing = inflightOrders.get(inflightKey);
+  if (existing) return existing;
+
+  const promise = instrumentAsync('order.create', async () => {
+    try {
+      enforceRateLimit(`checkout:${ownerId}`, RATE_LIMITS.checkout);
+    } catch (err) {
+      if (err instanceof RateLimitExceededError) {
+        throw new Error(formatRateLimitMessageAr(err.retryAfterMs));
+      }
+      throw err;
+    }
+
     const maxAttempts = 3;
 
     const orderItems = normalizeOrderRpcItems(order.items);
@@ -575,8 +569,14 @@ export const createOrder = async (
 
       if (!error && data?.success) {
         const orderId = data.order_id as string;
+        const wasIdempotent = data.idempotent === true;
 
-        if (marketingAttribution && storeSlug?.trim()) {
+        if (wasIdempotent) {
+          logger.info('order.create.idempotent', { orderId, ownerId, attempt });
+          metrics.increment('checkout.submit.idempotent');
+        }
+
+        if (marketingAttribution && storeSlug?.trim() && !wasIdempotent) {
           await (supabase as any).rpc('attach_order_marketing_attribution', {
             p_order_id: orderId,
             p_store_slug: storeSlug.trim().toLowerCase(),
@@ -584,7 +584,7 @@ export const createOrder = async (
           });
         }
 
-        if (storeSlug?.trim()) {
+        if (storeSlug?.trim() && !wasIdempotent) {
           void (supabase as any).functions
             .invoke('meta-conversions', {
               body: {
@@ -605,12 +605,12 @@ export const createOrder = async (
             });
         }
 
-        clearCheckoutIdempotencyKey(ownerId);
-        logger.info('order.create.success', { orderId, ownerId, attempt });
+        logger.info('order.create.success', { orderId, ownerId, attempt, wasIdempotent });
         return {
-          id: orderId,
           ...order,
+          id: orderId,
           total: Number(data.total_amount ?? order.total),
+          wasIdempotent,
         };
       }
 
@@ -651,4 +651,11 @@ export const createOrder = async (
 
     throw new Error(lastError);
   }, { ownerId, paymentMethod, itemCount: order.items.length });
+
+  inflightOrders.set(inflightKey, promise);
+  try {
+    return await promise;
+  } finally {
+    inflightOrders.delete(inflightKey);
+  }
 };

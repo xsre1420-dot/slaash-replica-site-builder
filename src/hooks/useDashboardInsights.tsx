@@ -26,9 +26,11 @@ import {
   summarizeInventoryAlerts,
   type PeriodMetrics,
 } from '@/utils/dashboardInsightsUtils';
+import {
+  fetchDashboardStatisticsBatch,
+} from '@/services/dashboardStatsService';
 import { fetchOrderStatsRows } from '@/services/orderService';
 import { useOrderDashboardStats } from '@/hooks/useOrderDashboardStats';
-import { supabase } from '@/integrations/supabase/client';
 import type { Order } from '@/types';
 
 export type DashboardActionItem = {
@@ -70,6 +72,7 @@ const fetchRpcPeriod = async (
   }
 };
 
+/** @deprecated Use fetchDashboardStatisticsBatch — kept for partial fallback */
 export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -114,6 +117,25 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
     }
 
     setKpiLoading(true);
+
+    const batch = await fetchDashboardStatisticsBatch(user.id);
+
+    if (
+      batch?.today != null &&
+      batch.yesterday != null &&
+      batch.week != null &&
+      batch.previousWeek != null
+    ) {
+      setOrders([]);
+      setPeriods({
+        today: batch.today,
+        yesterday: batch.yesterday,
+        week: batch.week,
+        previousWeek: batch.previousWeek,
+      });
+      setKpiLoading(false);
+      return;
+    }
 
     const todayBounds = getTodayBoundsIso();
     const yesterdayBounds = getYesterdayBoundsIso();

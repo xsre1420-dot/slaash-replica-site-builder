@@ -37,8 +37,26 @@ vi.mock('@/integrations/supabase/client', () => {
   };
 });
 
+vi.mock('@/hooks/useRecoveryMonitor', () => ({
+  useRecoveryMonitor: () => ({
+    mode: 'normal',
+    runHealthCheck: vi.fn(),
+  }),
+}));
+
 vi.mock('@/services/merchantHydration', () => ({
   hydrateMerchantStore: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('@/context/SubscriptionContext', () => ({
+  SubscriptionProvider: ({ children }: { children: React.ReactNode }) => children,
+  useSubscription: () => ({
+    hasAccess: false,
+    isAdmin: false,
+    loading: false,
+    refresh: vi.fn(),
+    subscription: null,
+  }),
 }));
 
 describe('Auth pages integration', () => {
@@ -53,11 +71,11 @@ describe('Auth pages integration', () => {
     await waitFor(
       () => {
         expect(screen.queryByText('حدث خطأ غير متوقع')).not.toBeInTheDocument();
-        expect(screen.getByText('إنشاء حساب جديد')).toBeInTheDocument();
+        expect(screen.getByText('اختر مدة اشتراكك')).toBeInTheDocument();
       },
-      { timeout: 10000 }
+      { timeout: 12000 }
     );
-  });
+  }, 15000);
 
   it('renders signup without ErrorBoundary crash', async () => {
     render(

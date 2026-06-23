@@ -13,10 +13,21 @@ vi.mock('@/integrations/supabase/client', () => ({
 
 vi.mock('@/lib/observability', () => ({
   instrumentAsync: (_op: string, fn: () => Promise<unknown>) => fn(),
-  logger: { error: vi.fn() },
+  logger: { error: vi.fn(), warn: vi.fn() },
 }));
 
 import { fetchOrderStatsSummary } from '@/services/orderService';
+
+const workflowCounts = {
+  all: 2,
+  new: 1,
+  processing: 0,
+  paid: 0,
+  shipped: 0,
+  delivered: 1,
+  cancelled: 0,
+  refunded: 0,
+};
 
 describe('fetchOrderStatsSummary', () => {
   beforeEach(() => {
@@ -25,25 +36,18 @@ describe('fetchOrderStatsSummary', () => {
     mockRpc.mockResolvedValue({ data: null, error: { message: 'RPC unavailable' } });
   });
 
-  it('aggregates stats from RPC when available', async () => {
+  it('aggregates stats from batch RPC when available', async () => {
     mockRpc.mockImplementation((name: string) => {
-      if (name === 'get_store_statistics') {
-        return Promise.resolve({
-          data: { order_count: 2, completed_revenue: 500, pending_count: 1 },
-          error: null,
-        });
-      }
-      if (name === 'count_merchant_orders_by_workflow') {
+      if (name === 'get_dashboard_statistics_batch') {
         return Promise.resolve({
           data: {
-            all: 2,
-            new: 1,
-            processing: 0,
-            paid: 0,
-            shipped: 0,
-            delivered: 1,
-            cancelled: 0,
-            refunded: 0,
+            today: { order_count: 2, completed_revenue: 100, visit_count: 5 },
+            yesterday: { order_count: 1, completed_revenue: 50, visit_count: 2 },
+            week: { order_count: 2, completed_revenue: 200, visit_count: 10 },
+            previous_week: { order_count: 0, completed_revenue: 0, visit_count: 0 },
+            month: { order_count: 2, completed_revenue: 500, visit_count: 12 },
+            all_time: { order_count: 10, completed_revenue: 500, visit_count: 100 },
+            workflow_counts: workflowCounts,
           },
           error: null,
         });

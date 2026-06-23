@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { syncMerchantProductCatalog } from "@/services/productService";
+import { fetchStoreByUserId } from "@/services/storeService";
 
 interface ParsedProduct {
   name: string;
@@ -128,6 +129,9 @@ export const BulkUpload = ({ onComplete }: { onComplete: () => void }) => {
     let failed = 0;
     const uploadErrors: string[] = [];
 
+    const store = await fetchStoreByUserId(user.id);
+    const storeId = store?.id ?? null;
+
     // Batch insert in chunks of 20
     const chunkSize = 20;
     for (let i = 0; i < parsed.length; i += chunkSize) {
@@ -141,6 +145,8 @@ export const BulkUpload = ({ onComplete }: { onComplete: () => void }) => {
         sizes: p.sizes || null,
         image_url: p.image_url || null,
         owner_id: user.id,
+        is_active: false,
+        ...(storeId ? { store_id: storeId } : {}),
       }));
 
       const { error } = await supabase.from("products").insert(chunk);

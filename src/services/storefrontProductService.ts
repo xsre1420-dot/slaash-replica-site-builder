@@ -12,7 +12,7 @@ import { cache } from '@/lib/cache';
 import { isStorefrontVisible } from '@/lib/productLifecycle';
 
 const MINIMAL_STOREFRONT_SELECT =
-  'id, name, description, category, price, image_url, additional_images, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, original_price, is_active, created_at, updated_at';
+  'id, name, description, category, price, image_url, additional_images, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, original_price, is_active, archived_at, created_at, updated_at';
 
 export interface StorefrontProductsPage {
   products: Product[];
@@ -102,24 +102,48 @@ async function queryProductsByIdsForOwner(
   const map = new Map<string, Product>();
   if (!ownerId || productIds.length === 0) return map;
 
-  const runQuery = async (select: string) =>
-    supabase
+  const uniqueIds = [...new Set(productIds.filter(Boolean))];
+
+  try {
+    const { data, error } = await (supabase as any).rpc('get_owner_checkout_products_by_ids', {
+      p_owner_id: ownerId,
+      p_product_ids: uniqueIds,
+    });
+    if (!error && data) {
+      const rows = Array.isArray(data) ? data : [];
+      for (const row of rows) {
+        const mapped = safeMapStorefrontProduct(row);
+        if (mapped && isStorefrontVisible(mapped)) map.set(mapped.id, mapped);
+      }
+      if (map.size >= uniqueIds.length) return map;
+    }
+  } catch {
+    /* RPC may be unavailable on older schema */
+  }
+
+  const runQuery = async (select: string, filterArchived: boolean) => {
+    let query = supabase
       .from('products')
       .select(select)
       .eq('owner_id', ownerId)
       .in('id', productIds)
       .or(ACTIVE_PRODUCTS_FILTER);
+    if (filterArchived) {
+      query = query.is('archived_at', null);
+    }
+    return query;
+  };
 
-  let { data, error } = await runQuery(MERCHANT_PRODUCTS_LIST_SELECT);
+  let { data, error } = await runQuery(MERCHANT_PRODUCTS_LIST_SELECT, true);
   if (error && isSchemaColumnError(error.message)) {
-    ({ data, error } = await runQuery(MINIMAL_STOREFRONT_SELECT));
+    ({ data, error } = await runQuery(MINIMAL_STOREFRONT_SELECT, false));
   }
 
   if (error || !data) return map;
 
   for (const row of data) {
     const mapped = safeMapStorefrontProduct(row);
-    if (mapped) map.set(mapped.id, mapped);
+    if (mapped && isStorefrontVisible(mapped)) map.set(mapped.id, mapped);
   }
   return map;
 }
@@ -130,7 +154,7 @@ async function queryActiveProductsByOwner(
 ): Promise<Product[]> {
   const limit = options.limit ?? 48;
 
-  const runQuery = async (select: string) => {
+  const runQuery = async (select: string, filterArchived: boolean) => {
     let query = supabase
       .from('products')
       .select(select)
@@ -138,6 +162,10 @@ async function queryActiveProductsByOwner(
       .or(ACTIVE_PRODUCTS_FILTER)
       .order('created_at', { ascending: false })
       .limit(limit);
+
+    if (filterArchived) {
+      query = query.is('archived_at', null);
+    }
 
     if (options.category?.trim()) {
       query = query.eq('category', options.category.trim());
@@ -149,10 +177,10 @@ async function queryActiveProductsByOwner(
     return query;
   };
 
-  let { data, error } = await runQuery(MERCHANT_PRODUCTS_LIST_SELECT);
+  let { data, error } = await runQuery(MERCHANT_PRODUCTS_LIST_SELECT, true);
 
   if (error && isSchemaColumnError(error.message)) {
-    ({ data, error } = await runQuery(MINIMAL_STOREFRONT_SELECT));
+    ({ data, error } = await runQuery(MINIMAL_STOREFRONT_SELECT, false));
   }
 
   if (error) {
@@ -243,7 +271,7 @@ export async function fetchStorefrontProductsPage(
     if (!error && data?.products !== undefined) {
       const mapped = ((data.products as Record<string, unknown>[]) || [])
         .map((row) => safeMapStorefrontProduct(row))
-        .filter((p): p is Product => p != null);
+        .filter((p): p is Product => p != null && isStorefrontVisible(p));
 
       if (mapped.length > 0 || options.cursor) {
         return {
@@ -318,7 +346,7 @@ export async function fetchStorefrontProductById(
 
     if (!error && data) {
       const mapped = safeMapStorefrontProduct(data);
-      if (mapped) return mapped;
+      if (mapped && isStorefrontVisible(mapped)) return mapped;
     }
 
     if (error) {
@@ -369,7 +397,7 @@ export async function fetchStorefrontProductById(
   }
 }
 
-/** Per-product RPC fetch — most reliable for checkout stock (avoids stale catalog scans). */
+/** Batch RPC fetch — single round-trip for checkout validation. */
 export async function fetchCheckoutProductsByIds(
   slug: string,
   productIds: string[]
@@ -379,8 +407,26 @@ export async function fetchCheckoutProductsByIds(
   const uniqueIds = [...new Set(productIds.filter(Boolean))];
   if (!/^[a-z0-9-]+$/.test(normalized) || uniqueIds.length === 0) return map;
 
+  try {
+    const { data, error } = await (supabase as any).rpc('get_checkout_products_by_ids', {
+      p_slug: normalized,
+      p_product_ids: uniqueIds,
+    });
+    if (!error && data) {
+      const rows = Array.isArray(data) ? data : [];
+      for (const row of rows) {
+        const mapped = safeMapStorefrontProduct(row);
+        if (mapped && isStorefrontVisible(mapped)) map.set(mapped.id, mapped);
+      }
+      if (map.size > 0) return map;
+    }
+  } catch {
+    /* fall through to per-id RPC */
+  }
+
   await Promise.all(
     uniqueIds.map(async (id) => {
+      if (map.has(id)) return;
       const product = await fetchStorefrontProductById(normalized, id);
       if (product && isStorefrontVisible(product)) {
         map.set(id, product);

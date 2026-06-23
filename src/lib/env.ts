@@ -13,6 +13,8 @@ const envSchema = z.object({
   VITE_OBSERVABILITY_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional(),
   VITE_FAILOVER_SUPABASE_URL: z.union([z.string().url(), z.literal('')]).optional(),
   VITE_FAILOVER_SUPABASE_PUBLISHABLE_KEY: z.string().min(20).optional(),
+  /** Transaction pooler URL (Dashboard → Connect → Pooler) — reduces connection churn at scale */
+  VITE_SUPABASE_POOLER_URL: z.union([z.string().url(), z.literal('')]).optional(),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;
@@ -27,6 +29,7 @@ const raw = {
   VITE_OBSERVABILITY_SAMPLE_RATE: import.meta.env.VITE_OBSERVABILITY_SAMPLE_RATE as number | undefined,
   VITE_FAILOVER_SUPABASE_URL: import.meta.env.VITE_FAILOVER_SUPABASE_URL as string | undefined,
   VITE_FAILOVER_SUPABASE_PUBLISHABLE_KEY: import.meta.env.VITE_FAILOVER_SUPABASE_PUBLISHABLE_KEY as string | undefined,
+  VITE_SUPABASE_POOLER_URL: import.meta.env.VITE_SUPABASE_POOLER_URL as string | undefined,
 };
 
 const parsed = envSchema.safeParse(raw);

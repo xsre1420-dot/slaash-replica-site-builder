@@ -23,6 +23,10 @@ import {
   type ProductLifecycleAction,
 } from "@/lib/productUpdateUtils";
 import { OWNER_PRODUCTS_PAGE_SIZE } from '@/constants/pagination';
+import {
+  collectProductImageUrls,
+  deleteProductStorageImages,
+} from '@/utils/productImageCleanup';
 
 /** @deprecated Use `@/services/productService` for new imports. */
 
@@ -354,6 +358,7 @@ export const invalidateProducts = async () => {
   const ownerId = await getAuthOwnerId();
   if (ownerId) {
     clearInflight(`${CacheKeys.products(ownerId)}:p0:s:c`);
+    void invalidateStorefrontForOwner(ownerId);
   }
 };
 
@@ -417,7 +422,12 @@ export const addProduct = async (
   return runOncePerKey(lockKey, async () => {
     try {
       const storeId = await resolveStoreIdForOwner(userId);
-      const payloads = buildProductInsertPayload(product, userId, storeId);
+      const publishIntent = product.isActive !== false;
+      const payloads = buildProductInsertPayload(
+        publishIntent ? { ...product, isActive: false } : product,
+        userId,
+        storeId
+      );
       const insertAttempts = [
         payloads.full,
         payloads.extended,
@@ -461,9 +471,23 @@ export const addProduct = async (
           });
         }
 
+        const productId = String((data as Record<string, unknown>).id);
+
+        if (publishIntent) {
+          try {
+            await (supabase as any).rpc('publish_owner_product', {
+              p_product_id: productId,
+              p_owner_id: userId,
+            });
+            syncProductCachesAfterMutation(userId);
+          } catch {
+            /* publish RPC optional until migration applied */
+          }
+        }
+
         products = cache.get<Product[]>(CacheKeys.products(userId)) || [];
         products_list = products;
-        return { success: true, productId: String((data as Record<string, unknown>).id) };
+        return { success: true, productId };
       }
 
       return { success: true };
@@ -576,6 +600,13 @@ export const deleteProduct = async (productId: string): Promise<{ success: boole
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, error: 'User not authenticated' };
 
+    const { data: row } = await supabase
+      .from('products')
+      .select('image_url, additional_images')
+      .eq('id', productId)
+      .eq('owner_id', user.id)
+      .maybeSingle();
+
     const { error } = await supabase
       .from('products')
       .delete()
@@ -583,6 +614,10 @@ export const deleteProduct = async (productId: string): Promise<{ success: boole
       .eq('owner_id', user.id);
 
     if (error) return { success: false, error: error.message };
+
+    if (row) {
+      void deleteProductStorageImages(collectProductImageUrls(row));
+    }
 
     removeCachedProduct(user.id, productId);
     syncMerchantProductCatalog(user.id);

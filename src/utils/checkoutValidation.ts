@@ -14,7 +14,10 @@ import { isStorefrontVisible } from '@/lib/productLifecycle';
 
 export type FetchFreshProductsOptions = {
   applyDiscount?: boolean;
+  /** Background cart sync only — never used on final checkout submit */
   cartFallback?: Map<string, Product>;
+  /** When true, never merge stale cart prices (checkout submit) */
+  strict?: boolean;
 };
 
 const variantStockSum = (variants?: Product['variants']) =>
@@ -115,7 +118,7 @@ export async function fetchFreshProducts(
     }
   }
 
-  if (options.cartFallback) {
+  if (!options.strict && options.cartFallback) {
     for (const id of uniqueIds) {
       if (map.has(id)) continue;
       const cartProduct = options.cartFallback.get(id);

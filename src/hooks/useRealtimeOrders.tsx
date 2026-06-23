@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { flushOwnerCache, clearInflight } from '@/lib/cache';
+import { flushOrderCache } from '@/lib/cache';
 
 const DEBOUNCE_MS = 500;
 
@@ -21,8 +21,7 @@ export const useRealtimeOrders = (
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       if (user?.id) {
-        flushOwnerCache(user.id);
-        clearInflight(`fetch-orders-${user.id}-0`);
+        flushOrderCache(user.id);
       }
       onChange?.();
       onEvent?.({ type: 'refetch' });

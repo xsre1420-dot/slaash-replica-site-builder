@@ -19,6 +19,11 @@ import {
   PRODUCT_MINIMAL_SELECT,
 } from '@/lib/productUpdateUtils';
 import { fetchStoreByUserId } from '@/services/storeService';
+import { syncProductCachesAfterMutation } from '@/lib/productCacheSync';
+import {
+  collectProductImageUrls,
+  deleteProductStorageImages,
+} from '@/utils/productImageCleanup';
 import type { Product } from '@/types';
 
 export type ProductsCrudResult<T> =
@@ -162,6 +167,7 @@ export async function createProduct(product: Product): Promise<ProductsCrudResul
       .single();
 
     if (!error && data) {
+      syncProductCachesAfterMutation(ownerId);
       return { success: true, data: mapDbProduct(data as Record<string, unknown>) };
     }
     if (error && !isSchemaColumnError(error.message)) {
@@ -197,6 +203,7 @@ export async function updateProduct(
         .maybeSingle();
 
       if (!error && data) {
+        syncProductCachesAfterMutation(ownerId);
         return { success: true, data: mapDbProduct(data as Record<string, unknown>) };
       }
       if (error && !isSchemaColumnError(error.message)) {
@@ -213,6 +220,13 @@ export async function deleteProduct(productId: string): Promise<ProductsCrudResu
   const ownerId = await requireOwnerId();
   if (!ownerId) return { success: false, error: 'يجب تسجيل الدخول أولاً' };
 
+  const { data: row } = await supabase
+    .from('products')
+    .select('image_url, additional_images')
+    .eq('id', productId)
+    .eq('owner_id', ownerId)
+    .maybeSingle();
+
   const { error } = await supabase
     .from('products')
     .delete()
@@ -220,6 +234,12 @@ export async function deleteProduct(productId: string): Promise<ProductsCrudResu
     .eq('owner_id', ownerId);
 
   if (error) return { success: false, error: error.message };
+
+  if (row) {
+    void deleteProductStorageImages(collectProductImageUrls(row));
+  }
+
+  syncProductCachesAfterMutation(ownerId);
 
   return { success: true, data: { id: productId } };
 }

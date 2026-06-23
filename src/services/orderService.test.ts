@@ -7,6 +7,13 @@ vi.mock('@/integrations/supabase/client', () => ({
   supabase: { rpc: (...args: unknown[]) => mockRpc(...args) },
 }));
 
+vi.mock('@/lib/security/rateLimiter', () => ({
+  enforceRateLimit: vi.fn(),
+  RATE_LIMITS: { checkout: { maxRequests: 5, windowMs: 60_000 } },
+  RateLimitExceededError: class extends Error {},
+  formatRateLimitMessageAr: (ms: number) => `wait ${ms}`,
+}));
+
 vi.mock('@/lib/observability', () => ({
   instrumentAsync: (_op: string, fn: () => Promise<unknown>) => fn(),
   instrumentQuery: async (_op: string, fn: () => Promise<unknown>) => fn(),
@@ -19,7 +26,7 @@ vi.mock('@/utils/checkoutSession', () => ({
   clearCheckoutIdempotencyKey: vi.fn(),
 }));
 
-import { createOrder } from '@/services/orderService';
+import { createOrder, clearInflightOrdersForTests } from '@/services/orderService';
 import { Order } from '@/types';
 
 const sampleOrder: Order = {
@@ -34,6 +41,7 @@ const sampleOrder: Order = {
 describe('orderService integration', () => {
   beforeEach(() => {
     mockRpc.mockReset();
+    clearInflightOrdersForTests();
   });
 
   it('creates order via RPC on success', async () => {
@@ -92,5 +100,42 @@ describe('orderService integration', () => {
     expect(result.total).toBe(1200);
     expect(mockRpc).toHaveBeenCalledTimes(2);
     expect(mockRpc.mock.calls[1][1].p_total_amount).toBe(1200);
+  });
+
+  it('returns existing order on idempotent RPC response', async () => {
+    mockRpc.mockResolvedValue({
+      data: {
+        success: true,
+        order_id: 'existing-order',
+        total_amount: 1000,
+        idempotent: true,
+      },
+      error: null,
+    });
+
+    const result = await createOrder(sampleOrder, 'owner-1');
+    expect(result.id).toBe('existing-order');
+    expect(mockRpc).toHaveBeenCalledTimes(1);
+  });
+
+  it('deduplicates concurrent createOrder calls', async () => {
+    let resolveRpc!: (v: unknown) => void;
+    const rpcPromise = new Promise((resolve) => {
+      resolveRpc = resolve;
+    });
+    mockRpc.mockReturnValue(rpcPromise);
+
+    const p1 = createOrder(sampleOrder, 'owner-1');
+    const p2 = createOrder(sampleOrder, 'owner-1');
+
+    resolveRpc({
+      data: { success: true, order_id: 'order-1', total_amount: 1000 },
+      error: null,
+    });
+
+    const [r1, r2] = await Promise.all([p1, p2]);
+    expect(r1.id).toBe('order-1');
+    expect(r2.id).toBe('order-1');
+    expect(mockRpc).toHaveBeenCalledTimes(1);
   });
 });

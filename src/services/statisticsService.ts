@@ -15,8 +15,8 @@ const CHART_ORDER_COLUMNS =
   'id,status,total_amount,created_at,customer_name,customer_phone,payment_method';
 
 /** When RPC supplies KPIs, only load current-period rows for charts/breakdowns. */
-const CHART_ORDERS_CAP = 1000;
-const VISITS_CAP = 1000;
+const CHART_ORDERS_CAP = 5000;
+const VISITS_CAP = 5000;
 /** Full client-side fallback when RPC is unavailable. */
 const FALLBACK_ORDERS_CAP = 5000;
 const FALLBACK_VISITS_CAP = 5000;
@@ -29,7 +29,9 @@ export interface StatisticsDateBounds {
 }
 
 export const hasUsableStatisticsKpis = (kpis?: Record<string, unknown>): boolean =>
-  kpis != null && typeof kpis === 'object';
+  kpis != null &&
+  typeof kpis === 'object' &&
+  (kpis.order_count != null || kpis.completed_order_count != null || kpis.visit_count != null);
 
 export const getStatisticsDateBounds = (
   dateRange: string,
@@ -108,7 +110,8 @@ const fetchProductCount = async (
     .from('products')
     .select('id', { count: 'exact', head: true })
     .eq('owner_id', ownerId)
-    .eq('is_active', true);
+    .eq('is_active', true)
+    .is('archived_at', null);
 
   if (!activeRes.error && activeRes.count != null) {
     return activeRes.count;
@@ -172,19 +175,34 @@ const fetchVisitsForStatistics = async (
 
 const fetchOrderItemsForStatistics = async (
   ownerId: string,
-  orders: DatabaseData['orders']
+  fromIso: string,
+  toIso: string
 ): Promise<DatabaseData['orderItems']> => {
-  const completedIds = orders
-    .filter((o) => o.status === 'completed')
-    .map((o) => o.id);
+  try {
+    const { data, error } = await (supabase as any).rpc('get_order_items_for_statistics', {
+      p_owner_id: ownerId,
+      p_start: fromIso,
+      p_end: toIso,
+      p_limit: 5000,
+    });
 
-  if (completedIds.length === 0) return [];
+    if (!error && Array.isArray(data)) {
+      return data as DatabaseData['orderItems'];
+    }
+    if (!error && data && typeof data === 'object') {
+      return (data as DatabaseData['orderItems']) ?? [];
+    }
+  } catch {
+    /* RPC optional until migration applied */
+  }
 
   const { data, error } = await supabase
     .from('order_items')
     .select('order_id, product_id, product_name, quantity, subtotal, created_at')
     .eq('owner_id', ownerId)
-    .in('order_id', completedIds);
+    .gte('created_at', fromIso)
+    .lte('created_at', toIso)
+    .limit(5000);
 
   if (error) {
     console.warn('[statistics] order_items fetch failed:', error.message);
@@ -270,7 +288,7 @@ export const fetchStatisticsData = async (
 
       const orders = ordersResult.orders;
       const visits = visitsResult.visits;
-      const orderItems = await fetchOrderItemsForStatistics(ownerId, orders);
+      const orderItems = await fetchOrderItemsForStatistics(ownerId, periodStart, periodEnd);
 
       const truncated =
         orders.length >= ordersCap ||

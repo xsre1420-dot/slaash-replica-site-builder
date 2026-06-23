@@ -27,6 +27,10 @@ export const mapOrderRpcFailure = (payload: OrderRpcErrorPayload | null | undefi
 export const mapOrderError = (message: string): string => {
   const lower = message.toLowerCase();
 
+  if (lower.includes('rate_limit') || lower.includes('محاولات كثيرة')) {
+    return message;
+  }
+
   if (lower.includes('stock_deduction_failed')) {
     return 'تعذر خصم المخزون — ربما نفد أحد المنتجات أثناء الطلب. حدّث الصفحة وراجع السلة.';
   }

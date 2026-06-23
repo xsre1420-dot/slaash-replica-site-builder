@@ -44,8 +44,10 @@ export const resolveSupabaseConfig = (): SupabaseEndpointConfig => {
     return { url: failoverUrl, key: failoverKey, label: 'failover' };
   }
 
+  const primaryUrl = env.VITE_SUPABASE_POOLER_URL?.trim() || env.VITE_SUPABASE_URL;
+
   return {
-    url: env.VITE_SUPABASE_URL,
+    url: primaryUrl,
     key: env.VITE_SUPABASE_PUBLISHABLE_KEY,
     label: 'primary',
   };

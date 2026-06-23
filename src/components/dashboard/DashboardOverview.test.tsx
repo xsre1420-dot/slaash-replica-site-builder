@@ -3,6 +3,22 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import DashboardOverview from '@/components/dashboard/DashboardOverview';
 
+vi.mock('@/hooks/useRecentOrders', () => ({
+  useRecentOrders: () => ({
+    orders: [
+      {
+        id: '1',
+        status: 'pending',
+        total: 100,
+        date: new Date().toISOString(),
+        customerInfo: { name: 'عميل', phone: '0770000000', address: 'بغداد', governorate: 'بغداد' },
+      },
+    ],
+    loading: false,
+    refetch: vi.fn(),
+  }),
+}));
+
 vi.mock('@/hooks/useOrders', () => ({
   useOrders: () => ({
     orders: [

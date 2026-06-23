@@ -5,7 +5,18 @@ import { useStore } from "@/context/StoreContext";
 import { useTenantStore } from "@/hooks/useTenantStore";
 import { useAuth } from "@/context/AuthContext";
 import { Order } from "@/types";
-import { saveOrderToDatabase, clearCheckoutIdempotencyKey } from "@/utils/orderUtils";
+import { saveOrderToDatabase } from "@/utils/orderUtils";
+import {
+  acquireCheckoutSubmitLock,
+  releaseCheckoutSubmitLock,
+  touchCheckoutSubmitLock,
+  getStableCheckoutOrderId,
+  loadCompletedCheckoutOrderId,
+  markCheckoutCompleted,
+  persistCheckoutFingerprint,
+  type CheckoutSubmitPhase,
+} from "@/utils/checkoutSession";
+import { tryRecoverCheckoutOrder } from "@/services/checkoutRecoveryService";
 import { mapOrderError } from "@/utils/orderErrors";
 import { logger, metrics, reportError, alertOnError } from "@/lib/observability";
 import { getStoredMarketingAttribution, clearMarketingAttribution } from "@/lib/attribution";
@@ -29,7 +40,6 @@ import {
 } from "@/utils/paymentUtils";
 import { cache } from "@/lib/cache";
 import { toast } from "sonner";
-import { generateUUID } from "@/lib/uuid";
 import { formatPhoneForStorage, isValidIraqiPhone } from "@/utils/phoneUtils";
 import { loadCheckoutCustomer, saveCheckoutCustomer } from "@/utils/checkoutCustomer";
 import { resolveStoreSlugByOwnerId } from "@/services/storefrontProductService";
@@ -57,6 +67,7 @@ export const useCheckoutFlow = () => {
   const [orderCompleted, setOrderCompleted] = useState(false);
   const [completedOrderId, setCompletedOrderId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitPhase, setSubmitPhase] = useState<CheckoutSubmitPhase>('idle');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [customerInfo, setCustomerInfo] = useState({ name: "", phone: "", address: "", notes: "" });
   const [selectedGovernorate, setSelectedGovernorate] = useState("");
@@ -177,7 +188,7 @@ export const useCheckoutFlow = () => {
 
     feePromise
       .then((fee) => {
-        if (!cancelled) setDeliveryFee(Number.isFinite(fee) ? fee : localFee);
+        if (!cancelled) setDeliveryFee(fee != null ? fee : localFee);
       })
       .catch(() => {
         if (!cancelled) setDeliveryFee(localFee);
@@ -199,7 +210,28 @@ export const useCheckoutFlow = () => {
   const { trackInitiateCheckout, trackPurchase } = useMetaPixel();
   const checkoutTrackedRef = useRef(false);
   const submitLockRef = useRef(false);
+  const submitSucceededRef = useRef(false);
   const cartFingerprint = buildCartFingerprint(cartItems);
+
+  useEffect(() => {
+    if (!ownerId) return;
+    const recoveredOrderId = loadCompletedCheckoutOrderId(ownerId);
+    if (recoveredOrderId) {
+      setCompletedOrderId(recoveredOrderId);
+      setOrderCompleted(true);
+      setSubmitPhase('success');
+    }
+  }, [ownerId]);
+
+  useEffect(() => {
+    if (!isSubmitting) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [isSubmitting]);
 
   useEffect(() => {
     if (!ownerId || cartItems.length === 0) return;
@@ -282,35 +314,107 @@ export const useCheckoutFlow = () => {
     return Object.keys(errors).length === 0;
   };
 
+  const finalizeSuccessfulOrder = useCallback(
+    (orderId: string, computedTotal: number, validationItems: typeof cartItems, idempotent = false) => {
+      submitSucceededRef.current = true;
+      setSubmitPhase('success');
+
+      if (!idempotent) {
+        trackPurchase(
+          computedTotal,
+          validationItems.map((item) => item.product.id),
+          orderId
+        );
+      }
+      clearMarketingAttribution(checkoutStoreSlug);
+
+      if (checkoutStoreSlug) {
+        cache.del(`tenant-meta:${checkoutStoreSlug.trim().toLowerCase()}`);
+        cache.flushByPrefix(`tenant-products:${checkoutStoreSlug.trim().toLowerCase()}:`);
+      }
+
+      if (user?.id === ownerId) {
+        flushOwnerCache(ownerId);
+      }
+
+      setCompletedOrderId(orderId);
+      setOrderCompleted(true);
+      clearCart();
+      sessionStorage.removeItem(COUPON_STORAGE_KEY(ownerId));
+      saveCheckoutCustomer(ownerId, {
+        name: customerInfo.name.trim(),
+        phone: formatPhoneForStorage(customerInfo.phone),
+        address: customerInfo.address.trim(),
+        notes: customerInfo.notes.trim(),
+        governorate: selectedGovernorate || undefined,
+      });
+      markCheckoutCompleted(ownerId, orderId);
+      metrics.increment(idempotent ? 'checkout.submit.recovered' : 'checkout.submit.success');
+      logger.info('checkout.submit.success', { orderId, ownerId, idempotent });
+      toast.success(
+        idempotent
+          ? 'تم استلام طلبك مسبقاً — لا حاجة لإعادة الإرسال.'
+          : 'تم استلام طلبك بنجاح! سنتواصل معك قريباً.'
+      );
+
+      setTimeout(() => {
+        setOrderCompleted(false);
+        navigate(storeHomePath);
+      }, 3000);
+    },
+    [
+      checkoutStoreSlug,
+      clearCart,
+      customerInfo,
+      navigate,
+      ownerId,
+      selectedGovernorate,
+      storeHomePath,
+      trackPurchase,
+      user?.id,
+    ]
+  );
+
   const handleSubmitOrder = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (submitLockRef.current || isSubmitting) return;
+    if (submitLockRef.current || isSubmitting || submitSucceededRef.current) return;
     if (!validateForm()) return;
-
-    if (!checkoutStoreSlug && isTenantMode) {
-      toast.error("تعذر تحديد المتجر. افتح صفحة المتجر من الرابط الرسمي ثم حاول مرة أخرى.");
-      return;
-    }
 
     if (!ownerId) {
       toast.error("تعذر تحديد المتجر. يرجى المحاولة مرة أخرى.");
       return;
     }
 
+    if (!acquireCheckoutSubmitLock(ownerId)) {
+      toast.info('جاري معالجة طلبك في نافذة أخرى أو تم الإرسال للتو — انتظر قليلاً.');
+      return;
+    }
+
+    if (!checkoutStoreSlug && isTenantMode) {
+      releaseCheckoutSubmitLock(ownerId);
+      toast.error("تعذر تحديد المتجر. افتح صفحة المتجر من الرابط الرسمي ثم حاول مرة أخرى.");
+      return;
+    }
+
     if (cartItems.length === 0) {
+      releaseCheckoutSubmitLock(ownerId);
       toast.error("سلة التسوق فارغة");
       return;
     }
 
     const selectedOption = paymentMethodOptions.find((m) => m.id === selectedPaymentMethod);
     if (!selectedOption?.available) {
+      releaseCheckoutSubmitLock(ownerId);
       toast.error("يرجى اختيار طريقة دفع متاحة");
       return;
     }
 
     submitLockRef.current = true;
     setIsSubmitting(true);
+    setSubmitPhase('validating');
     metrics.increment('checkout.submit.started');
+
+    let releaseLockOnExit = true;
 
     try {
       const productIds = cartItems.map((i) => i.product.id);
@@ -319,10 +423,17 @@ export const useCheckoutFlow = () => {
         freshMap = await fetchFreshProducts(
           ownerId,
           productIds,
-          checkoutStoreSlug ?? undefined
+          checkoutStoreSlug ?? undefined,
+          { strict: true }
         );
       } catch {
         toast.error("تعذر التحقق من المنتجات. تحقق من الاتصال وحاول مرة أخرى.");
+        return;
+      }
+
+      const missingProducts = productIds.filter((id) => !freshMap.has(id));
+      if (missingProducts.length > 0) {
+        toast.error("تعذر التحقق من بعض المنتجات من السيرفر. حدّث الصفحة وحاول مرة أخرى.");
         return;
       }
 
@@ -353,11 +464,7 @@ export const useCheckoutFlow = () => {
       replaceCartItems(validation.updatedItems);
 
       const fingerprint = buildCartFingerprint(validation.updatedItems);
-      const prevFingerprint = sessionStorage.getItem(`checkout-fingerprint:${ownerId}`);
-      if (prevFingerprint && prevFingerprint !== fingerprint) {
-        clearCheckoutIdempotencyKey(ownerId);
-      }
-      sessionStorage.setItem(`checkout-fingerprint:${ownerId}`, fingerprint);
+      persistCheckoutFingerprint(ownerId, fingerprint);
 
       let couponToApply = appliedCoupon;
       if (appliedCoupon) {
@@ -381,10 +488,14 @@ export const useCheckoutFlow = () => {
       let feeForOrder = 0;
       if (selectedGovernorate) {
         try {
-          feeForOrder =
+          const fetched =
             checkoutStoreSlug
               ? await fetchDeliveryFeeBySlug(checkoutStoreSlug, selectedGovernorate)
               : await fetchDeliveryFee(ownerId, selectedGovernorate);
+          feeForOrder =
+            fetched != null
+              ? fetched
+              : calculateDeliveryFeeFromPrices(deliveryPrices, selectedGovernorate);
         } catch {
           feeForOrder = calculateDeliveryFeeFromPrices(deliveryPrices, selectedGovernorate);
         }
@@ -398,7 +509,7 @@ export const useCheckoutFlow = () => {
         notes: customerInfo.notes.trim(),
       };
 
-      const orderId = generateUUID();
+      const orderId = getStableCheckoutOrderId(ownerId);
 
       const orderToSave: Order = {
         id: orderId,
@@ -419,6 +530,9 @@ export const useCheckoutFlow = () => {
         deliveryFee: feeForOrder,
       };
 
+      setSubmitPhase('creating');
+      touchCheckoutSubmitLock(ownerId);
+
       const savedOrder = await saveOrderToDatabase(
         orderToSave,
         ownerId,
@@ -428,46 +542,31 @@ export const useCheckoutFlow = () => {
         getStoredMarketingAttribution(checkoutStoreSlug)
       );
 
-      trackPurchase(
+      finalizeSuccessfulOrder(
+        savedOrder?.id || orderId,
         computedTotal,
-        validation.updatedItems.map((item) => item.product.id),
-        savedOrder?.id || orderId
+        validation.updatedItems,
+        savedOrder?.wasIdempotent === true
       );
-      clearMarketingAttribution(checkoutStoreSlug);
-
-      if (checkoutStoreSlug) {
-        cache.del(`tenant-meta:${checkoutStoreSlug.trim().toLowerCase()}`);
-        cache.flushByPrefix(`tenant-products:${checkoutStoreSlug.trim().toLowerCase()}:`);
-      }
-
-      if (user?.id === ownerId) {
-        flushOwnerCache(ownerId);
-      }
-
-      setCompletedOrderId(savedOrder?.id || orderId);
-      setOrderCompleted(true);
-      clearCart();
-      sessionStorage.removeItem(COUPON_STORAGE_KEY(ownerId));
-      saveCheckoutCustomer(ownerId, {
-        name: normalizedCustomer.name,
-        phone: normalizedCustomer.phone,
-        address: normalizedCustomer.address,
-        notes: normalizedCustomer.notes,
-        governorate: selectedGovernorate || undefined,
-      });
-      clearCheckoutIdempotencyKey(ownerId);
-      metrics.increment('checkout.submit.success');
-      logger.info('checkout.submit.success', { orderId: savedOrder?.id || orderId, ownerId });
-      toast.success("تم استلام طلبك بنجاح! سنتواصل معك قريباً.");
-
-      setTimeout(() => {
-        setOrderCompleted(false);
-        navigate(storeHomePath);
-      }, 3000);
+      releaseLockOnExit = false;
     } catch (error) {
       metrics.increment('checkout.submit.failed');
       reportError(error, { source: 'checkout.submit', ownerId });
       alertOnError('checkout.submit', error, { ownerId });
+
+      const recovered = await tryRecoverCheckoutOrder(ownerId, checkoutStoreSlug);
+      if (recovered) {
+        finalizeSuccessfulOrder(
+          recovered.orderId,
+          recovered.totalAmount,
+          cartItems,
+          true
+        );
+        releaseLockOnExit = false;
+        return;
+      }
+
+      setSubmitPhase('error');
 
       const rawMessage = error instanceof Error ? error.message : 'فشل في إنشاء الطلب';
       const isStockFailure =
@@ -492,8 +591,14 @@ export const useCheckoutFlow = () => {
 
       toast.error(mapOrderError(rawMessage));
     } finally {
-      submitLockRef.current = false;
-      setIsSubmitting(false);
+      if (releaseLockOnExit && ownerId) {
+        releaseCheckoutSubmitLock(ownerId);
+        submitLockRef.current = false;
+        setIsSubmitting(false);
+        if (submitPhase !== 'success') {
+          setSubmitPhase('idle');
+        }
+      }
     }
   }, [
     isSubmitting,
@@ -506,13 +611,10 @@ export const useCheckoutFlow = () => {
     deliveryPrices,
     customerInfo,
     checkoutStoreSlug,
-    user?.id,
     isTenantMode,
     replaceCartItems,
-    clearCart,
-    navigate,
-    storeHomePath,
-    trackPurchase,
+    finalizeSuccessfulOrder,
+    submitPhase,
   ]);
 
   return {
@@ -527,6 +629,7 @@ export const useCheckoutFlow = () => {
     orderCompleted,
     completedOrderId,
     isSubmitting,
+    submitPhase,
     formErrors,
     customerInfo,
     selectedGovernorate,

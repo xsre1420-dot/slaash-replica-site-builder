@@ -11,6 +11,12 @@ import {
   getAuthCallbackUrl,
   logAuthFailure,
 } from '@/lib/authUtils';
+import {
+  enforceRateLimit,
+  formatRateLimitMessageAr,
+  RATE_LIMITS,
+  RateLimitExceededError,
+} from '@/lib/security/rateLimiter';
 import { redeemAccessCode } from '@/services/leadAdminService';
 import { ACCESS_CODE_ERROR_MESSAGES } from '@/types/accessCodes';
 
@@ -167,6 +173,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string, rememberMe = true) => {
     try {
+      enforceRateLimit(`login:${email.trim().toLowerCase()}`, RATE_LIMITS.login);
       setAuthRememberMe(rememberMe);
 
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -189,6 +196,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       return {};
     } catch (err) {
+      if (err instanceof RateLimitExceededError) {
+        return { error: formatRateLimitMessageAr(err.retryAfterMs) };
+      }
       logAuthFailure('login.exception', err);
       const msg = err instanceof Error ? err.message : '';
       return { error: mapAuthError(msg) || 'حدث خطأ في الاتصال. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.' };
@@ -197,6 +207,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const loginWithAccessCode = async (code: string, rememberMe = true) => {
     try {
+      enforceRateLimit('access_code', RATE_LIMITS.accessCode);
       setAuthRememberMe(rememberMe);
       const result = await redeemAccessCode(code);
       const { error: sessionError } = await supabase.auth.setSession({
@@ -211,6 +222,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       return {};
     } catch (err) {
+      if (err instanceof RateLimitExceededError) {
+        return { error: formatRateLimitMessageAr(err.retryAfterMs) };
+      }
       logAuthFailure('login.access_code', err);
       const code = err instanceof Error ? err.message : '';
       return { error: ACCESS_CODE_ERROR_MESSAGES[code] || 'رمز التفعيل غير صحيح أو منتهي الصلاحية' };
@@ -224,10 +238,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         'is_username_available',
         { p_username: normalized }
       );
-      if (error) return { available: true };
+      if (error) return { available: false, error: 'تعذر التحقق من اسم المستخدم' };
       return { available: data !== false };
     } catch {
-      return { available: true };
+      return { available: false, error: 'تعذر التحقق من اسم المستخدم' };
     }
   };
 

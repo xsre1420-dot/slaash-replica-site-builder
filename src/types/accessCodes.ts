@@ -27,6 +27,7 @@ export const ACCESS_CODE_ERROR_MESSAGES: Record<string, string> = {
   forbidden: 'ليس لديك صلاحية — أضف حسابك كمسؤول',
   login_failed: 'تعذر تسجيل الدخول، حاول مرة أخرى',
   redeem_failed: 'تعذر تفعيل الرمز — تحقق من الرمز أو تواصل مع المبيعات',
+  rate_limited: 'محاولات كثيرة — انتظر قليلاً ثم حاول مرة أخرى',
   edge_unavailable:
     'خدمة تفعيل الرمز غير متوفرة حالياً — تأكد من نشر redeem-access-code على Supabase',
   network_error: 'تعذر الاتصال بالخادم — تحقق من الإنترنت',

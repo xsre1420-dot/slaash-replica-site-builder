@@ -36,6 +36,7 @@ const Checkout = () => {
     orderCompleted,
     completedOrderId,
     isSubmitting,
+    submitPhase,
     formErrors,
     customerInfo,
     selectedGovernorate,
@@ -72,6 +73,15 @@ const Checkout = () => {
     }
     prevStepRef.current = currentStep;
   }, [currentStep]);
+
+  const isCheckoutLocked = isSubmitting || submitPhase === 'creating' || submitPhase === 'validating';
+
+  const submitLabel =
+    submitPhase === 'validating'
+      ? 'جاري التحقق من السلة...'
+      : submitPhase === 'creating'
+        ? 'جاري إرسال الطلب...'
+        : 'تأكيد الطلب';
 
   if (isTenantMode && tenantLoading && !ownerId) {
     return (
@@ -111,7 +121,12 @@ const Checkout = () => {
             </div>
           </ScrollReveal>
         ) : (
-          <form id="checkout-form" onSubmit={handleSubmitOrder} className="space-y-3">
+          <form
+            id="checkout-form"
+            onSubmit={handleSubmitOrder}
+            className={`space-y-3 ${isCheckoutLocked ? 'pointer-events-none opacity-90' : ''}`}
+            aria-busy={isCheckoutLocked}
+          >
 
             <ScrollReveal delay={100}>
               <section className="bg-card rounded-xl border border-border/50 p-3.5 sm:p-4">
@@ -241,11 +256,23 @@ const Checkout = () => {
             <ScrollReveal delay={400}>
               <Button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isCheckoutLocked}
                 className="w-full rounded-xl py-2.5 text-sm font-bold h-12 bg-primary hover:bg-primary/90 transition-colors"
               >
-                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "تأكيد الطلب"}
+                {isCheckoutLocked ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {submitLabel}
+                  </span>
+                ) : (
+                  submitLabel
+                )}
               </Button>
+              {isCheckoutLocked && (
+                <p className="text-center text-xs text-muted-foreground mt-2" role="status">
+                  لا تغلق الصفحة — يتم معالجة طلبك بأمان
+                </p>
+              )}
             </ScrollReveal>
           </form>
         )}
@@ -279,11 +306,11 @@ const Checkout = () => {
             </Button>
             <Button
               type="button"
-              disabled={isSubmitting}
+              disabled={isCheckoutLocked}
               onClick={() => document.getElementById('checkout-form')?.requestSubmit()}
               className="h-10 min-h-0 min-w-0 rounded-xl px-3 text-xs font-semibold shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground"
             >
-              {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'تأكيد'}
+              {isCheckoutLocked ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'تأكيد'}
             </Button>
           </div>
         </div>

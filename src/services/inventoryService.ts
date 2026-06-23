@@ -1,5 +1,4 @@
 import { supabase } from '@/integrations/supabase/client';
-import { scaleVariantsToTotal, buildVariantsForStock } from '@/utils/inventoryUtils';
 import type { InventoryProductRow } from '@/utils/inventoryPageUtils';
 
 export class InventoryRestockError extends Error {
@@ -33,55 +32,39 @@ export const restockProduct = async ({
     return { newQuantity: previousQty, added: 0 };
   }
 
-  const newQty = previousQty + addAmount;
-  const updateData: Record<string, unknown> = {};
-
   if (addAmount > 0) {
-    updateData.stock_quantity = newQty;
-
-    const hasOptions = (product.sizes?.length ?? 0) > 0 || (product.colors?.length ?? 0) > 0;
-    const syncedVariants = hasOptions
-      ? buildVariantsForStock(
-          {
-            sizes: product.sizes,
-            colors: product.colors,
-            variants: product.variants,
-          },
-          newQty
-        )
-      : product.variants?.length
-        ? scaleVariantsToTotal(product.variants, newQty)
-        : undefined;
-
-    if (syncedVariants?.length) {
-      updateData.variants = syncedVariants;
-    } else if (!hasOptions) {
-      updateData.variants = null;
-    }
-  }
-
-  if (minLevel !== undefined) {
-    updateData.min_stock_level = minLevel;
-  }
-
-  const { error } = await (supabase as any)
-    .from('products')
-    .update(updateData)
-    .eq('id', product.id)
-    .eq('owner_id', ownerId);
-
-  if (error) throw error;
-
-  if (addAmount > 0) {
-    await (supabase as any).from('inventory_movements').insert({
-      product_id: product.id,
-      owner_id: ownerId,
-      quantity_delta: addAmount,
-      reason: 'restock',
+    const { data, error } = await (supabase as any).rpc('increment_product_stock', {
+      p_product_id: product.id,
+      p_owner_id: ownerId,
+      p_delta: addAmount,
+      p_reason: 'restock',
     });
+    const payload = data as { success?: boolean; stock_quantity?: number; error?: string };
+    if (!error && payload?.success && payload.stock_quantity != null) {
+      if (hasMinChange) {
+        await (supabase as any)
+          .from('products')
+          .update({ min_stock_level: minLevel })
+          .eq('id', product.id)
+          .eq('owner_id', ownerId);
+      }
+      return { newQuantity: payload.stock_quantity, added: addAmount };
+    }
+
+    throw new InventoryRestockError('تعذر تحديث المخزون — حاول مرة أخرى');
   }
 
-  return { newQuantity: newQty, added: addAmount };
+  if (hasMinChange) {
+    const { error } = await (supabase as any)
+      .from('products')
+      .update({ min_stock_level: minLevel })
+      .eq('id', product.id)
+      .eq('owner_id', ownerId);
+
+    if (error) throw error;
+  }
+
+  return { newQuantity: previousQty, added: 0 };
 };
 
 export type InventoryMovementRow = {

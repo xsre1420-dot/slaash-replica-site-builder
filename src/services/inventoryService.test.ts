@@ -1,11 +1,15 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { restockProduct, InventoryRestockError } from './inventoryService';
 
-const mockUpdate = vi.fn();
-const mockInsert = vi.fn();
+const { mockUpdate, mockInsert, mockRpc } = vi.hoisted(() => ({
+  mockUpdate: vi.fn(),
+  mockInsert: vi.fn(),
+  mockRpc: vi.fn(),
+}));
 
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
+    rpc: mockRpc,
     from: vi.fn((table: string) => {
       if (table === 'products') {
         return {
@@ -38,6 +42,10 @@ const product = {
 describe('inventoryService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRpc.mockResolvedValue({
+      data: { success: true, stock_quantity: 15 },
+      error: null,
+    });
     mockUpdate.mockResolvedValue({ error: null });
     mockInsert.mockResolvedValue({ error: null });
   });
@@ -52,10 +60,12 @@ describe('inventoryService', () => {
     const result = await restockProduct({ product, ownerId: 'o1', addAmount: 5 });
     expect(result.newQuantity).toBe(15);
     expect(result.added).toBe(5);
-    expect(mockInsert).toHaveBeenCalledWith(
+    expect(mockRpc).toHaveBeenCalledWith(
+      'increment_product_stock',
       expect.objectContaining({
-        quantity_delta: 5,
-        reason: 'restock',
+        p_product_id: 'p1',
+        p_owner_id: 'o1',
+        p_delta: 5,
       })
     );
   });

@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Category } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { generateUUID } from "@/lib/uuid";
+import { fetchStoreByUserId } from "@/services/storeService";
 
 interface CategoryDialogProps {
   categories: Category[];
@@ -38,10 +39,12 @@ const CategoryDialog = ({ categories, onCategoryChange, onAddLocalCategory, open
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
+      const store = await fetchStoreByUserId(user.id);
       const { error } = await supabase.from('categories').insert([{
         name: newCategory.name.trim(),
         owner_id: user.id,
-        display_order: categories.length
+        display_order: categories.length,
+        ...(store?.id ? { store_id: store.id } : {}),
       }]);
       if (error) throw error;
       onCategoryChange();

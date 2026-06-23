@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
 import { logStructured, withEdgeSpan } from '../_shared/observability.ts';
-import { addMonths, hashAccessCode } from '../_shared/accessCodeUtils.ts';
+import { addMonths, generateAuthPassword, hashAccessCode } from '../_shared/accessCodeUtils.ts';
+import { checkEdgeRateLimit, clientIpFromRequest } from '../_shared/rateLimiter.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,6 +12,33 @@ interface RedeemBody {
   code: string;
   store_name?: string;
 }
+
+const signInWithEphemeralPassword = async (
+  adminClient: ReturnType<typeof createClient>,
+  authClient: ReturnType<typeof createClient>,
+  userId: string,
+  email: string
+) => {
+  const tempPassword = generateAuthPassword();
+  const { error: updateError } = await adminClient.auth.admin.updateUserById(userId, {
+    password: tempPassword,
+  });
+
+  if (updateError) {
+    throw updateError;
+  }
+
+  const { data: sessionData, error: signInError } = await authClient.auth.signInWithPassword({
+    email,
+    password: tempPassword,
+  });
+
+  if (signInError || !sessionData.session) {
+    throw signInError ?? new Error('session_missing');
+  }
+
+  return sessionData.session;
+};
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -44,6 +72,18 @@ Deno.serve(async (req) => {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    const clientIp = clientIpFromRequest(req);
+    const rate = checkEdgeRateLimit(`redeem:${clientIp}`, 8, 15 * 60 * 1000);
+    if (!rate.allowed) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'rate_limited', retry_after_sec: rate.retryAfterSec }),
+        {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     const rawCode = body.code?.trim();
@@ -92,9 +132,10 @@ Deno.serve(async (req) => {
     let subscriptionEndAt = codeRow.subscription_end_at as string | null;
 
     if (!userId) {
+      const initialPassword = generateAuthPassword();
       const { data: createdUser, error: createError } = await adminClient.auth.admin.createUser({
         email: codeRow.auth_email,
-        password: codeRow.auth_password,
+        password: initialPassword,
         email_confirm: true,
         user_metadata: {
           username,
@@ -201,13 +242,18 @@ Deno.serve(async (req) => {
     }
 
     const authClient = createClient(supabaseUrl, anonKey);
-    const { data: sessionData, error: signInError } = await authClient.auth.signInWithPassword({
-      email: codeRow.auth_email,
-      password: codeRow.auth_password,
-    });
-
-    if (signInError || !sessionData.session) {
-      logStructured('error', 'redeem-access-code.sign_in_failed', { message: signInError?.message });
+    let session;
+    try {
+      session = await signInWithEphemeralPassword(
+        adminClient,
+        authClient,
+        userId as string,
+        codeRow.auth_email as string
+      );
+    } catch (signInErr) {
+      logStructured('error', 'redeem-access-code.sign_in_failed', {
+        message: signInErr instanceof Error ? signInErr.message : String(signInErr),
+      });
       return new Response(JSON.stringify({ success: false, error: 'login_failed' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -218,10 +264,10 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         session: {
-          access_token: sessionData.session.access_token,
-          refresh_token: sessionData.session.refresh_token,
-          expires_in: sessionData.session.expires_in,
-          expires_at: sessionData.session.expires_at,
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+          expires_in: session.expires_in,
+          expires_at: session.expires_at,
         },
         user: {
           id: userId,
