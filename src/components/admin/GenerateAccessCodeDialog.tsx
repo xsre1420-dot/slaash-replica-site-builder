@@ -17,6 +17,7 @@ import {
 } from '@/types/accessCodes';
 import type { LeadRecord } from '@/types/leads';
 import { buildWhatsAppUrl } from '@/types/leads';
+import { buildInitialWhatsAppMessage } from '@/utils/leadWorkflowUtils';
 import { PUBLIC_SUBSCRIPTION_PLANS } from '@/data/subscriptionPlans';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -148,7 +149,7 @@ export const GenerateAccessCodeDialog = ({
               </a>
             </div>
             <p className="text-xs text-center text-muted-foreground">
-              العميل يدخل من /login → «رمز التفعيل»
+              العميل يدخل من /login ويلصق الرمز
             </p>
           </div>
         ) : (
@@ -201,13 +202,13 @@ export const GenerateAccessCodeDialog = ({
             )}
 
             <a
-              href={buildWhatsAppUrl(lead.whatsapp_number, `مرحباً ${lead.full_name}، بخصوص اشتراك بداية`)}
+              href={buildWhatsAppUrl(lead.whatsapp_number, buildInitialWhatsAppMessage(lead))}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 rounded-xl border border-[#25D366]/30 bg-[#25D366]/5 py-2.5 text-sm text-[#128C7E] hover:bg-[#25D366]/10"
             >
               <MessageCircle className="h-4 w-4" />
-              تواصل مع العميل أولاً (واتساب)
+              تواصل مع العميل قبل إنشاء الرمز
             </a>
           </div>
         )}

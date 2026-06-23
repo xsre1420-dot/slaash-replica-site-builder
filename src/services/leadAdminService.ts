@@ -1,5 +1,9 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { LeadRecord, LeadStatus } from '@/types/leads';
+import {
+  matchesLeadQuickFilter,
+  type LeadQuickFilter,
+} from '@/utils/leadWorkflowUtils';
 
 export class LeadSubmitError extends Error {
   constructor(message: string) {
@@ -54,20 +58,52 @@ export const submitAccessLead = async (input: {
 export const fetchLeads = async (opts: {
   search?: string;
   status?: LeadStatus | '';
+  filter?: LeadQuickFilter | '';
   limit?: number;
   offset?: number;
 }): Promise<{ rows: LeadRecord[]; total: number }> => {
-  const { data, error } = await (supabase as any).rpc('admin_list_leads', {
+  const filter = opts.filter && opts.filter !== 'all' ? opts.filter : null;
+  const limit = opts.limit ?? 50;
+  const offset = opts.offset ?? 0;
+  const baseArgs = {
     p_search: opts.search || null,
     p_status: opts.status || null,
-    p_limit: opts.limit ?? 50,
-    p_offset: opts.offset ?? 0,
-  });
+    p_limit: limit,
+    p_offset: offset,
+  };
+
+  let data: unknown;
+  let error: { message?: string } | null = null;
+  let usedClientFilter = false;
+
+  ({ data, error } = await (supabase as any).rpc('admin_list_leads', {
+    ...baseArgs,
+    p_filter: filter,
+  }));
+
+  if (error && filter && /admin_list_leads|p_filter|schema cache|could not find/i.test(error.message ?? '')) {
+    usedClientFilter = true;
+    ({ data, error } = await (supabase as any).rpc('admin_list_leads', {
+      ...baseArgs,
+      p_limit: 1000,
+      p_offset: 0,
+    }));
+  }
 
   if (error) throw error;
   const payload = data as { success?: boolean; rows?: LeadRecord[]; total?: number; error?: string };
   if (!payload?.success) throw new Error(payload?.error || 'forbidden');
-  return { rows: payload.rows ?? [], total: payload.total ?? 0 };
+
+  let rows = payload.rows ?? [];
+  let total = payload.total ?? rows.length;
+
+  if (usedClientFilter && filter) {
+    rows = rows.filter((row) => matchesLeadQuickFilter(row, filter));
+    total = rows.length;
+    rows = rows.slice(offset, offset + limit);
+  }
+
+  return { rows, total };
 };
 
 export const fetchLeadById = async (leadId: string): Promise<LeadRecord | null> => {
@@ -97,6 +133,43 @@ export const fetchUnreadLeadsCount = async (): Promise<number> => {
   const { data, error } = await (supabase as any).rpc('admin_unread_leads_count');
   if (error) return 0;
   return typeof data === 'number' ? data : 0;
+};
+
+export type LeadStatsPayload = {
+  total: number;
+  new_count: number;
+  unread_count: number;
+  needs_code_count: number;
+  pending_activation_count: number;
+  pipeline_count: number;
+  customer_count: number;
+  today_count: number;
+};
+
+export const fetchLeadStats = async (): Promise<LeadStatsPayload | null> => {
+  const { data, error } = await (supabase as any).rpc('admin_leads_stats');
+  if (error) return null;
+  const payload = data as { success?: boolean } & LeadStatsPayload;
+  if (!payload?.success) return null;
+  return {
+    total: payload.total ?? 0,
+    new_count: payload.new_count ?? 0,
+    unread_count: payload.unread_count ?? 0,
+    needs_code_count: payload.needs_code_count ?? 0,
+    pending_activation_count: payload.pending_activation_count ?? 0,
+    pipeline_count: payload.pipeline_count ?? 0,
+    customer_count: payload.customer_count ?? 0,
+    today_count: payload.today_count ?? 0,
+  };
+};
+
+export const markLeadContacted = async (leadId: string): Promise<void> => {
+  const { data, error } = await (supabase as any).rpc('admin_mark_lead_contacted', {
+    p_lead_id: leadId,
+  });
+  if (error) throw error;
+  const payload = data as { success?: boolean; error?: string };
+  if (!payload?.success) throw new Error(payload?.error || 'mark_failed');
 };
 
 export const fetchSubscriptions = async (opts: {
@@ -210,6 +283,46 @@ export const generateAccessCode = async (
   };
 };
 
+type RedeemFunctionResult = {
+  success?: boolean;
+  error?: string;
+  session?: {
+    access_token: string;
+    refresh_token: string;
+    expires_in: number;
+    expires_at?: number;
+  };
+  user?: { username: string; store_name: string };
+  subscription_end_at?: string | null;
+};
+
+const parseRedeemFunctionResult = async (
+  data: unknown,
+  error: { message?: string; context?: Response } | null
+): Promise<RedeemFunctionResult> => {
+  if (data && typeof data === 'object' && ('success' in data || 'error' in data || 'session' in data)) {
+    return data as RedeemFunctionResult;
+  }
+
+  if (error?.context && typeof error.context.json === 'function') {
+    try {
+      const body = (await error.context.json()) as RedeemFunctionResult;
+      if (body && typeof body === 'object') return body;
+    } catch {
+      /* ignore malformed edge response */
+    }
+  }
+
+  const msg = error?.message ?? '';
+  if (/401|403|non-2xx|jwt|unauthorized/i.test(msg)) {
+    return { success: false, error: 'edge_unavailable' };
+  }
+  if (/failed to fetch|network/i.test(msg)) {
+    throw new Error('network_error');
+  }
+  return { success: false, error: msg || 'redeem_failed' };
+};
+
 export const redeemAccessCode = async (code: string): Promise<{
   accessToken: string;
   refreshToken: string;
@@ -223,26 +336,7 @@ export const redeemAccessCode = async (code: string): Promise<{
     body: { code: code.trim() },
   });
 
-  if (error) {
-    const msg = error.message ?? '';
-    if (/failed to fetch|network/i.test(msg)) {
-      throw new Error('تعذر الاتصال بالخادم — تحقق من الإنترنت');
-    }
-    throw new Error(msg);
-  }
-
-  const result = data as {
-    success?: boolean;
-    error?: string;
-    session?: {
-      access_token: string;
-      refresh_token: string;
-      expires_in: number;
-      expires_at?: number;
-    };
-    user?: { username: string; store_name: string };
-    subscription_end_at?: string | null;
-  };
+  const result = await parseRedeemFunctionResult(data, error as { message?: string; context?: Response } | null);
 
   if (!result?.success || !result.session) {
     throw new Error(result?.error || 'redeem_failed');

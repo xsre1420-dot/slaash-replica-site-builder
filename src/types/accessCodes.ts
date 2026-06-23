@@ -19,13 +19,20 @@ export type AccessCodeRecord = {
 
 export const ACCESS_CODE_ERROR_MESSAGES: Record<string, string> = {
   invalid_code: 'رمز التفعيل غير صحيح',
-  code_expired: 'انتهت صلاحية رمز التفعيل — تواصل مع فريق المبيعات',
+  code_expired: 'تم إلغاء هذا الرمز — تواصل مع فريق المبيعات للحصول على رمز جديد',
   code_revoked: 'تم إلغاء هذا الرمز',
   subscription_expired: 'انتهى اشتراكك — تواصل معنا للتجديد',
   activation_failed: 'تعذر تفعيل الحساب، حاول لاحقاً',
   lead_already_converted: 'هذا العميل مُفعّل مسبقاً',
   forbidden: 'ليس لديك صلاحية — أضف حسابك كمسؤول',
   login_failed: 'تعذر تسجيل الدخول، حاول مرة أخرى',
+  redeem_failed: 'تعذر تفعيل الرمز — تحقق من الرمز أو تواصل مع المبيعات',
+  edge_unavailable:
+    'خدمة تفعيل الرمز غير متوفرة حالياً — تأكد من نشر redeem-access-code على Supabase',
+  network_error: 'تعذر الاتصال بالخادم — تحقق من الإنترنت',
+  invalid_plan: 'الباقة غير متوفرة — شغّل npm run db:deploy',
+  lead_not_found: 'الطلب غير موجود',
+  generate_failed: 'تعذر إنشاء الرمز',
 };
 
 export const formatAccessCodeInput = (value: string): string => {
@@ -51,6 +58,6 @@ export const buildAccessCodeWhatsAppMessage = (opts: {
     `تم الاتفاق على اشتراك *${opts.planLabel}* (${opts.durationMonths} ${opts.durationMonths === 12 ? 'شهر' : 'أشهر'}).${priceLine}\n\n` +
     `🔑 *رمز الدخول للمنصة:*\n${opts.accessCode}\n\n` +
     `ادخل من الرابط:\n${opts.loginUrl}\n\n` +
-    `اختر «دخول برمز التفعيل» والصق الرمز.`
+    `الصق الرمز في صفحة تسجيل الدخول واضغط «دخول للمنصة».`
   );
 };

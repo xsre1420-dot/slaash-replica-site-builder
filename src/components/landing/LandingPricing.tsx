@@ -1,5 +1,6 @@
 import ElitePricingCard from '@/components/landing/ElitePricingCard';
 import { FadeUp, SectionTitle } from '@/components/landing/FadeUp';
+import { landingPricing } from '@/content/landingCopy';
 
 const LandingPricing = () => (
   <section id="pricing" className="landing-section landing-section--muted">
@@ -7,14 +8,19 @@ const LandingPricing = () => (
       <FadeUp>
         <SectionTitle
           align="right"
-          eyebrow="باقات الاشتراك"
-          title="باقة النخبة — كل ما يحتاجه متجرك"
-          subtitle="اختر مدّة الاشتراك — 6 أشهر أو سنة — ثم أرسل بياناتك ونتواصل معك عبر واتساب."
+          eyebrow={landingPricing.eyebrow}
+          title={
+            <>
+              {landingPricing.title}{' '}
+              <span className="text-primary">{landingPricing.titleAccent}</span>
+            </>
+          }
+          subtitle={landingPricing.subtitle}
         />
       </FadeUp>
 
-      <FadeUp delay={0.08}>
-        <div className="mx-auto mt-12 max-w-lg">
+      <FadeUp delay={0.06}>
+        <div className="mx-auto mt-10 max-w-lg">
           <ElitePricingCard />
         </div>
       </FadeUp>

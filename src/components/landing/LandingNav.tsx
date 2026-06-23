@@ -2,13 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-
-const links = [
-  { href: '#features', label: 'المميزات' },
-  { href: '#demo', label: 'لوحة التحكم' },
-  { href: '#pricing', label: 'الباقات' },
-  { href: '#faq', label: 'الأسئلة' },
-];
+import { landingNav } from '@/content/landingCopy';
 
 const LandingNav = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -36,7 +30,7 @@ const LandingNav = () => {
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
-          {links.map((link) => (
+          {landingNav.links.map((link) => (
             <a
               key={link.href}
               href={link.href}
@@ -50,12 +44,12 @@ const LandingNav = () => {
         <div className="flex items-center gap-2">
           <Link to="/login" className="hidden sm:inline-flex">
             <Button variant="ghost" size="sm" className="rounded-full text-[#64748b] hover:text-[#111827]">
-              تسجيل الدخول
+              {landingNav.login}
             </Button>
           </Link>
           <a href="#pricing">
             <Button size="sm" className="rounded-full bg-primary px-5 font-semibold text-primary-foreground hover:bg-primary/90">
-              ابدأ الآن
+              {landingNav.cta}
             </Button>
           </a>
         </div>

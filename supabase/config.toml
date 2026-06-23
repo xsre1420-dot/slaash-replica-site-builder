@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.get-store-products]
 verify_jwt = false
+
+[functions.redeem-access-code]
+verify_jwt = false

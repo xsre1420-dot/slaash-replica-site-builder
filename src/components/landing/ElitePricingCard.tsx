@@ -12,6 +12,7 @@ import {
   getPlanIndex,
   type PublicSubscriptionPlan,
 } from '@/data/subscriptionPlans';
+import { landingPricingCard } from '@/content/landingCopy';
 
 type ElitePricingCardProps = {
   onSelect?: (planId: string) => void;
@@ -172,7 +173,7 @@ const ElitePricingCard = ({
 
               {activePlan.highlight && (
                 <p className="mb-4 inline-block rounded-lg border border-border bg-neutral-50 px-3 py-1.5 text-xs font-medium text-foreground/80 dark:bg-neutral-900/50">
-                  {activePlan.highlight} مقارنةً بفترتين × 6 أشهر
+                  {activePlan.highlight} {landingPricingCard.savingsNote}
                 </p>
               )}
 
@@ -180,7 +181,7 @@ const ElitePricingCard = ({
 
               {/* Features */}
               <div className="rounded-xl border border-border bg-neutral-50/80 p-4 dark:bg-neutral-900/30">
-                <p className="mb-3 text-xs font-semibold text-muted-foreground">ما الذي تحصل عليه؟</p>
+                <p className="mb-3 text-xs font-semibold text-muted-foreground">{landingPricingCard.featuresHeading}</p>
                 <ul className="space-y-2.5">
                   {activePlan.features.map((feature, i) => (
                     <motion.li
@@ -213,7 +214,7 @@ const ElitePricingCard = ({
                   className="group h-12 w-full rounded-xl bg-foreground text-background font-semibold hover:bg-foreground/90"
                   onClick={() => onSelect(activePlan.id)}
                 >
-                  {isSelected ? 'متابعة — أكمل بياناتك' : 'ابدأ الآن'}
+                  {isSelected ? landingPricingCard.ctaSelected : landingPricingCard.ctaDefault}
                   <ArrowLeft className="mr-1 h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
                 </Button>
               ) : (
@@ -222,7 +223,7 @@ const ElitePricingCard = ({
                     size="lg"
                     className="group h-12 w-full rounded-xl bg-foreground text-background font-semibold hover:bg-foreground/90"
                   >
-                    ابدأ الآن
+                    {landingPricingCard.ctaDefault}
                     <ArrowLeft className="mr-1 h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
                   </Button>
                 </Link>
@@ -233,7 +234,7 @@ const ElitePricingCard = ({
       </div>
 
       <p className="mt-4 text-center text-xs text-muted-foreground">
-        الأسعار بالدينار العراقي — التفعيل عبر فريق المبيعات
+        {landingPricingCard.footnote}
       </p>
     </div>
   );

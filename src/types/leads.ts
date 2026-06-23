@@ -18,6 +18,7 @@ export type LeadRecord = {
   created_at: string;
   updated_at: string;
   is_unread?: boolean;
+  has_pending_code?: boolean;
 };
 
 export type SubscriptionStatus = 'active' | 'expired' | 'suspended';

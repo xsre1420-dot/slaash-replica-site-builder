@@ -344,12 +344,12 @@
   }
 
   .landing-section {
-    padding: 5rem 0;
+    padding: 4rem 0;
   }
 
   @media (min-width: 640px) {
     .landing-section {
-      padding: 6rem 0;
+      padding: 5rem 0;
     }
   }
 

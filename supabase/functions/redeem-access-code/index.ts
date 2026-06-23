@@ -77,23 +77,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    const now = new Date();
-    const codeExpiresAt = new Date(codeRow.code_expires_at);
-
-    if (codeRow.status === 'active' && now > codeExpiresAt && !codeRow.redeemed_user_id) {
-      await adminClient
-        .from('merchant_access_codes')
-        .update({ status: 'expired' })
-        .eq('id', codeRow.id);
+    if (codeRow.status === 'expired' && !codeRow.redeemed_user_id) {
       return new Response(JSON.stringify({ success: false, error: 'code_expired' }), {
         status: 410,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    const now = new Date();
+
     const storeName = body.store_name?.trim() || codeRow.store_name || 'متجري';
     const username = codeRow.username || `store${Math.floor(10000 + Math.random() * 90000)}`;
     let userId = codeRow.redeemed_user_id as string | null;
+    let subscriptionEndAt = codeRow.subscription_end_at as string | null;
 
     if (!userId) {
       const { data: createdUser, error: createError } = await adminClient.auth.admin.createUser({
@@ -119,6 +115,7 @@ Deno.serve(async (req) => {
 
       userId = createdUser.user.id;
       const subscriptionEnd = addMonths(now, codeRow.duration_months).toISOString();
+      subscriptionEndAt = subscriptionEnd;
 
       const { error: subError } = await adminClient.from('subscriptions').upsert(
         {
@@ -231,7 +228,7 @@ Deno.serve(async (req) => {
           username,
           store_name: storeName,
         },
-        subscription_end_at: codeRow.subscription_end_at,
+        subscription_end_at: subscriptionEndAt,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

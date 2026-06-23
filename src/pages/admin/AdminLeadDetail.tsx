@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { MessageCircle, Copy, ArrowRight, KeyRound } from 'lucide-react';
+import { MessageCircle, Copy, ArrowRight, KeyRound, ClipboardList } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import GenerateAccessCodeDialog from '@/components/admin/GenerateAccessCodeDialog';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ import {
 import {
   fetchLeadAccessCodes,
   fetchLeadById,
+  markLeadContacted,
   updateLead,
 } from '@/services/leadAdminService';
 import {
@@ -31,7 +32,17 @@ import {
 import { type AccessCodeRecord } from '@/types/accessCodes';
 import { getMonthlyOrderLabel } from '@/data/leadFormOptions';
 import { canCreateAccessCodeForLead } from '@/utils/leadAccessCodeUtils';
+import {
+  LEAD_STATUS_COLORS,
+  buildFollowUpWhatsAppMessage,
+  buildInitialWhatsAppMessage,
+  buildLeadSummaryText,
+  formatLeadRelativeTime,
+} from '@/utils/leadWorkflowUtils';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+
+const QUICK_STATUSES: LeadStatus[] = ['new', 'contacted', 'interested', 'customer', 'rejected'];
 
 const AdminLeadDetail = () => {
   const { leadId } = useParams<{ leadId: string }>();
@@ -56,8 +67,20 @@ const AdminLeadDetail = () => {
     setStatus(data.status);
     if (!data.admin_read_at) {
       await updateLead(id, { markRead: true });
+      setLead({ ...data, admin_read_at: new Date().toISOString(), is_unread: false });
     }
     return data;
+  };
+
+  const loadCodes = async (id: string) => {
+    try {
+      const rows = await fetchLeadAccessCodes(id);
+      setCodes(rows);
+      const hasPending = rows.some((c) => c.status === 'active');
+      setLead((prev) => (prev ? { ...prev, has_pending_code: hasPending } : prev));
+    } catch {
+      setCodes([]);
+    }
   };
 
   useEffect(() => {
@@ -65,21 +88,19 @@ const AdminLeadDetail = () => {
     void (async () => {
       setLoading(true);
       await loadLead(leadId);
-      try {
-        const rows = await fetchLeadAccessCodes(leadId);
-        setCodes(rows);
-      } catch {
-        setCodes([]);
-      }
+      await loadCodes(leadId);
       setLoading(false);
     })();
   }, [leadId, navigate]);
 
-  const saveNotes = async () => {
+  const saveNotes = async (nextStatus?: LeadStatus) => {
     if (!leadId) return;
     setSaving(true);
+    const statusToSave = nextStatus ?? status;
     try {
-      await updateLead(leadId, { notes, status });
+      await updateLead(leadId, { notes, status: statusToSave });
+      setStatus(statusToSave);
+      setLead((prev) => (prev ? { ...prev, notes, status: statusToSave } : prev));
       toast.success('تم الحفظ');
     } catch {
       toast.error('تعذر الحفظ');
@@ -88,14 +109,27 @@ const AdminLeadDetail = () => {
     }
   };
 
-  const refreshCodes = async () => {
+  const handleWhatsApp = async (message: string) => {
+    if (!lead) return;
+    if (lead.status === 'new') {
+      try {
+        await markLeadContacted(lead.id);
+        setLead({ ...lead, status: 'contacted', is_unread: false });
+        setStatus('contacted');
+      } catch {
+        /* continue */
+      }
+    }
+    window.open(buildWhatsAppUrl(lead.whatsapp_number, message), '_blank');
+  };
+
+  const refreshAfterCode = async () => {
     if (!leadId) return;
-    try {
-      const rows = await fetchLeadAccessCodes(leadId);
-      setCodes(rows);
-      setLead((prev) => (prev ? { ...prev, status: 'interested' } : prev));
-    } catch {
-      setCodes([]);
+    await loadCodes(leadId);
+    const data = await fetchLeadById(leadId);
+    if (data) {
+      setLead(data);
+      setStatus(data.status);
     }
   };
 
@@ -106,6 +140,11 @@ const AdminLeadDetail = () => {
       </AdminLayout>
     );
   }
+
+  const whatsAppMessage =
+    lead.status === 'contacted' || lead.status === 'interested'
+      ? buildFollowUpWhatsAppMessage(lead)
+      : buildInitialWhatsAppMessage(lead);
 
   return (
     <AdminLayout title="تفاصيل الطلب">
@@ -123,11 +162,17 @@ const AdminLeadDetail = () => {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-xl font-bold">{lead.full_name}</h2>
-              <p className="text-sm text-muted-foreground mt-1" dir="ltr">
+              <p className="text-sm text-muted-foreground mt-1 font-mono" dir="ltr">
                 {lead.whatsapp_number}
               </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                {formatLeadRelativeTime(lead.created_at)} ·{' '}
+                {format(new Date(lead.created_at), 'EEEE dd MMMM yyyy، HH:mm', { locale: ar })}
+              </p>
             </div>
-            <Badge>{LEAD_STATUS_LABELS[lead.status]}</Badge>
+            <Badge variant="outline" className={cn('font-normal', LEAD_STATUS_COLORS[lead.status])}>
+              {LEAD_STATUS_LABELS[lead.status]}
+            </Badge>
           </div>
 
           {lead.selected_plan_name && (
@@ -170,12 +215,8 @@ const AdminLeadDetail = () => {
             )}
           </div>
 
-          <p className="text-sm text-muted-foreground">
-            {format(new Date(lead.created_at), 'EEEE dd MMMM yyyy، HH:mm', { locale: ar })}
-          </p>
-
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            {canCreateAccessCodeForLead(lead) ? (
+            {canCreateAccessCodeForLead(lead) && !lead.has_pending_code && (
               <Button
                 size="lg"
                 className="rounded-xl gap-2 w-full sm:w-auto sm:min-w-[200px]"
@@ -184,22 +225,25 @@ const AdminLeadDetail = () => {
                 <KeyRound className="w-5 h-5" />
                 إنشاء رمز دخول
               </Button>
-            ) : (
-              <Badge variant="outline" className="self-start px-3 py-2">
-                العميل مُفعّل — لا يمكن إنشاء رمز جديد
+            )}
+            {lead.has_pending_code && (
+              <Badge variant="outline" className="self-start px-3 py-2 text-amber-700 border-amber-500/30">
+                رمز مُرسَل — بانتظار تفعيل العميل
               </Badge>
             )}
-            <a
-              href={buildWhatsAppUrl(lead.whatsapp_number, `مرحباً ${lead.full_name}، بخصوص طلب الاشتراك في بداية`)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full sm:w-auto"
+            {lead.converted_user_id && (
+              <Badge variant="outline" className="self-start px-3 py-2 text-emerald-700 border-emerald-500/30">
+                العميل مُفعّل
+              </Badge>
+            )}
+            <Button
+              variant="outline"
+              className="rounded-xl gap-2 w-full sm:w-auto bg-[#25D366]/5 text-[#128C7E] border-[#25D366]/30"
+              onClick={() => void handleWhatsApp(whatsAppMessage)}
             >
-              <Button variant="outline" className="rounded-xl gap-2 w-full sm:w-auto bg-[#25D366]/5 text-[#128C7E] border-[#25D366]/30">
-                <MessageCircle className="w-4 h-4" />
-                تواصل واتساب
-              </Button>
-            </a>
+              <MessageCircle className="w-4 h-4" />
+              {lead.status === 'new' ? 'تواصل واتساب' : 'متابعة واتساب'}
+            </Button>
             <Button
               variant="outline"
               className="rounded-xl gap-2 w-full sm:w-auto"
@@ -210,6 +254,17 @@ const AdminLeadDetail = () => {
             >
               <Copy className="w-4 h-4" />
               نسخ الرقم
+            </Button>
+            <Button
+              variant="outline"
+              className="rounded-xl gap-2 w-full sm:w-auto"
+              onClick={() => {
+                void navigator.clipboard.writeText(buildLeadSummaryText(lead));
+                toast.success('تم نسخ ملخص الطلب');
+              }}
+            >
+              <ClipboardList className="w-4 h-4" />
+              نسخ الملخص
             </Button>
           </div>
         </div>
@@ -246,6 +301,20 @@ const AdminLeadDetail = () => {
         <div className="rounded-2xl border border-border/50 bg-card p-6 space-y-4">
           <div className="space-y-2">
             <Label>الحالة</Label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {QUICK_STATUSES.map((s) => (
+                <Button
+                  key={s}
+                  type="button"
+                  size="sm"
+                  variant={status === s ? 'default' : 'outline'}
+                  className="rounded-full h-8 text-xs"
+                  onClick={() => setStatus(s)}
+                >
+                  {LEAD_STATUS_LABELS[s]}
+                </Button>
+              ))}
+            </div>
             <Select value={status} onValueChange={(v) => setStatus(v as LeadStatus)}>
               <SelectTrigger className="rounded-xl">
                 <SelectValue />
@@ -260,16 +329,16 @@ const AdminLeadDetail = () => {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>ملاحظات</Label>
+            <Label>ملاحظات المبيعات</Label>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={5}
               className="rounded-xl font-arabic"
-              placeholder="ملاحظات محادثة المبيعات — السعر المتفق عليه، موعد التفعيل..."
+              placeholder="السعر المتفق عليه، موعد التفعيل، اعتراضات العميل..."
             />
           </div>
-          <Button onClick={() => void saveNotes()} disabled={saving} className="rounded-xl">
+          <Button onClick={() => void saveNotes()} disabled={saving} className="rounded-xl w-full sm:w-auto">
             {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
           </Button>
         </div>
@@ -279,7 +348,7 @@ const AdminLeadDetail = () => {
         lead={lead}
         open={codeOpen}
         onOpenChange={setCodeOpen}
-        onGenerated={() => void refreshCodes()}
+        onGenerated={() => void refreshAfterCode()}
       />
     </AdminLayout>
   );

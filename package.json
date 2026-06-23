@@ -27,7 +27,8 @@
     "db:baseline": "powershell -ExecutionPolicy Bypass -File scripts/db-baseline.ps1",
     "db:verify": "node scripts/verify-platform-db.mjs",
     "db:check": "node scripts/platform-check.mjs",
-    "db:bundle": "node scripts/bundle-platform-migrations.mjs"
+    "db:bundle": "node scripts/bundle-platform-migrations.mjs",
+    "functions:deploy-redeem": "supabase functions deploy redeem-access-code --no-verify-jwt"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^16.3.0",
