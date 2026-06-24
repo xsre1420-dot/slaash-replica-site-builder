@@ -575,12 +575,6 @@ export async function fetchStorefrontProductsByIds(
 }
 
 export async function invalidateStorefrontForOwner(ownerId: string): Promise<void> {
-  cache.flushByPrefix('tenant-products:');
-  cache.flushByPrefix('storefront-bundle:');
-  cache.flushByPrefix('edge-bundle:');
-  cache.flushByPrefix('edge-page:');
-  cache.flushByPrefix('storefront-page:');
-
   const { data } = await supabase
     .from('store_settings')
     .select('store_slug')
@@ -603,8 +597,14 @@ export async function invalidateStorefrontForOwner(ownerId: string): Promise<voi
   }
 
   if (slug) {
+    cache.del(`storefront-bundle:${slug}`);
     cache.flushByPrefix(`tenant-products:${slug}`);
     cache.flushByPrefix(`tenant-meta:${slug}`);
+    cache.flushByPrefix(`edge-bundle:${slug}`);
+    cache.flushByPrefix(`edge-page:${slug}`);
+    cache.flushByPrefix(`storefront-page:${slug}:`);
+  } else {
+    cache.flushByPrefix(`tenant-products:${ownerId}`);
   }
 
   if (typeof window !== 'undefined') {

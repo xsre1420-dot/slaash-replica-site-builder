@@ -18,6 +18,7 @@ import OfflineBanner from "./components/OfflineBanner";
 import RecoveryBanner from "./components/RecoveryBanner";
 import { StoreBootstrapProvider } from "./components/StoreBootstrap";
 import SubdomainRouter from "./components/SubdomainRouter";
+import StorefrontRouteShell from "./components/StorefrontRouteShell";
 
 // Lazy load ALL pages
 const Index = lazy(() => import("./pages/Index"));
@@ -123,10 +124,12 @@ const App = () => (
                     <Route path="/admin/leads/:leadId" element={<AdminRoute><AdminLeadDetail /></AdminRoute>} />
                     <Route path="/admin/subscriptions" element={<AdminRoute><AdminSubscriptions /></AdminRoute>} />
                     <Route path="/admin/customers" element={<AdminRoute><AdminCustomers /></AdminRoute>} />
-                    <Route path="/store/:username" element={<Store />} />
-                    <Route path="/store/:username/product/:productId" element={<ProductDetails />} />
+                    <Route element={<StorefrontRouteShell />}>
+                      <Route path="/store/:username" element={<Store />} />
+                      <Route path="/store/:username/product/:productId" element={<ProductDetails />} />
+                      <Route path="/store/:username/checkout" element={<Checkout />} />
+                    </Route>
                     <Route path="/product-details/:productId" element={<ProductDetails />} />
-                    <Route path="/store/:username/checkout" element={<Checkout />} />
                     <Route path="/checkout" element={<Checkout />} />
                     <Route path="/preview" element={<ProtectedRoute><PreviewStore /></ProtectedRoute>} />
                     <Route path="/sitemap.xml" element={<Sitemap />} />

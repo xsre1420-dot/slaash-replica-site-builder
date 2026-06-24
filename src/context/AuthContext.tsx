@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { invalidateOwnerCache, setCurrentOwner, setCurrentStore } from '@/services/productService';
 import { setObservabilityUser } from '@/lib/observability';
@@ -336,18 +336,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUserAndOwner(null);
   };
 
-  const value = {
-    user,
-    login,
-    loginWithAccessCode,
-    register,
-    resetPassword,
-    updatePassword,
-    resendVerificationEmail,
-    checkUsernameAvailable,
-    logout,
-    loading,
-  };
+  const value = useMemo(
+    () => ({
+      user,
+      login,
+      loginWithAccessCode,
+      register,
+      resetPassword,
+      updatePassword,
+      resendVerificationEmail,
+      checkUsernameAvailable,
+      logout,
+      loading,
+    }),
+    [
+      user,
+      loading,
+    ]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

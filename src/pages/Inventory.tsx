@@ -23,9 +23,10 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { Product } from '@/types';
 import { restockProduct, InventoryRestockError } from '@/services/inventoryService';
 import { getProductLifecycleStatus, lifecycleStatusLabel } from '@/lib/productLifecycle';
-import { loadAllMerchantProducts, syncMerchantProductCatalog, invalidateProducts } from '@/services/productService';
+import { useMerchantProductsPage } from '@/hooks/useMerchantProductsPage';
+import { useProgressiveRender } from '@/hooks/useProgressiveRender';
+import { syncMerchantProductCatalog, getProductsSync } from '@/services/productService';
 import { useRealtimeProducts } from '@/hooks/useRealtimeProducts';
-import { useStoreHydration } from '@/context/StoreBootstrapContext';
 import AttentionStrip from '@/components/ui/AttentionStrip';
 import { ATTENTION_PARAM } from '@/lib/attentionHighlight';
 import { useSearchParams } from 'react-router-dom';
@@ -41,15 +42,29 @@ import {
   type StockFilter,
 } from '@/utils/inventoryPageUtils';
 
+const mapCatalogToInventoryRows = (catalog: Product[]): InventoryProductRow[] =>
+  catalog.map((p) => ({
+    id: p.id,
+    name: p.name,
+    price: p.price,
+    category: p.category,
+    image_url: p.image,
+    stock_quantity: p.stockQuantity,
+    min_stock_level: p.lowStockThreshold,
+    sizes: p.sizes,
+    colors: p.colors,
+    variants: p.variants,
+    created_at: (p as Product & { created_at?: string }).created_at || new Date().toISOString(),
+    lifecycle: getProductLifecycleStatus(p),
+  }));
+
 function Inventory() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const attentionApplied = useRef(false);
-  const { isReady, hydrationVersion } = useStoreHydration();
   const [products, setProducts] = useState<InventoryProductRow[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebouncedValue(searchTerm, 300);
-  const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<InventoryProductRow | null>(null);
   const [stockFilter, setStockFilter] = useState<StockFilter>('all');
   const [lifecycleFilter, setLifecycleFilter] = useState<LifecycleFilter>('all');
@@ -59,47 +74,21 @@ function Inventory() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const reloadInventory = useCallback(async () => {
-    if (!user?.id) {
-      setProducts([]);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await invalidateProducts();
-      const { products: catalog } = await loadAllMerchantProducts(true);
-      setProducts(
-        catalog.map((p) => ({
-          id: p.id,
-          name: p.name,
-          price: p.price,
-          category: p.category,
-          image_url: p.image,
-          stock_quantity: p.stockQuantity,
-          min_stock_level: p.lowStockThreshold,
-          sizes: p.sizes,
-          colors: p.colors,
-          variants: p.variants,
-          created_at: (p as Product & { created_at?: string }).created_at || new Date().toISOString(),
-          lifecycle: getProductLifecycleStatus(p),
-        }))
-      );
-    } catch (error) {
-      console.error('Error fetching inventory products:', error);
-      toast.error('خطأ في تحميل المنتجات');
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id]);
+  const catalog = useMerchantProductsPage(debouncedSearch, categoryFilter);
+  const loading = catalog.loading;
 
   useEffect(() => {
-    if (!isReady || !user?.id) return;
-    void reloadInventory();
-  }, [isReady, hydrationVersion, reloadInventory, user?.id]);
+    setProducts(mapCatalogToInventoryRows(catalog.products));
+  }, [catalog.products]);
+
+  const reloadInventory = catalog.reload;
 
   useRealtimeProducts(() => {
+    const synced = getProductsSync();
+    if (synced.length > 0) {
+      setProducts(mapCatalogToInventoryRows(synced));
+      return;
+    }
     void reloadInventory();
   });
 
@@ -165,6 +154,9 @@ function Inventory() {
     });
     return sortInventoryProducts(filtered, sort);
   }, [products, debouncedSearch, stockFilter, categoryFilter, lifecycleFilter, lowStockOnly, sort]);
+
+  const { visibleItems: visibleInventory, hasMore: hasMoreToRender, loadMore: renderMore } =
+    useProgressiveRender(filteredProducts, 48);
 
   const lowStockProducts = useMemo(
     () =>
@@ -340,13 +332,28 @@ function Inventory() {
             />
           ) : (
             <div className="grid gap-2.5 sm:gap-3">
-              {filteredProducts.map((product) => (
+              {visibleInventory.map((product) => (
                 <InventoryProductCard
                   key={product.id}
                   product={product}
                   onRestock={openRestockDialog}
                 />
               ))}
+              {(hasMoreToRender || catalog.hasMore) && (
+                <div className="flex justify-center pt-2">
+                  <Button
+                    variant="outline"
+                    className="rounded-xl min-h-[44px]"
+                    disabled={catalog.loadingMore}
+                    onClick={() => {
+                      if (hasMoreToRender) renderMore();
+                      else void catalog.loadMore();
+                    }}
+                  >
+                    {catalog.loadingMore ? 'جاري التحميل...' : 'تحميل المزيد'}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </section>

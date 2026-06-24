@@ -79,13 +79,13 @@ const Orders = () => {
   } = useOrderNotifications(user?.id);
 
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [statsRefreshKey, setStatsRefreshKey] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkProcessing, setBulkProcessing] = useState(false);
+  const realtimeRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useScrollPersistence('orders');
 
-  const { stats } = useOrderDashboardStats(statsRefreshKey);
+  const { stats, reloadStats } = useOrderDashboardStats();
 
   useEffect(() => {
     if (searchParams.get(ATTENTION_PARAM) !== 'pending-orders' || attentionApplied.current) return;
@@ -150,10 +150,22 @@ const Orders = () => {
     [isNewOrder, markOrderKnown, navigate, pushNotification]
   );
 
-  useRealtimeOrders(() => {
-    refetch();
-    setStatsRefreshKey((k) => k + 1);
-  }, handleRealtimeEvent);
+  const scheduleRealtimeRefresh = useCallback(() => {
+    if (realtimeRefreshTimer.current) clearTimeout(realtimeRefreshTimer.current);
+    realtimeRefreshTimer.current = setTimeout(() => {
+      refetch();
+      void reloadStats();
+    }, 400);
+  }, [refetch, reloadStats]);
+
+  useEffect(
+    () => () => {
+      if (realtimeRefreshTimer.current) clearTimeout(realtimeRefreshTimer.current);
+    },
+    []
+  );
+
+  useRealtimeOrders(scheduleRealtimeRefresh, handleRealtimeEvent);
 
   useEffect(() => {
     setSelectedIds((prev) => {

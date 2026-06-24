@@ -67,6 +67,12 @@ Deno.serve(async (req) => {
         logStructured('warn', 'payment-webhook.invalid_signature');
         return new Response(JSON.stringify({ error: 'Invalid signature' }), { status: 401 });
       }
+    } else {
+      logStructured('warn', 'payment-webhook.no_secret');
+      return new Response(JSON.stringify({ error: 'Webhook secret required' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     let event: { id?: string; type?: string; data?: unknown };

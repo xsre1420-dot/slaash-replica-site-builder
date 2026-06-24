@@ -5,7 +5,7 @@
 import { cache, CacheKeys, CacheTTL } from '@/lib/cache';
 import {
   getCategories,
-  loadAllMerchantProducts,
+  loadProductsPage,
   setCurrentStore,
 } from '@/services/productService';
 import {
@@ -45,7 +45,7 @@ export const hydrateMerchantStore = async (userId: string): Promise<HydrationRes
   const [storeRecord, storeProfile, productsPage, categories, orders] = await Promise.all([
     fetchStoreByUserId(userId),
     fetchStoreSettings(userId, true),
-    loadAllMerchantProducts(true),
+    loadProductsPage(0, undefined, true),
     getCategories(true),
     fetchOrdersPage(userId, 0, ORDERS_PER_PAGE),
   ]);

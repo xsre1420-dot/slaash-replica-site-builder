@@ -29,12 +29,13 @@ import { Product } from '@/types';
 import { toast } from 'sonner';
 import {
   getCategories,
-  invalidateProducts,
-  loadAllMerchantProducts as reloadProductsData,
+  getProductsSync,
   publishProduct,
   setProductLifecycle,
   addProduct,
 } from '@/services/productService';
+import { useMerchantProductsPage } from '@/hooks/useMerchantProductsPage';
+import { useProgressiveRender } from '@/hooks/useProgressiveRender';
 import { getFirstPendingReviewTarget, countPendingReviewsForOwner } from '@/services/reviewService';
 import { getProductLifecycleStatus } from '@/lib/productLifecycle';
 import type { ProductSaveMode } from '@/lib/productFormLabels';
@@ -76,8 +77,6 @@ const Products = () => {
   const { isReady, hydrationVersion } = useStoreHydration();
   const { user } = useAuth();
   const [selectedProduct, setSelectedProduct] = useState<{ id: string; name: string } | null>(null);
-  const [loadedProducts, setLoadedProducts] = useState<Product[]>([]);
-  const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogFilters, setCatalogFilters] = useState<ProductCatalogFilters>(DEFAULT_PRODUCT_CATALOG_FILTERS);
   const debouncedSearch = useDebouncedValue(catalogFilters.search, 350);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
@@ -102,40 +101,19 @@ const Products = () => {
     [catalogFilters, debouncedSearch]
   );
 
-  const handleRealtimeUpdate = useCallback(async () => {
-    await invalidateProducts();
-    const result = await reloadProductsData(true);
-    setLoadedProducts(result.products);
-  }, []);
+  const catalog = useMerchantProductsPage(
+    debouncedSearch,
+    catalogFilters.category
+  );
+
+  const handleRealtimeUpdate = useCallback(() => {
+    catalog.syncFromCache();
+  }, [catalog.syncFromCache]);
   useRealtimeProducts(handleRealtimeUpdate);
 
-  const reloadCatalog = useCallback(async () => {
-    if (!user?.id) {
-      setLoadedProducts([]);
-      setCatalogLoading(false);
-      return [];
-    }
-
-    setCatalogLoading(true);
-    try {
-      await invalidateProducts();
-      const result = await reloadProductsData(true);
-      setLoadedProducts(result.products);
-      return result.products;
-    } catch (err) {
-      console.error('[Products] failed to load catalog:', err);
-      toast.error('تعذر تحميل المنتجات — حاول تحديث الصفحة');
-      setLoadedProducts([]);
-      return [];
-    } finally {
-      setCatalogLoading(false);
-    }
-  }, [user?.id]);
-
-  useEffect(() => {
-    if (!isReady || !user?.id) return;
-    void reloadCatalog();
-  }, [isReady, hydrationVersion, reloadCatalog, user?.id]);
+  const reloadCatalog = catalog.reload;
+  const loadedProducts = catalog.products;
+  const catalogLoading = catalog.loading;
 
   const productIdParam = searchParams.get('productId');
   const productNameParam = searchParams.get('productName');
@@ -254,6 +232,9 @@ const Products = () => {
     [loadedProducts, listFilters]
   );
 
+  const { visibleItems: pagedVisibleProducts, hasMore: hasMoreToRender, loadMore: renderMore } =
+    useProgressiveRender(visibleProducts, 48);
+
   const categoryNames = useMemo(() => {
     const fromDb = categories.map((c) => c.name);
     const fromProducts = loadedProducts.map((p) => p.category).filter(Boolean);
@@ -301,7 +282,8 @@ const Products = () => {
     if (!state?.refreshProducts) return;
 
     clearFilters();
-    void reloadCatalog().then((data) => {
+    void reloadCatalog().then(() => {
+      const data = getProductsSync();
       if (state.createdProductId && !data.some((p) => p.id === state.createdProductId)) {
         toast.error('تم الحفظ لكن تعذر عرض المنتج — حدّث الصفحة');
       }
@@ -641,7 +623,7 @@ const Products = () => {
               <div className="space-y-3 min-w-0">
                 {viewMode === 'table' && (
                   <ProductsDataTable
-                    products={visibleProducts}
+                    products={pagedVisibleProducts}
                     selectedIds={selectedIds}
                     onToggleSelect={toggleSelect}
                     onToggleSelectAll={toggleSelectAll}
@@ -666,9 +648,9 @@ const Products = () => {
                       <ProductsList
                         onProductSelect={handleProductSelect}
                         products={loadedProducts}
-                        filteredProducts={visibleProducts}
+                        filteredProducts={pagedVisibleProducts}
                         filtersActive
-                        onProductsChange={setLoadedProducts}
+                        onProductsChange={() => void reloadCatalog()}
                         onClearFilters={clearFilters}
                         isLoading={!isReady || catalogLoading}
                         reloadToken={hydrationVersion}
@@ -701,6 +683,26 @@ const Products = () => {
                   }
                   processing={bulkProcessing}
                 />
+
+                {(hasMoreToRender || catalog.hasMore) && (
+                  <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
+                    {hasMoreToRender && (
+                      <Button variant="outline" className="rounded-xl" onClick={renderMore}>
+                        عرض المزيد ({pagedVisibleProducts.length} / {visibleProducts.length})
+                      </Button>
+                    )}
+                    {catalog.hasMore && (
+                      <Button
+                        variant="secondary"
+                        className="rounded-xl"
+                        disabled={catalog.loadingMore}
+                        onClick={() => void catalog.loadMore()}
+                      >
+                        {catalog.loadingMore ? 'جاري التحميل…' : `تحميل صفحة إضافية (${loadedProducts.length} / ${catalog.total})`}
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

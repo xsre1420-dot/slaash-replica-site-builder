@@ -18,7 +18,6 @@ import { useStoreVisitTracking } from "@/hooks/useStoreVisitTracking";
 import StoreThemeProvider from "@/components/StoreThemeProvider";
 import StorefrontTrustBar from "@/components/storefront/StorefrontTrustBar";
 import { useStoreDisplay } from "@/hooks/useStoreDisplay";
-import { useTenantStore } from "@/hooks/useTenantStore";
 
 const Checkout = () => {
   const { removeFromCart, updateQuantity, getMaxQuantity } = useCart();
@@ -56,7 +55,6 @@ const Checkout = () => {
     handleSubmitOrder,
   } = useCheckoutFlow();
 
-  const tenant = useTenantStore(storeSlug);
   const display = useStoreDisplay(storeSlug);
   const themeColors = {
     backgroundColor: display.storeSettings.menuBackgroundColor,
@@ -320,7 +318,7 @@ const Checkout = () => {
         <OrderSuccessModal
           orderId={completedOrderId}
           storeSlug={storeSlug}
-          whatsappNumber={display.storeSettings.whatsappNumber || tenant.storeInfo?.whatsappNumber}
+          whatsappNumber={display.storeSettings.whatsappNumber}
         />
       )}
     </div>

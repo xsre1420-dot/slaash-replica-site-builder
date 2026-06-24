@@ -66,7 +66,7 @@ export async function fetchFreshProducts(
 
   if (slug) {
     map = await fetchCheckoutProductsByIds(slug, uniqueIds);
-    if (map.size < uniqueIds.length) {
+    if (!options.strict && map.size < uniqueIds.length) {
       const catalog = await fetchStorefrontProductsByIds(slug, uniqueIds);
       for (const [id, product] of catalog) {
         if (!map.has(id)) map.set(id, product);
@@ -110,7 +110,7 @@ export async function fetchFreshProducts(
     }
   }
 
-  if (ownerId && uniqueIds.length > 0) {
+  if (ownerId && uniqueIds.length > 0 && !options.strict) {
     const authoritative = await fetchOwnerActiveProductsByIds(ownerId, uniqueIds);
     for (const [id, dbProduct] of authoritative) {
       const existing = map.get(id);

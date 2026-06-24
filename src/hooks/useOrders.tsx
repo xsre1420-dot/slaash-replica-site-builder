@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Order } from '@/types';
-import { dedup, flushOwnerCache } from '@/lib/cache';
+import { dedup, flushOrderCache } from '@/lib/cache';
 import { useAuth } from '@/context/AuthContext';
 import { useStoreHydration } from '@/context/StoreBootstrapContext';
 import { mapOrderError } from '@/utils/orderErrors';
@@ -91,7 +91,7 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState === 'visible' && user?.id) {
-        flushOwnerCache(user.id);
+        flushOrderCache(user.id);
         void loadPage(page);
       }
     };

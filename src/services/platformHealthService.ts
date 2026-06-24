@@ -74,7 +74,7 @@ const parseRpcHealth = (data: Record<string, unknown>): PlatformHealthResult => 
   const result: PlatformHealthResult = {
     ok: Boolean(data.ok),
     schemaVersion: Number(data.schema_version ?? 0),
-    requiredVersion: Number(data.required_version ?? 21),
+    requiredVersion: Number(data.required_version ?? 25),
     missing,
     checks: {
       storefront: Boolean(checksRaw.storefront),
@@ -107,7 +107,7 @@ async function probePlatformHealthFallback(): Promise<PlatformHealthResult> {
       return {
         ok: false,
         schemaVersion: 0,
-        requiredVersion: 21,
+        requiredVersion: 25,
         missing: ['connection'],
         checks: defaultChecks(),
         message: 'connection_error',
@@ -173,7 +173,7 @@ async function probePlatformHealthFallback(): Promise<PlatformHealthResult> {
   return {
     ok: missing.length === 0 && Object.values(checks).every(Boolean),
     schemaVersion: 0,
-    requiredVersion: 21,
+    requiredVersion: 25,
     missing,
     checks,
     message,

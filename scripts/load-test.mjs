@@ -262,7 +262,7 @@ if (!slug) {
   console.log(`Store slug: ${slug} (${sessionMode === 'full' ? 'full storefront' : 'infra'} mode)\n`);
 }
 
-const userLevels = [10, 25, 50, 100, 200, 500, 1000, 1500].filter((n) => n <= Math.max(CONCURRENT_USERS, 1500));
+const userLevels = [10, 25, 50, 100, 200, 500, 1000, 2500, 5000, 10000].filter((n) => n <= Math.max(CONCURRENT_USERS, 10000));
 const uniqueLevels = [...new Set(userLevels)];
 if (!uniqueLevels.includes(CONCURRENT_USERS)) uniqueLevels.push(CONCURRENT_USERS);
 uniqueLevels.sort((a, b) => a - b);

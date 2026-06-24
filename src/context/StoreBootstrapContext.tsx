@@ -3,6 +3,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   ReactNode,
@@ -103,10 +104,13 @@ export const StoreBootstrapProvider = ({ children }: { children: ReactNode }) =>
     runHydration(user.id);
   }, [user?.id, authLoading, runHydration, isReady]);
 
+  const value = useMemo(
+    () => ({ isReady, isHydrating, hydrationError, hydrationVersion, refresh }),
+    [isReady, isHydrating, hydrationError, hydrationVersion, refresh]
+  );
+
   return (
-    <StoreBootstrapContext.Provider
-      value={{ isReady, isHydrating, hydrationError, hydrationVersion, refresh }}
-    >
+    <StoreBootstrapContext.Provider value={value}>
       {children}
     </StoreBootstrapContext.Provider>
   );

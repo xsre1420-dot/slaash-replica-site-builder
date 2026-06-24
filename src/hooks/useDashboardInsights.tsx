@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { buildAttentionHref, type AttentionKey } from '@/lib/attentionHighlight';
 import { useAuth } from '@/context/AuthContext';
-import { getProductsSync, loadProducts } from '@/services/productService';
+import { getProductsSync } from '@/services/productService';
 import { countPendingReviewsForOwner } from '@/services/reviewService';
 import { getStorePublicSlug } from '@/lib/storeUrl';
 import {
@@ -87,11 +87,6 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
   const [hasSlug, setHasSlug] = useState<boolean | null>(null);
   const [pendingReviewsCount, setPendingReviewsCount] = useState(0);
   const [kpiLoading, setKpiLoading] = useState(true);
-
-  useEffect(() => {
-    if (!user?.id) return;
-    void loadProducts(true);
-  }, [user?.id, refreshKey]);
 
   useEffect(() => {
     if (!user?.id) {

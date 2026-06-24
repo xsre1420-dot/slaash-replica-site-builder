@@ -1,81 +1,29 @@
-import { useEffect, useCallback, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { flushOrderCache } from '@/lib/cache';
+import { subscribeMerchantOrders, type OrderRealtimeEvent } from '@/lib/merchantRealtimeHub';
 
-const DEBOUNCE_MS = 500;
-
-export type OrderRealtimeEvent =
-  | { type: 'insert'; orderId: string }
-  | { type: 'update'; orderId: string; status?: string; paymentStatus?: string }
-  | { type: 'refetch' };
+export type { OrderRealtimeEvent };
 
 export const useRealtimeOrders = (
   onChange?: () => void,
   onEvent?: (event: OrderRealtimeEvent) => void
 ) => {
   const { user } = useAuth();
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onChangeRef = useRef(onChange);
+  const onEventRef = useRef(onEvent);
 
-  const scheduleRefetch = useCallback(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      if (user?.id) {
-        flushOrderCache(user.id);
-      }
-      onChange?.();
-      onEvent?.({ type: 'refetch' });
-    }, DEBOUNCE_MS);
-  }, [onChange, onEvent, user?.id]);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+    onEventRef.current = onEvent;
+  }, [onChange, onEvent]);
 
   useEffect(() => {
     if (!user?.id) return;
 
-    const channel = supabase
-      .channel(`orders-realtime-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'orders',
-          filter: `owner_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const orderId = String((payload.new as { id?: string })?.id ?? '');
-          if (orderId) {
-            onEvent?.({ type: 'insert', orderId });
-          }
-          scheduleRefetch();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'orders',
-          filter: `owner_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const row = payload.new as { id?: string; status?: string; payment_status?: string };
-          const orderId = String(row?.id ?? '');
-          if (orderId) {
-            onEvent?.({
-              type: 'update',
-              orderId,
-              status: row.status,
-              paymentStatus: row.payment_status,
-            });
-          }
-          scheduleRefetch();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      supabase.removeChannel(channel);
-    };
-  }, [user?.id, scheduleRefetch, onEvent]);
+    return subscribeMerchantOrders(
+      user.id,
+      () => onChangeRef.current?.(),
+      (event) => onEventRef.current?.(event)
+    );
+  }, [user?.id]);
 };

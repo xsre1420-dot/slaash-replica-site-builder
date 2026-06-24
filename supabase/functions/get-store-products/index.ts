@@ -149,6 +149,19 @@ Deno.serve(async (req) => {
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+    const { data: dbAllowed, error: rateErr } = await supabase.rpc('check_rpc_rate_limit', {
+      p_key: `edge-store:${slug}:${clientIP}`,
+      p_max: 120,
+      p_window_seconds: 60,
+    });
+    if (rateErr || dbAllowed === false) {
+      logStructured('warn', 'get-store-products.db_rate_limited', { clientIP, slug });
+      return new Response(JSON.stringify({ error: 'Too many requests' }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': '60' },
+      });
+    }
+
     if (wantBundle) {
       const { data: bundle, error: bundleErr } = await supabase.rpc('get_storefront_page_bundle', {
         p_slug: slug,
