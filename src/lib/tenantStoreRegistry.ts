@@ -113,28 +113,7 @@ async function fetchStoreMeta(normalizedSlug: string) {
     };
   }
 
-  const { data: storeData, error: storeErr } = await (supabase as any).rpc('get_store_by_slug', {
-    p_slug: normalizedSlug,
-  });
-
-  if (storeErr || !storeData) throw new Error('المتجر غير موجود');
-
-  const store = (Array.isArray(storeData) ? storeData[0] : storeData) as Record<string, unknown>;
-  if (!store?.owner_id) throw new Error('المتجر غير صالح');
-
-  const catsRes = await (supabase as any).rpc('get_store_categories_by_slug', {
-    p_slug: normalizedSlug,
-  });
-  if (catsRes.error) throw new Error('فشل في تحميل بيانات المتجر');
-
-  return {
-    storeInfo: buildStoreInfo(store, normalizedSlug, String(store.owner_id)),
-    categories: ((catsRes.data || []) as Record<string, unknown>[]).map((c) => ({
-      id: String(c.id),
-      name: String(c.name),
-      order: Number(c.display_order) || 0,
-    })),
-  };
+  throw new Error(metaErr?.message || 'المتجر غير موجود');
 }
 
 function getEntry(slug: string): SlugEntry {

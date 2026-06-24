@@ -20,6 +20,7 @@ export type InventoryProductRow = {
   colors?: Product['colors'];
   variants?: ProductVariant[];
   created_at: string;
+  archived_at?: string;
   lifecycle: ReturnType<typeof getProductLifecycleStatus>;
 };
 
@@ -35,7 +36,7 @@ export const toInventoryProduct = (row: InventoryProductRow): Product => ({
   colors: row.colors,
   variants: row.variants,
   isActive: row.lifecycle === 'published',
-  archivedAt: row.lifecycle === 'archived' ? row.created_at : undefined,
+  archivedAt: row.lifecycle === 'archived' ? row.archived_at ?? row.created_at : undefined,
 });
 
 export type StockStatus = 'good' | 'low' | 'out';

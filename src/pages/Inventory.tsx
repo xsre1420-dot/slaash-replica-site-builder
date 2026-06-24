@@ -55,6 +55,7 @@ const mapCatalogToInventoryRows = (catalog: Product[]): InventoryProductRow[] =>
     colors: p.colors,
     variants: p.variants,
     created_at: (p as Product & { created_at?: string }).created_at || new Date().toISOString(),
+    archived_at: p.archivedAt,
     lifecycle: getProductLifecycleStatus(p),
   }));
 

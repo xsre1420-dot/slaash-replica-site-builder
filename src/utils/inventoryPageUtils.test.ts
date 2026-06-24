@@ -6,6 +6,7 @@ import {
   sortInventoryProducts,
   getSuggestedRestockAmount,
   summarizeMovements,
+  toInventoryProduct,
   type InventoryProductRow,
 } from './inventoryPageUtils';
 
@@ -22,6 +23,15 @@ const baseRow = (overrides: Partial<InventoryProductRow> = {}): InventoryProduct
 });
 
 describe('inventoryPageUtils', () => {
+  it('uses archived_at for archived lifecycle rows', () => {
+    const row = baseRow({
+      lifecycle: 'archived',
+      created_at: '2026-01-01T00:00:00Z',
+      archived_at: '2026-06-01T12:00:00Z',
+    });
+    expect(toInventoryProduct(row).archivedAt).toBe('2026-06-01T12:00:00Z');
+  });
+
   it('marks low stock when at min threshold', () => {
     expect(getInventoryStockStatus(baseRow({ stock_quantity: 5 })).status).toBe('low');
   });

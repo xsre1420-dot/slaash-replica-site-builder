@@ -9,6 +9,7 @@ import {
   isSchemaColumnError,
 } from '@/lib/productUpdateUtils';
 import { cache, CacheTTL, dedup } from '@/lib/cache';
+import { cacheDeleteByPrefix } from '@/utils/indexedDB';
 import { isStorefrontVisible } from '@/lib/productLifecycle';
 import {
   fetchStorefrontBundleViaEdge,
@@ -603,8 +604,10 @@ export async function invalidateStorefrontForOwner(ownerId: string): Promise<voi
     cache.flushByPrefix(`edge-bundle:${slug}`);
     cache.flushByPrefix(`edge-page:${slug}`);
     cache.flushByPrefix(`storefront-page:${slug}:`);
+    await cacheDeleteByPrefix(`idb:tenant-products:${slug}`);
   } else {
     cache.flushByPrefix(`tenant-products:${ownerId}`);
+    await cacheDeleteByPrefix(`idb:tenant-products:${ownerId}`);
   }
 
   if (typeof window !== 'undefined') {

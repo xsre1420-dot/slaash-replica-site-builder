@@ -50,6 +50,49 @@ export const cacheSet = async <T>(key: string, data: T): Promise<void> => {
   }
 };
 
+export const cacheDelete = async (key: string): Promise<void> => {
+  if (typeof indexedDB === 'undefined') return;
+  try {
+    const db = await openDB();
+    const tx = db.transaction('cache', 'readwrite');
+    tx.objectStore('cache').delete(key);
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (e) {
+    console.warn('IndexedDB cacheDelete failed:', e);
+  }
+};
+
+export const cacheDeleteByPrefix = async (prefix: string): Promise<void> => {
+  if (typeof indexedDB === 'undefined') return;
+  try {
+    const db = await openDB();
+    const tx = db.transaction('cache', 'readwrite');
+    const store = tx.objectStore('cache');
+    const request = store.openCursor();
+
+    await new Promise<void>((resolve, reject) => {
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) {
+          resolve();
+          return;
+        }
+        const entry = cursor.value as CachedData<unknown>;
+        if (entry.key.startsWith(prefix)) {
+          cursor.delete();
+        }
+        cursor.continue();
+      };
+      request.onerror = () => reject(request.error);
+    });
+  } catch (e) {
+    console.warn('IndexedDB cacheDeleteByPrefix failed:', e);
+  }
+};
+
 export const cacheGet = async <T>(key: string, maxAge?: number): Promise<T | null> => {
   try {
     const db = await openDB();

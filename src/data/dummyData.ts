@@ -90,6 +90,7 @@ const resolveStoreIdForOwner = async (ownerId: string): Promise<string | null> =
 
 /** Keep merchant + storefront product caches consistent after mutations */
 export const syncMerchantProductCatalog = (ownerId: string, row?: Record<string, unknown>) => {
+  cache.del(CacheKeys.products(ownerId));
   cache.flushByPrefix(`${CacheKeys.products(ownerId)}:p`);
   clearInflight(`${CacheKeys.products(ownerId)}:p0:s:c`);
   cache.flushByPrefix(`stats:${ownerId}:`);
@@ -474,14 +475,30 @@ export const addProduct = async (
         const productId = String((data as Record<string, unknown>).id);
 
         if (publishIntent) {
+          let published = false;
           try {
-            await (supabase as any).rpc('publish_owner_product', {
-              p_product_id: productId,
-              p_owner_id: userId,
-            });
-            syncProductCachesAfterMutation(userId);
+            const { data: pubData, error: pubError } = await (supabase as any).rpc(
+              'publish_owner_product',
+              { p_product_id: productId }
+            );
+            if (!pubError && pubData?.success && pubData?.product) {
+              syncProductCachesAfterMutation(userId, pubData.product as Record<string, unknown>);
+              published = true;
+            }
           } catch {
             /* publish RPC optional until migration applied */
+          }
+
+          if (!published) {
+            const lifecycle = await setProductLifecycle(productId, 'publish');
+            if (!lifecycle.success) {
+              return {
+                success: true,
+                productId,
+                error: lifecycle.error ?? 'تم إنشاء المنتج لكن فشل النشر',
+              };
+            }
+            syncProductCachesAfterMutation(userId);
           }
         }
 
@@ -729,6 +746,10 @@ export const updateCategory = async (categoryId: string, updatedCategory: Catego
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, error: 'User not authenticated' };
 
+    const key = CacheKeys.categories(getOwnerId());
+    const previous = (cache.get<Category[]>(key) || []).find((c) => c.id === categoryId);
+    const previousName = previous?.name;
+
     const { error } = await supabase
       .from('categories')
       .update({ name: updatedCategory.name, display_order: updatedCategory.order || 0 })
@@ -737,7 +758,17 @@ export const updateCategory = async (categoryId: string, updatedCategory: Catego
 
     if (error) return { success: false, error: error.message };
 
-    const key = CacheKeys.categories(getOwnerId());
+    if (previousName && previousName !== updatedCategory.name) {
+      const { error: productsError } = await supabase
+        .from('products')
+        .update({ category: updatedCategory.name })
+        .eq('owner_id', user.id)
+        .eq('category', previousName);
+
+      if (productsError) return { success: false, error: productsError.message };
+      syncMerchantProductCatalog(user.id);
+    }
+
     const current = cache.get<Category[]>(key) || [];
     cache.set(key, current.map(c => c.id === categoryId ? { ...updatedCategory, id: categoryId } : c), CacheTTL.MEDIUM, CacheTTL.STALE);
     return { success: true };

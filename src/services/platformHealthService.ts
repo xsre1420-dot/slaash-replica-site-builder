@@ -72,9 +72,9 @@ const parseRpcHealth = (data: Record<string, unknown>): PlatformHealthResult => 
   const message = (data.message as PlatformHealthResult['message']) || 'unknown';
 
   const result: PlatformHealthResult = {
-    ok: Boolean(data.ok),
+    ok: Boolean(data.ok) || message === 'ok',
     schemaVersion: Number(data.schema_version ?? 0),
-    requiredVersion: Number(data.required_version ?? 25),
+    requiredVersion: Number(data.required_version ?? 27),
     missing,
     checks: {
       storefront: Boolean(checksRaw.storefront),
@@ -107,7 +107,7 @@ async function probePlatformHealthFallback(): Promise<PlatformHealthResult> {
       return {
         ok: false,
         schemaVersion: 0,
-        requiredVersion: 25,
+        requiredVersion: 27,
         missing: ['connection'],
         checks: defaultChecks(),
         message: 'connection_error',
@@ -137,7 +137,7 @@ async function probePlatformHealthFallback(): Promise<PlatformHealthResult> {
 
   const rpcProbes: Array<{ name: string; key: keyof PlatformHealthChecks; args: Record<string, unknown> }> = [
     { name: 'get_owner_products_page', key: 'merchant_catalog', args: { p_owner_id: '00000000-0000-0000-0000-000000000000', p_limit: 1, p_offset: 0 } },
-    { name: 'get_store_products_page', key: 'storefront', args: { p_slug: 'health-probe', p_limit: 1 } },
+    { name: 'get_store_products_page', key: 'storefront', args: { p_slug: 'health-probe', p_limit: 1, p_cursor: '', p_category: '', p_search: '' } },
     { name: 'create_order_with_stock_deduction', key: 'checkout', args: {} },
     { name: 'publish_owner_product', key: 'publish', args: { p_product_id: '00000000-0000-0000-0000-000000000000' } },
     { name: 'get_merchant_product_reviews', key: 'reviews', args: { p_product_id: '00000000-0000-0000-0000-000000000000' } },
@@ -173,7 +173,7 @@ async function probePlatformHealthFallback(): Promise<PlatformHealthResult> {
   return {
     ok: missing.length === 0 && Object.values(checks).every(Boolean),
     schemaVersion: 0,
-    requiredVersion: 25,
+    requiredVersion: 27,
     missing,
     checks,
     message,

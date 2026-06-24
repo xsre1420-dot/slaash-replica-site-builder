@@ -123,6 +123,15 @@ export const BulkUpload = ({ onComplete }: { onComplete: () => void }) => {
       return;
     }
 
+    const deduped = parsed.filter((product, index, list) => {
+      const key = product.name.trim().toLowerCase();
+      return list.findIndex((p) => p.name.trim().toLowerCase() === key) === index;
+    });
+
+    if (deduped.length < parsed.length) {
+      toast.info(`تم تجاهل ${parsed.length - deduped.length} منتج مكرر في الملف`);
+    }
+
     setUploading(true);
     setProgress(0);
     let success = 0;
@@ -132,10 +141,9 @@ export const BulkUpload = ({ onComplete }: { onComplete: () => void }) => {
     const store = await fetchStoreByUserId(user.id);
     const storeId = store?.id ?? null;
 
-    // Batch insert in chunks of 20
     const chunkSize = 20;
-    for (let i = 0; i < parsed.length; i += chunkSize) {
-      const chunk = parsed.slice(i, i + chunkSize).map(p => ({
+    for (let i = 0; i < deduped.length; i += chunkSize) {
+      const chunk = deduped.slice(i, i + chunkSize).map(p => ({
         name: p.name,
         description: p.description,
         category: p.category,
@@ -149,14 +157,36 @@ export const BulkUpload = ({ onComplete }: { onComplete: () => void }) => {
         ...(storeId ? { store_id: storeId } : {}),
       }));
 
-      const { error } = await supabase.from("products").insert(chunk);
+      const { data: inserted, error } = await supabase
+        .from("products")
+        .insert(chunk)
+        .select("id, stock_quantity");
+
       if (error) {
         failed += chunk.length;
         uploadErrors.push(`خطأ في رفع الدفعة ${Math.floor(i / chunkSize) + 1}: ${error.message}`);
       } else {
-        success += chunk.length;
+        success += inserted?.length ?? chunk.length;
+
+        const movements = (inserted ?? [])
+          .filter((row) => (row.stock_quantity ?? 0) > 0)
+          .map((row) => ({
+            product_id: row.id,
+            owner_id: user.id,
+            quantity_delta: row.stock_quantity,
+            reason: 'initial_stock',
+          }));
+
+        if (movements.length > 0) {
+          const { error: movementError } = await supabase
+            .from('inventory_movements')
+            .insert(movements);
+          if (movementError) {
+            uploadErrors.push(`تنبيه: تم رفع المنتجات لكن سجل المخزون فشل: ${movementError.message}`);
+          }
+        }
       }
-      setProgress(Math.round(((i + chunkSize) / parsed.length) * 100));
+      setProgress(Math.round(((i + chunkSize) / deduped.length) * 100));
     }
 
     setResult({ success, failed, errors: uploadErrors });
@@ -164,7 +194,7 @@ export const BulkUpload = ({ onComplete }: { onComplete: () => void }) => {
 
     if (success > 0) {
       syncMerchantProductCatalog(user.id);
-      toast.success(`تم رفع ${success} منتج بنجاح`);
+      toast.success(`تم رفع ${success} منتج كمسودة — انشرها من صفحة المنتجات`);
       onComplete();
     }
   };

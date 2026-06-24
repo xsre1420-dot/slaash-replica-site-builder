@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Product } from '@/types';
 import { cache, CacheTTL } from '@/lib/cache';
-import { cacheGet, cacheSet } from '@/utils/indexedDB';
+import { cacheGet, cacheSet, cacheDeleteByPrefix } from '@/utils/indexedDB';
 import {
   fetchStorefrontProductsPage,
   STOREFRONT_PRODUCTS_CHANGED,
@@ -123,6 +123,7 @@ export const useStoreProductsPage = (
   const refetch = useCallback(() => {
     cursorRef.current = null;
     cache.flushByPrefix(`tenant-products:${normalizedSlug}:`);
+    void cacheDeleteByPrefix(`idb:tenant-products:${normalizedSlug}`);
     fetchPage(false, null, true);
   }, [normalizedSlug, fetchPage]);
 

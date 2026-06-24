@@ -36,17 +36,21 @@ const TABLES = [
   'profiles', 'stores', 'store_settings', 'products', 'categories', 'orders',
   'order_items', 'customers', 'store_visits', 'product_reviews', 'suggested_products',
   'inventory_movements', 'product_views', 'marketing_coupons', 'marketing_settings',
-  'order_refunds', 'order_chargebacks', 'order_payments', 'order_shipments',
+  'order_refunds', 'order_chargebacks', 'shipments', 'payment_transactions',
   'subscription_plans', 'store_subscriptions', 'platform_schema_version',
-  'restaurant_owners', 'marketing_attributions',
+  'restaurant_owners', 'leads', 'store_daily_stats', 'storefront_footer_products',
 ];
 
 const RPCS = [
-  'platform_health_check', 'get_store_meta', 'get_store_by_slug', 'get_store_products_page',
+  'platform_health_check', 'get_store_meta', 'get_store_products_page',
   'create_order_with_stock_deduction', 'resolve_checkout_owner', 'publish_owner_product',
   'get_merchant_product_reviews', 'get_store_statistics', 'get_owner_bootstrap',
   'get_owner_products_page', 'product_checkout_available_qty', 'handle_new_user',
-  'is_username_available', 'attach_order_marketing_attribution',
+  'is_username_available', 'attach_order_marketing_attribution', 'check_rpc_rate_limit',
+];
+
+const STORE_SETTINGS_COLS = [
+  'owner_id', 'store_slug', 'store_font', 'custom_domain', 'domain_verified',
 ];
 
 const PRODUCT_COLS = [
@@ -57,7 +61,12 @@ const ORDER_COLS = [
 ];
 
 async function probeTable(name) {
-  const res = await fetch(`${url}/rest/v1/${name}?select=id&limit=0`, { headers });
+  const pkByTable = {
+    platform_schema_version: 'version',
+    store_daily_stats: 'owner_id,stat_date',
+  };
+  const pk = pkByTable[name] || 'id';
+  const res = await fetch(`${url}/rest/v1/${name}?select=${encodeURIComponent(pk)}&limit=0`, { headers });
   const count = res.headers.get('content-range');
   if (res.ok) return { exists: true, status: res.status, count };
   const body = await res.text();
@@ -84,14 +93,34 @@ async function probeColumns(table, cols) {
 }
 
 async function probeRpc(name) {
+  const argsByFn = {
+    get_store_meta: { p_slug: 'probe-invalid-slug' },
+    get_store_products_page: { p_slug: 'probe-invalid-slug', p_limit: 1, p_cursor: '', p_category: '', p_search: '' },
+    is_username_available: { p_username: 'probe_user_xyz' },
+    get_owner_bootstrap: { p_user_id: '00000000-0000-0000-0000-000000000000' },
+    get_owner_products_page: { p_owner_id: '00000000-0000-0000-0000-000000000000', p_limit: 1, p_offset: 0 },
+    get_store_statistics: {
+      p_owner_id: '00000000-0000-0000-0000-000000000000',
+      p_start: '2000-01-01T00:00:00Z',
+      p_end: '2000-01-02T00:00:00Z',
+    },
+    publish_owner_product: { p_product_id: '00000000-0000-0000-0000-000000000000' },
+    get_merchant_product_reviews: { p_product_id: '00000000-0000-0000-0000-000000000000' },
+    attach_order_marketing_attribution: {
+      p_order_id: '00000000-0000-0000-0000-000000000000',
+      p_store_slug: 'probe',
+      p_attribution: {},
+    },
+    check_rpc_rate_limit: { p_key: 'probe', p_max: 1, p_window_seconds: 60 },
+  };
   const res = await fetch(`${url}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({}),
+    body: JSON.stringify(argsByFn[name] || {}),
   });
   const body = await res.text();
   if (body.includes('Could not find the function') || res.status === 404) {
-    return { exists: false };
+    return { exists: false, status: res.status };
   }
   return { exists: true, status: res.status, hint: body.slice(0, 80) };
 }
@@ -107,6 +136,9 @@ for (const t of TABLES) {
   const icon = r.exists === true ? '✓' : r.exists === 'maybe' ? '?' : '✗';
   console.log(`${icon} ${t}: ${JSON.stringify(r)}`);
 }
+
+console.log('\n--- store_settings columns ---');
+console.log(JSON.stringify(await probeColumns('store_settings', STORE_SETTINGS_COLS), null, 2));
 
 console.log('\n--- Product columns ---');
 console.log(JSON.stringify(await probeColumns('products', PRODUCT_COLS), null, 2));
