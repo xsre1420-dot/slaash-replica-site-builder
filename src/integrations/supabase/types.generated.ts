@@ -1328,18 +1328,25 @@ export type Database = {
           banner_images: string[] | null
           created_at: string
           delivery_prices: Json | null
+          facebook_url: string | null
           id: string
+          instagram_url: string | null
           menu_accent_color: string | null
           menu_background_color: string | null
           menu_text_color: string | null
           owner_id: string
+          payment_methods: Json | null
           primary_banner_index: number | null
+          privacy_policy: string | null
+          return_policy: string | null
+          store_font: string | null
           store_governorate: string | null
           store_logo: string | null
           store_name: string | null
           store_slug: string | null
           terms_conditions: string | null
           updated_at: string
+          whatsapp_number: string | null
           whatsapp_order_confirmation: string | null
           whatsapp_welcome_message: string | null
         }
@@ -1347,18 +1354,25 @@ export type Database = {
           banner_images?: string[] | null
           created_at?: string
           delivery_prices?: Json | null
+          facebook_url?: string | null
           id?: string
+          instagram_url?: string | null
           menu_accent_color?: string | null
           menu_background_color?: string | null
           menu_text_color?: string | null
           owner_id: string
+          payment_methods?: Json | null
           primary_banner_index?: number | null
+          privacy_policy?: string | null
+          return_policy?: string | null
+          store_font?: string | null
           store_governorate?: string | null
           store_logo?: string | null
           store_name?: string | null
           store_slug?: string | null
           terms_conditions?: string | null
           updated_at?: string
+          whatsapp_number?: string | null
           whatsapp_order_confirmation?: string | null
           whatsapp_welcome_message?: string | null
         }
@@ -1366,18 +1380,25 @@ export type Database = {
           banner_images?: string[] | null
           created_at?: string
           delivery_prices?: Json | null
+          facebook_url?: string | null
           id?: string
+          instagram_url?: string | null
           menu_accent_color?: string | null
           menu_background_color?: string | null
           menu_text_color?: string | null
           owner_id?: string
+          payment_methods?: Json | null
           primary_banner_index?: number | null
+          privacy_policy?: string | null
+          return_policy?: string | null
+          store_font?: string | null
           store_governorate?: string | null
           store_logo?: string | null
           store_name?: string | null
           store_slug?: string | null
           terms_conditions?: string | null
           updated_at?: string
+          whatsapp_number?: string | null
           whatsapp_order_confirmation?: string | null
           whatsapp_welcome_message?: string | null
         }
@@ -1989,6 +2010,16 @@ export type Database = {
       }
       get_storefront_footer_products: {
         Args: { p_slug: string }
+        Returns: Json
+      }
+      get_storefront_page_bundle: {
+        Args: {
+          p_category?: string
+          p_cursor?: string
+          p_limit?: number
+          p_search?: string
+          p_slug: string
+        }
         Returns: Json
       }
       get_suggested_products_for_store: {
