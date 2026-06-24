@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Product } from '@/types';
 import { cache, CacheTTL } from '@/lib/cache';
+import { cacheGet, cacheSet } from '@/utils/indexedDB';
 import {
   fetchStorefrontProductsPage,
   STOREFRONT_PRODUCTS_CHANGED,
 } from '@/services/storefrontProductService';
 
 const PAGE_SIZE = 24;
+const PRODUCTS_IDB_TTL = 5 * 60 * 1000;
 
 interface UseStoreProductsPageOptions {
   category?: string;
@@ -46,9 +48,25 @@ export const useStoreProductsPage = (
       else setLoading(true);
 
       const cacheKey = `tenant-products:${reqKey}`;
+      const idbKey = `idb:${cacheKey}`;
 
       try {
         if (!force && !append) {
+          const idbCached = await cacheGet<{
+            products: Product[];
+            nextCursor: string | null;
+            hasMore: boolean;
+          }>(idbKey, PRODUCTS_IDB_TTL);
+          if (idbCached?.products?.length) {
+            setProducts(idbCached.products);
+            cursorRef.current = idbCached.nextCursor;
+            setHasMore(!!idbCached.hasMore);
+            setError(null);
+            setLoading(false);
+            setLoadingMore(false);
+            return;
+          }
+
           const cached = cache.get<{
             products: Product[];
             nextCursor: string | null;
@@ -74,7 +92,10 @@ export const useStoreProductsPage = (
 
         if (requestKeyRef.current !== reqKey) return;
 
-        cache.set(cacheKey, result, CacheTTL.SHORT, CacheTTL.STALE);
+        cache.set(cacheKey, result, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+        if (!append && !cursor) {
+          await cacheSet(idbKey, result);
+        }
 
         setProducts((prev) => (append ? [...prev, ...result.products] : result.products));
         cursorRef.current = result.nextCursor;

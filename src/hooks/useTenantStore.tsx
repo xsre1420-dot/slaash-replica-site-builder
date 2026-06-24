@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Product, Category } from '@/types';
 import { cache, CacheTTL, dedup } from '@/lib/cache';
 import { cacheGet, cacheSet } from '@/utils/indexedDB';
+import { loadStorefrontBundle } from '@/services/storefrontProductService';
 
 const META_IDB_TTL = 10 * 60 * 1000; // 10 min for store meta
 
@@ -57,6 +58,21 @@ const buildStoreInfo = (store: Record<string, unknown>, normalizedSlug: string, 
 });
 
 async function fetchStoreMeta(normalizedSlug: string) {
+  const bundle = await loadStorefrontBundle(normalizedSlug);
+  if (bundle?.store) {
+    const store = bundle.store;
+    const ownerId = String(store.owner_id || '');
+    if (!ownerId) throw new Error('المتجر غير صالح');
+    return {
+      storeInfo: buildStoreInfo(store, normalizedSlug, ownerId),
+      categories: (bundle.categories || []).map((c) => ({
+        id: String(c.id),
+        name: String(c.name),
+        order: Number(c.display_order) || 0,
+      })),
+    };
+  }
+
   const { data: meta, error: metaErr } = await (supabase as any).rpc('get_store_meta', {
     p_slug: normalizedSlug,
   });

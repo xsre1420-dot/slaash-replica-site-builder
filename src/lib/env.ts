@@ -13,8 +13,12 @@ const envSchema = z.object({
   VITE_OBSERVABILITY_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional(),
   VITE_FAILOVER_SUPABASE_URL: z.union([z.string().url(), z.literal('')]).optional(),
   VITE_FAILOVER_SUPABASE_PUBLISHABLE_KEY: z.string().min(20).optional(),
-  /** Transaction pooler URL (Dashboard → Connect → Pooler) — reduces connection churn at scale */
+  /** Transaction pooler — use project HTTPS URL; client sends x-connection-mode: pooler */
   VITE_SUPABASE_POOLER_URL: z.union([z.string().url(), z.literal('')]).optional(),
+  /** Edge function URL override; defaults to {SUPABASE_URL}/functions/v1/get-store-products */
+  VITE_STOREFRONT_EDGE_URL: z.union([z.string().url(), z.literal('')]).optional(),
+  /** When true, routes public storefront reads through the edge function (shared HTTP cache). */
+  VITE_STOREFRONT_EDGE_ENABLED: z.enum(['true', 'false', '0', '1']).optional(),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;
@@ -30,6 +34,8 @@ const raw = {
   VITE_FAILOVER_SUPABASE_URL: import.meta.env.VITE_FAILOVER_SUPABASE_URL as string | undefined,
   VITE_FAILOVER_SUPABASE_PUBLISHABLE_KEY: import.meta.env.VITE_FAILOVER_SUPABASE_PUBLISHABLE_KEY as string | undefined,
   VITE_SUPABASE_POOLER_URL: import.meta.env.VITE_SUPABASE_POOLER_URL as string | undefined,
+  VITE_STOREFRONT_EDGE_URL: import.meta.env.VITE_STOREFRONT_EDGE_URL as string | undefined,
+  VITE_STOREFRONT_EDGE_ENABLED: import.meta.env.VITE_STOREFRONT_EDGE_ENABLED as string | undefined,
 };
 
 const parsed = envSchema.safeParse(raw);

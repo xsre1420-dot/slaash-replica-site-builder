@@ -4,10 +4,14 @@ import { logStructured, withEdgeSpan } from '../_shared/observability.ts';
 
 const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') || '').split(',').map(s => s.trim()).filter(Boolean);
 
+const HTTP_CACHE_SECONDS = 120;
+const EDGE_MEMORY_TTL_MS = 90_000;
+const EDGE_MEMORY_MAX = 500;
+
 function getCorsHeaders(origin: string | null): Record<string, string> | null {
   const base = {
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Cache-Control': 'public, max-age=30, stale-while-revalidate=60',
+    'Cache-Control': `public, max-age=${HTTP_CACHE_SECONDS}, stale-while-revalidate=180`,
   };
 
   if (isProduction()) {
@@ -26,8 +30,28 @@ function getCorsHeaders(origin: string | null): Record<string, string> | null {
 }
 
 const requestCounts = new Map<string, { count: number; resetTime: number }>();
-const RATE_LIMIT_WINDOW = 60000;
-const RATE_LIMIT_MAX_REQUESTS = 60;
+const RATE_LIMIT_WINDOW = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 300;
+
+const memoryCache = new Map<string, { body: string; expiresAt: number }>();
+
+function getMemoryCached(key: string): string | null {
+  const hit = memoryCache.get(key);
+  if (!hit) return null;
+  if (Date.now() > hit.expiresAt) {
+    memoryCache.delete(key);
+    return null;
+  }
+  return hit.body;
+}
+
+function setMemoryCache(key: string, body: string): void {
+  if (memoryCache.size >= EDGE_MEMORY_MAX) {
+    const oldest = memoryCache.keys().next().value;
+    if (oldest) memoryCache.delete(oldest);
+  }
+  memoryCache.set(key, { body, expiresAt: Date.now() + EDGE_MEMORY_TTL_MS });
+}
 
 function getRealIP(req: Request): string {
   return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
@@ -48,6 +72,16 @@ function isRateLimited(ip: string): boolean {
 
 function validateSlug(slug: string): boolean {
   return /^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/.test(slug);
+}
+
+function rpcParams(slug: string, limit: number, cursor: string | null, category: string | null, search: string | null) {
+  return {
+    p_slug: slug,
+    p_limit: limit,
+    p_cursor: cursor || '',
+    p_category: category || '',
+    p_search: search || '',
+  };
 }
 
 Deno.serve(async (req) => {
@@ -86,9 +120,9 @@ Deno.serve(async (req) => {
   try {
     const requestBody = await req.json();
     const slug = String(requestBody.slug || '').trim().toLowerCase();
-    const cursor = requestBody.cursor ? String(requestBody.cursor) : null;
-    const category = requestBody.category ? String(requestBody.category) : null;
-    const search = requestBody.search ? String(requestBody.search) : null;
+    const cursor = requestBody.cursor ? String(requestBody.cursor) : '';
+    const category = requestBody.category ? String(requestBody.category) : '';
+    const search = requestBody.search ? String(requestBody.search) : '';
     const limit = Math.min(Math.max(Number(requestBody.limit) || 24, 1), 48);
 
     if (!slug || !validateSlug(slug)) {
@@ -98,13 +132,55 @@ Deno.serve(async (req) => {
       });
     }
 
+    const wantBundle = requestBody.bundle === true;
+    const wantMetaOnly = requestBody.metaOnly === true;
+    const wantProductsOnly = requestBody.page === true && !wantBundle && !wantMetaOnly;
+    const cacheKey = `${slug}:${wantBundle ? 'bundle' : wantProductsOnly ? 'page' : 'meta'}:${cursor}:${category}:${search}:${limit}`;
+
+    const cached = getMemoryCached(cacheKey);
+    if (cached) {
+      return new Response(cached, {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'HIT' },
+      });
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    const fetchMeta = requestBody.metaOnly === true || !requestBody.page;
+    if (wantBundle) {
+      const { data: bundle, error: bundleErr } = await supabase.rpc('get_storefront_page_bundle', {
+        p_slug: slug,
+        p_limit: limit,
+        p_cursor: cursor,
+        p_category: category,
+        p_search: search,
+      });
 
-    if (fetchMeta) {
+      if (bundleErr || !bundle?.store) {
+        return new Response(JSON.stringify({ error: 'Store not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const payload = JSON.stringify({
+        storeInfo: bundle.store,
+        categories: bundle.categories || [],
+        products: bundle.products || [],
+        next_cursor: bundle.next_cursor || null,
+        has_more: bundle.has_more || false,
+        success: true,
+      });
+      setMemoryCache(cacheKey, payload);
+      return new Response(payload, {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' },
+      });
+    }
+
+    if (wantMetaOnly) {
       const { data: meta, error: metaErr } = await supabase.rpc('get_store_meta', { p_slug: slug });
       if (metaErr || !meta?.store) {
         return new Response(JSON.stringify({ error: 'Store not found' }), {
@@ -113,41 +189,22 @@ Deno.serve(async (req) => {
         });
       }
 
-      const { data: page, error: pageErr } = await supabase.rpc('get_store_products_page', {
-        p_slug: slug,
-        p_limit: limit,
-        p_cursor: cursor,
-        p_category: category,
-        p_search: search,
-      });
-
-      if (pageErr) {
-        return new Response(JSON.stringify({ error: 'Failed to load products' }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      return new Response(JSON.stringify({
+      const payload = JSON.stringify({
         storeInfo: meta.store,
         categories: meta.categories || [],
-        products: page?.products || [],
-        next_cursor: page?.next_cursor || null,
-        has_more: page?.has_more || false,
         success: true,
-      }), {
+      });
+      setMemoryCache(cacheKey, payload);
+      return new Response(payload, {
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' },
       });
     }
 
-    const { data: page, error: pageErr } = await supabase.rpc('get_store_products_page', {
-      p_slug: slug,
-      p_limit: limit,
-      p_cursor: cursor,
-      p_category: category,
-      p_search: search,
-    });
+    const { data: page, error: pageErr } = await supabase.rpc(
+      'get_store_products_page',
+      rpcParams(slug, limit, cursor, category, search)
+    );
 
     if (pageErr) {
       return new Response(JSON.stringify({ error: 'Failed to load products' }), {
@@ -156,14 +213,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({
+    const payload = JSON.stringify({
       products: page?.products || [],
       next_cursor: page?.next_cursor || null,
       has_more: page?.has_more || false,
       success: true,
-    }), {
+    });
+    setMemoryCache(cacheKey, payload);
+    return new Response(payload, {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' },
     });
   } catch (error) {
     logStructured('error', 'get-store-products.error', {

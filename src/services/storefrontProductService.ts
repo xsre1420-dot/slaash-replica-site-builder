@@ -8,8 +8,12 @@ import {
   MERCHANT_PRODUCTS_LIST_SELECT,
   isSchemaColumnError,
 } from '@/lib/productUpdateUtils';
-import { cache } from '@/lib/cache';
+import { cache, CacheTTL, dedup } from '@/lib/cache';
 import { isStorefrontVisible } from '@/lib/productLifecycle';
+import {
+  fetchStorefrontBundleViaEdge,
+  fetchStorefrontPageViaEdge,
+} from '@/services/storefrontEdgeService';
 
 const MINIMAL_STOREFRONT_SELECT =
   'id, name, description, category, price, image_url, additional_images, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, original_price, is_active, archived_at, created_at, updated_at';
@@ -23,6 +27,83 @@ export interface StorefrontProductsPage {
 export const STOREFRONT_PRODUCTS_CHANGED = 'storefront:products-changed';
 
 const ACTIVE_PRODUCTS_FILTER = 'is_active.eq.true,is_active.is.null';
+
+export interface StorefrontBundleCache {
+  store?: Record<string, unknown>;
+  categories?: Record<string, unknown>[];
+  products?: Product[];
+  nextCursor?: string | null;
+  hasMore?: boolean;
+}
+
+const bundleMemoryKey = (slug: string) => `storefront-bundle:${slug}`;
+
+/** Shared in-memory bundle cache (meta + first page) — one RPC/edge call serves both hooks. */
+export function peekStorefrontBundle(slug: string): StorefrontBundleCache | null {
+  return cache.get<StorefrontBundleCache>(bundleMemoryKey(slug.trim().toLowerCase()));
+}
+
+async function fetchStorefrontBundleRpc(
+  slug: string,
+  options: { limit?: number; cursor?: string | null; category?: string; search?: string } = {}
+): Promise<StorefrontBundleCache | null> {
+  const normalized = slug.trim().toLowerCase();
+  try {
+    const { data, error } = await (supabase as any).rpc('get_storefront_page_bundle', {
+      p_slug: normalized,
+      p_limit: options.limit ?? 24,
+      p_cursor: options.cursor || '',
+      p_category: options.category?.trim() || '',
+      p_search: options.search?.trim() || '',
+    });
+    if (error || !data?.store) return null;
+    const products = ((data.products as Record<string, unknown>[]) || [])
+      .map((row) => safeMapStorefrontProduct(row))
+      .filter((p): p is Product => p != null && isStorefrontVisible(p));
+    return {
+      store: data.store as Record<string, unknown>,
+      categories: (data.categories as Record<string, unknown>[]) || [],
+      products,
+      nextCursor: data.next_cursor || null,
+      hasMore: !!data.has_more,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function loadStorefrontBundle(
+  slug: string,
+  options: { limit?: number; cursor?: string | null; category?: string; search?: string } = {}
+): Promise<StorefrontBundleCache | null> {
+  const normalized = slug.trim().toLowerCase();
+  if (!/^[a-z0-9-]+$/.test(normalized)) return null;
+
+  const key = bundleMemoryKey(normalized);
+  const cached = cache.get<StorefrontBundleCache>(key);
+  if (cached?.store) return cached;
+
+  return dedup(key, async () => {
+    const edge = await fetchStorefrontBundleViaEdge(normalized, options);
+    if (edge) {
+      const payload: StorefrontBundleCache = {
+        store: edge.storeInfo,
+        categories: edge.categories,
+        products: edge.products,
+        nextCursor: edge.nextCursor,
+        hasMore: edge.hasMore,
+      };
+      cache.set(key, payload, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+      return payload;
+    }
+
+    const rpc = await fetchStorefrontBundleRpc(normalized, options);
+    if (rpc) {
+      cache.set(key, rpc, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+    }
+    return rpc;
+  });
+}
 
 export async function resolveStoreOwnerBySlug(slug: string): Promise<string | null> {
   const normalized = slug.trim().toLowerCase();
@@ -254,79 +335,105 @@ export async function fetchStorefrontProductsPage(
 ): Promise<StorefrontProductsPage> {
   const normalized = slug.trim().toLowerCase();
   const limit = options.limit ?? 24;
+  const category = options.category?.trim() || '';
+  const search = options.search?.trim() || '';
+  const cursor = options.cursor || '';
 
   if (!/^[a-z0-9-]+$/.test(normalized)) {
     return { products: [], nextCursor: null, hasMore: false };
   }
 
-  try {
-    const { data, error } = await (supabase as any).rpc('get_store_products_page', {
-      p_slug: normalized,
-      p_limit: limit,
-      p_cursor: options.cursor || null,
-      p_category: options.category?.trim() || null,
-      p_search: options.search?.trim() || null,
-    });
+  const dedupeKey = `storefront-page:${normalized}:${cursor}:${category}:${search}:${limit}`;
 
-    if (!error && data?.products !== undefined) {
-      const mapped = ((data.products as Record<string, unknown>[]) || [])
-        .map((row) => safeMapStorefrontProduct(row))
-        .filter((p): p is Product => p != null && isStorefrontVisible(p));
+  return dedup(dedupeKey, async () => {
+    const isFirstPage = !cursor && !category && !search;
 
-      if (mapped.length > 0 || options.cursor) {
+    if (isFirstPage) {
+      const bundle = peekStorefrontBundle(normalized) ?? (await loadStorefrontBundle(normalized, options));
+      if (bundle?.products) {
         return {
-          products: mapped,
-          nextCursor: data.next_cursor || null,
-          hasMore: !!data.has_more,
+          products: bundle.products,
+          nextCursor: bundle.nextCursor ?? null,
+          hasMore: !!bundle.hasMore,
         };
       }
+    }
 
+    const edgePage = await fetchStorefrontPageViaEdge(normalized, {
+      limit,
+      cursor: cursor || null,
+      category: category || undefined,
+      search: search || undefined,
+    });
+    if (edgePage) return edgePage;
+
+    try {
+      const { data, error } = await (supabase as any).rpc('get_store_products_page', {
+        p_slug: normalized,
+        p_limit: limit,
+        p_cursor: cursor,
+        p_category: category,
+        p_search: search,
+      });
+
+      if (!error && data?.products !== undefined) {
+        const mapped = ((data.products as Record<string, unknown>[]) || [])
+          .map((row) => safeMapStorefrontProduct(row))
+          .filter((p): p is Product => p != null && isStorefrontVisible(p));
+
+        if (mapped.length > 0 || cursor) {
+          return {
+            products: mapped,
+            nextCursor: data.next_cursor || null,
+            hasMore: !!data.has_more,
+          };
+        }
+
+        const ownerId = await resolveStoreOwnerBySlug(normalized);
+        if (ownerId && !category && !search) {
+          return {
+            products: mapped,
+            nextCursor: data.next_cursor || null,
+            hasMore: !!data.has_more,
+          };
+        }
+      }
+
+      if (error) {
+        console.warn('[storefront] RPC get_store_products_page failed, trying fallbacks:', error.message);
+      }
+    } catch (err) {
+      console.warn('[storefront] RPC unavailable, trying fallbacks:', err);
+    }
+
+    if (category || search) {
       const ownerId = await resolveStoreOwnerBySlug(normalized);
-      if (ownerId && !options.category?.trim() && !options.search?.trim()) {
-        return {
-          products: mapped,
-          nextCursor: data.next_cursor || null,
-          hasMore: !!data.has_more,
-        };
-      }
+      if (!ownerId) return { products: [], nextCursor: null, hasMore: false };
+      const products = await queryActiveProductsByOwner(ownerId, { category, search, limit });
+      return { products, nextCursor: null, hasMore: false };
     }
 
-    if (error) {
-      console.warn('[storefront] RPC get_store_products_page failed, trying fallbacks:', error.message);
+    const slugRpcProducts = await fetchProductsViaSlugRpc(normalized);
+    if (slugRpcProducts.length > 0) {
+      return { products: slugRpcProducts.slice(0, limit), nextCursor: null, hasMore: false };
     }
-  } catch (err) {
-    console.warn('[storefront] RPC unavailable, trying fallbacks:', err);
-  }
 
-  const slugRpcProducts = await fetchProductsViaSlugRpc(normalized);
-  if (slugRpcProducts.length > 0) {
-    const filtered = applyClientFilters(slugRpcProducts, {
-      category: options.category,
-      search: options.search,
-      limit,
-    });
-    return { products: filtered, nextCursor: null, hasMore: false };
-  }
+    const ownerId = await resolveStoreOwnerBySlug(normalized);
+    if (!ownerId) {
+      return { products: [], nextCursor: null, hasMore: false };
+    }
 
-  const ownerId = await resolveStoreOwnerBySlug(normalized);
-  if (!ownerId) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user?.id === ownerId) {
+      const products = await queryActiveProductsByOwner(ownerId, { limit });
+      return { products, nextCursor: null, hasMore: false };
+    }
+
     return { products: [], nextCursor: null, hasMore: false };
-  }
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (user?.id === ownerId) {
-    const products = await queryActiveProductsByOwner(ownerId, {
-      category: options.category,
-      search: options.search,
-      limit,
-    });
-    return { products, nextCursor: null, hasMore: false };
-  }
-
-  return { products: [], nextCursor: null, hasMore: false };
+  });
 }
 
 /** Single product for storefront detail page — RPC + slug catalog fallback (works for anon). */
@@ -469,6 +576,10 @@ export async function fetchStorefrontProductsByIds(
 
 export async function invalidateStorefrontForOwner(ownerId: string): Promise<void> {
   cache.flushByPrefix('tenant-products:');
+  cache.flushByPrefix('storefront-bundle:');
+  cache.flushByPrefix('edge-bundle:');
+  cache.flushByPrefix('edge-page:');
+  cache.flushByPrefix('storefront-page:');
 
   const { data } = await supabase
     .from('store_settings')

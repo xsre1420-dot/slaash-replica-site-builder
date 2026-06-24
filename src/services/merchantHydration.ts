@@ -30,7 +30,7 @@ export const hydrateMerchantStore = async (userId: string): Promise<HydrationRes
   logger.info('merchant.hydrate.start', { userId });
 
   invalidatePlatformHealthCache();
-  const health = await fetchPlatformHealth(true);
+  const health = await fetchPlatformHealth(false);
   if (!health.ok) {
     logger.warn('platform.health.degraded', {
       userId,

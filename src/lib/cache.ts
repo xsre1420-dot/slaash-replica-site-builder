@@ -123,6 +123,9 @@ export const CacheTTL = {
   MEDIUM: 60_000,
   LONG: 300_000,
   STALE: 15_000,
+  /** Public storefront catalog — longer TTL reduces RPC churn under viral traffic */
+  STOREFRONT: 120_000,
+  STOREFRONT_STALE: 60_000,
 } as const;
 
 /** Invalidate order + stats caches only (preserve product catalog). */

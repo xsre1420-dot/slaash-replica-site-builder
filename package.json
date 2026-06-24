@@ -26,11 +26,14 @@
     "db:deploy": "powershell -ExecutionPolicy Bypass -File scripts/db-push.ps1",
     "db:baseline": "powershell -ExecutionPolicy Bypass -File scripts/db-baseline.ps1",
     "db:verify": "node scripts/verify-platform-db.mjs",
+    "load:test": "node scripts/load-test.mjs",
+    "load:seed": "supabase db query --linked -f scripts/seed-load-test-store.sql",
     "db:check": "node scripts/platform-check.mjs",
     "db:bundle": "node scripts/bundle-platform-migrations.mjs",
     "functions:deploy-redeem": "supabase functions deploy redeem-access-code --no-verify-jwt",
     "functions:deploy-meta": "supabase functions deploy meta-conversions --no-verify-jwt",
-    "functions:deploy-security": "supabase functions deploy redeem-access-code --no-verify-jwt && supabase functions deploy meta-conversions --no-verify-jwt"
+    "functions:deploy-security": "supabase functions deploy redeem-access-code --no-verify-jwt && supabase functions deploy meta-conversions --no-verify-jwt",
+    "functions:deploy-storefront": "supabase functions deploy get-store-products --no-verify-jwt"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^16.3.0",
