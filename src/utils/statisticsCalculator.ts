@@ -148,23 +148,43 @@ export const calculateStatistics = (
     mergeMetric(prevVisitors, previousVisitorsClient)
   );
 
-  const productSales: { [key: string]: { name: string; orders: number; revenue: number } } = {};
-  periodItems.forEach(item => {
-    const productName = item.product_name || 'منتج غير معروف';
-    if (!productSales[productName]) {
-      productSales[productName] = { name: productName, orders: 0, revenue: 0 };
-    }
-    productSales[productName].orders += item.quantity || 1;
-    productSales[productName].revenue += parseFloat(item.subtotal || 0);
-  });
+  const rawTopSelling = Array.isArray(kpis?.top_selling_products) ? kpis.top_selling_products : [];
+  const topProductsFromKpi = (rawTopSelling as Array<{
+    product_name?: string;
+    units?: number;
+    revenue?: number;
+  }>)
+    .map((row) => ({
+      name: String(row.product_name || 'منتج'),
+      orders: Number(row.units || 0),
+      revenue: Number(row.revenue || 0),
+    }))
+    .filter((p) => p.revenue > 0 || p.orders > 0);
 
-  const topProducts = Object.values(productSales)
-    .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 6)
-    .map(product => ({
-      ...product,
-      percentage: totalRevenue > 0 ? (product.revenue / totalRevenue) * 100 : 0
-    }));
+  const topProducts = topProductsFromKpi.length > 0
+    ? topProductsFromKpi.slice(0, 6).map((product) => ({
+        ...product,
+        percentage: totalRevenue > 0 ? (product.revenue / totalRevenue) * 100 : 0,
+      }))
+    : (() => {
+        const productSales: { [key: string]: { name: string; orders: number; revenue: number } } = {};
+        periodItems.forEach(item => {
+          const productName = item.product_name || 'منتج غير معروف';
+          if (!productSales[productName]) {
+            productSales[productName] = { name: productName, orders: 0, revenue: 0 };
+          }
+          productSales[productName].orders += item.quantity || 1;
+          productSales[productName].revenue += parseFloat(item.subtotal || 0);
+        });
+
+        return Object.values(productSales)
+          .sort((a, b) => b.revenue - a.revenue)
+          .slice(0, 6)
+          .map(product => ({
+            ...product,
+            percentage: totalRevenue > 0 ? (product.revenue / totalRevenue) * 100 : 0
+          }));
+      })();
 
   const rawTopViewed = Array.isArray(kpis?.top_viewed_products) ? kpis.top_viewed_products : [];
   const topViewedProducts = (rawTopViewed as Array<{ product_id?: string; product_name?: string; view_count?: number }>)

@@ -3,6 +3,8 @@
 **Date:** 2026-06-19  
 **Scope:** All merchant `postgres_changes` subscriptions (`products`, `orders`)
 
+> **Full reports:** [`REALTIME_AUDIT_REPORT.md`](./REALTIME_AUDIT_REPORT.md) · [`SUBSCRIPTION_OPTIMIZATION_REPORT.md`](./SUBSCRIPTION_OPTIMIZATION_REPORT.md)
+
 ---
 
 ## Architecture (after optimization)

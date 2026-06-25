@@ -14,6 +14,10 @@ vi.mock('@/lib/security/rateLimiter', () => ({
   formatRateLimitMessageAr: (ms: number) => `wait ${ms}`,
 }));
 
+vi.mock('@/lib/tenantGuard', () => ({
+  assertMerchantOwner: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('@/lib/observability', () => ({
   instrumentAsync: (_op: string, fn: () => Promise<unknown>) => fn(),
   instrumentQuery: async (_op: string, fn: () => Promise<unknown>) => fn(),
@@ -29,6 +33,18 @@ vi.mock('@/utils/checkoutSession', () => ({
 vi.mock('@/services/checkoutRecoveryService', () => ({
   tryRecoverCheckoutOrder: vi.fn().mockResolvedValue(null),
 }));
+
+vi.mock('@/services/storefrontProductService', () => ({
+  invalidateStorefrontForOwner: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('@/lib/cache', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/cache')>();
+  return {
+    ...actual,
+    flushOrderCache: vi.fn(),
+  };
+});
 
 import { createOrder, clearInflightOrdersForTests } from '@/services/orderService';
 import { tryRecoverCheckoutOrder } from '@/services/checkoutRecoveryService';

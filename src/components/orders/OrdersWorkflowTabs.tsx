@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 import { OrderWorkflowTab, WORKFLOW_TABS } from '@/utils/orderWorkflowUtils';
-import type { WorkflowTabCounts } from '@/services/orderService';
+import type { WorkflowTabCounts } from '@/types/orders';
 
 interface OrdersWorkflowTabsProps {
   tabCounts: WorkflowTabCounts;

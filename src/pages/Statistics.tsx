@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SalesStats } from "@/components/statistics/SalesStats";
 import { DateRangeControls, periodLabels } from "@/components/statistics/DateRangeControls";
 import { useRealStatistics } from "@/hooks/useRealStatistics";
+import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { copyStorePublicUrl } from "@/lib/storeUrl";
@@ -63,6 +64,10 @@ const Statistics = () => {
     startDate,
     endDate
   );
+
+  useRealtimeOrders(() => {
+    refetch();
+  });
 
   const exportCSV = useCallback(() => {
     if (!stats) return;

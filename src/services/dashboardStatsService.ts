@@ -5,7 +5,7 @@ import {
   type PeriodMetrics,
 } from '@/utils/dashboardInsightsUtils';
 import { netRevenueFromRpc } from '@/utils/analyticsMetrics';
-import type { OrderDashboardStats, WorkflowTabCounts } from '@/services/orderService';
+import type { OrderDashboardStats, WorkflowTabCounts } from '@/types/orders';
 
 export type DashboardBatchPayload = {
   today: PeriodMetrics | null;

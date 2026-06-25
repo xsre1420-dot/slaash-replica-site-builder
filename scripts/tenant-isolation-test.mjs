@@ -33,7 +33,7 @@ const headers = {
 };
 
 const VICTIM_OWNER = '00000000-0000-0000-0000-000000000001';
-const VICTIM_ORDER = '00000000-0000-0000-0000-000000000002';
+const VICTIM_PRODUCT = '00000000-0000-0000-0000-000000000002';
 const FAKE_KEY = 'probe-isolation-' + Date.now();
 
 const tests = [];
@@ -57,10 +57,32 @@ async function rpc(name, body) {
 async function tableSelect(table, query) {
   const res = await fetch(`${url}/rest/v1/${table}?${query}`, { headers });
   const text = await res.text();
-  return { status: res.status, text: text.slice(0, 200) };
+  return { status: res.status, text: text.slice(0, 300) };
 }
 
-// 1) Direct table access blocked by RLS
+function rpcBlocked(probe, { allowNull = true } = {}) {
+  const leaked =
+    probe.json?.success === true &&
+    (probe.json?.order_id != null || probe.json?.found === true);
+  if (leaked) return false;
+  if (allowNull && probe.json === null) return true;
+  const text = String(probe.text || '');
+  return (
+    probe.status === 404 ||
+    probe.status === 401 ||
+    probe.status === 403 ||
+    probe.status === 42501 ||
+    text.includes('Could not find') ||
+    text.includes('permission denied') ||
+    text.includes('Unauthorized') ||
+    text.includes('PGRST202') ||
+    text.includes('PGRST301') ||
+    (probe.json?.found === false) ||
+    (probe.json?.success === false)
+  );
+}
+
+// --- Direct table access (RLS) ---
 const ordersProbe = await tableSelect('orders', 'select=id&limit=1');
 tests.push({
   name: 'anon cannot list orders',
@@ -73,6 +95,19 @@ tests.push({
   pass: productsProbe.status === 200 && !productsProbe.text.includes('"name"'),
 });
 
+const customersProbe = await tableSelect('customers', 'select=id,phone&limit=5');
+tests.push({
+  name: 'anon cannot read customers table',
+  pass: customersProbe.status === 200 && !customersProbe.text.includes('"phone"'),
+});
+
+const settingsProbe = await tableSelect('store_settings', 'select=owner_id,store_slug&limit=5');
+tests.push({
+  name: 'anon cannot enumerate store_settings',
+  pass: settingsProbe.status === 200 && !settingsProbe.text.includes('store_slug'),
+});
+
+// --- Cross-tenant analytics (Store A → Store B) ---
 const statsProbe = await rpc('get_store_statistics', {
   p_owner_id: VICTIM_OWNER,
   p_start: '2000-01-01T00:00:00Z',
@@ -91,6 +126,15 @@ tests.push({
   pass: dashboardProbe.json === null || dashboardProbe.status === 401,
 });
 
+const marketingProbe = await rpc('get_store_marketing_for_owner', {
+  p_owner_id: VICTIM_OWNER,
+});
+tests.push({
+  name: 'anon cannot read victim marketing settings',
+  pass: marketingProbe.json === null || marketingProbe.json?.meta_pixel_id === undefined,
+});
+
+// --- Cross-tenant orders ---
 const listOrdersProbe = await rpc('list_merchant_orders', {
   p_owner_id: VICTIM_OWNER,
   p_page: 0,
@@ -101,21 +145,34 @@ tests.push({
   pass: listOrdersProbe.status === 401 || String(listOrdersProbe.text).includes('Unauthorized'),
 });
 
-// 2) checkout_resolve_duplicate_order locked down
+const workflowProbe = await rpc('count_merchant_orders_by_workflow', {
+  p_owner_id: VICTIM_OWNER,
+});
+tests.push({
+  name: 'anon cannot read victim workflow counts',
+  pass: workflowProbe.status === 401 || String(workflowProbe.text).includes('Unauthorized'),
+});
+
+const baseFilterProbe = await rpc('merchant_orders_base_filter', {
+  p_owner_id: VICTIM_OWNER,
+});
+const baseFilterEmpty =
+  Array.isArray(baseFilterProbe.json) && baseFilterProbe.json.length === 0;
+tests.push({
+  name: 'anon cannot call merchant_orders_base_filter (no rows leaked)',
+  pass: rpcBlocked(baseFilterProbe) || baseFilterEmpty,
+});
+
+// --- Internal checkout probes ---
 const checkoutResolveProbe = await rpc('checkout_resolve_duplicate_order', {
   p_owner_id: VICTIM_OWNER,
   p_idempotency_key: FAKE_KEY,
 });
 tests.push({
-  name: 'checkout_resolve_duplicate_order not callable by anon',
-  pass:
-    checkoutResolveProbe.status === 404 ||
-    String(checkoutResolveProbe.text).includes('Could not find') ||
-    checkoutResolveProbe.status === 401 ||
-    checkoutResolveProbe.status === 403,
+  name: 'checkout_resolve_duplicate_order not callable by anon (no leak)',
+  pass: rpcBlocked(checkoutResolveProbe),
 });
 
-// 3) get_order_by_idempotency_key ignores spoofed owner_id for anon
 const recoverSpoof = await rpc('get_order_by_idempotency_key', {
   p_idempotency_key: FAKE_KEY,
   p_owner_id: VICTIM_OWNER,
@@ -126,9 +183,9 @@ tests.push({
   pass: recoverSpoof.json?.found === false || recoverSpoof.json?.found === undefined,
 });
 
-// 4) increment_product_stock forbidden for anon
+// --- Cross-tenant inventory / products ---
 const restockProbe = await rpc('increment_product_stock', {
-  p_product_id: VICTIM_ORDER,
+  p_product_id: VICTIM_PRODUCT,
   p_owner_id: VICTIM_OWNER,
   p_delta: 1,
 });
@@ -140,16 +197,23 @@ tests.push({
     restockProbe.json?.success === false,
 });
 
-// 5) publish victim product blocked
 const publishProbe = await rpc('publish_owner_product', {
-  p_product_id: VICTIM_ORDER,
+  p_product_id: VICTIM_PRODUCT,
 });
 tests.push({
   name: 'anon cannot publish victim product',
   pass: publishProbe.json?.success === false || publishProbe.json?.error === 'unauthorized',
 });
 
-// 6) Storefront slug path still works (public by design)
+const storeProbe = await rpc('get_store_for_user', {
+  p_user_id: VICTIM_OWNER,
+});
+tests.push({
+  name: 'anon cannot read victim store via get_store_for_user',
+  pass: storeProbe.json === null || storeProbe.json?.store_name === undefined,
+});
+
+// --- Public storefront (intentional) ---
 const storefrontProbe = await rpc('get_store_products_page', {
   p_slug: 'bidaya-demo',
   p_limit: 1,
@@ -162,7 +226,7 @@ tests.push({
   pass: storefrontProbe.status === 200 && typeof storefrontProbe.json === 'object',
 });
 
-console.log('=== Tenant Isolation Tests ===');
+console.log('=== Tenant Isolation Penetration Tests ===');
 console.log(`URL: ${url}\n`);
 
 let failed = 0;

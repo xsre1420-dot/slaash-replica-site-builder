@@ -670,10 +670,13 @@ export type Database = {
           customer_phone: string | null
           delivery_fee: number | null
           delivery_status: string
+          delivery_time: number | null
           discount_amount: number | null
           id: string
           idempotency_key: string | null
           marketing_attribution: Json | null
+          meta_conversion_sent_at: string | null
+          notes: string | null
           owner_id: string | null
           payment_method: string | null
           payment_status: string
@@ -693,10 +696,13 @@ export type Database = {
           customer_phone?: string | null
           delivery_fee?: number | null
           delivery_status?: string
+          delivery_time?: number | null
           discount_amount?: number | null
           id?: string
           idempotency_key?: string | null
           marketing_attribution?: Json | null
+          meta_conversion_sent_at?: string | null
+          notes?: string | null
           owner_id?: string | null
           payment_method?: string | null
           payment_status?: string
@@ -716,10 +722,13 @@ export type Database = {
           customer_phone?: string | null
           delivery_fee?: number | null
           delivery_status?: string
+          delivery_time?: number | null
           discount_amount?: number | null
           id?: string
           idempotency_key?: string | null
           marketing_attribution?: Json | null
+          meta_conversion_sent_at?: string | null
+          notes?: string | null
           owner_id?: string | null
           payment_method?: string | null
           payment_status?: string
@@ -1303,6 +1312,27 @@ export type Database = {
           unique_visitors?: number
           updated_at?: string
           visit_count?: number
+        }
+        Relationships: []
+      }
+      store_visitor_daily_keys: {
+        Row: {
+          created_at: string
+          owner_id: string
+          stat_date: string
+          visitor_ip: string
+        }
+        Insert: {
+          created_at?: string
+          owner_id: string
+          stat_date: string
+          visitor_ip: string
+        }
+        Update: {
+          created_at?: string
+          owner_id?: string
+          stat_date?: string
+          visitor_ip?: string
         }
         Relationships: []
       }
@@ -2113,6 +2143,10 @@ export type Database = {
       mark_delivery_failed: {
         Args: { p_owner_id: string; p_reason?: string; p_shipment_id: string }
         Returns: Json
+      }
+      mark_meta_conversion_sent: {
+        Args: { p_order_id: string; p_owner_id: string }
+        Returns: boolean
       }
       merchant_orders_base_filter: {
         Args: {

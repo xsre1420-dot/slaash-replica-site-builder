@@ -16,7 +16,7 @@ import { AdminRoute } from "./components/AdminRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 import OfflineBanner from "./components/OfflineBanner";
 import RecoveryBanner from "./components/RecoveryBanner";
-import { StoreBootstrapProvider } from "./components/StoreBootstrap";
+import { StoreBootstrapProvider } from '@/context/StoreBootstrapContext';
 import SubdomainRouter from "./components/SubdomainRouter";
 import StorefrontRouteShell from "./components/StorefrontRouteShell";
 

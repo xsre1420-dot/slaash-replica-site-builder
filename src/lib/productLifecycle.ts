@@ -23,5 +23,7 @@ export const lifecycleStatusLabel: Record<ProductLifecycleStatus, string> = {
   archived: 'مؤرشف',
 };
 
-export const isStorefrontVisible = (product: Pick<Product, 'isActive' | 'archivedAt'>): boolean =>
-  getProductLifecycleStatus(product) === 'published';
+export const isStorefrontVisible = (product: Pick<Product, 'isActive' | 'archivedAt'>): boolean => {
+  if (product.archivedAt) return false;
+  return product.isActive !== false;
+};

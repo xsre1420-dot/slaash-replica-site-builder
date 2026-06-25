@@ -139,6 +139,33 @@ describe('calculateStatistics', () => {
     expect(stats.totalVisitors).toBe(1);
   });
 
+  it('uses top_selling_products from KPI when order_items are empty', () => {
+    const data: DatabaseData = {
+      orders: [],
+      orderItems: [],
+      customers: [],
+      products: [null],
+      visits: [],
+      kpis: {
+        order_count: 5,
+        completed_order_count: 5,
+        completed_revenue: 500,
+        unique_visitors: 100,
+        top_selling_products: [
+          { product_name: 'Best Seller', units: 10, revenue: 400 },
+          { product_name: 'Runner Up', units: 3, revenue: 100 },
+        ],
+      },
+      dateBounds: bounds,
+    };
+
+    const stats = calculateStatistics(data, bounds);
+    expect(stats.topProducts).toHaveLength(2);
+    expect(stats.topProducts[0].name).toBe('Best Seller');
+    expect(stats.topProducts[0].revenue).toBe(400);
+    expect(stats.topProducts[0].percentage).toBe(80);
+  });
+
   it('computes stats from orders and visits when KPI RPC is unavailable', () => {
     const data: DatabaseData = {
       orders: [

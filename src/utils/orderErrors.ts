@@ -67,6 +67,10 @@ export const mapOrderError = (message: string): string => {
     return 'يرجى إدخال الاسم ورقم الهاتف والعنوان بشكل صحيح.';
   }
 
+  if (lower.includes('idempotency_required')) {
+    return 'تعذر تأكيد الطلب — حدّث الصفحة وحاول مرة أخرى.';
+  }
+
   if (
     lower.includes('unauthorized_checkout') ||
     lower.includes('store_owner_mismatch') ||

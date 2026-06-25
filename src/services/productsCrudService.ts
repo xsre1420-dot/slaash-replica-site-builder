@@ -168,7 +168,19 @@ export async function createProduct(product: Product): Promise<ProductsCrudResul
 
     if (!error && data) {
       syncProductCachesAfterMutation(ownerId);
-      return { success: true, data: mapDbProduct(data as Record<string, unknown>) };
+      const mapped = mapDbProduct(data as Record<string, unknown>);
+
+      const stockQty = product.stockQuantity ?? 0;
+      if (stockQty > 0) {
+        void supabase.from('inventory_movements').insert({
+          product_id: mapped.id,
+          owner_id: ownerId,
+          quantity_delta: stockQty,
+          reason: 'initial_stock',
+        });
+      }
+
+      return { success: true, data: mapped };
     }
     if (error && !isSchemaColumnError(error.message)) {
       return { success: false, error: mapProductInsertError(error.message) };

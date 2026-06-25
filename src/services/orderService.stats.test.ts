@@ -16,6 +16,10 @@ vi.mock('@/lib/observability', () => ({
   logger: { error: vi.fn(), warn: vi.fn() },
 }));
 
+vi.mock('@/lib/tenantGuard', () => ({
+  assertMerchantOwner: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { fetchOrderStatsSummary } from '@/services/orderService';
 
 const workflowCounts = {

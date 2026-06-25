@@ -33,6 +33,41 @@ export const hasUsableStatisticsKpis = (kpis?: Record<string, unknown>): boolean
   typeof kpis === 'object' &&
   (kpis.order_count != null || kpis.completed_order_count != null || kpis.visit_count != null);
 
+export const hasTopSellingProductsKpi = (kpis?: Record<string, unknown>): boolean =>
+  Array.isArray(kpis?.top_selling_products) && (kpis.top_selling_products as unknown[]).length > 0;
+
+const fetchStatisticsPageBundleRpc = async (
+  ownerId: string,
+  periodStart: string,
+  periodEnd: string,
+  previousStart: string,
+  previousEnd: string
+): Promise<{ current?: Record<string, unknown>; previous?: Record<string, unknown> } | undefined> => {
+  try {
+    const { data, error } = await (supabase as any).rpc('get_statistics_page_bundle', {
+      p_owner_id: ownerId,
+      p_current_start: periodStart,
+      p_current_end: periodEnd,
+      p_previous_start: previousStart,
+      p_previous_end: previousEnd,
+    });
+    if (!error && data && typeof data === 'object') {
+      const payload = data as Record<string, unknown>;
+      return {
+        current: (payload.current as Record<string, unknown>) ?? undefined,
+        previous: (payload.previous as Record<string, unknown>) ?? undefined,
+      };
+    }
+    if (error) {
+      console.warn('[statistics] get_statistics_page_bundle unavailable, using single-period RPC:', error.message);
+    }
+    return undefined;
+  } catch (err) {
+    console.warn('[statistics] get_statistics_page_bundle RPC failed:', err);
+    return undefined;
+  }
+};
+
 export const getStatisticsDateBounds = (
   dateRange: string,
   customStart?: string,
@@ -200,44 +235,36 @@ const fetchOrderItemsForStatistics = async (
   return data || [];
 };
 
-type CustomerMetricRow = { first_order_date: string | null; last_order_date: string | null };
-
 /** Match get_store_statistics customer semantics when RPC KPIs are missing. */
 const fetchCustomerMetricsForStatistics = async (
   ownerId: string,
   periodStart: string,
   periodEnd: string
 ): Promise<{ new_customers: number; returning_customers: number }> => {
-  const { data, error } = await supabase
-    .from('customers')
-    .select('first_order_date, last_order_date')
-    .eq('owner_id', ownerId);
+  const [newResult, returningResult] = await Promise.all([
+    supabase
+      .from('customers')
+      .select('*', { count: 'exact', head: true })
+      .eq('owner_id', ownerId)
+      .gte('first_order_date', periodStart)
+      .lte('first_order_date', periodEnd),
+    supabase
+      .from('customers')
+      .select('*', { count: 'exact', head: true })
+      .eq('owner_id', ownerId)
+      .lt('first_order_date', periodStart)
+      .gte('last_order_date', periodStart)
+      .lte('last_order_date', periodEnd),
+  ]);
 
-  if (error || !data?.length) {
+  if (newResult.error && returningResult.error) {
     return { new_customers: 0, returning_customers: 0 };
   }
 
-  const start = new Date(periodStart).getTime();
-  const end = new Date(periodEnd).getTime();
-  let newCustomers = 0;
-  let returningCustomers = 0;
-
-  for (const row of data as CustomerMetricRow[]) {
-    const first = row.first_order_date ? new Date(row.first_order_date).getTime() : NaN;
-    const last = row.last_order_date ? new Date(row.last_order_date).getTime() : NaN;
-    if (Number.isFinite(first) && first >= start && first <= end) newCustomers += 1;
-    if (
-      Number.isFinite(first) &&
-      Number.isFinite(last) &&
-      first < start &&
-      last >= start &&
-      last <= end
-    ) {
-      returningCustomers += 1;
-    }
-  }
-
-  return { new_customers: newCustomers, returning_customers: returningCustomers };
+  return {
+    new_customers: newResult.count ?? 0,
+    returning_customers: returningResult.count ?? 0,
+  };
 };
 
 export const fetchStatisticsData = async (
@@ -274,16 +301,22 @@ export const fetchStatisticsData = async (
     const fallbackFrom = bounds.previousStart.toISOString();
 
     try {
-      const [kpis, previousKpis] = await withTimeout(
-        Promise.all([
-          fetchStoreStatisticsRpc(ownerId, periodStart, periodEnd),
-          fetchStoreStatisticsRpc(
-            ownerId,
-            bounds.previousStart.toISOString(),
-            previousEnd.toISOString()
-          ),
-        ])
+      const previousStart = bounds.previousStart.toISOString();
+      const bundle = await withTimeout(
+        fetchStatisticsPageBundleRpc(ownerId, periodStart, periodEnd, previousStart, previousEnd.toISOString())
       );
+
+      let kpis = bundle?.current;
+      let previousKpis = bundle?.previous;
+
+      if (!hasUsableStatisticsKpis(kpis)) {
+        [kpis, previousKpis] = await withTimeout(
+          Promise.all([
+            fetchStoreStatisticsRpc(ownerId, periodStart, periodEnd),
+            fetchStoreStatisticsRpc(ownerId, previousStart, previousEnd.toISOString()),
+          ])
+        );
+      }
 
       const rpcReady = hasUsableStatisticsKpis(kpis);
       const ordersCap = rpcReady ? CHART_ORDERS_CAP : FALLBACK_ORDERS_CAP;
@@ -291,6 +324,7 @@ export const fetchStatisticsData = async (
       const ordersFrom = rpcReady ? periodStart : fallbackFrom;
       const visitsFrom = rpcReady ? periodStart : fallbackFrom;
       const skipVisits = rpcReady && hasUsableStatisticsKpis(previousKpis);
+      const skipOrderItems = rpcReady && hasTopSellingProductsKpi(kpis);
 
       const [ordersResult, visitsResult, productCount, orderItems] = await withTimeout(
         Promise.all([
@@ -299,7 +333,9 @@ export const fetchStatisticsData = async (
             ? Promise.resolve({ visits: [] as DatabaseData['visits'] })
             : fetchVisitsForStatistics(ownerId, visitsFrom, periodEnd, visitsCap),
           fetchProductCount(ownerId, kpis),
-          fetchOrderItemsForStatistics(ownerId, periodStart, periodEnd),
+          skipOrderItems
+            ? Promise.resolve([] as DatabaseData['orderItems'])
+            : fetchOrderItemsForStatistics(ownerId, periodStart, periodEnd),
         ])
       );
 

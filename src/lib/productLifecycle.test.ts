@@ -33,5 +33,8 @@ describe('productLifecycle', () => {
     expect(isStorefrontVisible(base({ isActive: true }))).toBe(true);
     expect(isStorefrontVisible(base({ isActive: false }))).toBe(false);
     expect(isStorefrontVisible(base({ archivedAt: '2026-01-01T00:00:00Z' }))).toBe(false);
+    expect(
+      isStorefrontVisible(base({ isActive: true, archivedAt: '2026-01-01T00:00:00Z' }))
+    ).toBe(false);
   });
 });

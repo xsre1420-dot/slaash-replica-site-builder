@@ -20,6 +20,7 @@ import {
 } from '@/lib/security/rateLimiter';
 import { redeemAccessCode } from '@/services/leadAdminService';
 import { ACCESS_CODE_ERROR_MESSAGES } from '@/types/accessCodes';
+import { teardownMerchantRealtimeHub } from '@/lib/merchantRealtimeHub';
 
 interface User {
   id: string;
@@ -339,6 +340,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async () => {
     const prevId = lastUserIdRef.current;
     invalidateOwnerCache(prevId);
+    teardownMerchantRealtimeHub();
     await supabase.auth.signOut();
     setUserAndOwner(null);
   };

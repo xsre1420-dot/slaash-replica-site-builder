@@ -319,7 +319,6 @@ function scheduleOrderRefetch(userId: string, entry: OrderEntry, immediate = fal
     flushOrderCache(userId);
     for (const h of entry.handlers) {
       h.onChange?.();
-      h.onEvent?.({ type: 'refetch' });
     }
   }, immediate ? 0 : ORDER_DEBOUNCE_MS);
 }

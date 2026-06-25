@@ -6,7 +6,7 @@ import { tryRecoverCheckoutOrder } from '@/services/checkoutRecoveryService';
 import { mapOrderRpcFailure, mapOrderError } from '@/utils/orderErrors';
 import { computeOrderStats, normalizeOrderPhone, type OrderListFilters, type OrderWorkflowTab } from '@/utils/orderWorkflowUtils';
 import { filtersToRpcParams, filtersToRpcParamsWithoutWorkflow, serializeOrderFilters } from '@/utils/orderQueryBuilder';
-import { cache, CacheKeys, CacheTTL, dedup } from '@/lib/cache';
+import { cache, CacheKeys, CacheTTL, dedup, flushOrderCache } from '@/lib/cache';
 import { instrumentAsync, instrumentQuery, logger, metrics } from '@/lib/observability';
 import {
   enforceRateLimit,
@@ -16,6 +16,9 @@ import {
 } from '@/lib/security/rateLimiter';
 import type { MarketingAttribution } from '@/lib/attribution';
 import { escapeIlikePattern, sanitizePostgrestFilterValue } from '@/lib/security/postgrestFilter';
+import { invalidateStorefrontForOwner } from '@/services/storefrontProductService';
+import { assertMerchantOwner } from '@/lib/tenantGuard';
+import type { OrderDashboardStats, WorkflowTabCounts } from '@/types/orders';
 import {
   buildOrderDashboardStatsFromBatch,
   fetchDashboardStatisticsBatch,
@@ -73,6 +76,7 @@ export const fetchOrderById = async (
   orderId: string,
   ownerId: string
 ): Promise<Order | null> => {
+  await assertMerchantOwner(ownerId);
   return instrumentQuery(
     'orders.fetchById',
     async () => {
@@ -98,6 +102,7 @@ export const fetchOrdersPage = async (
   page = 0,
   pageSize = ORDERS_PER_PAGE
 ): Promise<Order[]> => {
+  await assertMerchantOwner(ownerId);
   const result = await fetchOrdersFiltered(ownerId, DEFAULT_LIST_FILTERS, page, pageSize);
   return result.orders;
 };
@@ -131,6 +136,7 @@ export const fetchOrdersFiltered = async (
   page = 0,
   pageSize = ORDERS_PER_PAGE
 ): Promise<OrdersPageResult> => {
+  await assertMerchantOwner(ownerId);
   return instrumentAsync('orders.fetchFiltered', async () => {
     const filterKey = serializeOrderFilters(filters);
     const cacheKey = CacheKeys.ordersFiltered(ownerId, filterKey, page);
@@ -232,8 +238,6 @@ const fetchOrdersFilteredFallback = async (
   return result;
 };
 
-export type WorkflowTabCounts = Record<OrderWorkflowTab, number>;
-
 const EMPTY_WORKFLOW_COUNTS: WorkflowTabCounts = {
   all: 0,
   new: 0,
@@ -249,6 +253,7 @@ export const fetchWorkflowTabCounts = async (
   ownerId: string,
   filters: OrderListFilters
 ): Promise<WorkflowTabCounts> => {
+  await assertMerchantOwner(ownerId);
   const baseKey = serializeOrderFilters({ ...filters, workflowTab: 'all' });
   const cacheKey = CacheKeys.ordersWorkflowCounts(ownerId, baseKey);
   const cached = cache.get<WorkflowTabCounts>(cacheKey);
@@ -314,6 +319,7 @@ export const fetchWorkflowTabCounts = async (
 };
 
 export const fetchRecentOrders = async (ownerId: string, limit = 5): Promise<Order[]> => {
+  await assertMerchantOwner(ownerId);
   const cacheKey = CacheKeys.ordersRecent(ownerId);
   const cached = cache.get<Order[]>(cacheKey);
   if (cached) return cached;
@@ -365,6 +371,7 @@ export const updateOrderStatus = async (
   ownerId: string,
   status: Order['status']
 ): Promise<{ success: boolean; error?: string }> => {
+  await assertMerchantOwner(ownerId);
   const started = performance.now();
   const { error } = await supabase
     .from('orders')
@@ -388,7 +395,7 @@ export const ORDERS_STATS_CAP = 5000;
 export const ORDER_STATS_SELECT =
   'id, status, total_amount, payment_status, delivery_status, created_at';
 
-export type OrderDashboardStats = ReturnType<typeof computeOrderStats>;
+export type { OrderDashboardStats, WorkflowTabCounts } from '@/types/orders';
 
 export type CustomerOrderInsights = {
   orderCount: number;
@@ -400,6 +407,7 @@ export const fetchCustomerInsightsByPhone = async (
   ownerId: string,
   phone: string
 ): Promise<CustomerOrderInsights> => {
+  await assertMerchantOwner(ownerId);
   const digits = normalizeOrderPhone(phone);
   if (!digits) return { orderCount: 0, totalSpent: 0 };
 
@@ -428,6 +436,7 @@ export const fetchCustomerInsightsByPhone = async (
 
 /** Lightweight order rows for period metrics fallback (not paginated list). */
 export const fetchOrderStatsRows = async (ownerId: string): Promise<Order[]> => {
+  await assertMerchantOwner(ownerId);
   const cacheKey = CacheKeys.ordersStatsSummary(ownerId) + ':rows';
   const cached = cache.get<Order[]>(cacheKey);
   if (cached) return cached;
@@ -464,6 +473,7 @@ const buildOrderStatsFromRpc = async (ownerId: string): Promise<OrderDashboardSt
 
 /** Aggregate order stats across the full store (not paginated list). */
 export const fetchOrderStatsSummary = async (ownerId: string): Promise<OrderDashboardStats> => {
+  await assertMerchantOwner(ownerId);
   const cacheKey = CacheKeys.ordersStatsSummary(ownerId);
   const cached = cache.get<OrderDashboardStats>(cacheKey);
   if (cached) return cached;
@@ -624,6 +634,10 @@ export const createOrder = async (
         }
 
         logger.info('order.create.success', { orderId, ownerId, attempt, wasIdempotent });
+        if (!wasIdempotent) {
+          flushOrderCache(ownerId);
+          void invalidateStorefrontForOwner(ownerId);
+        }
         return {
           ...order,
           id: orderId,

@@ -1,6 +1,5 @@
 
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,8 +8,9 @@ import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { Product } from "@/types";
 import { updateProduct, fetchProductById } from "@/services/productService";
-import { buildVariantsForStock } from "@/utils/inventoryUtils";
 import { mapProductInsertError } from "@/lib/productUpdateUtils";
+import { restockProduct, InventoryRestockError } from "@/services/inventoryService";
+import { getProductLifecycleStatus } from "@/lib/productLifecycle";
 
 interface QuickEditDialogProps {
   product: Product | null;
@@ -48,7 +48,6 @@ export const QuickEditDialog = ({ product, open, onOpenChange, onSaved }: QuickE
     setSaving(true);
     const addQty = parseInt(stockAdd, 10) || 0;
     const latest = (await fetchProductById(product.id)) ?? product;
-    const currentStock = latest.stockQuantity ?? 0;
 
     const patch: Partial<Product> = {
       name: name.trim(),
@@ -56,30 +55,45 @@ export const QuickEditDialog = ({ product, open, onOpenChange, onSaved }: QuickE
       cost: cost ? parseFloat(cost) || undefined : undefined,
     };
 
-    if (addQty > 0) {
-      const newStock = currentStock + addQty;
-      patch.stockQuantity = newStock;
-      if ((latest.sizes?.length ?? 0) > 0 || (latest.colors?.length ?? 0) > 0 || latest.variants?.length) {
-        patch.variants = buildVariantsForStock(latest, newStock);
-      }
-    }
-
     const result = await updateProduct(product.id, patch);
-    setSaving(false);
-
     if (!result.success) {
+      setSaving(false);
       toast.error(mapProductInsertError(result.error || "فشل في حفظ التغييرات"));
       return;
     }
 
     if (addQty > 0) {
-      await (supabase as any).from('inventory_movements').insert({
-        product_id: product.id,
-        owner_id: user.id,
-        quantity_delta: addQty,
-        reason: 'restock',
-      });
+      try {
+        await restockProduct({
+          product: {
+            id: latest.id,
+            name: patch.name ?? latest.name,
+            price: patch.price ?? latest.price,
+            category: latest.category,
+            image_url: latest.image,
+            stock_quantity: latest.stockQuantity,
+            min_stock_level: latest.lowStockThreshold,
+            sizes: latest.sizes,
+            colors: latest.colors,
+            variants: latest.variants,
+            created_at: new Date().toISOString(),
+            lifecycle: getProductLifecycleStatus(latest),
+          },
+          ownerId: user.id,
+          addAmount: addQty,
+        });
+      } catch (err) {
+        setSaving(false);
+        toast.error(
+          err instanceof InventoryRestockError
+            ? err.message
+            : "تم حفظ البيانات لكن فشل تحديث المخزون"
+        );
+        return;
+      }
     }
+
+    setSaving(false);
 
     toast.success(addQty > 0 ? `تمت إضافة ${addQty} وحدة للمخزون` : "تم حفظ التغييرات");
     onSaved();
