@@ -89,7 +89,6 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <SubscriptionProvider>
-        <StoreBootstrapProvider>
         <StoreProvider>
           <TooltipProvider>
             <CartProvider>
@@ -98,6 +97,7 @@ const App = () => (
               <Toaster />
               <Sonner />
               <BrowserRouter>
+              <StoreBootstrapProvider>
                 <RouteObserver />
                 <SubdomainRouter />
                 <Suspense fallback={<PageLoader />}>
@@ -138,11 +138,11 @@ const App = () => (
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Suspense>
+              </StoreBootstrapProvider>
               </BrowserRouter>
             </CartProvider>
           </TooltipProvider>
         </StoreProvider>
-        </StoreBootstrapProvider>
         </SubscriptionProvider>
       </AuthProvider>
     </QueryClientProvider>

@@ -11,12 +11,14 @@ import {
   removeCachedProduct,
 } from '@/services/productService';
 import { invalidateStorefrontForOwner } from '@/services/storefrontProductService';
+import { patchStorefrontProductFromDbRow } from '@/services/storefrontCacheService';
 import { markLocalStorefrontMutation, shouldSuppressRealtimeStorefrontInvalidation } from '@/lib/localMutationGuard';
 import { mapDbProduct } from '@/mappers/productMapper';
 import { isStorefrontVisible } from '@/lib/productLifecycle';
 import {
   getChangedFieldKeys,
   isNoiseOnlyChange,
+  isStockOnlyStorefrontChange,
   ORDER_NOISE_FIELDS,
   PRODUCT_NOISE_FIELDS,
   shouldInvalidateStorefront,
@@ -172,7 +174,13 @@ function applyProductPayload(userId: string, payload: ProductRealtimePayload) {
     if (payload.new) {
       patchCachedProduct(userId, payload.new);
       if (shouldInvalidateStorefront(payload)) {
-        maybeInvalidateStorefront(userId);
+        const changed = getChangedFieldKeys(payload.new, payload.old);
+        if (isStockOnlyStorefrontChange(changed)) {
+          markLocalStorefrontMutation(userId);
+          void patchStorefrontProductFromDbRow(userId, payload.new);
+        } else {
+          maybeInvalidateStorefront(userId);
+        }
       }
       scheduleProductUiNotify(userId, entry);
     }

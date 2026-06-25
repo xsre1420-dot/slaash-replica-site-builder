@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildProductInsertPayload, buildProductLifecyclePatch, mergeProductForUpdate, isProductLowStock, getProductLowStockThreshold } from './productUpdateUtils';
+import { buildProductInsertPayload, buildProductLifecyclePatch, mergeProductForUpdate, isProductLowStock, getProductLowStockThreshold, patchAffectsCatalogStats } from './productUpdateUtils';
 import { Product } from '@/types';
 
 const base: Product = {
@@ -68,5 +68,19 @@ describe('isProductLowStock', () => {
 
   it('defaults threshold to 5', () => {
     expect(getProductLowStockThreshold({})).toBe(5);
+  });
+});
+
+describe('patchAffectsCatalogStats', () => {
+  it('is false for metadata-only patches', () => {
+    expect(patchAffectsCatalogStats({ name: 'New' })).toBe(false);
+    expect(patchAffectsCatalogStats({ price: 99 })).toBe(false);
+  });
+
+  it('is true when stock, lifecycle, or threshold changes', () => {
+    expect(patchAffectsCatalogStats({ stockQuantity: 5 })).toBe(true);
+    expect(patchAffectsCatalogStats({ isActive: false })).toBe(true);
+    expect(patchAffectsCatalogStats({ archivedAt: '2026-01-01' })).toBe(true);
+    expect(patchAffectsCatalogStats({ lowStockThreshold: 2 })).toBe(true);
   });
 });

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   getChangedFieldKeys,
   isNoiseOnlyChange,
+  isStockOnlyStorefrontChange,
   shouldInvalidateStorefront,
   PRODUCT_NOISE_FIELDS,
 } from './merchantRealtimeUtils';
@@ -50,5 +51,11 @@ describe('merchantRealtimeUtils', () => {
         old: { seo_title: 'y' },
       })
     ).toBe(false);
+  });
+
+  it('detects stock-only storefront changes for selective cache patch', () => {
+    expect(isStockOnlyStorefrontChange(['stock_quantity'])).toBe(true);
+    expect(isStockOnlyStorefrontChange(['stock_quantity', 'variants'])).toBe(true);
+    expect(isStockOnlyStorefrontChange(['stock_quantity', 'name'])).toBe(false);
   });
 });

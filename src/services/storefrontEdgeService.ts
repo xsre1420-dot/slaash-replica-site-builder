@@ -4,10 +4,15 @@
  */
 import { env } from '@/lib/env';
 import { dedup } from '@/lib/cache';
+import {
+  getStorefrontCached,
+  setStorefrontCached,
+  StorefrontCacheKeys,
+} from '@/services/storefrontCacheService';
 import { Product } from '@/types';
 import { safeMapStorefrontProduct } from '@/mappers/productMapper';
 import { isStorefrontVisible } from '@/lib/productLifecycle';
-import type { StorefrontProductsPage } from '@/services/storefrontProductService';
+import type { StorefrontProductsPage } from '@/types/storefrontCache';
 
 export interface StorefrontEdgeBundle {
   storeInfo: Record<string, unknown>;
@@ -73,7 +78,15 @@ export async function fetchStorefrontBundleViaEdge(
   const normalized = slug.trim().toLowerCase();
   if (!/^[a-z0-9-]+$/.test(normalized)) return null;
 
-  const cacheKey = `edge-bundle:${normalized}:${options.cursor || ''}:${options.category || ''}:${options.search || ''}`;
+  const cacheKey = StorefrontCacheKeys.edgeBundle(
+    normalized,
+    options.cursor || '',
+    options.category || '',
+    options.search || ''
+  );
+
+  const cached = getStorefrontCached<StorefrontEdgeBundle>(cacheKey);
+  if (cached) return cached;
 
   return dedup(cacheKey, async () => {
     const data = await postEdge<{
@@ -93,13 +106,15 @@ export async function fetchStorefrontBundleViaEdge(
 
     if (!data?.storeInfo) return null;
 
-    return {
+    const payload: StorefrontEdgeBundle = {
       storeInfo: data.storeInfo,
       categories: data.categories ?? [],
       products: mapProducts(data.products ?? []),
       nextCursor: data.next_cursor ?? null,
       hasMore: !!data.has_more,
     };
+    setStorefrontCached(cacheKey, payload);
+    return payload;
   });
 }
 
@@ -116,7 +131,15 @@ export async function fetchStorefrontPageViaEdge(
   const normalized = slug.trim().toLowerCase();
   if (!/^[a-z0-9-]+$/.test(normalized)) return null;
 
-  const cacheKey = `edge-page:${normalized}:${options.cursor || ''}:${options.category || ''}:${options.search || ''}`;
+  const cacheKey = StorefrontCacheKeys.edgePage(
+    normalized,
+    options.cursor || '',
+    options.category || '',
+    options.search || ''
+  );
+
+  const cached = getStorefrontCached<StorefrontProductsPage>(cacheKey);
+  if (cached) return cached;
 
   return dedup(cacheKey, async () => {
     const data = await postEdge<{
@@ -135,10 +158,12 @@ export async function fetchStorefrontPageViaEdge(
 
     if (!data?.products) return null;
 
-    return {
+    const payload: StorefrontProductsPage = {
       products: mapProducts(data.products),
       nextCursor: data.next_cursor ?? null,
       hasMore: !!data.has_more,
     };
+    setStorefrontCached(cacheKey, payload);
+    return payload;
   });
 }

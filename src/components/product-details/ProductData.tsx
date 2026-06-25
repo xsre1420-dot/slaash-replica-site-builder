@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { Product } from "@/types";
-import { loadProducts, getProductById } from "@/services/productService";
+import { getProductById, fetchProductById } from "@/services/productService";
 import { fetchStorefrontProductById } from "@/services/storefrontProductService";
 
 export type ProductLoadStatus = "loading" | "success" | "not_found";
@@ -61,9 +61,10 @@ const ProductData = ({ productId, initialProduct, onProductLoaded }: ProductData
         return;
       }
 
-      await loadProducts(true);
+      const foundProduct =
+        (initialProduct?.id === productId ? initialProduct : getProductById(productId)) ??
+        (await fetchProductById(productId));
       if (signal.aborted) return;
-      const foundProduct = getProductById(productId);
       onLoadedRef.current(foundProduct ?? null, foundProduct ? "success" : "not_found");
     } catch (err) {
       console.error("[ProductData] load failed:", err);

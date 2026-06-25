@@ -28,6 +28,10 @@ import {
   resolveStoreOwnerBySlug,
   invalidateStorefrontForOwner,
 } from './storefrontProductService';
+import {
+  patchStorefrontProductInCache,
+  StorefrontCacheKeys,
+} from './storefrontCacheService';
 
 describe('storefront slug resolution cache', () => {
   beforeEach(() => {
@@ -92,5 +96,32 @@ describe('storefront slug resolution cache', () => {
     expect(cache.get(CacheKeys.slugOwner('my-store'))).toBeNull();
     expect(cache.get('storefront-bundle:my-store')).toBeNull();
     expect(cache.get(CacheKeys.footerSuggested('my-store'))).toBeNull();
+  });
+
+  it('patchStorefrontProductInCache updates bundle and product detail without full flush', () => {
+    cache.set(
+      StorefrontCacheKeys.bundle('my-store'),
+      {
+        store: { owner_id: 'owner-1' },
+        products: [{ id: 'p1', name: 'A', price: 10, stockQuantity: 5 } as any],
+        nextCursor: null,
+        hasMore: false,
+      },
+      120_000,
+      60_000
+    );
+    cache.set(
+      StorefrontCacheKeys.product('my-store', 'p1'),
+      { id: 'p1', name: 'A', price: 10, stockQuantity: 5 } as any,
+      120_000,
+      60_000
+    );
+
+    const patched = patchStorefrontProductInCache('my-store', 'p1', { stockQuantity: 0 });
+    expect(patched).toBe(true);
+
+    const bundle = cache.get<any>(StorefrontCacheKeys.bundle('my-store'));
+    expect(bundle?.products?.[0]?.stockQuantity).toBe(0);
+    expect(cache.get<any>(StorefrontCacheKeys.product('my-store', 'p1'))?.stockQuantity).toBe(0);
   });
 });

@@ -12,6 +12,7 @@ import {
   isSchemaColumnError,
   mapProductInsertError,
   mergeProductForUpdate,
+  patchAffectsCatalogStats,
   MERCHANT_PRODUCTS_LIST_SELECT,
   MERCHANT_PRODUCTS_STANDARD_SELECT,
   PRODUCT_DETAIL_SELECT,
@@ -182,7 +183,11 @@ export async function createProduct(product: Product): Promise<ProductsCrudResul
           }
         );
         if (stockError || !stockData?.success) {
-          console.warn('[productsCrud] initial_stock ledger failed:', stockError?.message ?? stockData?.error);
+          await supabase.from('products').delete().eq('id', mapped.id).eq('owner_id', ownerId);
+          return {
+            success: false,
+            error: 'فشل تسجيل المخزون الافتتاحي — لم يتم إنشاء المنتج. حاول مرة أخرى.',
+          };
         }
       }
 
@@ -222,7 +227,9 @@ export async function updateProduct(
 
       if (!error && data) {
         void cleanupRemovedProductImages(existingRow, data as Record<string, unknown>);
-        syncProductCachesAfterMutation(ownerId);
+        syncProductCachesAfterMutation(ownerId, data as Record<string, unknown>, {
+          refreshStats: patchAffectsCatalogStats(patch),
+        });
         return { success: true, data: mapDbProduct(data as Record<string, unknown>) };
       }
       if (error && !isSchemaColumnError(error.message)) {

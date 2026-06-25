@@ -6,6 +6,8 @@ import { Product } from '@/types';
 import { mapStorefrontProduct, safeMapStorefrontProduct } from '@/mappers/productMapper';
 import {
   MERCHANT_PRODUCTS_LIST_SELECT,
+  STOREFRONT_ACTIVE_LIST_SELECT,
+  STOREFRONT_DETAIL_SELECT,
   isSchemaColumnError,
 } from '@/lib/productUpdateUtils';
 import { cache, CacheKeys, CacheTTL, dedup, flushSlugResolutionCache } from '@/lib/cache';
@@ -15,29 +17,21 @@ import {
   fetchStorefrontBundleViaEdge,
   fetchStorefrontPageViaEdge,
 } from '@/services/storefrontEdgeService';
+import {
+  getStorefrontCached,
+  setStorefrontCached,
+  StorefrontCacheKeys,
+} from '@/services/storefrontCacheService';
+import type { StorefrontBundleCache, StorefrontProductsPage } from '@/types/storefrontCache';
 
 const MINIMAL_STOREFRONT_SELECT =
   'id, name, description, category, price, image_url, additional_images, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, original_price, is_active, archived_at, created_at, updated_at';
-
-export interface StorefrontProductsPage {
-  products: Product[];
-  nextCursor: string | null;
-  hasMore: boolean;
-}
 
 export const STOREFRONT_PRODUCTS_CHANGED = 'storefront:products-changed';
 
 const ACTIVE_PRODUCTS_FILTER = 'is_active.eq.true,is_active.is.null';
 
-export interface StorefrontBundleCache {
-  store?: Record<string, unknown>;
-  categories?: Record<string, unknown>[];
-  products?: Product[];
-  nextCursor?: string | null;
-  hasMore?: boolean;
-}
-
-const bundleMemoryKey = (slug: string) => `storefront-bundle:${slug}`;
+const bundleMemoryKey = (slug: string) => StorefrontCacheKeys.bundle(slug);
 
 /** Shared in-memory bundle cache (meta + first page) — one RPC/edge call serves both hooks. */
 export function peekStorefrontBundle(slug: string): StorefrontBundleCache | null {
@@ -81,11 +75,22 @@ export async function loadStorefrontBundle(
   if (!/^[a-z0-9-]+$/.test(normalized)) return null;
 
   const key = bundleMemoryKey(normalized);
-  const cached = cache.get<StorefrontBundleCache>(key);
+  const cached = getStorefrontCached<StorefrontBundleCache>(key, async () => {
+    const fresh = await fetchStorefrontBundleFresh(normalized, options);
+    if (fresh?.store) setStorefrontCached(key, fresh);
+    return fresh!;
+  });
   if (cached?.store) return cached;
 
-  return dedup(key, async () => {
-    const edge = await fetchStorefrontBundleViaEdge(normalized, options);
+  return dedup(key, () => fetchStorefrontBundleFresh(normalized, options));
+}
+
+async function fetchStorefrontBundleFresh(
+  normalized: string,
+  options: { limit?: number; cursor?: string | null; category?: string; search?: string } = {}
+): Promise<StorefrontBundleCache | null> {
+  const key = StorefrontCacheKeys.bundle(normalized);
+  const edge = await fetchStorefrontBundleViaEdge(normalized, options);
     if (edge) {
       const payload: StorefrontBundleCache = {
         store: edge.storeInfo,
@@ -94,16 +99,15 @@ export async function loadStorefrontBundle(
         nextCursor: edge.nextCursor,
         hasMore: edge.hasMore,
       };
-      cache.set(key, payload, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+      setStorefrontCached(key, payload);
       return payload;
     }
 
     const rpc = await fetchStorefrontBundleRpc(normalized, options);
     if (rpc) {
-      cache.set(key, rpc, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+      setStorefrontCached(key, rpc);
     }
     return rpc;
-  });
 }
 
 export async function resolveStoreOwnerBySlug(slug: string): Promise<string | null> {
@@ -237,7 +241,10 @@ async function queryProductsByIdsForOwner(
     return query;
   };
 
-  let { data, error } = await runQuery(MERCHANT_PRODUCTS_LIST_SELECT, true);
+  let { data, error } = await runQuery(STOREFRONT_ACTIVE_LIST_SELECT, true);
+  if (error && isSchemaColumnError(error.message)) {
+    ({ data, error } = await runQuery(MERCHANT_PRODUCTS_LIST_SELECT, true));
+  }
   if (error && isSchemaColumnError(error.message)) {
     ({ data, error } = await runQuery(MINIMAL_STOREFRONT_SELECT, false));
   }
@@ -280,7 +287,11 @@ async function queryActiveProductsByOwner(
     return query;
   };
 
-  let { data, error } = await runQuery(MERCHANT_PRODUCTS_LIST_SELECT, true);
+  let { data, error } = await runQuery(STOREFRONT_ACTIVE_LIST_SELECT, true);
+
+  if (error && isSchemaColumnError(error.message)) {
+    ({ data, error } = await runQuery(MERCHANT_PRODUCTS_LIST_SELECT, true));
+  }
 
   if (error && isSchemaColumnError(error.message)) {
     ({ data, error } = await runQuery(MINIMAL_STOREFRONT_SELECT, false));
@@ -493,14 +504,14 @@ export async function fetchStorefrontProductById(
   const id = productId.trim();
   if (!/^[a-z0-9-]+$/.test(normalized) || !id) return null;
 
-  const productCacheKey = CacheKeys.storefrontProduct(normalized, id);
-  const cachedProduct = cache.get<Product>(productCacheKey);
+  const productCacheKey = StorefrontCacheKeys.product(normalized, id);
+  const cachedProduct = getStorefrontCached<Product>(productCacheKey);
   if (cachedProduct) return cachedProduct;
 
   return dedup(productCacheKey, async () => {
     const product = await fetchStorefrontProductByIdUncached(normalized, id);
     if (product) {
-      cache.set(productCacheKey, product, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+      setStorefrontCached(productCacheKey, product);
     }
     return product;
   });
@@ -525,10 +536,6 @@ async function fetchStorefrontProductByIdUncached(
       console.warn('[storefront] get_store_product_by_id failed:', error.message);
     }
 
-    const page = await fetchStorefrontProductsPage(normalized, { limit: 48 });
-    const fromPage = page.products.find((p) => p.id === id);
-    if (fromPage) return fromPage;
-
     const ownerId = await resolveStoreOwnerBySlug(normalized);
     if (ownerId) {
       const {
@@ -538,7 +545,7 @@ async function fetchStorefrontProductByIdUncached(
       if (user?.id === ownerId) {
         let { data: row, error: queryError } = await supabase
           .from('products')
-          .select(MERCHANT_PRODUCTS_LIST_SELECT)
+          .select(STOREFRONT_DETAIL_SELECT)
           .eq('id', id)
           .eq('owner_id', ownerId)
           .or(ACTIVE_PRODUCTS_FILTER)
@@ -561,8 +568,7 @@ async function fetchStorefrontProductByIdUncached(
       }
     }
 
-    const catalog = await fetchProductsViaSlugRpc(normalized);
-    return catalog.find((p) => p.id === id) ?? null;
+    return null;
   } catch (err) {
     console.error('[storefront] fetchStorefrontProductById failed:', err);
     return null;
@@ -609,34 +615,12 @@ export async function fetchCheckoutProductsByIds(
   return map;
 }
 
-/** Batch product fetch for checkout validation on tenant storefronts. */
+/** Batch product fetch for checkout — delegates to single RPC round-trip. */
 export async function fetchStorefrontProductsByIds(
   slug: string,
   productIds: string[]
 ): Promise<Map<string, Product>> {
-  const uniqueIds = [...new Set(productIds.filter(Boolean))];
-  const map = new Map<string, Product>();
-  if (uniqueIds.length === 0) return map;
-
-  const normalized = slug.trim().toLowerCase();
-  const idSet = new Set(uniqueIds);
-
-  const catalog = await fetchProductsViaSlugRpc(normalized);
-  for (const product of catalog) {
-    if (idSet.has(product.id)) map.set(product.id, product);
-  }
-
-  const missing = uniqueIds.filter((id) => !map.has(id));
-  if (missing.length > 0) {
-    await Promise.all(
-      missing.map(async (id) => {
-        const product = await fetchStorefrontProductById(normalized, id);
-        if (product) map.set(id, product);
-      })
-    );
-  }
-
-  return map;
+  return fetchCheckoutProductsByIds(slug, productIds);
 }
 
 export async function invalidateStorefrontForOwner(ownerId: string): Promise<void> {
@@ -664,14 +648,15 @@ export async function invalidateStorefrontForOwner(ownerId: string): Promise<voi
   flushSlugResolutionCache(ownerId, slug);
 
   if (slug) {
-    cache.del(`storefront-bundle:${slug}`);
+    cache.del(StorefrontCacheKeys.bundle(slug));
     cache.flushByPrefix(`tenant-products:${slug}`);
-    cache.flushByPrefix(`tenant-meta:${slug}`);
+    cache.flushByPrefix(StorefrontCacheKeys.meta(slug));
     cache.flushByPrefix(`edge-bundle:${slug}`);
     cache.flushByPrefix(`edge-page:${slug}`);
     cache.flushByPrefix(`storefront-page:${slug}:`);
+    cache.flushByPrefix(`${StorefrontCacheKeys.product(slug, '')}`.replace(/:$/, ':'));
     cache.flushByPrefix(`storefront-product:${slug}:`);
-    cache.del(CacheKeys.footerSuggested(slug));
+    cache.del(StorefrontCacheKeys.footer(slug));
     await cacheDeleteByPrefix(`idb:tenant-products:${slug}`);
     await cacheDeleteByPrefix(`idb:tenant-meta:${slug}`);
   } else {

@@ -115,14 +115,14 @@ function Inventory() {
 
       toast.success(message);
       patchMerchantStockInCache(user.id, productId, newQuantity);
-      await reloadInventory();
+      catalog.syncFromCache();
 
       if (opts?.closeDialog !== false) {
         setDialogOpen(false);
         setSelectedProduct(null);
       }
     },
-    [products, reloadInventory, user?.id]
+    [products, catalog, user?.id]
   );
 
   const handleDialogRestock = async (productId: string, addAmount: number, minLevel: number) => {

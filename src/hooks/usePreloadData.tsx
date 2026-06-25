@@ -14,11 +14,20 @@ export const usePreloadData = () => {
     if (!user?.id || hasPreloaded.current) return;
     hasPreloaded.current = true;
 
-    const timer = setTimeout(() => {
-      import('@/pages/AddProduct').catch(() => {});
+    const preloadChunks = () => {
       import('@/pages/Orders').catch(() => {});
       import('@/pages/Products').catch(() => {});
-    }, 2000);
+      import('@/pages/Statistics').catch(() => {});
+      import('@/pages/AddProduct').catch(() => {});
+    };
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    if ('requestIdleCallback' in window) {
+      const idleId = window.requestIdleCallback(preloadChunks, { timeout: 1_500 });
+      return () => window.cancelIdleCallback(idleId);
+    }
+
+    timer = setTimeout(preloadChunks, 800);
 
     return () => clearTimeout(timer);
   }, [user?.id]);

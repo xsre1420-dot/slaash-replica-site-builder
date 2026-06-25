@@ -159,7 +159,7 @@ const Products = () => {
       return;
     }
     void countPendingReviewsForOwner(user.id).then(setPendingReviewsCount);
-  }, [user?.id, loadedProducts.length]);
+  }, [user?.id]);
 
   useEffect(() => {
     const state = location.state as { refreshProducts?: boolean } | null;

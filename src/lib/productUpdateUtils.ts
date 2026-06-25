@@ -24,6 +24,14 @@ export const MERCHANT_PRODUCTS_GRID_SELECT =
 export const MERCHANT_PRODUCTS_INVENTORY_SELECT =
   'id, name, category, price, image_url, stock_quantity, sizes, colors, variants, is_active, archived_at, min_stock_level, created_at, updated_at';
 
+/** Storefront list / preview — card-shaped columns (no cost, no additional_images) */
+export const STOREFRONT_ACTIVE_LIST_SELECT =
+  'id, name, description, category, price, original_price, image_url, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, is_active, archived_at, created_at';
+
+/** Storefront product detail fallback — full gallery, no cost */
+export const STOREFRONT_DETAIL_SELECT =
+  'id, name, description, category, price, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, is_active, archived_at, created_at';
+
 /** Merchant list/load — full columns (detail-adjacent fallbacks) */
 export const MERCHANT_PRODUCTS_LIST_SELECT =
   'id, name, description, category, price, cost, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, archived_at, min_stock_level, discount_type, discount_value, discount_start_date, discount_end_date, created_at, updated_at';
@@ -131,6 +139,13 @@ export const mapProductInsertError = (message: string): string => {
 };
 
 export type ProductLifecycleAction = 'publish' | 'draft' | 'archive' | 'restore';
+
+/** Whether a product patch changes dashboard catalog KPIs (product/low-stock counts). */
+export const patchAffectsCatalogStats = (patch: Partial<Product>): boolean =>
+  'stockQuantity' in patch ||
+  'isActive' in patch ||
+  'archivedAt' in patch ||
+  'lowStockThreshold' in patch;
 
 export const buildProductLifecyclePatch = (
   action: ProductLifecycleAction

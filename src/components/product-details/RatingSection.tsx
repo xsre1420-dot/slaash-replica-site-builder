@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Star, MessageSquarePlus } from "lucide-react";
+import { useInView } from "@/hooks/useInView";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,6 +39,7 @@ const reviewCountLabel = (count: number) => {
 };
 
 const RatingSection = ({ productId, storeSlug, reviews = [] }: RatingSectionProps) => {
+  const [sectionRef, inView] = useInView<HTMLDivElement>();
   const [dbReviews, setDbReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -88,8 +90,9 @@ const RatingSection = ({ productId, storeSlug, reviews = [] }: RatingSectionProp
   };
 
   useEffect(() => {
-    fetchReviews();
-  }, [productId, storeSlug, user?.id]);
+    if (!inView) return;
+    void fetchReviews();
+  }, [productId, storeSlug, user?.id, inView]);
 
   const allReviews = reviews.length > 0 ? reviews : dbReviews;
 
@@ -198,7 +201,7 @@ const RatingSection = ({ productId, storeSlug, reviews = [] }: RatingSectionProp
   );
 
   return (
-    <section className="rounded-2xl border border-border/50 bg-card overflow-hidden">
+    <section ref={sectionRef} className="rounded-2xl border border-border/50 bg-card overflow-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 sm:p-6 border-b border-border/40 bg-muted/20">
         <div className="text-right">
           <h2 className="text-lg sm:text-xl font-bold text-foreground">التقييمات والمراجعات</h2>

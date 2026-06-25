@@ -44,6 +44,11 @@ export const getChangedFieldKeys = (
 export const isNoiseOnlyChange = (changedKeys: string[], noiseFields: Set<string>): boolean =>
   changedKeys.length > 0 && changedKeys.every((key) => noiseFields.has(key));
 
+export const isStockOnlyStorefrontChange = (changedKeys: string[]): boolean => {
+  const stockFields = new Set(['stock_quantity', 'variants']);
+  return changedKeys.length > 0 && changedKeys.every((key) => stockFields.has(key));
+};
+
 export const shouldInvalidateStorefront = (input: {
   eventType: string;
   new?: Record<string, unknown>;

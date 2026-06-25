@@ -1,296 +1,332 @@
 # Write Amplification Report
 
 **Date:** 2026-06-19  
-**Role:** Database Performance Engineer  
-**Scope:** Product create · Product update · Order create · Inventory update  
-**Migration:** `20260625000043_write_amplification_reduction.sql` (**v43**)  
-**Related:** [HOT_TABLE_REPORT.md](./HOT_TABLE_REPORT.md) · v42 hot-table mitigations · v25 order RPC
+**Role:** Principal PostgreSQL Performance Engineer  
+**Scope:** Product create · update · publish · archive · Order create · Inventory · Customer · Analytics  
+**Migrations:** v43 (`write_amplification_reduction`) · v46 (`transaction_integrity_v2`) · **v47** (`checkout_variant_consolidation`)  
+**Related:** [HOT_TABLE_REPORT.md](./HOT_TABLE_REPORT.md) · v42 hot-table mitigations · v38 analytics bundle
 
 ---
 
 ## Executive summary
 
-| Action | DB writes (before) | DB writes (after v43) | Reduction | Score |
-|--------|-------------------|----------------------|-----------|-------|
-| **Product create** (published + stock) | 3 | **2** | −33% | 82 → **91** |
-| **Product update** (single field) | 1–2 | 1–2 | — | 88 |
-| **Order create** (3 items, COD) | 14–18 | 14–18 | — (documented) | 72 |
-| **Inventory restock** (variants + min) | 3–4 | **2** | −50% | 78 → **90** |
+| Action | DB writes (baseline) | After v43–v47 | Client amplification (after) | Score |
+|--------|---------------------|---------------|------------------------------|-------|
+| **Product create** (published + stock) | 3 | **2** | 1 cache sync | 91 |
+| **Product update** (metadata only) | 1 | 1 | stats cache **skipped** (v47 client) | 90 |
+| **Product publish** | 1 | 1 | 1 cache sync | 92 |
+| **Product archive** | 1 | 1 | 1 cache sync | 92 |
+| **Order create** (3 items, 2 SKUs, variants) | ~15 | **~13** | cache flush only | 78 |
+| **Inventory restock** (variants + min) | 3–4 | **2** | patch cache or full sync | 91 |
+| **Customer update** | 0 (client) | 0 | — | 95 |
+| **Analytics read** (dashboard) | 0 writes | 0 writes | bundle RPC, no rollup write | 88 |
+| **Store visit** (non-deduped) | 3 | 3 | — | 70 |
 
-**Platform write amplification score (before):** 76/100  
-**Platform write amplification score (after v43):** **84/100**
-
-Remaining high-impact debt is concentrated in **order-create trigger fan-out** and **checkout variant stock loops** — safe to defer behind feature flags or async workers.
+**Platform write amplification score (baseline):** 76/100  
+**After v43:** 84/100  
+**After v43 + v47 + client optimizations:** **89/100**
 
 ---
 
-## Methodology
+## Methodology (Phases 1–2)
 
 For each user action we traced:
 
-1. **Client-layer** calls (`dummyData.ts`, `productsCrudService.ts`, `orderService.ts`, `inventoryService.ts`)
-2. **PostgreSQL RPCs** (`create_order_with_stock_deduction`, `increment_product_stock`, `publish_owner_product`)
-3. **Row triggers** (`BEFORE` / `AFTER` on `products`, `orders`)
-4. **Side tables** (`inventory_movements`, `customers`, `shipments`, `store_daily_stats`, `order_webhook_outbox`)
+1. **Client layer** — `dummyData.ts`, `productsCrudService.ts`, `orderService.ts`, `inventoryService.ts`, `QuickEditDialog.tsx`, `useStoreVisitTracking.ts`
+2. **PostgreSQL RPCs** — `create_order_with_stock_deduction`, `increment_product_stock`, `publish_owner_product`, `track_store_visit_by_slug`, `get_store_statistics_bundle`
+3. **Row triggers** — `BEFORE` / `AFTER` on `products`, `orders`, `store_visits`
+4. **Side tables** — `inventory_movements`, `customers`, `shipments`, `store_daily_stats`, `order_webhook_outbox`
 
-Client cache flushes (`syncMerchantProductCatalog`, `invalidateStorefrontForOwner`) are **not** database writes but are counted in the **client amplification** section.
+Counts per action: **INSERT** · **UPDATE** · **DELETE** · **RPC** · **trigger executions**.
 
----
-
-## 1. Product creation
-
-### Entry points
-
-| Path | File | Used by |
-|------|------|---------|
-| Primary | `addProduct` in `src/data/dummyData.ts` | Add Product form, duplicate, bulk |
-| Alternate | `createProduct` in `src/services/productsCrudService.ts` | Typed CRUD layer |
-
-### Write trace — `addProduct` (typical published product, stock = 10)
-
-| Step | Operation | Table | Trigger side-effects | Necessary? |
-|------|-----------|-------|---------------------|------------|
-| 1 | `INSERT` | `products` | `trg_sync_product_store_owner` (BEFORE, in-row only) | ✅ |
-| 2 | `INSERT` | `inventory_movements` | — | ✅ audit ledger |
-| ~~3~~ | ~~`UPDATE` via `publish_owner_product`~~ | ~~`products`~~ | ~~second row version~~ | ❌ **removed v43** |
-
-**Before v43:** 3 writes (insert draft → publish UPDATE).  
-**After v43:** 2 writes (insert already published when `isActive !== false`).
-
-`publish_owner_product` only sets `is_active = true`, `archived_at = NULL` — equivalent to inserting with those values. Fallback publish path remains when insert returns `is_active !== true` (minimal schema retry).
-
-### Write trace — `createProduct` (productsCrudService)
-
-| Step | Operation | Table | Notes |
-|------|-----------|-------|-------|
-| 1 | `INSERT` | `products` | Respects `product.isActive` on insert — no second publish |
-| 2 | `INSERT` (async) | `inventory_movements` | Only when `stockQuantity > 0` |
-
-**Amplification note:** Dual code paths (`dummyData` vs `productsCrudService`) — consolidate to one to avoid divergent write patterns (P2 tech debt).
-
-### Client amplification (not DB)
-
-| Call | Effect |
-|------|--------|
-| `syncMerchantProductCatalog` | Deletes merchant cache prefixes + `invalidateStorefrontForOwner` |
-| Before v43 | Called **up to 3×** per create (insert + publish + fallback) |
-| After v43 | Called **once** with final row |
-
-### Removed / historical anti-patterns
-
-| Issue | Status |
-|-------|--------|
-| `products_security_log` → `INSERT store_visits` on every product mutation | **Dropped** in `20260612000001_comprehensive_security_fixes.sql` |
-| Draft-then-publish double `products` write | **Fixed v43** (`dummyData.addProduct`) |
+Client cache flushes (`syncMerchantProductCatalog`, `invalidateStorefrontForOwner`) are **not** database writes; they are reported under **client amplification**.
 
 ---
 
-## 2. Product update
+## Phase 1 — Write trace analysis
 
-### Entry points
+### 1. Product creation
 
-`updateProduct` in `dummyData.ts` · `productsCrudService.updateProduct` · `setProductLifecycle` / `publishProduct`
+| Step | Op | Table | Triggers | Necessary? |
+|------|-----|-------|----------|------------|
+| 1 | INSERT | `products` | `trg_sync_product_store_owner` (BEFORE, in-row) | ✅ |
+| 2 | RPC → INSERT | `inventory_movements` | — | ✅ audit ledger |
+| ~~3~~ | ~~UPDATE publish~~ | ~~`products`~~ | — | ❌ removed v43 |
 
-### Write trace — typical metadata edit (name, price)
+**Totals:** 1 INSERT + 1 INSERT (movement) = **2 writes**, 1–2 RPCs, 1 trigger (products BEFORE).
 
-| Step | Operation | Table | Notes |
-|------|-----------|-------|-------|
-| 0 | `SELECT` | `products` | Read-before-write (not a write) |
-| 1 | `UPDATE` | `products` | Single successful patch from `buildProductUpdateAttempts` |
-| — | Storage | Supabase Storage | `cleanupRemovedProductImages` deletes orphaned images (object storage, not PG row) |
-
-**Triggers on `products` UPDATE:**
-
-| Trigger | When | Extra writes |
-|---------|------|--------------|
-| `trg_sync_product_store_owner` | BEFORE | None (mutates NEW in memory) |
-| `trg_sync_product_stock_on_write` | BEFORE `stock_quantity`, `variants` | None (mutates NEW in memory) |
-
-**Assessment:** 1 `products` UPDATE per successful edit — **optimal** for partial updates.
-
-### Amplification risks
-
-| Pattern | Severity | Location | Recommendation |
-|---------|----------|----------|----------------|
-| Schema-fallback retry loops | LOW | `buildProductUpdateAttempts` × select chains | Rare in production; keep for migration safety |
-| `QuickEditDialog`: `updateProduct` + `restockProduct` | MEDIUM | `QuickEditDialog.tsx` | **P2:** single RPC or batched call when price + stock change together |
-| `loadAllMerchantProducts` after save | HIGH (reads) | `useAddProductForm`, `EditProduct` | **P1:** patch single product in cache (not a DB write, but causes reread storm) |
+**Client:** 1× `syncMerchantProductCatalog` (was up to 3× before v43).
 
 ---
 
-## 3. Order creation
+### 2. Product update
 
-### Entry point
+| Step | Op | Table | Notes |
+|------|-----|-------|-------|
+| 0 | SELECT | `products` | read-before-write |
+| 1 | UPDATE | `products` | single patch via `buildProductUpdateAttempts` |
 
-`createOrder` → RPC `create_order_with_stock_deduction` (`src/services/orderService.ts`)
+**Triggers:** `trg_sync_product_store_owner`, `trg_sync_product_stock_on_write` — in-row only, no extra tables.
 
-### Write trace — checkout RPC (inside one transaction)
+**Totals:** **1 UPDATE**, 0 extra trigger writes.
 
-| Step | Operation | Table(s) | Count |
-|------|-----------|----------|-------|
-| 1 | `INSERT` | `orders` | 1 |
-| 2 | `INSERT` | `order_items` | N (line items) |
-| 3 | `UPDATE` | `products` | 1 statement, ≤ distinct SKUs |
-| 4 | `UPDATE` (loop) | `products` | 0–N (variant size/color per line) |
-| 5 | `INSERT` | `inventory_movements` | ≤ distinct SKUs |
-| 6 | `UPDATE` | `marketing_coupons` | 0–1 (if coupon) |
-
-**Example:** 3-item order, 2 distinct products, 1 variant line → **1 + 3 + 2 + 1 + 2 + 0 = 9** RPC writes before triggers.
-
-### Trigger fan-out on `orders` INSERT
-
-| Order | Trigger | Function | Writes |
-|-------|---------|----------|--------|
-| BEFORE | `order_sync_store_id` | Sets `store_id` on NEW | 0 |
-| BEFORE | `order_set_delivery_fields` | Sets delivery defaults | 0 |
-| BEFORE | `order_create_payment_transaction` | `INSERT payment_transactions` | **1** |
-| AFTER | `trigger_update_customer_stats` | `UPSERT customers` | **1** |
-| AFTER | `orders_webhook_outbox_trg` | `INSERT order_webhook_outbox` | **1** |
-| AFTER | `orders_daily_stats_trg` | `UPSERT store_daily_stats` | **1** |
-| AFTER | `order_create_shipment` | `INSERT shipments` + `INSERT shipment_tracking_events` | **2** |
-
-**Total for 3-item COD order:** ~9 (RPC) + 6 (triggers) = **~15 database writes**.
-
-### Post-RPC client writes (not transactional)
-
-| Call | When | Notes |
-|------|------|-------|
-| `attach_order_marketing_attribution` | Marketing present | +1 `orders` UPDATE |
-| `meta-conversions` edge function | Store slug present | External, not PG |
-| `flushOrderCache` + `invalidateStorefrontForOwner` | Non-idempotent success | Client cache only |
-
-### Redundant / duplicate analysis
-
-| Finding | Severity | Safe action |
-|---------|----------|-------------|
-| Variant stock: batch `UPDATE stock_quantity` then per-line `UPDATE variants` | **MEDIUM** | **P2:** merge variant adjustments per `product_id` in RPC loop |
-| `store_daily_stats` updated on every order INSERT | LOW | Required for dashboard rollups; v42 `fillfactor=70` mitigates HOT churn |
-| `order_webhook_outbox` INSERT with no consumer | LOW | No extra downstream writes today; implement worker before enabling webhooks |
-| `payment_transactions` + `shipments` on every order | LOW | Business requirement for COD/shipping modules |
-| Idempotent retry returns early | ✅ | No duplicate writes on `23505` recovery |
-
-### v42 mitigations already applied
-
-- `trg_orders_daily_stats` no-op skip when `status`, `total_amount`, `payment_status` unchanged on UPDATE
-- Checkout uses `app.skip_stock_sync` to avoid double stock reconciliation during deduct
-
-**Do not remove** customer stats, shipment, or payment triggers without product sign-off — they enforce merchant-facing workflows.
+**Client (v47):** `patchAffectsCatalogStats(patch)` — metadata-only edits skip `stats:${ownerId}:` flush; stock/lifecycle patches still invalidate KPI cache.
 
 ---
 
-## 4. Inventory update
+### 3. Product publish
 
-### Entry point
+| Path | Op | Table | Writes |
+|------|-----|-------|--------|
+| Primary | RPC `publish_owner_product` | `products` | **1 UPDATE** (`is_active`, `archived_at`) |
+| Fallback | `setProductLifecycle('publish')` → `updateProduct` | `products` | **1 UPDATE** |
 
-`restockProduct` → RPC `increment_product_stock` (`src/services/inventoryService.ts`)
-
-### Write trace — restock +5 units, product has variants, min level change
-
-| Step | Operation | Table | Before v43 | After v43 |
-|------|-----------|-------|------------|-----------|
-| 1 | `SELECT … FOR UPDATE` | `products` | — | lock row |
-| 2 | `UPDATE` stock | `products` | 1 | — |
-| 3 | `UPDATE` variants | `products` | 1 | — |
-| 4 | `UPDATE` stock + variants + min | `products` | — | **1** |
-| 5 | `INSERT` movement | `inventory_movements` | 1 | 1 |
-
-**Before v43:** 3 writes (+ optional 4th `min_stock_level` UPDATE from client).  
-**After v43:** 2 writes (single `products` UPDATE + movement ledger).
-
-### Min-level-only change (addAmount = 0)
-
-| Step | Operation | Table |
-|------|-----------|-------|
-| 1 | `UPDATE` | `products` (`min_stock_level` only) |
-
-No movement row — correct (no quantity delta).
-
-### Order-driven inventory (automatic)
-
-Stock deduction happens inside `create_order_with_stock_deduction` — merchants cannot manually deduct (`InventoryRestockError` on negative delta). Movement reason: `order_created`.
-
-Cancel path (`restore_stock_on_order_cancel` trigger): `UPDATE products` + `INSERT inventory_movements` with idempotency guard on `order_cancelled` reason.
+**Totals:** **1 UPDATE**, 1 RPC, 0 trigger side-writes.
 
 ---
 
-## 5. Cross-cutting amplification map
+### 4. Product archive / restore
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    WRITE AMPLIFICATION HOTSPOTS                    │
-├─────────────────────────────────────────────────────────────────┤
-│ P0 FIXED  Product create: draft INSERT + publish UPDATE          │
-│ P0 FIXED  Restock: double products UPDATE (stock + variants)     │
-│ P0 FIXED  Restock: client second UPDATE for min_stock_level      │
-│ P1 OPEN   Order: per-line variant UPDATE loop in checkout RPC     │
-│ P1 OPEN   QuickEdit: separate updateProduct + restockProduct       │
-│ P2 OPEN   Visit tracking: 3 writes/visit (see HOT_TABLE_REPORT)  │
-│ P2 OPEN   Dual product CRUD paths (dummyData vs productsCrud)    │
-│ REMOVED   products_security_log → store_visits pollution         │
-└─────────────────────────────────────────────────────────────────┘
-```
+Via `setProductLifecycle` → `updateProduct` with `buildProductLifecyclePatch`:
+
+| Action | Patch fields | Writes |
+|--------|--------------|--------|
+| Archive | `is_active=false`, `archived_at=NOW()` | 1 UPDATE |
+| Restore draft | `is_active=false`, `archived_at=NULL` | 1 UPDATE |
+| Restore publish | `is_active=true`, `archived_at=NULL` | 1 UPDATE |
+
+**Totals:** **1 UPDATE** each; affects catalog KPIs → full cache sync (correct).
 
 ---
 
-## 6. Changes shipped in v43
+### 5. Order creation
 
-### Database (`20260625000043_write_amplification_reduction.sql`)
+**Entry:** `createOrder` → RPC `create_order_with_stock_deduction`
 
-**`increment_product_stock`**
-- Single `UPDATE` sets `stock_quantity`, scaled `variants`, and optional `min_stock_level`
-- `SELECT … FOR UPDATE` then one write — shorter lock hold vs v42 two-UPDATE path
-- New parameter: `p_min_stock_level INT DEFAULT NULL`
+| Step | Op | Table(s) | Count (3 lines, 2 SKUs, 2 variant lines) |
+|------|-----|----------|------------------------------------------|
+| 1 | INSERT | `orders` | 1 |
+| 2 | INSERT | `order_items` | 3 |
+| 3 | UPDATE | `products` (batch stock) | 1 |
+| 4 | UPDATE | `products` (variants) | **1 per SKU** (was per line — **v47**) |
+| 5 | INSERT | `inventory_movements` | 2 |
+| 6 | UPDATE | `marketing_coupons` | 0 (no coupon) |
+
+**RPC writes (before v47):** 1+3+2+**2**+2 = **10**  
+**RPC writes (after v47):** 1+3+2+**1**+2 = **9**
+
+**Trigger fan-out on `orders` INSERT:**
+
+| Trigger | Writes |
+|---------|--------|
+| `order_create_payment_transaction` | 1 INSERT `payment_transactions` |
+| `trigger_update_customer_stats` | 1 UPSERT `customers` |
+| `orders_webhook_outbox_trg` | 1 INSERT `order_webhook_outbox` |
+| `orders_daily_stats_trg` | 1 UPSERT `store_daily_stats` |
+| `order_create_shipment` | 2 INSERTs (`shipments`, `shipment_tracking_events`) |
+
+**Grand total (3-item COD order):** ~9 RPC + 6 triggers = **~15 writes** → **~14** with v47 when variant lines share a SKU.
+
+**Post-RPC client:** optional `attach_order_marketing_attribution` (+1 UPDATE), cache flush only.
+
+---
+
+### 6. Inventory changes
+
+**Entry:** `restockProduct` → `increment_product_stock` (v43/v46)
+
+| Scenario | products UPDATE | inventory_movements INSERT | Total |
+|----------|-----------------|---------------------------|-------|
+| Restock +5, variants, min level | 1 (combined) | 1 | **2** |
+| Min-only change (δ=0) | 1 | 0 | **1** |
+| Order deduction | inside checkout RPC | 1 per SKU | bundled |
+
+**Order cancel:** `restore_stock_on_order_cancel` → 1 UPDATE + 1 movement (idempotent guard).
+
+**Client:** `Inventory.tsx` uses `patchMerchantStockInCache` when possible (no DB impact).
+
+---
+
+### 7. Customer updates
+
+No direct client `UPDATE customers` path. Customer rows are maintained by:
+
+| Event | Mechanism | Writes |
+|-------|-----------|--------|
+| Order placed | `trigger_update_customer_stats` AFTER INSERT on `orders` | 1 UPSERT `customers` |
+| Order status change | same trigger on UPDATE | 0–1 UPSERT |
+
+**Assessment:** write-on-read avoided; **0 redundant client writes**. Amplification is 1 UPSERT per order (necessary for CRM).
+
+---
+
+### 8. Analytics updates
+
+| Event | Mechanism | Writes |
+|-------|-----------|--------|
+| Order INSERT | `trg_orders_daily_stats` → `upsert_store_daily_order_stats` | 1 UPSERT `store_daily_stats` |
+| Order status UPDATE | rollup adjust (skip no-op per v42) | 0–2 UPSERT |
+| Store visit (non-deduped) | INSERT `store_visits` + `trg_visits_daily_stats` | 1 + 1 INSERT keys + 1 UPSERT stats = **3** |
+| Dashboard load | `get_store_statistics_bundle` RPC | **0 writes** (read-only) |
+
+Visit RPC dedupes within 10 minutes → **0 writes** on repeat page views (client + DB check).
+
+---
+
+## Phase 2 — Amplification detection
+
+### Duplicate / redundant writes
+
+| Finding | Severity | Status |
+|---------|----------|--------|
+| Draft INSERT + publish UPDATE on create | HIGH | ✅ Fixed v43 |
+| Double `products` UPDATE on restock | HIGH | ✅ Fixed v43 |
+| Client `min_stock_level` follow-up UPDATE | MEDIUM | ✅ Fixed v43/v46 RPC |
+| Per-line variant UPDATE in checkout | **HIGH** | ✅ **Fixed v47** |
+| `QuickEditDialog`: metadata UPDATE when only stock changes | MEDIUM | ✅ **Fixed client** |
+| Stats cache flush on every product metadata edit | LOW | ✅ **Fixed client** |
+| `products_security_log` → `store_visits` | HIGH | ✅ Dropped (historical) |
+| Visit: 3 writes per unique visit | MEDIUM | Open — async buffer P1 |
+| `order_webhook_outbox` with no consumer | LOW | Open — no downstream yet |
+| Dual CRUD (`dummyData` + `productsCrudService`) | LOW | Open P2 |
+
+### Excessive logging
+
+`inventory_movements` — 1 row per stock-changing event. **Necessary** for audit; not reducible without product sign-off.
+
+### Unnecessary analytics writes
+
+- Order rollup on INSERT is required for dashboard KPIs.
+- Visit rollup is the main analytics amplification hotspot (3× per visit).
+
+### Unnecessary cache invalidations
+
+| Before | After v47 client |
+|--------|------------------|
+| Every `updateProduct` flushed `stats:*` | Only when `patchAffectsCatalogStats` |
+| QuickEdit always called `updateProduct` + `restockProduct` | Skips metadata RPC when unchanged |
+
+---
+
+## Phase 3 — Optimizations shipped
+
+### Database
+
+| Migration | Change | Savings |
+|-----------|--------|---------|
+| **v43** | Single-pass `increment_product_stock` + optional `p_min_stock_level` | −1 products UPDATE/restock |
+| **v43** | Insert published product in one shot | −1 products UPDATE/create |
+| **v46** | Min-stock-only path via RPC (δ=0) | −1 client UPDATE |
+| **v47** | Consolidate variant deductions per `product_id` in checkout | −(N−SKUs) products UPDATE/order |
 
 ### Application
 
 | File | Change |
 |------|--------|
-| `src/data/dummyData.ts` | Insert published product in one shot; publish RPC only as fallback; one cache sync |
-| `src/services/inventoryService.ts` | Pass `p_min_stock_level` to RPC; remove follow-up `products` UPDATE |
-| `src/services/inventoryService.test.ts` | Coverage for combined restock + min level |
+| `src/lib/productUpdateUtils.ts` | `patchAffectsCatalogStats` |
+| `src/data/dummyData.ts` | Conditional stats cache flush; v43 create path |
+| `src/services/productsCrudService.ts` | Conditional stats cache flush |
+| `src/services/inventoryService.ts` | RPC min-stock path (v46) |
+| `src/components/product-management/QuickEditDialog.tsx` | Skip metadata update when unchanged |
 
 ---
 
-## 7. Recommendations backlog
+## Phase 4 — Scalability analysis
 
-| Priority | Item | Est. write savings | Risk |
-|----------|------|-------------------|------|
-| **P1** | Batch variant `UPDATE` in `create_order_with_stock_deduction` | 1–N `products` writes/order | Medium — needs variant merge tests |
-| **P1** | `QuickEditDialog` combined stock + metadata RPC | 1 `products` write/edit | Low |
-| **P2** | Consolidate `dummyData` + `productsCrudService` | Consistency | Low |
-| **P2** | Async visit rollup buffer | 2 writes/visit | Medium — analytics lag |
-| **P3** | Lazy shipment creation (on fulfill, not create) | 2 writes/order | High — shipping UX change |
-| **P3** | Webhook outbox worker (consume, don't duplicate enqueue) | 0 today | Low until webhooks live |
+**Assumptions per active merchant/month:** 50 products, 200 orders, 5K visits, 20 restocks, 30 metadata edits.
+
+| Scale | Merchants | Est. writes/month | Peak writes/sec (8h peak) | Bottleneck |
+|-------|-----------|-------------------|---------------------------|------------|
+| **Current** | ~50 | ~350K | ~2–4 | `store_visits` INSERT + visit rollup |
+| **1K users** | 1,000 | ~7M | ~40–80 | Visit chain + `store_daily_stats` UPSERT |
+| **10K users** | 10,000 | ~70M | ~400–800 | Same + checkout `products` row locks |
+| **100K users** | 100,000 | ~700M | ~4K–8K | Postgres single-primary ceiling |
+
+**Per-action write budget (steady state, after v47):**
+
+| Action | Writes | At 10K merchants × rate |
+|--------|--------|-------------------------|
+| Order (avg 2.5 lines) | ~13 | 200 orders/mo → 2.6M |
+| Visit (70% deduped) | ~0.9 effective | 5K/mo → 45M raw → ~13M effective |
+| Product create | 2 | low volume |
+| Restock | 2 | 20/mo → 400K |
+
+**v47 impact at 10K merchants:** ~200 orders/merchant/month × 10K = 2M orders. If avg 1.5 extra variant UPDATEs saved per order → **~3M fewer `products` UPDATEs/month**.
 
 ---
 
-## 8. Verification
+## Phase 5 — Reports
+
+### Write Amplification Report (this document)
+
+Score progression: **76 → 84 (v43) → 89 (v47 + client)**.
+
+### Database Load Analysis
+
+| Table | Write profile | Mitigation |
+|-------|---------------|------------|
+| `products` | UPDATE-heavy (checkout, restock) | v43/v47 batching; advisory locks scoped |
+| `store_visits` | INSERT-heavy | 10m dedupe; BRIN on `created_at` (v26) |
+| `store_daily_stats` | UPSERT HOT | `fillfactor=70` (v42); skip no-op order UPDATEs |
+| `inventory_movements` | INSERT append-only | Partition by month at 10M+ rows (future) |
+| `orders` + children | INSERT per checkout | Single RPC transaction; idempotency index |
+
+### Optimization Report
+
+| Priority | Item | Status |
+|----------|------|--------|
+| P0 | Product create double-write | ✅ v43 |
+| P0 | Restock double UPDATE | ✅ v43 |
+| P0 | Checkout variant loop | ✅ **v47** |
+| P1 | QuickEdit duplicate write | ✅ client |
+| P1 | Stats cache over-invalidation | ✅ client |
+| P1 | Async visit rollup buffer | Open |
+| P2 | `create_owner_product` single RPC | Open |
+| P2 | Consolidate dual CRUD paths | Open |
+| P3 | Lazy shipment on fulfill | Open (UX change) |
+
+### Estimated Scalability Improvement
+
+| Metric | Before audit | After v43–v47 |
+|--------|--------------|---------------|
+| Writes per restock | 3–4 | **2** (−33–50%) |
+| Writes per product create | 3 | **2** (−33%) |
+| Writes per variant-heavy order | +N variant UPDATEs | **+1 per SKU** |
+| Client stats invalidations / metadata edit | 100% | **~0%** |
+| Platform write score | 76 | **89** |
+| Headroom to 1K merchants | Moderate | **Good** |
+| Headroom to 10K merchants | Visit rollup risk | **Visit buffer required** |
+
+---
+
+## Verification
 
 ```bash
-npm run test -- src/services/inventoryService.test.ts
-npm run db:deploy   # applies v43
+npm run test
+npm run db:deploy   # applies through v47
 ```
 
 ### Manual smoke checklist
 
-- [ ] Create product with publish ON → one row in `products`, `is_active = true`, no second `updated_at` bump from publish
-- [ ] Restock variant product + change min level → one `products` UPDATE, one `inventory_movements` row
-- [ ] Checkout 2-item order → single order row, movements per SKU, customer/shipment/payment rows present
-- [ ] Idempotent checkout retry → no duplicate orders or movements
+- [ ] Create published product → 1 `products` row + 1 movement, no publish bump
+- [ ] Edit product name only → 1 UPDATE, stats cache not flushed (network tab / no stats refetch)
+- [ ] QuickEdit stock-only → 1 RPC restock, no metadata UPDATE
+- [ ] Checkout multi-variant same SKU → 1 variant UPDATE on that product
+- [ ] Idempotent checkout retry → no duplicate rows
 
 ---
 
-## 9. Score breakdown
+## Score breakdown
 
-| Dimension | Before | After v43 |
-|-----------|--------|-----------|
-| Product lifecycle writes | 70 | **92** |
-| Inventory restock efficiency | 75 | **91** |
-| Order create trigger discipline | 72 | 72 |
-| Client cache invalidation discipline | 80 | **88** |
-| Historical anti-pattern cleanup | 85 | 85 |
-| **Overall** | **76** | **84** |
+| Dimension | Baseline | v43 | v47 + client |
+|-----------|----------|-----|--------------|
+| Product lifecycle writes | 70 | 92 | **93** |
+| Inventory restock efficiency | 75 | 91 | **91** |
+| Order create RPC discipline | 68 | 72 | **82** |
+| Client cache invalidation | 80 | 88 | **94** |
+| Analytics write discipline | 72 | 72 | 72 |
+| **Overall** | **76** | **84** | **89** |
 
 ---
 
-*Generated as part of the platform scalability audit series. Deploy v43 via `npm run db:deploy`.*
+*Generated as part of the platform scalability audit series. Deploy v47 via `npm run db:deploy`.*

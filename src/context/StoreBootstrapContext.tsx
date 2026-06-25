@@ -8,6 +8,7 @@ import React, {
   useState,
   ReactNode,
 } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/observability';
@@ -33,8 +34,23 @@ const StoreBootstrapContext = createContext<StoreBootstrapContextValue>({
 
 export const useStoreHydration = () => useContext(StoreBootstrapContext);
 
+/** Public marketing/auth routes — skip heavy merchant hydration until dashboard entry. */
+const DEFERRED_HYDRATION_PATHS = new Set([
+  '/',
+  '/login',
+  '/signup',
+  '/request-access',
+  '/auth/callback',
+  '/reset-password',
+  '/subscription-expired',
+]);
+
+const shouldDeferMerchantHydration = (pathname: string): boolean =>
+  DEFERRED_HYDRATION_PATHS.has(pathname);
+
 export const StoreBootstrapProvider = ({ children }: { children: ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
+  const location = useLocation();
   const [isReady, setIsReady] = useState(false);
   const [isHydrating, setIsHydrating] = useState(false);
   const [hydrationError, setHydrationError] = useState<string | null>(null);
@@ -99,10 +115,16 @@ export const StoreBootstrapProvider = ({ children }: { children: ReactNode }) =>
       return;
     }
 
+    if (shouldDeferMerchantHydration(location.pathname)) {
+      setIsReady(true);
+      setIsHydrating(false);
+      return;
+    }
+
     if (hydratedForRef.current === user.id && isReady) return;
 
     runHydration(user.id);
-  }, [user?.id, authLoading, runHydration, isReady]);
+  }, [user?.id, authLoading, location.pathname, runHydration, isReady]);
 
   const value = useMemo(
     () => ({ isReady, isHydrating, hydrationError, hydrationVersion, refresh }),

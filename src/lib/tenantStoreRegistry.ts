@@ -1,7 +1,13 @@
 import { Category } from '@/types';
 import { cache, CacheTTL, dedup } from '@/lib/cache';
-import { cacheGet, cacheSet } from '@/utils/indexedDB';
-import { loadStorefrontBundle, resolveStoreOwnerBySlug } from '@/services/storefrontProductService';
+import { cacheGet, cacheSet, cacheDeleteByPrefix } from '@/utils/indexedDB';
+import {
+  loadStorefrontBundle,
+  peekStorefrontBundle,
+  resolveStoreOwnerBySlug,
+  STOREFRONT_PRODUCTS_CHANGED,
+} from '@/services/storefrontProductService';
+import { StorefrontCacheKeys } from '@/services/storefrontCacheService';
 import { supabase } from '@/integrations/supabase/client';
 
 const META_IDB_TTL = 10 * 60 * 1000;
@@ -150,15 +156,67 @@ export function getTenantStoreSnapshot(slug: string): TenantStoreSnapshot | null
   return entries.get(slug)?.snapshot ?? null;
 }
 
+export function invalidateTenantStore(slug: string): void {
+  const normalized = slug.trim().toLowerCase();
+  cache.del(StorefrontCacheKeys.meta(normalized));
+  void cacheDeleteByPrefix(`idb:${StorefrontCacheKeys.meta(normalized)}`);
+  setSnapshot(normalized, { loading: true, error: null });
+  void fetchTenantStore(normalized, true);
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener(STOREFRONT_PRODUCTS_CHANGED, ((event: CustomEvent<{ slug?: string }>) => {
+    const slug = event.detail?.slug?.trim().toLowerCase();
+    if (slug) invalidateTenantStore(slug);
+  }) as EventListener);
+
+  window.addEventListener('storage', (event: StorageEvent) => {
+    if (event.key !== 'storefront:invalidate' || !event.newValue) return;
+    try {
+      const payload = JSON.parse(event.newValue) as { slug?: string };
+      const slug = payload.slug?.trim().toLowerCase();
+      if (slug) invalidateTenantStore(slug);
+    } catch {
+      /* ignore malformed payload */
+    }
+  });
+}
+
 export async function fetchTenantStore(slug: string, force = false): Promise<void> {
   const entry = getEntry(slug);
   if (entry.inflight && !force) return entry.inflight;
 
-  const cacheKey = `tenant-meta:${slug}`;
+  const cacheKey = StorefrontCacheKeys.meta(slug);
   const idbKey = `idb:${cacheKey}`;
 
   const task = (async () => {
     if (!force) {
+      const bundlePeek = peekStorefrontBundle(slug);
+      if (bundlePeek?.store) {
+        let ownerId = String(bundlePeek.store.owner_id || '');
+        if (!ownerId) {
+          ownerId = (await resolveStoreOwnerBySlug(slug)) || '';
+        }
+        if (ownerId) {
+          const fromBundle = {
+            storeInfo: buildStoreInfo({ ...bundlePeek.store, owner_id: ownerId }, slug, ownerId),
+            categories: (bundlePeek.categories || []).map((c) => ({
+              id: String(c.id),
+              name: String(c.name),
+              order: Number(c.display_order) || 0,
+            })),
+          };
+          cache.set(cacheKey, fromBundle, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+          setSnapshot(slug, {
+            storeInfo: fromBundle.storeInfo,
+            categories: fromBundle.categories,
+            loading: false,
+            error: null,
+          });
+          return;
+        }
+      }
+
       const idbCached = await cacheGet<{ storeInfo: TenantStoreInfo; categories: Category[] }>(
         idbKey,
         META_IDB_TTL
@@ -189,7 +247,7 @@ export async function fetchTenantStore(slug: string, force = false): Promise<voi
 
     try {
       const data = await dedup(cacheKey, () => fetchStoreMeta(slug));
-      cache.set(cacheKey, data, CacheTTL.LONG, CacheTTL.MEDIUM);
+      cache.set(cacheKey, data, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
       await cacheSet(idbKey, data);
       setSnapshot(slug, {
         storeInfo: data.storeInfo,

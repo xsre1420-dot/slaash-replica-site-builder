@@ -59,13 +59,24 @@ export const restockProduct = async ({
   }
 
   if (hasMinChange) {
-    const { error } = await (supabase as any)
-      .from('products')
-      .update({ min_stock_level: minLevel })
-      .eq('id', product.id)
-      .eq('owner_id', ownerId);
+    const { data, error } = await (supabase as any).rpc('increment_product_stock', {
+      p_product_id: product.id,
+      p_owner_id: ownerId,
+      p_delta: 0,
+      p_reason: 'threshold_update',
+      p_min_stock_level: minLevel,
+    });
+    const payload = data as { success?: boolean; stock_quantity?: number; error?: string };
+    if (!error && payload?.success) {
+      recordHealthEvent('inventory', true);
+      return {
+        newQuantity: payload.stock_quantity ?? previousQty,
+        added: 0,
+      };
+    }
 
-    if (error) throw error;
+    recordHealthEvent('inventory', false, { message: payload?.error ?? error?.message });
+    throw new InventoryRestockError('تعذر تحديث حد المخزون — حاول مرة أخرى');
   }
 
   return { newQuantity: previousQty, added: 0 };

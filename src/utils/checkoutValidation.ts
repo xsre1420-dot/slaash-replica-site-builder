@@ -5,7 +5,6 @@ import { AppliedCoupon, validateCoupon } from '@/services/couponService';
 import { mapDbProduct } from '@/mappers/productMapper';
 import {
   fetchCheckoutProductsByIds,
-  fetchStorefrontProductsByIds,
   fetchOwnerActiveProductsByIds,
   resolveStoreSlugByOwnerId,
 } from '@/services/storefrontProductService';
@@ -66,12 +65,6 @@ export async function fetchFreshProducts(
 
   if (slug) {
     map = await fetchCheckoutProductsByIds(slug, uniqueIds);
-    if (!options.strict && map.size < uniqueIds.length) {
-      const catalog = await fetchStorefrontProductsByIds(slug, uniqueIds);
-      for (const [id, product] of catalog) {
-        if (!map.has(id)) map.set(id, product);
-      }
-    }
   }
 
   const missingAfterSlug = uniqueIds.filter((id) => !map.has(id));
@@ -110,11 +103,10 @@ export async function fetchFreshProducts(
     }
   }
 
-  if (ownerId && uniqueIds.length > 0 && !options.strict) {
+  if (ownerId && uniqueIds.length > 0 && !options.strict && map.size < uniqueIds.length) {
     const authoritative = await fetchOwnerActiveProductsByIds(ownerId, uniqueIds);
     for (const [id, dbProduct] of authoritative) {
-      const existing = map.get(id);
-      map.set(id, existing ? mergeProductStock(dbProduct, existing) : dbProduct);
+      if (!map.has(id)) map.set(id, dbProduct);
     }
   }
 

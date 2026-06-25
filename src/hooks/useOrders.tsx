@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Order } from '@/types';
-import { dedup, flushOrderCache } from '@/lib/cache';
+import { dedup, flushOrderCache, cache, CacheKeys } from '@/lib/cache';
 import { useAuth } from '@/context/AuthContext';
 import { useStoreHydration } from '@/context/StoreBootstrapContext';
 import { mapOrderError } from '@/utils/orderErrors';
@@ -11,6 +11,7 @@ import {
   updateOrderStatus,
   ORDERS_PER_PAGE,
   type WorkflowTabCounts,
+  type OrdersPageResult,
 } from '@/services/orderService';
 import {
   DEFAULT_ORDER_FILTERS,
@@ -47,6 +48,20 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
 
   const filterKey = useMemo(() => serializeOrderFilters(listFilters), [listFilters]);
 
+  const applyOrdersPage = useCallback((result: OrdersPageResult, pageNum: number) => {
+    setOrders(result.orders);
+    setTotal(result.total);
+    setTotalPages(result.totalPages);
+    setPage(pageNum);
+    result.orders.forEach((o) => knownOrderIdsRef.current.add(o.id));
+  }, []);
+
+  const readCachedPage = useCallback(
+    (ownerId: string, pageNum: number): OrdersPageResult | null =>
+      cache.get<OrdersPageResult>(CacheKeys.ordersFiltered(ownerId, filterKey, pageNum)),
+    [filterKey]
+  );
+
   const loadTabCounts = useCallback(async () => {
     const ownerId = user?.id;
     if (!ownerId) {
@@ -75,6 +90,13 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
         return;
       }
 
+      const warmed = readCachedPage(ownerId, pageNum);
+      if (warmed) {
+        applyOrdersPage(warmed, pageNum);
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       const dedupKey = `fetch-orders-${ownerId}-${filterKey}-${pageNum}`;
 
@@ -83,11 +105,7 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
           fetchOrdersFiltered(ownerId, listFilters, pageNum, ORDERS_PER_PAGE)
         );
 
-        setOrders(result.orders);
-        setTotal(result.total);
-        setTotalPages(result.totalPages);
-        setPage(pageNum);
-        result.orders.forEach((o) => knownOrderIdsRef.current.add(o.id));
+        applyOrdersPage(result, pageNum);
       } catch (err) {
         console.error('[useOrders] load failed:', err);
         toast.error('تعذر تحميل الطلبات');
@@ -95,7 +113,7 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
         setLoading(false);
       }
     },
-    [user?.id, filterKey, listFilters]
+    [user?.id, filterKey, listFilters, readCachedPage, applyOrdersPage]
   );
 
   useEffect(() => {

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+import { useInView } from "@/hooks/useInView";
 import {
   fetchSuggestedProductsForOwner,
   fetchSuggestedProductsForStore,
@@ -13,14 +14,15 @@ interface SuggestedProductsProps {
 }
 
 const SuggestedProducts = ({ currentProductId, storeSlug }: SuggestedProductsProps) => {
+  const [sectionRef, inView] = useInView<HTMLDivElement>();
   const [suggestedProducts, setSuggestedProducts] = useState<
     Awaited<ReturnType<typeof fetchSuggestedProductsForStore>>
   >([]);
 
   useEffect(() => {
-    const load = async () => {
-      if (!currentProductId) return;
+    if (!inView || !currentProductId) return;
 
+    const load = async () => {
       try {
         if (storeSlug) {
           setSuggestedProducts(
@@ -41,15 +43,15 @@ const SuggestedProducts = ({ currentProductId, storeSlug }: SuggestedProductsPro
       }
     };
     void load();
-  }, [currentProductId, storeSlug]);
-
-  if (suggestedProducts.length === 0) return null;
+  }, [currentProductId, storeSlug, inView]);
 
   const productLink = (id: string) =>
     storeSlug ? `/store/${storeSlug}/product/${id}` : `/product-details/${id}`;
 
   return (
-    <div className="space-y-4 mt-6">
+    <div ref={sectionRef} className="space-y-4 mt-6">
+      {suggestedProducts.length === 0 ? null : (
+        <>
       <h2 className="text-lg font-bold text-right text-foreground">قد يعجبك أيضاً</h2>
 
       <Carousel className="w-full">
@@ -80,6 +82,8 @@ const SuggestedProducts = ({ currentProductId, storeSlug }: SuggestedProductsPro
           ))}
         </CarouselContent>
       </Carousel>
+        </>
+      )}
     </div>
   );
 };

@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { cache, CacheTTL } from '@/lib/cache';
 
 export type MerchantProductReview = {
   id: string;
@@ -66,7 +67,10 @@ export async function approveProductReview(
       p_review_id: reviewId,
     });
 
-    if (!error && data?.success) return { success: true };
+    if (!error && data?.success) {
+      cache.del(`reviews:pending-count:${ownerId}`);
+      return { success: true };
+    }
   } catch {
     /* fall through */
   }
@@ -78,6 +82,7 @@ export async function approveProductReview(
     .eq('owner_id', ownerId);
 
   if (error) return { success: false, error: error.message };
+  cache.del(`reviews:pending-count:${ownerId}`);
   return { success: true };
 }
 
@@ -92,12 +97,17 @@ export async function deleteProductReview(
     .eq('owner_id', ownerId);
 
   if (error) return { success: false, error: error.message };
+  cache.del(`reviews:pending-count:${ownerId}`);
   return { success: true };
 }
 
 /** Count merchant reviews awaiting approval across all products */
 export async function countPendingReviewsForOwner(ownerId: string): Promise<number> {
   if (!ownerId) return 0;
+
+  const cacheKey = `reviews:pending-count:${ownerId}`;
+  const cached = cache.get<number>(cacheKey);
+  if (cached != null) return cached;
 
   const { count, error } = await supabase
     .from('product_reviews')
@@ -110,7 +120,9 @@ export async function countPendingReviewsForOwner(ownerId: string): Promise<numb
     return 0;
   }
 
-  return count ?? 0;
+  const value = count ?? 0;
+  cache.set(cacheKey, value, CacheTTL.SHORT, CacheTTL.STALE);
+  return value;
 }
 
 /** First product with a pending review — for dashboard deep-link */

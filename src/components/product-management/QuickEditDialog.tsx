@@ -47,19 +47,27 @@ export const QuickEditDialog = ({ product, open, onOpenChange, onSaved }: QuickE
 
     setSaving(true);
     const addQty = parseInt(stockAdd, 10) || 0;
-    const latest = (await fetchProductById(product.id)) ?? product;
 
-    const patch: Partial<Product> = {
-      name: name.trim(),
-      price: priceNum,
-      cost: cost ? parseFloat(cost) || undefined : undefined,
-    };
+    const metadataChanged =
+      name.trim() !== product.name ||
+      priceNum !== product.price ||
+      (cost ? parseFloat(cost) || undefined : undefined) !== product.cost;
 
-    const result = await updateProduct(product.id, patch);
-    if (!result.success) {
-      setSaving(false);
-      toast.error(mapProductInsertError(result.error || "فشل في حفظ التغييرات"));
-      return;
+    const latest = metadataChanged ? (await fetchProductById(product.id)) ?? product : product;
+
+    if (metadataChanged) {
+      const patch: Partial<Product> = {
+        name: name.trim(),
+        price: priceNum,
+        cost: cost ? parseFloat(cost) || undefined : undefined,
+      };
+
+      const result = await updateProduct(product.id, patch);
+      if (!result.success) {
+        setSaving(false);
+        toast.error(mapProductInsertError(result.error || "فشل في حفظ التغييرات"));
+        return;
+      }
     }
 
     if (addQty > 0) {
@@ -67,8 +75,8 @@ export const QuickEditDialog = ({ product, open, onOpenChange, onSaved }: QuickE
         await restockProduct({
           product: {
             id: latest.id,
-            name: patch.name ?? latest.name,
-            price: patch.price ?? latest.price,
+            name: name.trim(),
+            price: priceNum,
             category: latest.category,
             image_url: latest.image,
             stock_quantity: latest.stockQuantity,

@@ -1,32 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { scheduleIdle } from '@/utils/scheduleIdle';
 
 const dedupeKey = (slug: string, path: string) => `visit-tracked:${slug}:${path}`;
 const slugDedupeKey = (slug: string) => `visit-tracked-slug:${slug}`;
 const DEDUPE_MS = 30 * 60 * 1000;
-const DEFER_MS = 4_000;
 const VISIT_RPC_TIMEOUT_MS = 8_000;
-
-function scheduleIdle(fn: () => void): () => void {
-  if (typeof window === 'undefined') return () => undefined;
-
-  const run = () => {
-    try {
-      fn();
-    } catch {
-      /* ignore */
-    }
-  };
-
-  if ('requestIdleCallback' in window) {
-    const id = window.requestIdleCallback(run, { timeout: 5_000 });
-    return () => window.cancelIdleCallback(id);
-  }
-
-  const timer = window.setTimeout(run, DEFER_MS);
-  return () => window.clearTimeout(timer);
-}
 
 /**
  * Records a storefront page view via slug-bound RPC (tenant-safe).
