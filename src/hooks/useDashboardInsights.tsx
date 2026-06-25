@@ -27,10 +27,11 @@ import {
   type PeriodMetrics,
 } from '@/utils/dashboardInsightsUtils';
 import {
+  buildOrderDashboardStatsFromBatch,
   fetchDashboardStatisticsBatch,
 } from '@/services/dashboardStatsService';
 import { fetchOrderStatsRows } from '@/services/orderService';
-import { useOrderDashboardStats } from '@/hooks/useOrderDashboardStats';
+import { supabase } from '@/integrations/supabase/client';
 import type { Order } from '@/types';
 
 export type DashboardActionItem = {
@@ -76,7 +77,7 @@ const fetchRpcPeriod = async (
 export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
-  const { stats } = useOrderDashboardStats(refreshKey);
+  const [pendingFulfillment, setPendingFulfillment] = useState(0);
 
   const [periods, setPeriods] = useState({
     today: EMPTY_PERIOD,
@@ -91,10 +92,16 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
   useEffect(() => {
     if (!user?.id) {
       setHasSlug(null);
-      setPendingReviewsCount(0);
       return;
     }
     void getStorePublicSlug(user.id).then((slug) => setHasSlug(!!slug));
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setPendingReviewsCount(0);
+      return;
+    }
     void countPendingReviewsForOwner(user.id).then(setPendingReviewsCount);
   }, [user?.id, refreshKey]);
 
@@ -128,6 +135,7 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
         week: batch.week,
         previousWeek: batch.previousWeek,
       });
+      setPendingFulfillment(buildOrderDashboardStatsFromBatch(batch).pendingFulfillment);
       setKpiLoading(false);
       return;
     }
@@ -179,7 +187,7 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
     void loadPeriods();
   }, [loadPeriods, refreshKey]);
 
-  const products = getProductsSync();
+  const products = useMemo(() => getProductsSync(), [refreshKey, user?.id]);
   const productCount = products.length;
   const lowStockCount = countLowStockProducts(products);
   const inventorySummary = summarizeInventoryAlerts(products);
@@ -187,7 +195,7 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
 
   const actions = useMemo((): DashboardActionItem[] => {
     const items: DashboardActionItem[] = [];
-    const pendingOrdersCount = stats.pendingFulfillment;
+    const pendingOrdersCount = pendingFulfillment;
 
     if (pendingOrdersCount > 0) {
       items.push({
@@ -255,7 +263,7 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
 
     return items;
   }, [
-    stats.pendingFulfillment,
+    pendingFulfillment,
     productCount,
     hasSlug,
     lowStockCount,
@@ -273,7 +281,7 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
     previousWeek: periods.previousWeek,
     lowStockCount,
     inventoryOutCount: inventorySummary.out,
-    pendingOrdersCount: stats.pendingFulfillment,
+    pendingOrdersCount: pendingFulfillment,
     pendingReviewsCount,
     loading: kpiLoading,
   };

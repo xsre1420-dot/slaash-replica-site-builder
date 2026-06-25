@@ -31,7 +31,7 @@ import {
   removeFooterSuggestedProduct,
   type FooterSuggestedRow,
 } from '@/services/footerSuggestedProductsService';
-import { loadAllMerchantProducts } from '@/services/productService';
+import { loadAllMerchantProducts, getProductsSync } from '@/services/productService';
 import type { Product } from '@/types';
 import { getProductLifecycleStatus } from '@/lib/productLifecycle';
 
@@ -49,26 +49,50 @@ const FooterSuggestedProductsManager = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
+  const publishedFromCatalog = useCallback(
+    (catalog: Product[]) => catalog.filter((p) => getProductLifecycleStatus(p) === 'published'),
+    []
+  );
+
   const reload = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const [footerRows, catalog] = await Promise.all([
-        listFooterSuggestedForOwner(user.id),
-        loadAllMerchantProducts(true),
-      ]);
+      const footerRows = await listFooterSuggestedForOwner(user.id);
       setRows(footerRows);
-      setProducts(catalog.products.filter((p) => getProductLifecycleStatus(p) === 'published'));
+      const cached = getProductsSync();
+      if (cached.length > 0) {
+        setProducts(publishedFromCatalog(cached));
+      }
     } catch {
       toast.error('تعذّر تحميل قائمة المنتجات المقترَحة');
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [publishedFromCatalog, user?.id]);
+
+  const loadPickerCatalog = useCallback(async () => {
+    if (!user?.id) return;
+    const cached = getProductsSync();
+    if (cached.length > 0) {
+      setProducts(publishedFromCatalog(cached));
+      return;
+    }
+    try {
+      const catalog = await loadAllMerchantProducts(false);
+      setProducts(publishedFromCatalog(catalog.products));
+    } catch {
+      toast.error('تعذّر تحميل قائمة المنتجات');
+    }
+  }, [publishedFromCatalog, user?.id]);
 
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  useEffect(() => {
+    if (dialogOpen) void loadPickerCatalog();
+  }, [dialogOpen, loadPickerCatalog]);
 
   const selectedIds = useMemo(() => new Set(rows.map((r) => r.product_id)), [rows]);
 

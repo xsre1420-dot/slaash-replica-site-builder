@@ -5,6 +5,7 @@ const orderIdKey = (ownerId: string) => `checkout-order-id:${ownerId}`;
 const fingerprintKey = (ownerId: string) => `checkout-fingerprint:${ownerId}`;
 const completedKey = (ownerId: string) => `checkout-completed:${ownerId}`;
 const submitLockKey = (ownerId: string) => `checkout-submit-lock:${ownerId}`;
+const crossTabLockKey = (ownerId: string) => `checkout-cross-lock:${ownerId}`;
 
 const SUBMIT_LOCK_TTL_MS = 3 * 60 * 1000;
 
@@ -32,6 +33,42 @@ const removeSession = (key: string): void => {
   }
 };
 
+const readLocal = (key: string): string | null => {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const writeLocal = (key: string, value: string): void => {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* quota / private mode */
+  }
+};
+
+const removeLocal = (key: string): void => {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    /* ignore */
+  }
+};
+
+const isLockFresh = (raw: string | null, now: number): boolean => {
+  if (!raw) return false;
+  const started = Number(raw);
+  return Number.isFinite(started) && now - started < SUBMIT_LOCK_TTL_MS;
+};
+
+/** True when a checkout attempt is in progress (idempotency pinned, not yet completed). */
+export const hasPendingCheckoutAttempt = (ownerId: string): boolean => {
+  if (loadCompletedCheckoutOrderId(ownerId)) return false;
+  return !!readSession(idempotencyKey(ownerId));
+};
+
 /** Stable idempotency key per checkout attempt — shared across tabs via sessionStorage. */
 export const getOrCreateIdempotencyKey = (ownerId: string): string => {
   const storageKey = idempotencyKey(ownerId);
@@ -41,6 +78,12 @@ export const getOrCreateIdempotencyKey = (ownerId: string): string => {
   writeSession(storageKey, key);
   return key;
 };
+
+/** Pin idempotency + order id before any async validation (survives refresh / retries). */
+export const pinCheckoutAttempt = (ownerId: string): { idempotencyKey: string; orderId: string } => ({
+  idempotencyKey: getOrCreateIdempotencyKey(ownerId),
+  orderId: getStableCheckoutOrderId(ownerId),
+});
 
 /** Stable client order UUID — reused on retries so p_order_id stays consistent. */
 export const getStableCheckoutOrderId = (ownerId: string): string => {
@@ -53,24 +96,30 @@ export const getStableCheckoutOrderId = (ownerId: string): string => {
 };
 
 /**
- * Cross-tab submit lock (sessionStorage). Returns false if another tab is submitting.
+ * Cross-tab submit lock (sessionStorage + localStorage).
+ * Returns false if another tab is submitting the same checkout.
  */
 export const acquireCheckoutSubmitLock = (ownerId: string): boolean => {
-  const key = submitLockKey(ownerId);
-  const raw = readSession(key);
   const now = Date.now();
-  if (raw) {
-    const started = Number(raw);
-    if (Number.isFinite(started) && now - started < SUBMIT_LOCK_TTL_MS) {
-      return false;
-    }
+  const sessionRaw = readSession(submitLockKey(ownerId));
+  if (isLockFresh(sessionRaw, now)) {
+    return false;
   }
-  writeSession(key, String(now));
+
+  const crossRaw = readLocal(crossTabLockKey(ownerId));
+  if (isLockFresh(crossRaw, now)) {
+    return false;
+  }
+
+  const stamp = String(now);
+  writeSession(submitLockKey(ownerId), stamp);
+  writeLocal(crossTabLockKey(ownerId), stamp);
   return true;
 };
 
 export const releaseCheckoutSubmitLock = (ownerId: string): void => {
   removeSession(submitLockKey(ownerId));
+  removeLocal(crossTabLockKey(ownerId));
 };
 
 export const touchCheckoutSubmitLock = (ownerId: string): void => {
@@ -95,6 +144,7 @@ export const clearCheckoutSession = (ownerId: string) => {
   removeSession(fingerprintKey(ownerId));
   removeSession(orderIdKey(ownerId));
   removeSession(submitLockKey(ownerId));
+  removeLocal(crossTabLockKey(ownerId));
 };
 
 export const persistCheckoutFingerprint = (ownerId: string, fingerprint: string): void => {

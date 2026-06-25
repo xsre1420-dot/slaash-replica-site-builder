@@ -60,6 +60,39 @@ describe('calculateStatistics', () => {
     expect(stats.newCustomers).toBe(1);
   });
 
+  it('excludes refunded completed orders from client revenue fallback', () => {
+    const data: DatabaseData = {
+      orders: [
+        {
+          id: '1',
+          status: 'completed',
+          total_amount: '100',
+          payment_status: 'refunded',
+          created_at: '2026-06-02T10:00:00Z',
+          customer_phone: '1',
+        },
+        {
+          id: '2',
+          status: 'completed',
+          total_amount: '80',
+          payment_status: 'collected',
+          created_at: '2026-06-02T11:00:00Z',
+          customer_phone: '2',
+        },
+      ],
+      orderItems: [
+        { order_id: '2', product_name: 'B', quantity: 1, subtotal: '80' },
+      ],
+      customers: [],
+      products: [null],
+      visits: [],
+      dateBounds: bounds,
+    };
+
+    const stats = calculateStatistics(data, bounds);
+    expect(stats.totalRevenue).toBe(80);
+  });
+
   it('returns product count when no orders in period', () => {
     const data: DatabaseData = {
       orders: [],

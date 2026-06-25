@@ -31,6 +31,8 @@ const EMPTY_TAB_COUNTS: WorkflowTabCounts = {
   refunded: 0,
 };
 
+const VISIBILITY_REFETCH_MS = 60_000;
+
 export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS) => {
   const { user } = useAuth();
   const { isReady, hydrationVersion } = useStoreHydration();
@@ -41,8 +43,26 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
   const [totalPages, setTotalPages] = useState(1);
   const [tabCounts, setTabCounts] = useState<WorkflowTabCounts>(EMPTY_TAB_COUNTS);
   const knownOrderIdsRef = useRef<Set<string>>(new Set());
+  const lastVisibilityRefetchRef = useRef(0);
 
   const filterKey = useMemo(() => serializeOrderFilters(listFilters), [listFilters]);
+
+  const loadTabCounts = useCallback(async () => {
+    const ownerId = user?.id;
+    if (!ownerId) {
+      setTabCounts(EMPTY_TAB_COUNTS);
+      return;
+    }
+
+    try {
+      const counts = await dedup(`fetch-wc-${ownerId}-${filterKey}`, () =>
+        fetchWorkflowTabCounts(ownerId, listFilters)
+      );
+      setTabCounts(counts);
+    } catch (err) {
+      console.error('[useOrders] tab counts failed:', err);
+    }
+  }, [user?.id, filterKey, listFilters]);
 
   const loadPage = useCallback(
     async (pageNum: number) => {
@@ -59,18 +79,14 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
       const dedupKey = `fetch-orders-${ownerId}-${filterKey}-${pageNum}`;
 
       try {
-        const [result, counts] = await Promise.all([
-          dedup(dedupKey, () => fetchOrdersFiltered(ownerId, listFilters, pageNum, ORDERS_PER_PAGE)),
-          dedup(`fetch-wc-${ownerId}-${filterKey}`, () =>
-            fetchWorkflowTabCounts(ownerId, listFilters)
-          ),
-        ]);
+        const result = await dedup(dedupKey, () =>
+          fetchOrdersFiltered(ownerId, listFilters, pageNum, ORDERS_PER_PAGE)
+        );
 
         setOrders(result.orders);
         setTotal(result.total);
         setTotalPages(result.totalPages);
         setPage(pageNum);
-        setTabCounts(counts);
         result.orders.forEach((o) => knownOrderIdsRef.current.add(o.id));
       } catch (err) {
         console.error('[useOrders] load failed:', err);
@@ -84,20 +100,28 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
 
   useEffect(() => {
     if (!isReady) return;
+    void loadTabCounts();
+  }, [isReady, hydrationVersion, loadTabCounts]);
+
+  useEffect(() => {
+    if (!isReady) return;
     setPage(0);
     void loadPage(0);
   }, [isReady, hydrationVersion, loadPage]);
 
   useEffect(() => {
     const onVisible = () => {
-      if (document.visibilityState === 'visible' && user?.id) {
-        flushOrderCache(user.id);
-        void loadPage(page);
-      }
+      if (document.visibilityState !== 'visible' || !user?.id) return;
+      const now = Date.now();
+      if (now - lastVisibilityRefetchRef.current < VISIBILITY_REFETCH_MS) return;
+      lastVisibilityRefetchRef.current = now;
+      flushOrderCache(user.id);
+      void loadPage(page);
+      void loadTabCounts();
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [loadPage, page, user?.id]);
+  }, [loadPage, loadTabCounts, page, user?.id]);
 
   const goToPage = useCallback(
     (next: number) => {
@@ -134,8 +158,8 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
             : o
         )
       );
-      flushOwnerCache(ownerId);
-      void loadPage(page);
+      flushOrderCache(ownerId);
+      void loadTabCounts();
       return true;
     }
 
@@ -144,9 +168,10 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
   };
 
   const refetch = useCallback(() => {
-    if (user?.id) flushOwnerCache(user.id);
+    if (user?.id) flushOrderCache(user.id);
     void loadPage(page);
-  }, [loadPage, page, user?.id]);
+    void loadTabCounts();
+  }, [loadPage, loadTabCounts, page, user?.id]);
 
   const isNewOrder = useCallback((orderId: string) => {
     return !knownOrderIdsRef.current.has(orderId);

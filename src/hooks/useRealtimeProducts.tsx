@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { appendCachedProduct, patchCachedProduct, removeCachedProduct } from '@/services/productService';
 import { invalidateStorefrontForOwner } from '@/services/storefrontProductService';
@@ -38,6 +38,20 @@ const shouldInvalidateStorefront = (payload: ProductRealtimePayload): boolean =>
 
 export const useRealtimeProducts = (onUpdate?: () => void) => {
   const { user } = useAuth();
+  const onUpdateRef = useRef(onUpdate);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    onUpdateRef.current = onUpdate;
+  }, [onUpdate]);
+
+  const scheduleParentUpdate = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      debounceRef.current = null;
+      onUpdateRef.current?.();
+    }, 300);
+  }, []);
 
   const handleChange = useCallback(
     (payload: ProductRealtimePayload) => {
@@ -49,14 +63,14 @@ export const useRealtimeProducts = (onUpdate?: () => void) => {
         if (shouldInvalidateStorefront(payload)) {
           void invalidateStorefrontForOwner(ownerId);
         }
-        onUpdate?.();
+        scheduleParentUpdate();
         return;
       }
 
       if (payload.eventType === 'DELETE' && payload.old?.id) {
         removeCachedProduct(ownerId, String(payload.old.id));
         void invalidateStorefrontForOwner(ownerId);
-        onUpdate?.();
+        scheduleParentUpdate();
         return;
       }
 
@@ -66,14 +80,21 @@ export const useRealtimeProducts = (onUpdate?: () => void) => {
         if (isStorefrontVisible(mapped)) {
           void invalidateStorefrontForOwner(ownerId);
         }
-        onUpdate?.();
+        scheduleParentUpdate();
       }
     },
-    [user?.id, onUpdate]
+    [user?.id, scheduleParentUpdate]
   );
 
   useEffect(() => {
     if (!user?.id) return;
     return subscribeMerchantProducts(user.id, handleChange);
   }, [user?.id, handleChange]);
+
+  useEffect(
+    () => () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    },
+    []
+  );
 };

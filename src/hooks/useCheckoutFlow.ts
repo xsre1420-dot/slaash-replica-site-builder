@@ -14,6 +14,8 @@ import {
   loadCompletedCheckoutOrderId,
   markCheckoutCompleted,
   persistCheckoutFingerprint,
+  pinCheckoutAttempt,
+  hasPendingCheckoutAttempt,
   type CheckoutSubmitPhase,
 } from "@/utils/checkoutSession";
 import { tryRecoverCheckoutOrder } from "@/services/checkoutRecoveryService";
@@ -220,8 +222,29 @@ export const useCheckoutFlow = () => {
       setCompletedOrderId(recoveredOrderId);
       setOrderCompleted(true);
       setSubmitPhase('success');
+      return;
     }
-  }, [ownerId]);
+
+    if (!hasPendingCheckoutAttempt(ownerId)) return;
+
+    let cancelled = false;
+    void (async () => {
+      const recovered = await tryRecoverCheckoutOrder(ownerId, checkoutStoreSlug);
+      if (cancelled || !recovered) return;
+
+      submitSucceededRef.current = true;
+      setCompletedOrderId(recovered.orderId);
+      setOrderCompleted(true);
+      setSubmitPhase('success');
+      markCheckoutCompleted(ownerId, recovered.orderId);
+      clearCart();
+      toast.info('تم استلام طلبك مسبقاً — لا حاجة لإعادة الإرسال.');
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ownerId, checkoutStoreSlug, clearCart]);
 
   useEffect(() => {
     if (!isSubmitting) return;
@@ -413,6 +436,8 @@ export const useCheckoutFlow = () => {
     setIsSubmitting(true);
     setSubmitPhase('validating');
     metrics.increment('checkout.submit.started');
+
+    pinCheckoutAttempt(ownerId);
 
     let releaseLockOnExit = true;
 

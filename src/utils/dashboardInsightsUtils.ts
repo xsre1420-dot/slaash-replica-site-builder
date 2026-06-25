@@ -5,6 +5,7 @@ import { getProductLifecycleStatus } from '@/lib/productLifecycle';
 import { getProductLowStockThreshold } from '@/lib/productUpdateUtils';
 import { getAvailableQty } from '@/utils/inventoryUtils';
 import { getEffectivePaymentStatus } from '@/utils/orderWorkflowUtils';
+import { netRevenueFromRpc } from '@/utils/analyticsMetrics';
 
 export type PeriodMetrics = {
   orders: number;
@@ -53,7 +54,7 @@ export const parseRpcPeriodMetrics = (data: Record<string, unknown> | null | und
   if (!data || typeof data !== 'object') return EMPTY_PERIOD;
   return {
     orders: Number(data.order_count ?? 0),
-    revenue: Number(data.completed_revenue ?? 0),
+    revenue: netRevenueFromRpc(data),
     visits: Number(data.visit_count ?? 0),
   };
 };

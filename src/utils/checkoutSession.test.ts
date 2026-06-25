@@ -8,11 +8,14 @@ import {
   markCheckoutCompleted,
   loadCompletedCheckoutOrderId,
   clearCheckoutSession,
+  hasPendingCheckoutAttempt,
+  pinCheckoutAttempt,
 } from './checkoutSession';
 
 describe('checkoutSession', () => {
   beforeEach(() => {
     sessionStorage.clear();
+    localStorage.clear();
     vi.restoreAllMocks();
   });
 
@@ -41,6 +44,27 @@ describe('checkoutSession', () => {
     expect(acquireCheckoutSubmitLock('owner-1')).toBe(false);
     releaseCheckoutSubmitLock('owner-1');
     expect(acquireCheckoutSubmitLock('owner-1')).toBe(true);
+  });
+
+  it('blocks cross-tab submit lock via localStorage', () => {
+    localStorage.setItem('checkout-cross-lock:owner-1', String(Date.now()));
+    expect(acquireCheckoutSubmitLock('owner-1')).toBe(false);
+    localStorage.removeItem('checkout-cross-lock:owner-1');
+  });
+
+  it('tracks pending checkout attempts', () => {
+    expect(hasPendingCheckoutAttempt('owner-1')).toBe(false);
+    pinCheckoutAttempt('owner-1');
+    expect(hasPendingCheckoutAttempt('owner-1')).toBe(true);
+    markCheckoutCompleted('owner-1', 'order-1');
+    expect(hasPendingCheckoutAttempt('owner-1')).toBe(false);
+  });
+
+  it('pins stable ids before submit', () => {
+    const first = pinCheckoutAttempt('owner-1');
+    const second = pinCheckoutAttempt('owner-1');
+    expect(second.idempotencyKey).toBe(first.idempotencyKey);
+    expect(second.orderId).toBe(first.orderId);
   });
 
   it('marks completed order and clears pending session keys', () => {

@@ -25,7 +25,7 @@ import { restockProduct, InventoryRestockError } from '@/services/inventoryServi
 import { getProductLifecycleStatus, lifecycleStatusLabel } from '@/lib/productLifecycle';
 import { useMerchantProductsPage } from '@/hooks/useMerchantProductsPage';
 import { useProgressiveRender } from '@/hooks/useProgressiveRender';
-import { syncMerchantProductCatalog, getProductsSync } from '@/services/productService';
+import { syncMerchantProductCatalog } from '@/services/productService';
 import { useRealtimeProducts } from '@/hooks/useRealtimeProducts';
 import AttentionStrip from '@/components/ui/AttentionStrip';
 import { ATTENTION_PARAM } from '@/lib/attentionHighlight';
@@ -63,7 +63,6 @@ function Inventory() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const attentionApplied = useRef(false);
-  const [products, setProducts] = useState<InventoryProductRow[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebouncedValue(searchTerm, 300);
   const [selectedProduct, setSelectedProduct] = useState<InventoryProductRow | null>(null);
@@ -75,22 +74,18 @@ function Inventory() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const catalog = useMerchantProductsPage(debouncedSearch, categoryFilter);
+  const catalog = useMerchantProductsPage('', 'all');
   const loading = catalog.loading;
 
-  useEffect(() => {
-    setProducts(mapCatalogToInventoryRows(catalog.products));
-  }, [catalog.products]);
+  const products = useMemo(
+    () => mapCatalogToInventoryRows(catalog.products),
+    [catalog.products]
+  );
 
   const reloadInventory = catalog.reload;
 
   useRealtimeProducts(() => {
-    const synced = getProductsSync();
-    if (synced.length > 0) {
-      setProducts(mapCatalogToInventoryRows(synced));
-      return;
-    }
-    void reloadInventory();
+    catalog.syncFromCache();
   });
 
   const performRestock = useCallback(

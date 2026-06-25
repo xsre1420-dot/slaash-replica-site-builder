@@ -26,7 +26,12 @@ vi.mock('@/utils/checkoutSession', () => ({
   clearCheckoutIdempotencyKey: vi.fn(),
 }));
 
+vi.mock('@/services/checkoutRecoveryService', () => ({
+  tryRecoverCheckoutOrder: vi.fn().mockResolvedValue(null),
+}));
+
 import { createOrder, clearInflightOrdersForTests } from '@/services/orderService';
+import { tryRecoverCheckoutOrder } from '@/services/checkoutRecoveryService';
 import { Order } from '@/types';
 
 const sampleOrder: Order = {
@@ -42,6 +47,7 @@ describe('orderService integration', () => {
   beforeEach(() => {
     mockRpc.mockReset();
     clearInflightOrdersForTests();
+    vi.mocked(tryRecoverCheckoutOrder).mockResolvedValue(null);
   });
 
   it('creates order via RPC on success', async () => {
@@ -137,5 +143,19 @@ describe('orderService integration', () => {
     expect(r1.id).toBe('order-1');
     expect(r2.id).toBe('order-1');
     expect(mockRpc).toHaveBeenCalledTimes(1);
+  });
+
+  it('recovers order after transport error when server already created it', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'Failed to fetch' } });
+    vi.mocked(tryRecoverCheckoutOrder).mockResolvedValue({
+      orderId: 'recovered-order',
+      totalAmount: 1000,
+      idempotent: true,
+    });
+
+    const result = await createOrder(sampleOrder, 'owner-1', 'cash_on_delivery', null, 'demo-store');
+    expect(result.id).toBe('recovered-order');
+    expect(result.wasIdempotent).toBe(true);
+    expect(tryRecoverCheckoutOrder).toHaveBeenCalledWith('owner-1', 'demo-store');
   });
 });

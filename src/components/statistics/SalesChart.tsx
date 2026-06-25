@@ -11,6 +11,7 @@ interface SalesChartProps {
     created_at: string;
     total_amount: number | string;
     status?: string;
+    payment_status?: string | null;
   }>;
   chartStart: Date;
   chartEnd: Date;
@@ -51,6 +52,7 @@ export const SalesChart = ({ orders, chartStart, chartEnd }: SalesChartProps) =>
 
     orders.forEach(order => {
       if (order.status !== 'completed') return;
+      if (order.payment_status === 'refunded') return;
       const date = new Date(order.created_at);
       const key = dayKey(date);
       if (grouped[key]) {

@@ -41,6 +41,7 @@ import { useScrollPersistence } from '@/hooks/useScrollPersistence';
 import AttentionStrip from '@/components/ui/AttentionStrip';
 import { ATTENTION_PARAM } from '@/lib/attentionHighlight';
 import { canTransitionOrderStatus } from '@/utils/orderStatusUtils';
+import { runWithConcurrency } from '@/utils/runWithConcurrency';
 
 const Orders = () => {
   const { user } = useAuth();
@@ -81,7 +82,6 @@ const Orders = () => {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkProcessing, setBulkProcessing] = useState(false);
-  const realtimeRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useScrollPersistence('orders');
 
@@ -150,22 +150,13 @@ const Orders = () => {
     [isNewOrder, markOrderKnown, navigate, pushNotification]
   );
 
-  const scheduleRealtimeRefresh = useCallback(() => {
-    if (realtimeRefreshTimer.current) clearTimeout(realtimeRefreshTimer.current);
-    realtimeRefreshTimer.current = setTimeout(() => {
+  useRealtimeOrders(
+    () => {
       refetch();
       void reloadStats();
-    }, 400);
-  }, [refetch, reloadStats]);
-
-  useEffect(
-    () => () => {
-      if (realtimeRefreshTimer.current) clearTimeout(realtimeRefreshTimer.current);
     },
-    []
+    handleRealtimeEvent
   );
-
-  useRealtimeOrders(scheduleRealtimeRefresh, handleRealtimeEvent);
 
   useEffect(() => {
     setSelectedIds((prev) => {
@@ -250,11 +241,9 @@ const Orders = () => {
     if (status === 'cancelled' && !confirm(`إلغاء ${targets.length} طلب؟`)) return;
 
     setBulkProcessing(true);
-    let ok = 0;
-    for (const order of targets) {
-      const success = await updateOrderStatus(order.id, status);
-      if (success) ok += 1;
-    }
+    const ok = await runWithConcurrency(targets, 5, (order) =>
+      updateOrderStatus(order.id, status)
+    );
     setBulkProcessing(false);
     setSelectedIds(new Set());
     toast.success(`تم تحديث ${ok} من ${targets.length} طلب`);

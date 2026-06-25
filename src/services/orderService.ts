@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Order, CartItem } from '@/types';
 import { mapDbOrder } from '@/mappers/orderMapper';
 import { getOrCreateIdempotencyKey } from '@/utils/checkoutSession';
+import { tryRecoverCheckoutOrder } from '@/services/checkoutRecoveryService';
 import { mapOrderRpcFailure, mapOrderError } from '@/utils/orderErrors';
 import { computeOrderStats, normalizeOrderPhone, type OrderListFilters, type OrderWorkflowTab } from '@/utils/orderWorkflowUtils';
 import { filtersToRpcParams, filtersToRpcParamsWithoutWorkflow, serializeOrderFilters } from '@/utils/orderQueryBuilder';
@@ -497,6 +498,7 @@ const isRetryableOrderError = (message: string): boolean => {
     lower.includes('insufficient stock') ||
     lower.includes('stock_deduction_failed') ||
     lower.includes('total_amount_mismatch') ||
+    lower.includes('rate_limited') ||
     message.includes('غير متوفر') ||
     message.includes('مخزون')
   ) {
@@ -506,9 +508,25 @@ const isRetryableOrderError = (message: string): boolean => {
     lower.includes('timeout') ||
     lower.includes('lock') ||
     lower.includes('could not be processed') ||
-    lower.includes('connection')
+    lower.includes('connection') ||
+    lower.includes('fetch') ||
+    lower.includes('network') ||
+    lower.includes('aborted') ||
+    lower.includes('econnreset') ||
+    lower.includes('socket') ||
+    lower.includes('temporarily unavailable')
   );
 };
+
+const buildRecoveredOrderResult = (
+  order: Order,
+  recovered: { orderId: string; totalAmount: number }
+): CreateOrderResult => ({
+  ...order,
+  id: recovered.orderId,
+  total: recovered.totalAmount,
+  wasIdempotent: true,
+});
 
 const normalizeOrderRpcItems = (items: CartItem[]) =>
   items.map((item) => ({
@@ -614,6 +632,33 @@ export const createOrder = async (
         };
       }
 
+      if (error) {
+        lastError = mapOrderRpcFailure({ error: error.message });
+        logger.warn('order.create.rpc_transport_error', {
+          ownerId,
+          attempt,
+          error: error.message,
+        });
+
+        if (attempt < maxAttempts && isRetryableOrderError(lastError)) {
+          await sleep(400 * attempt);
+          continue;
+        }
+
+        const recovered = await tryRecoverCheckoutOrder(ownerId, storeSlug);
+        if (recovered) {
+          logger.info('order.create.recovered_after_transport_error', {
+            orderId: recovered.orderId,
+            ownerId,
+            attempt,
+          });
+          metrics.increment('checkout.submit.recovered');
+          return buildRecoveredOrderResult(order, recovered);
+        }
+
+        throw new Error(lastError);
+      }
+
       if (
         data?.error === 'total_amount_mismatch' &&
         data?.expected_total != null &&
@@ -647,6 +692,16 @@ export const createOrder = async (
       }
 
       throw new Error(lastError);
+    }
+
+    const recovered = await tryRecoverCheckoutOrder(ownerId, storeSlug);
+    if (recovered) {
+      logger.info('order.create.recovered_after_retries', {
+        orderId: recovered.orderId,
+        ownerId,
+      });
+      metrics.increment('checkout.submit.recovered');
+      return buildRecoveredOrderResult(order, recovered);
     }
 
     throw new Error(lastError);

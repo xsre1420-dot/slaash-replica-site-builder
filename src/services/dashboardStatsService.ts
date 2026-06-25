@@ -4,6 +4,7 @@ import {
   parseRpcPeriodMetrics,
   type PeriodMetrics,
 } from '@/utils/dashboardInsightsUtils';
+import { netRevenueFromRpc } from '@/utils/analyticsMetrics';
 import type { OrderDashboardStats, WorkflowTabCounts } from '@/services/orderService';
 
 export type DashboardBatchPayload = {
@@ -53,7 +54,7 @@ export const fetchDashboardStatisticsBatch = async (
         workflowCounts: (payload.workflow_counts as WorkflowTabCounts) ?? null,
       };
 
-      cache.set(cacheKey, result, CacheTTL.SHORT, CacheTTL.STALE);
+      cache.set(cacheKey, result, CacheTTL.ANALYTICS, CacheTTL.ANALYTICS_STALE);
       return result;
     } catch {
       return null;
@@ -75,7 +76,7 @@ export const buildOrderDashboardStatsFromBatch = (
     newOrders: counts?.new ?? 0,
     pendingFulfillment: (counts?.new ?? 0) + (counts?.processing ?? 0) + (counts?.paid ?? 0),
     delivered: counts?.delivered ?? 0,
-    revenue: Number(allTime?.completed_revenue ?? month?.revenue ?? 0),
+    revenue: netRevenueFromRpc(allTime) || month?.revenue || 0,
     todayOrders: today?.orders ?? 0,
     weekOrders: week?.orders ?? 0,
     monthOrders: month?.orders ?? 0,

@@ -60,6 +60,7 @@ import {
   buildProductsExportFilename,
   exportProductsToCsv,
 } from '@/utils/productExportUtils';
+import { runWithConcurrency } from '@/utils/runWithConcurrency';
 import { generateUUID } from '@/lib/uuid';
 
 const ProductReviewsManager = lazy(() => import('@/components/product-management/ProductReviewsManager'));
@@ -363,14 +364,13 @@ const Products = () => {
     }
 
     setBulkProcessing(true);
-    let ok = 0;
-    for (const product of targets) {
+    const ok = await runWithConcurrency(targets, 4, async (product) => {
       const result =
         mode === 'publish'
           ? await publishProduct(product.id)
           : await setProductLifecycle(product.id, 'archive');
-      if (result.success) ok += 1;
-    }
+      return result.success;
+    });
     setBulkProcessing(false);
     setSelectedIds(new Set());
     await reloadCatalog();

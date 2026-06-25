@@ -10,9 +10,9 @@ const withTimeout = <T>(promise: Promise<T>, ms = 12000): Promise<T> => {
   ]);
 };
 
-/** Columns needed for chart, payment mix, peak hours, and client KPI fallback. */
+/** Order columns needed for chart, payment mix, peak hours, and client KPI fallback. */
 const CHART_ORDER_COLUMNS =
-  'id,status,total_amount,created_at,customer_name,customer_phone,payment_method';
+  'id,status,total_amount,created_at,customer_name,customer_phone,payment_method,payment_status';
 
 /** When RPC supplies KPIs, only load current-period rows for charts/breakdowns. */
 const CHART_ORDERS_CAP = 5000;
@@ -94,6 +94,14 @@ export const invalidateStatisticsCache = (
   const cacheKey = CacheKeys.statistics(ownerId, rangeKey);
   cache.del(cacheKey);
   clearInflight(cacheKey);
+};
+
+/** Clear all merchant analytics caches (orders stats, dashboard batch, statistics ranges). */
+export const invalidateMerchantAnalyticsCache = (ownerId: string): void => {
+  cache.flushByPrefix(`stats:${ownerId}:`);
+  cache.del(CacheKeys.dashboardBatch(ownerId));
+  cache.del(CacheKeys.ordersStatsSummary(ownerId));
+  clearInflight(CacheKeys.dashboardBatch(ownerId));
 };
 
 const fetchProductCount = async (
@@ -212,6 +220,46 @@ const fetchOrderItemsForStatistics = async (
   return data || [];
 };
 
+type CustomerMetricRow = { first_order_date: string | null; last_order_date: string | null };
+
+/** Match get_store_statistics customer semantics when RPC KPIs are missing. */
+const fetchCustomerMetricsForStatistics = async (
+  ownerId: string,
+  periodStart: string,
+  periodEnd: string
+): Promise<{ new_customers: number; returning_customers: number }> => {
+  const { data, error } = await supabase
+    .from('customers')
+    .select('first_order_date, last_order_date')
+    .eq('owner_id', ownerId);
+
+  if (error || !data?.length) {
+    return { new_customers: 0, returning_customers: 0 };
+  }
+
+  const start = new Date(periodStart).getTime();
+  const end = new Date(periodEnd).getTime();
+  let newCustomers = 0;
+  let returningCustomers = 0;
+
+  for (const row of data as CustomerMetricRow[]) {
+    const first = row.first_order_date ? new Date(row.first_order_date).getTime() : NaN;
+    const last = row.last_order_date ? new Date(row.last_order_date).getTime() : NaN;
+    if (Number.isFinite(first) && first >= start && first <= end) newCustomers += 1;
+    if (
+      Number.isFinite(first) &&
+      Number.isFinite(last) &&
+      first < start &&
+      last >= start &&
+      last <= end
+    ) {
+      returningCustomers += 1;
+    }
+  }
+
+  return { new_customers: newCustomers, returning_customers: returningCustomers };
+};
+
 export const fetchStatisticsData = async (
   dateRange: string,
   customStart?: string,
@@ -264,13 +312,14 @@ export const fetchStatisticsData = async (
       const visitsFrom = rpcReady ? periodStart : fallbackFrom;
       const skipVisits = rpcReady && hasUsableStatisticsKpis(previousKpis);
 
-      const [ordersResult, visitsResult, productCount] = await withTimeout(
+      const [ordersResult, visitsResult, productCount, orderItems] = await withTimeout(
         Promise.all([
           fetchOrdersForStatistics(ownerId, ordersFrom, periodEnd, ordersCap),
           skipVisits
             ? Promise.resolve({ visits: [] as DatabaseData['visits'] })
             : fetchVisitsForStatistics(ownerId, visitsFrom, periodEnd, visitsCap),
           fetchProductCount(ownerId, kpis),
+          fetchOrderItemsForStatistics(ownerId, periodStart, periodEnd),
         ])
       );
 
@@ -288,7 +337,20 @@ export const fetchStatisticsData = async (
 
       const orders = ordersResult.orders;
       const visits = visitsResult.visits;
-      const orderItems = await fetchOrderItemsForStatistics(ownerId, periodStart, periodEnd);
+
+      let enrichedKpis = kpis;
+      if (
+        rpcReady &&
+        kpis &&
+        (kpis.new_customers == null || kpis.returning_customers == null)
+      ) {
+        const customerMetrics = await fetchCustomerMetricsForStatistics(
+          ownerId,
+          periodStart,
+          periodEnd
+        );
+        enrichedKpis = { ...kpis, ...customerMetrics };
+      }
 
       const truncated =
         orders.length >= ordersCap ||
@@ -301,14 +363,19 @@ export const fetchStatisticsData = async (
         customers: [],
         products: productCount > 0 ? Array(productCount).fill(null) : [],
         visits,
-        kpis,
+        kpis: enrichedKpis,
         previousKpis,
         truncated,
         fetchWarnings: fetchWarnings.length > 0 ? fetchWarnings : undefined,
         dateBounds: bounds,
       };
 
-      cache.set(cacheKey, result, CacheTTL.SHORT, CacheTTL.STALE);
+      cache.set(
+        cacheKey,
+        result,
+        rpcReady ? CacheTTL.ANALYTICS : CacheTTL.SHORT,
+        rpcReady ? CacheTTL.ANALYTICS_STALE : CacheTTL.STALE
+      );
       return result;
     } catch (err) {
       console.error('[statistics] fetch failed, returning empty dataset:', err);

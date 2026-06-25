@@ -65,7 +65,9 @@ export const calculateStatistics = (
   const { start, end } = periodBounds;
   const periodOrders = orders.filter(o => inPeriod(o.created_at, start, end));
   const periodVisits = visits.filter(v => inPeriod(v.created_at, start, end));
-  const completedOrders = periodOrders.filter(o => o.status === 'completed');
+  const isNetCompletedOrder = (o: (typeof orders)[number]) =>
+    o.status === 'completed' && o.payment_status !== 'refunded';
+  const completedOrders = periodOrders.filter(isNetCompletedOrder);
   const completedOrderIds = new Set(completedOrders.map(o => o.id));
   const periodItems = orderItems.filter(i => completedOrderIds.has(i.order_id));
 
@@ -123,7 +125,7 @@ export const calculateStatistics = (
 
   const previousPeriodOrders = orders.filter(o => inPeriod(o.created_at, periodBounds.previousStart, start));
   const previousCompletedRevenue = previousPeriodOrders
-    .filter(o => o.status === 'completed')
+    .filter(isNetCompletedOrder)
     .reduce((s, o) => s + parseFloat(o.total_amount || 0), 0);
   const previousOrderCountClient = previousPeriodOrders.filter(o => o.status !== 'cancelled').length;
   const previousVisitorsClient = new Set(

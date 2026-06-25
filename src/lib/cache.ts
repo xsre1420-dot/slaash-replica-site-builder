@@ -123,6 +123,9 @@ export const CacheTTL = {
   MEDIUM: 60_000,
   LONG: 300_000,
   STALE: 15_000,
+  /** Aggregated KPI RPC responses — safe to cache longer when rollups are stable */
+  ANALYTICS: 90_000,
+  ANALYTICS_STALE: 45_000,
   /** Public storefront catalog — longer TTL reduces RPC churn under viral traffic */
   STOREFRONT: 120_000,
   STOREFRONT_STALE: 60_000,
@@ -135,6 +138,9 @@ export function flushOrderCache(ownerId: string): void {
   cache.del(CacheKeys.dashboardBatch(ownerId));
   cache.flushByPrefix(`stats:${ownerId}:`);
 }
+
+/** Alias — analytics KPIs are owner-scoped (one store per merchant account). */
+export const flushMerchantAnalyticsCache = flushOrderCache;
 
 /** Invalidate cached merchant data for a single tenant (avoids cross-tenant flush). */
 export function flushOwnerCache(ownerId: string): void {

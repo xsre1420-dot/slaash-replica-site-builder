@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchOrderStatsSummary, type OrderDashboardStats } from '@/services/orderService';
+import {
+  buildOrderDashboardStatsFromBatch,
+  fetchDashboardStatisticsBatch,
+} from '@/services/dashboardStatsService';
 import { useAuth } from '@/context/AuthContext';
 
 const EMPTY_STATS: OrderDashboardStats = {
@@ -27,6 +31,12 @@ export const useOrderDashboardStats = (refreshKey = 0) => {
 
     setLoading(true);
     try {
+      const batch = await fetchDashboardStatisticsBatch(user.id);
+      if (batch?.workflowCounts) {
+        setStats(buildOrderDashboardStatsFromBatch(batch));
+        return;
+      }
+
       const summary = await fetchOrderStatsSummary(user.id);
       setStats(summary);
     } catch (err) {
