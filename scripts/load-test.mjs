@@ -112,7 +112,7 @@ async function fetchFirstSlug() {
   }
 }
 
-/** One virtual customer session: browse store (+ visit if slug is live) */
+/** One virtual customer session — matches production client (bundle + deferred visit). */
 async function customerSession(slug, signal, mode) {
   const results = [];
   const calls =
@@ -127,26 +127,41 @@ async function customerSession(slug, signal, mode) {
             ),
           () => rpc('list_public_store_slugs', { p_limit: 10, p_offset: 0 }, signal),
         ]
-      : [
-          () =>
-            rpc(
-              'get_storefront_page_bundle',
-              { p_slug: slug, p_limit: 24, p_cursor: '', p_category: '', p_search: '' },
-              signal
-            ),
-          () =>
-            rpc(
-              'get_store_products_page',
-              { p_slug: slug, p_limit: 24, p_cursor: '', p_category: '', p_search: '' },
-              signal
-            ),
-          () =>
-            rpc('track_store_visit_by_slug', {
-              p_store_slug: slug,
-              p_page_path: `/store/${slug}`,
-              p_user_agent: 'SlaashLoadTest/1.0',
-            }, signal),
-        ];
+      : mode === 'legacy'
+        ? [
+            () =>
+              rpc(
+                'get_storefront_page_bundle',
+                { p_slug: slug, p_limit: 24, p_cursor: '', p_category: '', p_search: '' },
+                signal
+              ),
+            () =>
+              rpc(
+                'get_store_products_page',
+                { p_slug: slug, p_limit: 24, p_cursor: '', p_category: '', p_search: '' },
+                signal
+              ),
+            () =>
+              rpc('track_store_visit_by_slug', {
+                p_store_slug: slug,
+                p_page_path: `/store/${slug}`,
+                p_user_agent: 'SlaashLoadTest/1.0',
+              }, signal),
+          ]
+        : [
+            () =>
+              rpc(
+                'get_storefront_page_bundle',
+                { p_slug: slug, p_limit: 24, p_cursor: '', p_category: '', p_search: '' },
+                signal
+              ),
+            () =>
+              rpc('track_store_visit_by_slug', {
+                p_store_slug: slug,
+                p_page_path: `/store/${slug}`,
+                p_user_agent: 'SlaashLoadTest/1.0',
+              }, signal),
+          ];
   for (const call of calls) {
     try {
       results.push(await call());
@@ -182,9 +197,10 @@ async function runPhase(label, users, durationSec, slug, sessionMode) {
           }
         }
       } catch {
-        failed += 3;
-        iterations += 3;
-        statusCounts.timeout = (statusCounts.timeout || 0) + 3;
+        const rpcsPerSession = sessionMode === 'legacy' ? 3 : sessionMode === 'realistic' ? 2 : 3;
+        failed += rpcsPerSession;
+        iterations += rpcsPerSession;
+        statusCounts.timeout = (statusCounts.timeout || 0) + rpcsPerSession;
       } finally {
         clearTimeout(timer);
       }
@@ -242,15 +258,22 @@ console.log(`Phases: ramp concurrent storefront users\n`);
 
 const slugArg = args.slug && args.slug !== 'true' ? args.slug : null;
 let slug = slugArg;
-let sessionMode = 'full';
+const sessionModeArg = args.mode === 'legacy' ? 'legacy' : args.mode === 'infra' ? 'infra' : 'realistic';
+let sessionMode = sessionModeArg;
 
 if (slug) {
   const valid = await validateSlug(slug);
-  sessionMode = valid ? 'full' : 'infra';
+  if (sessionModeArg === 'realistic') {
+    sessionMode = valid ? 'realistic' : 'infra';
+  } else if (sessionModeArg === 'legacy') {
+    sessionMode = valid ? 'legacy' : 'infra';
+  }
 } else {
   slug = await fetchFirstSlug();
-  if (slug) {
-    sessionMode = (await validateSlug(slug)) ? 'full' : 'infra';
+  if (slug && sessionModeArg === 'realistic') {
+    sessionMode = (await validateSlug(slug)) ? 'realistic' : 'infra';
+  } else if (slug && sessionModeArg === 'legacy') {
+    sessionMode = (await validateSlug(slug)) ? 'legacy' : 'infra';
   }
 }
 
@@ -259,7 +282,10 @@ if (!slug) {
   sessionMode = 'infra';
   console.log('No published store slug — infra probe (sitemap + RPC throughput).\n');
 } else {
-  console.log(`Store slug: ${slug} (${sessionMode === 'full' ? 'full storefront' : 'infra'} mode)\n`);
+  const modeLabel =
+    sessionMode === 'realistic' ? 'realistic storefront (bundle + visit)' :
+    sessionMode === 'legacy' ? 'legacy (bundle + products + visit)' : 'infra';
+  console.log(`Store slug: ${slug} (${modeLabel})\n`);
 }
 
 const userLevels = [10, 25, 50, 100, 200, 500, 1000, 2500, 5000, 10000].filter((n) => n <= Math.max(CONCURRENT_USERS, 10000));
@@ -304,8 +330,9 @@ if (last?.statusCounts && Object.keys(last.statusCounts).length) {
 }
 
 console.log('\n────────────────── Notes ──────────────────');
-console.log('• Test simulates: store meta + product list + visit tracking per user.');
+console.log('• Realistic mode: get_storefront_page_bundle + track_store_visit_by_slug (2 RPCs).');
+console.log('• Legacy mode (--mode=legacy): adds redundant get_store_products_page (3 RPCs).');
 console.log('• Checkout/orders NOT load-tested (would affect real inventory).');
 console.log('• Supabase plan limits (connections, CPU) dominate at scale.');
-console.log('• Enable VITE_SUPABASE_POOLER_URL + Pro plan for 500+ concurrent users.');
+console.log('• Use Supavisor pooler (6543) + Pro plan for 500+ concurrent users.');
 console.log('═══════════════════════════════════════════════════\n');

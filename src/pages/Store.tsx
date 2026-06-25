@@ -26,7 +26,6 @@ import StorefrontTrustBar from "@/components/storefront/StorefrontTrustBar";
 import StorefrontFooter from "@/components/storefront/StorefrontFooter";
 import { getCheckoutPath, getProductPath } from "@/lib/storefrontPaths";
 import { persistCheckoutStoreSlug } from "@/lib/checkoutStoreContext";
-import { persistCheckoutStoreSlug } from "@/lib/checkoutStoreContext";
 import { BadgeCheck } from "lucide-react";
 
 const Store = () => {

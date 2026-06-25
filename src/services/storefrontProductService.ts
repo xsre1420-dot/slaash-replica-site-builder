@@ -110,6 +110,9 @@ export async function resolveStoreOwnerBySlug(slug: string): Promise<string | nu
   const normalized = slug.trim().toLowerCase();
   if (!/^[a-z0-9-]+$/.test(normalized)) return null;
 
+  const cachedOwner = peekStorefrontBundle(normalized)?.store?.owner_id;
+  if (cachedOwner) return String(cachedOwner);
+
   try {
     const { data: meta, error } = await (supabase as any).rpc('get_store_meta', { p_slug: normalized });
     if (!error && meta?.store?.owner_id) {
