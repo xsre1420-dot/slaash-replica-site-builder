@@ -5,7 +5,9 @@
 import { env } from '@/lib/env';
 import { dedup } from '@/lib/cache';
 import {
+  getRememberedStorefrontCacheVersion,
   getStorefrontCached,
+  rememberStorefrontCacheVersion,
   setStorefrontCached,
   StorefrontCacheKeys,
 } from '@/services/storefrontCacheService';
@@ -20,6 +22,13 @@ export interface StorefrontEdgeBundle {
   products: Product[];
   nextCursor: string | null;
   hasMore: boolean;
+  cacheVersion?: number;
+}
+
+export interface StorefrontEdgeMeta {
+  storeInfo: Record<string, unknown>;
+  categories: Record<string, unknown>[];
+  cacheVersion?: number;
 }
 
 const edgeDisabled = () =>
@@ -70,6 +79,54 @@ function mapProducts(rows: Record<string, unknown>[]): Product[] {
     .filter((p): p is Product => p != null && isStorefrontVisible(p));
 }
 
+function resolveVersion(slug: string, fromResponse?: number): number {
+  const version = fromResponse ?? getRememberedStorefrontCacheVersion(slug) ?? 0;
+  if (fromResponse != null) rememberStorefrontCacheVersion(slug, fromResponse);
+  return version;
+}
+
+/** Best-effort purge of edge worker memory for a store slug. */
+export async function requestEdgeStorefrontPurge(slug: string): Promise<boolean> {
+  const normalized = slug.trim().toLowerCase();
+  if (!/^[a-z0-9-]+$/.test(normalized)) return false;
+  const result = await postEdge<{ success?: boolean }>({ slug: normalized, purge: true });
+  return !!result?.success;
+}
+
+/** Store metadata + categories via edge (CDN-cacheable). */
+export async function fetchStorefrontMetaViaEdge(slug: string): Promise<StorefrontEdgeMeta | null> {
+  const normalized = slug.trim().toLowerCase();
+  if (!/^[a-z0-9-]+$/.test(normalized)) return null;
+
+  const versionHint = getRememberedStorefrontCacheVersion(normalized) ?? 0;
+  const cacheKey = StorefrontCacheKeys.edgeMeta(normalized, versionHint);
+
+  const cached = getStorefrontCached<StorefrontEdgeMeta>(cacheKey);
+  if (cached?.storeInfo) return cached;
+
+  return dedup(cacheKey, async () => {
+    const data = await postEdge<{
+      storeInfo?: Record<string, unknown>;
+      categories?: Record<string, unknown>[];
+      cache_version?: number;
+    }>({
+      slug: normalized,
+      metaOnly: true,
+    });
+
+    if (!data?.storeInfo) return null;
+
+    const cacheVersion = resolveVersion(normalized, data.cache_version);
+    const payload: StorefrontEdgeMeta = {
+      storeInfo: data.storeInfo,
+      categories: data.categories ?? [],
+      cacheVersion,
+    };
+    setStorefrontCached(StorefrontCacheKeys.edgeMeta(normalized, cacheVersion), payload);
+    return payload;
+  });
+}
+
 /** Meta + first product page in one edge round-trip (CDN-cacheable). */
 export async function fetchStorefrontBundleViaEdge(
   slug: string,
@@ -78,15 +135,17 @@ export async function fetchStorefrontBundleViaEdge(
   const normalized = slug.trim().toLowerCase();
   if (!/^[a-z0-9-]+$/.test(normalized)) return null;
 
+  const versionHint = getRememberedStorefrontCacheVersion(normalized) ?? 0;
   const cacheKey = StorefrontCacheKeys.edgeBundle(
     normalized,
     options.cursor || '',
     options.category || '',
-    options.search || ''
+    options.search || '',
+    versionHint
   );
 
   const cached = getStorefrontCached<StorefrontEdgeBundle>(cacheKey);
-  if (cached) return cached;
+  if (cached?.storeInfo) return cached;
 
   return dedup(cacheKey, async () => {
     const data = await postEdge<{
@@ -95,6 +154,7 @@ export async function fetchStorefrontBundleViaEdge(
       products?: Record<string, unknown>[];
       next_cursor?: string | null;
       has_more?: boolean;
+      cache_version?: number;
     }>({
       slug: normalized,
       bundle: true,
@@ -106,14 +166,25 @@ export async function fetchStorefrontBundleViaEdge(
 
     if (!data?.storeInfo) return null;
 
+    const cacheVersion = resolveVersion(normalized, data.cache_version);
     const payload: StorefrontEdgeBundle = {
       storeInfo: data.storeInfo,
       categories: data.categories ?? [],
       products: mapProducts(data.products ?? []),
       nextCursor: data.next_cursor ?? null,
       hasMore: !!data.has_more,
+      cacheVersion,
     };
-    setStorefrontCached(cacheKey, payload);
+    setStorefrontCached(
+      StorefrontCacheKeys.edgeBundle(
+        normalized,
+        options.cursor || '',
+        options.category || '',
+        options.search || '',
+        cacheVersion
+      ),
+      payload
+    );
     return payload;
   });
 }
@@ -131,21 +202,24 @@ export async function fetchStorefrontPageViaEdge(
   const normalized = slug.trim().toLowerCase();
   if (!/^[a-z0-9-]+$/.test(normalized)) return null;
 
+  const versionHint = getRememberedStorefrontCacheVersion(normalized) ?? 0;
   const cacheKey = StorefrontCacheKeys.edgePage(
     normalized,
     options.cursor || '',
     options.category || '',
-    options.search || ''
+    options.search || '',
+    versionHint
   );
 
   const cached = getStorefrontCached<StorefrontProductsPage>(cacheKey);
-  if (cached) return cached;
+  if (cached?.products) return cached;
 
   return dedup(cacheKey, async () => {
     const data = await postEdge<{
       products?: Record<string, unknown>[];
       next_cursor?: string | null;
       has_more?: boolean;
+      cache_version?: number;
     }>({
       slug: normalized,
       limit: options.limit ?? 24,
@@ -158,12 +232,22 @@ export async function fetchStorefrontPageViaEdge(
 
     if (!data?.products) return null;
 
+    const cacheVersion = resolveVersion(normalized, data.cache_version);
     const payload: StorefrontProductsPage = {
       products: mapProducts(data.products),
       nextCursor: data.next_cursor ?? null,
       hasMore: !!data.has_more,
     };
-    setStorefrontCached(cacheKey, payload);
+    setStorefrontCached(
+      StorefrontCacheKeys.edgePage(
+        normalized,
+        options.cursor || '',
+        options.category || '',
+        options.search || '',
+        cacheVersion
+      ),
+      payload
+    );
     return payload;
   });
 }

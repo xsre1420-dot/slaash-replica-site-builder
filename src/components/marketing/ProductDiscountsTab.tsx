@@ -11,22 +11,15 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchDiscountProducts,
+  updateProductDiscount,
+  type DiscountProductRow,
+} from "@/services/marketingService";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  image_url: string;
-  category: string;
-  discount_type?: 'none' | 'percentage' | 'amount';
-  discount_value?: number;
-  discount_start_date?: string;
-  discount_end_date?: string;
-  original_price?: number;
-}
+type Product = DiscountProductRow;
 
 export default function ProductDiscountsTab() {
   const { user } = useAuth();
@@ -45,13 +38,7 @@ export default function ProductDiscountsTab() {
   const loadProducts = useCallback(async () => {
     if (!user) return;
     setInitialLoading(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any)
-      .from('products')
-      .select('id, name, price, image_url, category, discount_type, discount_value, discount_start_date, discount_end_date, original_price')
-      .eq('owner_id', user.id)
-      .order('name', { ascending: true });
-    if (!error) setProducts((data || []) as Product[]);
+    setProducts(await fetchDiscountProducts(user.id));
     setInitialLoading(false);
   }, [user]);
 
@@ -102,13 +89,8 @@ export default function ProductDiscountsTab() {
     if (discountForm.discount_type !== 'none' && !selectedProduct.original_price) updateData.original_price = originalPrice;
     if (discountForm.discount_type === 'none' && selectedProduct.original_price) updateData.original_price = null;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
-      .from('products')
-      .update(updateData)
-      .eq('id', selectedProduct.id)
-      .eq('owner_id', user!.id);
-    if (error) toast.error("فشل في تحديث الخصم");
+    const result = await updateProductDiscount(user.id, selectedProduct.id, updateData);
+    if (!result.success) toast.error("فشل في تحديث الخصم");
     else { toast.success(discountForm.discount_type === 'none' ? "تم إزالة الخصم" : "تم حفظ الخصم"); loadProducts(); setIsDialogOpen(false); setSelectedProduct(null); }
     setLoading(false);
   };
@@ -116,15 +98,13 @@ export default function ProductDiscountsTab() {
   const removeDiscount = async (product: Product) => {
     if (!user) return;
     setLoading(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
-      .from('products')
-      .update({
-        discount_type: 'none', discount_value: 0, price: product.original_price || product.price, original_price: null,
-      })
-      .eq('id', product.id)
-      .eq('owner_id', user.id);
-    if (!error) { toast.success("تم إزالة الخصم"); loadProducts(); }
+    const result = await updateProductDiscount(user.id, product.id, {
+      discount_type: 'none',
+      discount_value: 0,
+      price: product.original_price || product.price,
+      original_price: null,
+    });
+    if (result.success) { toast.success("تم إزالة الخصم"); loadProducts(); }
     setLoading(false);
   };
 

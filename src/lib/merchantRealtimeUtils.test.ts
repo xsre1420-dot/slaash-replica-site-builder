@@ -27,6 +27,14 @@ describe('merchantRealtimeUtils', () => {
     expect(isNoiseOnlyChange(changed, PRODUCT_NOISE_FIELDS)).toBe(true);
   });
 
+  it('treats seo and cost-only changes as noise', () => {
+    const changed = getChangedFieldKeys(
+      { seo_title: 'a', cost: 10 },
+      { seo_title: 'b', cost: 12 }
+    );
+    expect(isNoiseOnlyChange(changed, PRODUCT_NOISE_FIELDS)).toBe(true);
+  });
+
   it('does not treat stock changes as noise', () => {
     const changed = getChangedFieldKeys(
       { stock_quantity: 2, updated_at: 'b' },

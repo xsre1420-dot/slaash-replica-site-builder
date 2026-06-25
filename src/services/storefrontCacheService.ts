@@ -11,12 +11,15 @@ export type { StorefrontBundleCache, StorefrontProductsPage } from '@/types/stor
 
 export const StorefrontCacheKeys = {
   bundle: (slug: string) => `storefront-bundle:${slug.trim().toLowerCase()}`,
+  version: (slug: string) => `storefront-version:${slug.trim().toLowerCase()}`,
   page: (slug: string, cursor: string, category: string, search: string, limit: number) =>
     `storefront-page:${slug.trim().toLowerCase()}:${cursor}:${category}:${search}:${limit}`,
-  edgeBundle: (slug: string, cursor: string, category: string, search: string) =>
-    `edge-bundle:${slug.trim().toLowerCase()}:${cursor}:${category}:${search}`,
-  edgePage: (slug: string, cursor: string, category: string, search: string) =>
-    `edge-page:${slug.trim().toLowerCase()}:${cursor}:${category}:${search}`,
+  edgeBundle: (slug: string, cursor: string, category: string, search: string, version?: number) =>
+    `edge-bundle:${slug.trim().toLowerCase()}:v${version ?? 0}:${cursor}:${category}:${search}`,
+  edgePage: (slug: string, cursor: string, category: string, search: string, version?: number) =>
+    `edge-page:${slug.trim().toLowerCase()}:v${version ?? 0}:${cursor}:${category}:${search}`,
+  edgeMeta: (slug: string, version?: number) =>
+    `edge-meta:${slug.trim().toLowerCase()}:v${version ?? 0}`,
   meta: (slug: string) => CacheKeys.tenantMeta(slug.trim().toLowerCase()),
   product: (slug: string, productId: string) =>
     CacheKeys.storefrontProduct(slug.trim().toLowerCase(), productId),
@@ -29,6 +32,15 @@ export function getStorefrontCached<T>(key: string, revalidate?: () => Promise<T
 
 export function setStorefrontCached<T>(key: string, data: T): void {
   cache.set(key, data, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+}
+
+export function rememberStorefrontCacheVersion(slug: string, version: number | undefined): void {
+  if (!slug || version == null || Number.isNaN(version)) return;
+  cache.set(StorefrontCacheKeys.version(slug), version, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+}
+
+export function getRememberedStorefrontCacheVersion(slug: string): number | null {
+  return cache.get<number>(StorefrontCacheKeys.version(slug));
 }
 
 const patchProductsInPage = (

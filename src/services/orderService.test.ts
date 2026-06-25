@@ -36,6 +36,7 @@ vi.mock('@/services/checkoutRecoveryService', () => ({
 
 vi.mock('@/services/storefrontProductService', () => ({
   invalidateStorefrontForOwner: vi.fn().mockResolvedValue(undefined),
+  invalidateStorefrontScope: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@/lib/cache', async (importOriginal) => {

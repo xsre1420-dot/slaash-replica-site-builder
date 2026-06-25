@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { scheduleIdle } from '@/utils/scheduleIdle';
+import { trackProductViewBySlug } from '@/services/analyticsTrackingService';
 
 const dedupeKey = (slug: string, productId: string) => `product-view:${slug}:${productId}`;
 const DEDUPE_MS = 30 * 60 * 1000;
@@ -33,19 +33,19 @@ export function useProductViewTracking(storeSlug?: string, productId?: string | 
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       inflightRef.current = key;
 
-      const viewPromise = (supabase as any).rpc('track_product_view_by_slug', {
-        p_slug: normalizedSlug,
-        p_product_id: normalizedProductId,
-        p_page_path: typeof window !== 'undefined' ? window.location.pathname : null,
-      });
+      const viewPromise = trackProductViewBySlug(
+        normalizedSlug,
+        normalizedProductId,
+        typeof window !== 'undefined' ? window.location.pathname : null
+      );
 
       const timeoutPromise = new Promise<never>((_, reject) => {
         window.setTimeout(() => reject(new Error('view_timeout')), VIEW_RPC_TIMEOUT_MS);
       });
 
       void Promise.race([viewPromise, timeoutPromise])
-        .then(({ data, error }: { data?: { success?: boolean }; error?: { message?: string } | null }) => {
-          if (!error && data?.success) {
+        .then((data) => {
+          if (data?.success) {
             try {
               sessionStorage.setItem(key, String(Date.now()));
             } catch {

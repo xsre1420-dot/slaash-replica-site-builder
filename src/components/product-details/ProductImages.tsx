@@ -1,5 +1,6 @@
 
 import { useState, useCallback, useEffect } from "react";
+import { resolveMediaDeliveryUrl } from "@/utils/cdnMediaUtils";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
 import { Sparkles, Flame, Tag } from "lucide-react";
 import ProductImageLightbox from "@/components/storefront/ProductImageLightbox";
@@ -129,7 +130,7 @@ const ProductImages = ({
           : "border-border/50 opacity-70 hover:opacity-100 hover:border-primary/30"
       }`}
     >
-      <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
+      <img src={resolveMediaDeliveryUrl(img, { variant: 'thumbnail' })} alt="" className="w-full h-full object-cover" loading="lazy" />
     </button>
   );
 

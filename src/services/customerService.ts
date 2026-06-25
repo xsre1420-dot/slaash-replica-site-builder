@@ -2,6 +2,7 @@
  * Customer metrics — merchant-scoped reads aligned with analytics RPC semantics.
  */
 import { supabase } from '@/integrations/supabase/client';
+import { assertMerchantOwner } from '@/lib/tenantGuard';
 
 export interface CustomerPeriodMetrics {
   new_customers: number;
@@ -14,6 +15,8 @@ export async function fetchCustomerMetricsForPeriod(
   periodStart: string,
   periodEnd: string
 ): Promise<CustomerPeriodMetrics> {
+  await assertMerchantOwner(ownerId);
+
   const [newResult, returningResult] = await Promise.all([
     supabase
       .from('customers')

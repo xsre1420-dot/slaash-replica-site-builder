@@ -6,6 +6,7 @@ export interface StorefrontBundleCache {
   products?: Product[];
   nextCursor?: string | null;
   hasMore?: boolean;
+  cacheVersion?: number;
 }
 
 export interface StorefrontProductsPage {

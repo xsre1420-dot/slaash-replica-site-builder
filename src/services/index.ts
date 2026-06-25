@@ -29,6 +29,9 @@ export * as CustomerService from '@/services/customerService';
 /** Analytics, KPIs, tracking */
 export * as AnalyticsService from '@/services/analyticsService';
 
+/** Background jobs & outbox monitoring */
+export * as BackgroundJobsService from '@/services/backgroundJobsService';
+
 /** Public storefront reads */
 export * as StorefrontService from '@/services/storefrontProductService';
 

@@ -10,7 +10,7 @@ import React, {
 } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { getAuthSession } from '@/services/authService';
 import { logger } from '@/lib/observability';
 import { hydrateMerchantStore } from '@/services/merchantHydration';
 
@@ -69,7 +69,7 @@ export const StoreBootstrapProvider = ({ children }: { children: ReactNode }) =>
       setIsReady(false);
 
       try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        const { session, error: sessionError } = await getAuthSession();
         if (sessionError || !session?.user || session.user.id !== userId) {
           logger.warn('merchant.hydrate.skipped', {
             userId,

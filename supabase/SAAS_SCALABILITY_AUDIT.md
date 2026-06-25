@@ -3,20 +3,20 @@
 **Date:** 2026-06-19  
 **Targets:** 100,000 stores · 10,000,000 products · 1,000,000 orders/month · 10,000 concurrent users  
 **Stack:** React SPA · Supabase (PostgreSQL + Auth + Storage + Realtime + Edge) · tenant-scoped RPC-first  
-**Related:** [`SCALABILITY_ROADMAP.md`](./SCALABILITY_ROADMAP.md) · [`POSTGRESQL_SCALE_PERFORMANCE_REPORT.md`](./POSTGRESQL_SCALE_PERFORMANCE_REPORT.md) · [`QUEUE_ARCHITECTURE_REPORT.md`](./QUEUE_ARCHITECTURE_REPORT.md) · [`CACHE_COVERAGE_REPORT.md`](./CACHE_COVERAGE_REPORT.md)
+**Related:** [`SCALABILITY_ROADMAP.md`](./SCALABILITY_ROADMAP.md) · [`SCALABILITY_AUDIT_REPORT.md`](./SCALABILITY_AUDIT_REPORT.md) · [`GROWTH_RISK_REPORT.md`](./GROWTH_RISK_REPORT.md) · [`CAPACITY_PROJECTION_REPORT.md`](./CAPACITY_PROJECTION_REPORT.md) · [`POSTGRESQL_SCALE_PERFORMANCE_REPORT.md`](./POSTGRESQL_SCALE_PERFORMANCE_REPORT.md)
 
 ---
 
-## Executive scores
+## Executive scores (updated post v53–v56)
 
 | Dimension | Score | Summary |
 |-----------|------:|---------|
-| **Architecture** | **86 / 100** | Tenant-scoped RPC-first design is correct for multi-tenant SaaS; dual product path and SPA-only compute are debt |
-| **Reliability** | **88 / 100** | Checkout idempotency + atomic stock; outbox enqueue without consumer; client-only offline queue |
-| **Performance** | **91 / 100** | v36–v40 removed major DB multipliers; remaining cliffs are OFFSET pagination and client heavy paths |
-| **Security** | **89 / 100** | RLS + RPC guards; XSS/session surface typical of SPAs |
-| **Scalability** | **82 / 100** | Per-tenant isolation scales; platform-wide growth needs workers, replicas, and partition strategy |
-| **Production readiness (overall)** | **87 / 100** | Ready for **1k concurrent** today; **10k concurrent** requires Phase B–C roadmap |
+| **Architecture** | **89 / 100** | RPC-first + edge/CDN/cache layers; dual product path remains debt |
+| **Reliability** | **90 / 100** | Checkout idempotency; webhook outbox consumer (v55) |
+| **Performance** | **93 / 100** | v36–v40 DB + storefront/CDN/realtime optimizations |
+| **Security** | **89 / 100** | RLS + RPC guards; tenant isolation 93/100 |
+| **Scalability** | **86 / 100** | Per-tenant scales to 100k stores; 10k concurrent needs H2–H3 |
+| **Production readiness (overall)** | **90 / 100** | Ready for **1–2k concurrent**; **10k** requires roadmap execution |
 
 ---
 

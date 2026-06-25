@@ -1,17 +1,23 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
 import { isProduction } from '../_shared/env.ts';
 import { logStructured, withEdgeSpan } from '../_shared/observability.ts';
+import {
+  buildPayloadKey,
+  edgeCacheControlHeader,
+  edgeCacheStats,
+  getCachedVersion,
+  getMemoryCached,
+  purgeSlugFromMemory,
+  setCachedVersion,
+  setMemoryCache,
+} from '../_shared/edgeCache.ts';
 
 const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') || '').split(',').map(s => s.trim()).filter(Boolean);
-
-const HTTP_CACHE_SECONDS = 120;
-const EDGE_MEMORY_TTL_MS = 120_000;
-const EDGE_MEMORY_MAX = 2_000;
 
 function getCorsHeaders(origin: string | null): Record<string, string> | null {
   const base = {
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Cache-Control': `public, max-age=${HTTP_CACHE_SECONDS}, stale-while-revalidate=180`,
+    'Cache-Control': edgeCacheControlHeader(),
   };
 
   if (isProduction()) {
@@ -32,26 +38,6 @@ function getCorsHeaders(origin: string | null): Record<string, string> | null {
 const requestCounts = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT_WINDOW = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 300;
-
-const memoryCache = new Map<string, { body: string; expiresAt: number }>();
-
-function getMemoryCached(key: string): string | null {
-  const hit = memoryCache.get(key);
-  if (!hit) return null;
-  if (Date.now() > hit.expiresAt) {
-    memoryCache.delete(key);
-    return null;
-  }
-  return hit.body;
-}
-
-function setMemoryCache(key: string, body: string): void {
-  if (memoryCache.size >= EDGE_MEMORY_MAX) {
-    const oldest = memoryCache.keys().next().value;
-    if (oldest) memoryCache.delete(oldest);
-  }
-  memoryCache.set(key, { body, expiresAt: Date.now() + EDGE_MEMORY_TTL_MS });
-}
 
 function getRealIP(req: Request): string {
   return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
@@ -82,6 +68,36 @@ function rpcParams(slug: string, limit: number, cursor: string | null, category:
     p_category: category || '',
     p_search: search || '',
   };
+}
+
+async function resolveCacheVersion(
+  supabase: ReturnType<typeof createClient>,
+  slug: string
+): Promise<number> {
+  const cached = getCachedVersion(slug);
+  if (cached != null) return cached;
+
+  const { data, error } = await supabase.rpc('get_storefront_cache_version', { p_slug: slug });
+  const version = !error && data != null ? Number(data) : 1;
+  setCachedVersion(slug, version);
+  return version;
+}
+
+function jsonResponse(
+  body: string,
+  corsHeaders: Record<string, string>,
+  cacheStatus: 'HIT' | 'MISS' | 'PURGE',
+  version?: number
+): Response {
+  const headers: Record<string, string> = {
+    ...corsHeaders,
+    'Content-Type': 'application/json',
+    'X-Cache': cacheStatus,
+  };
+  if (version != null) {
+    headers['ETag'] = `"storefront-v${version}"`;
+  }
+  return new Response(body, { status: 200, headers });
 }
 
 Deno.serve(async (req) => {
@@ -132,22 +148,31 @@ Deno.serve(async (req) => {
       });
     }
 
-    const wantBundle = requestBody.bundle === true;
-    const wantMetaOnly = requestBody.metaOnly === true;
-    const wantProductsOnly = requestBody.page === true && !wantBundle && !wantMetaOnly;
-    const cacheKey = `${slug}:${wantBundle ? 'bundle' : wantProductsOnly ? 'page' : 'meta'}:${cursor}:${category}:${search}:${limit}`;
-
-    const cached = getMemoryCached(cacheKey);
-    if (cached) {
-      return new Response(cached, {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'HIT' },
-      });
-    }
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+    if (requestBody.purge === true) {
+      const removed = purgeSlugFromMemory(slug);
+      logStructured('info', 'get-store-products.purge', { slug, removed, stats: edgeCacheStats() });
+      return new Response(JSON.stringify({ success: true, purged: removed }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'PURGE' },
+      });
+    }
+
+    const wantBundle = requestBody.bundle === true;
+    const wantMetaOnly = requestBody.metaOnly === true;
+    const wantProductsOnly = requestBody.page === true && !wantBundle && !wantMetaOnly;
+    const kind = wantBundle ? 'bundle' : wantProductsOnly ? 'page' : 'meta';
+
+    const cacheVersion = await resolveCacheVersion(supabase, slug);
+    const cacheKey = buildPayloadKey(slug, cacheVersion, kind, cursor, category, search, limit);
+
+    const cached = getMemoryCached(cacheKey, cacheVersion);
+    if (cached) {
+      return jsonResponse(cached, corsHeaders, 'HIT', cacheVersion);
+    }
 
     const { data: dbAllowed, error: rateErr } = await supabase.rpc('check_rpc_rate_limit', {
       p_key: `edge-store:${slug}:${clientIP}`,
@@ -178,19 +203,20 @@ Deno.serve(async (req) => {
         });
       }
 
+      const version = Number(bundle.cache_version ?? cacheVersion);
+      setCachedVersion(slug, version);
       const payload = JSON.stringify({
         storeInfo: bundle.store,
         categories: bundle.categories || [],
         products: bundle.products || [],
         next_cursor: bundle.next_cursor || null,
         has_more: bundle.has_more || false,
+        cache_version: version,
         success: true,
       });
-      setMemoryCache(cacheKey, payload);
-      return new Response(payload, {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' },
-      });
+      const versionedKey = buildPayloadKey(slug, version, kind, cursor, category, search, limit);
+      setMemoryCache(versionedKey, payload, version);
+      return jsonResponse(payload, corsHeaders, 'MISS', version);
     }
 
     if (wantMetaOnly) {
@@ -202,16 +228,17 @@ Deno.serve(async (req) => {
         });
       }
 
+      const version = Number(meta.cache_version ?? cacheVersion);
+      setCachedVersion(slug, version);
       const payload = JSON.stringify({
         storeInfo: meta.store,
         categories: meta.categories || [],
+        cache_version: version,
         success: true,
       });
-      setMemoryCache(cacheKey, payload);
-      return new Response(payload, {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' },
-      });
+      const versionedKey = buildPayloadKey(slug, version, kind, cursor, category, search, limit);
+      setMemoryCache(versionedKey, payload, version);
+      return jsonResponse(payload, corsHeaders, 'MISS', version);
     }
 
     const { data: page, error: pageErr } = await supabase.rpc(
@@ -230,13 +257,11 @@ Deno.serve(async (req) => {
       products: page?.products || [],
       next_cursor: page?.next_cursor || null,
       has_more: page?.has_more || false,
+      cache_version: cacheVersion,
       success: true,
     });
-    setMemoryCache(cacheKey, payload);
-    return new Response(payload, {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' },
-    });
+    setMemoryCache(cacheKey, payload, cacheVersion);
+    return jsonResponse(payload, corsHeaders, 'MISS', cacheVersion);
   } catch (error) {
     logStructured('error', 'get-store-products.error', {
       clientIP,

@@ -66,7 +66,7 @@ const ProductCard = memo(({
         onClick={() => onView(product.id)}
       >
         <div className="relative w-28 h-28 rounded-xl overflow-hidden flex-shrink-0 bg-muted/40">
-          <OptimizedImage src={product.image} alt={product.name} className="w-full h-full group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+          <OptimizedImage src={product.image} alt={product.name} variant="thumbnail" className="w-full h-full group-hover:scale-105 transition-transform duration-500" loading="lazy" />
           <div className="absolute top-1.5 right-1.5 flex flex-col gap-1">
             {hasDiscount && (
               <span className="bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded-md text-[9px] font-bold shadow-sm">
@@ -143,6 +143,7 @@ const ProductCard = memo(({
         <OptimizedImage
           src={product.image}
           alt={product.name}
+          variant="thumbnail"
           className="w-full h-full group-hover:scale-110 transition-transform duration-700"
           loading="lazy"
         />

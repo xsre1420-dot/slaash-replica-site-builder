@@ -21,7 +21,7 @@ import { useFavorites } from "@/hooks/useFavorites";
 import { useToast } from "@/hooks/use-toast";
 import { useStoreDisplay } from "@/hooks/useStoreDisplay";
 import { STORE_PRODUCTS_PAGE_SIZE } from "@/constants/pagination";
-import SEOHead from "@/components/seo/SEOHead";
+import { resolveMediaDeliveryUrl } from "@/utils/cdnMediaUtils";
 import StorefrontTrustBar from "@/components/storefront/StorefrontTrustBar";
 import StorefrontFooter from "@/components/storefront/StorefrontFooter";
 import { getCheckoutPath, getProductPath } from "@/lib/storefrontPaths";
@@ -366,7 +366,7 @@ const Store = () => {
               {storeLogo && (
                 <div className="relative">
                   <div className="absolute inset-0 bg-primary/20 rounded-full blur-md" />
-                  <img src={storeLogo} alt="" className="relative w-9 h-9 rounded-full object-cover ring-2 ring-primary/20" />
+                  <img src={resolveMediaDeliveryUrl(storeLogo, { variant: 'thumbnail' })} alt="" className="relative w-9 h-9 rounded-full object-cover ring-2 ring-primary/20" />
                 </div>
               )}
               <p className="font-bold text-base text-foreground truncate flex items-center gap-1 justify-center">

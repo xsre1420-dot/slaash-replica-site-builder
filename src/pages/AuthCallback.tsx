@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
 import { mapAuthError } from '@/lib/authUtils';
+import { exchangeAuthCodeForSession, getAuthSession } from '@/services/authService';
 
 type CallbackState = 'processing' | 'success' | 'error';
 
@@ -39,19 +39,19 @@ const AuthCallback = () => {
         }
 
         if (code) {
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          const { error: exchangeError } = await exchangeAuthCodeForSession(code);
           if (exchangeError) {
-            console.error('[auth.callback] exchange failed:', exchangeError.message);
-            finish('error', mapAuthError(exchangeError.message));
+            console.error('[auth.callback] exchange failed:', exchangeError);
+            finish('error', mapAuthError(exchangeError));
             return;
           }
           window.history.replaceState({}, '', '/auth/callback');
         }
 
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        const { session, error: sessionError } = await getAuthSession();
         if (sessionError) {
-          console.error('[auth.callback] getSession failed:', sessionError.message);
-          finish('error', mapAuthError(sessionError.message));
+          console.error('[auth.callback] getSession failed:', sessionError);
+          finish('error', mapAuthError(sessionError));
           return;
         }
 

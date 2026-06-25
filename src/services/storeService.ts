@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { cache, CacheKeys, CacheTTL } from '@/lib/cache';
-import { invalidateStorefrontForOwner } from '@/services/storefrontProductService';
+import { invalidateStorefrontScope } from '@/services/storefrontProductService';
 import { isSchemaColumnError } from '@/lib/productUpdateUtils';
 import { mapDbProduct } from '@/mappers/productMapper';
 import { defaultStoreSettings, StoreProfile, StoreSettings } from '@/types/store';
@@ -81,14 +81,14 @@ export const upsertStoreSettings = async (
   }
 
   cache.del(CacheKeys.storeSettings(ownerId));
-  void invalidateStorefrontForOwner(ownerId);
+  void invalidateStorefrontScope(ownerId, 'settings');
   return { success: true };
 };
 
 export const invalidateStoreSettingsCache = (ownerId: string) => {
   cache.del(CacheKeys.storeSettings(ownerId));
   cache.del(CacheKeys.store(ownerId));
-  void invalidateStorefrontForOwner(ownerId);
+  void invalidateStorefrontScope(ownerId, 'settings');
 };
 
 export interface StoreRecord {

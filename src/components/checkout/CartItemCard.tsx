@@ -29,6 +29,7 @@ const CartItemCard = memo(({ item, index, maxQuantity, onRemove, onUpdateQuantit
         <OptimizedImage
           src={item.product.image}
           alt={item.product.name}
+          variant="thumbnail"
           className="w-16 h-16 rounded-lg shrink-0"
           width={64}
           height={64}

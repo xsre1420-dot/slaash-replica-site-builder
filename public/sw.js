@@ -1,5 +1,5 @@
-// Service Worker v2 — optimized caching strategies
-const CACHE_NAME = 'bidaya-cache-v2';
+// Service Worker v3 — CDN-aware caching (storage assets are UUID-versioned / immutable)
+const CACHE_NAME = 'bidaya-cache-v3';
 const STATIC_ASSETS = ['/', '/placeholder.svg'];
 
 // Install: pre-cache essentials
@@ -33,7 +33,7 @@ self.addEventListener('fetch', (event) => {
   // Skip auth endpoints
   if (url.pathname.includes('/auth/')) return;
 
-  // Images: cache-first with background update
+  // Supabase Storage: cache-first — objects use UUID paths + 1yr Cache-Control from upload
   if (
     request.destination === 'image' ||
     url.pathname.match(/\.(png|jpg|jpeg|webp|gif|svg|ico)$/i) ||
@@ -42,14 +42,11 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       caches.open(CACHE_NAME).then(async (cache) => {
         const cached = await cache.match(request);
-        const fetchPromise = fetch(request)
-          .then((res) => {
-            if (res.ok) cache.put(request, res.clone());
-            return res;
-          })
-          .catch(() => cached);
-        return cached || fetchPromise;
-      })
+        if (cached) return cached;
+        const res = await fetch(request);
+        if (res.ok) cache.put(request, res.clone());
+        return res;
+      }).catch(() => fetch(request))
     );
     return;
   }

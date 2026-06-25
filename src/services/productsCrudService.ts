@@ -26,6 +26,7 @@ import {
   cleanupRemovedProductImages,
   deleteProductStorageImages,
 } from '@/utils/productImageCleanup';
+import { applyStockQuantityPatch, InventoryRestockError } from '@/services/inventoryService';
 import type { Product } from '@/types';
 
 export type ProductsCrudResult<T> =
@@ -212,7 +213,30 @@ export async function updateProduct(
   const existingRow = await fetchRowById(productId, ownerId);
   if (!existingRow) return { success: false, error: 'المنتج غير موجود' };
 
-  const merged = mergeProductForUpdate(mapDbProduct(existingRow), patch);
+  const existing = mapDbProduct(existingRow);
+  let workingProduct = existing;
+  const patchForMerge = { ...patch };
+
+  if ('stockQuantity' in patch && patch.stockQuantity !== undefined) {
+    try {
+      const newQty = await applyStockQuantityPatch(
+        productId,
+        ownerId,
+        existing.stockQuantity,
+        patch.stockQuantity
+      );
+      workingProduct = { ...existing, stockQuantity: newQty };
+    } catch (err) {
+      const message =
+        err instanceof InventoryRestockError
+          ? err.message
+          : 'تعذر تحديث المخزون — حاول مرة أخرى';
+      return { success: false, error: message };
+    }
+    delete patchForMerge.stockQuantity;
+  }
+
+  const merged = mergeProductForUpdate(workingProduct, patchForMerge);
   const attempts = buildProductUpdateAttempts(merged);
 
   for (const updateRow of attempts) {

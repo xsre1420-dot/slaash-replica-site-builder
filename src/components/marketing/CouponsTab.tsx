@@ -11,25 +11,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-
-interface Coupon {
-  id: string;
-  code: string;
-  discount_type: 'percentage' | 'fixed_amount';
-  discount_value: number;
-  minimum_order_amount: number;
-  usage_limit: number | null;
-  used_count: number;
-  start_date: string;
-  end_date: string | null;
-  is_active: boolean;
-  description: string;
-}
+import {
+  createMerchantCoupon,
+  deleteMerchantCoupon,
+  listMerchantCoupons,
+  updateMerchantCoupon,
+  type MerchantCoupon,
+} from "@/services/couponService";
 
 export default function CouponsTab() {
   const { user } = useAuth();
-  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [coupons, setCoupons] = useState<MerchantCoupon[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -49,14 +41,7 @@ export default function CouponsTab() {
   const loadCoupons = useCallback(async () => {
     if (!user) return;
     setInitialLoading(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any)
-      .from('marketing_coupons')
-      .select('*')
-      .eq('owner_id', user.id)
-      .order('created_at', { ascending: false });
-
-    if (!error) setCoupons((data || []) as Coupon[]);
+    setCoupons(await listMerchantCoupons(user.id));
     setInitialLoading(false);
   }, [user]);
 
@@ -87,25 +72,20 @@ export default function CouponsTab() {
       return;
     }
     setLoading(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
-      .from('marketing_coupons')
-      .insert({
-        owner_id: user.id,
-        code: newCoupon.code.toUpperCase(),
-        discount_type: newCoupon.discount_type,
-        discount_value: newCoupon.discount_value,
-        minimum_order_amount: newCoupon.minimum_order_amount,
-        usage_limit: newCoupon.usage_limit,
-        start_date: new Date(newCoupon.start_date).toISOString(),
-        end_date: newCoupon.end_date ? new Date(newCoupon.end_date).toISOString() : null,
-        description: newCoupon.description,
-        is_active: true,
-        used_count: 0
-      });
+    const result = await createMerchantCoupon(user.id, {
+      code: newCoupon.code.toUpperCase(),
+      discount_type: newCoupon.discount_type,
+      discount_value: newCoupon.discount_value,
+      minimum_order_amount: newCoupon.minimum_order_amount,
+      usage_limit: newCoupon.usage_limit,
+      start_date: new Date(newCoupon.start_date).toISOString(),
+      end_date: newCoupon.end_date ? new Date(newCoupon.end_date).toISOString() : null,
+      description: newCoupon.description,
+      is_active: true,
+    });
 
-    if (error) {
-      toast.error(error.message.includes('duplicate') ? "كود الكوبون موجود مسبقاً" : "فشل في إضافة الكوبون");
+    if (!result.success) {
+      toast.error(result.error?.includes('duplicate') ? "كود الكوبون موجود مسبقاً" : "فشل في إضافة الكوبون");
     } else {
       toast.success("تمت إضافة الكوبون الجديد");
       loadCoupons();
@@ -117,25 +97,15 @@ export default function CouponsTab() {
 
   const handleDelete = async (id: string) => {
     if (!user) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
-      .from('marketing_coupons')
-      .delete()
-      .eq('id', id)
-      .eq('owner_id', user.id);
-    if (!error) { toast.success("تم حذف الكوبون"); loadCoupons(); }
+    const result = await deleteMerchantCoupon(user.id, id);
+    if (result.success) { toast.success("تم حذف الكوبون"); loadCoupons(); }
     else toast.error("فشل في حذف الكوبون");
   };
 
   const handleToggle = async (id: string, isActive: boolean) => {
     if (!user) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
-      .from('marketing_coupons')
-      .update({ is_active: !isActive })
-      .eq('id', id)
-      .eq('owner_id', user.id);
-    if (!error) { loadCoupons(); toast.success(`تم ${!isActive ? 'تفعيل' : 'إيقاف'} الكوبون`); }
+    const result = await updateMerchantCoupon(user.id, id, { is_active: !isActive });
+    if (result.success) { loadCoupons(); toast.success(`تم ${!isActive ? 'تفعيل' : 'إيقاف'} الكوبون`); }
   };
 
   return (

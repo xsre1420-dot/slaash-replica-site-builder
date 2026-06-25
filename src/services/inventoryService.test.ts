@@ -102,4 +102,50 @@ describe('inventoryService', () => {
     );
     expect(mockUpdate).not.toHaveBeenCalled();
   });
+
+  it('applyStockQuantityPatch uses increment RPC for positive deltas', async () => {
+    const { applyStockQuantityPatch } = await import('./inventoryService');
+    const qty = await applyStockQuantityPatch('p1', 'o1', 10, 15);
+    expect(qty).toBe(15);
+    expect(mockRpc).toHaveBeenCalledWith(
+      'increment_product_stock',
+      expect.objectContaining({ p_delta: 5, p_reason: 'restock' })
+    );
+  });
+
+  it('applyStockQuantityPatch rejects negative deltas', async () => {
+    const { applyStockQuantityPatch } = await import('./inventoryService');
+    await expect(applyStockQuantityPatch('p1', 'o1', 10, 5)).rejects.toBeInstanceOf(
+      InventoryRestockError
+    );
+  });
+
+  it('auditInventoryIntegrity maps RPC payload', async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: {
+        success: true,
+        score: 95,
+        total_products: 10,
+        issues_count: 1,
+        summary: {
+          negative_stock: 0,
+          variant_drift: 1,
+          duplicate_initial_stock: 0,
+          missing_initial_stock: 0,
+          ledger_mismatch: 0,
+          orphan_movements: 0,
+          archived_still_active: 0,
+        },
+        issues: [{ type: 'variant_drift', product_id: 'p1' }],
+      },
+      error: null,
+    });
+    const { auditInventoryIntegrity } = await import('./inventoryService');
+    const result = await auditInventoryIntegrity('o1');
+    expect(result?.score).toBe(95);
+    expect(result?.summary.variant_drift).toBe(1);
+    expect(mockRpc).toHaveBeenCalledWith('audit_merchant_inventory_integrity', {
+      p_owner_id: 'o1',
+    });
+  });
 });

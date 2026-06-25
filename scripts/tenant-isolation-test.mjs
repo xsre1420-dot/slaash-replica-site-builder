@@ -134,6 +134,42 @@ tests.push({
   pass: marketingProbe.json === null || marketingProbe.json?.meta_pixel_id === undefined,
 });
 
+const statsBundleProbe = await rpc('get_statistics_page_bundle', {
+  p_owner_id: VICTIM_OWNER,
+  p_current_start: '2000-01-01T00:00:00Z',
+  p_current_end: '2030-01-01T00:00:00Z',
+  p_previous_start: '1999-01-01T00:00:00Z',
+  p_previous_end: '1999-12-31T23:59:59Z',
+});
+tests.push({
+  name: 'anon cannot read victim statistics page bundle',
+  pass: statsBundleProbe.json === null || statsBundleProbe.json?.current === undefined,
+});
+
+const inventoryProbe = await tableSelect('inventory_movements', 'select=id&limit=1');
+tests.push({
+  name: 'anon cannot read inventory_movements',
+  pass: inventoryProbe.status === 200 && (inventoryProbe.text.includes('[]') || inventoryProbe.text === '[]'),
+});
+
+const dailyStatsProbe = await tableSelect('store_daily_stats', 'select=owner_id&limit=1');
+tests.push({
+  name: 'anon cannot read store_daily_stats rollups',
+  pass: dailyStatsProbe.status === 200 && !dailyStatsProbe.text.includes('owner_id'),
+});
+
+const outboxProbe = await tableSelect('analytics_event_outbox', 'select=id&limit=1');
+const outboxBlocked =
+  outboxProbe.status === 404 ||
+  String(outboxProbe.text).includes('Could not find') ||
+  String(outboxProbe.text).includes('PGRST205') ||
+  (outboxProbe.status === 200 &&
+    (outboxProbe.text.includes('[]') || outboxProbe.text === '[]'));
+tests.push({
+  name: 'anon cannot read analytics_event_outbox',
+  pass: outboxBlocked,
+});
+
 // --- Cross-tenant orders ---
 const listOrdersProbe = await rpc('list_merchant_orders', {
   p_owner_id: VICTIM_OWNER,
@@ -203,6 +239,20 @@ const publishProbe = await rpc('publish_owner_product', {
 tests.push({
   name: 'anon cannot publish victim product',
   pass: publishProbe.json?.success === false || publishProbe.json?.error === 'unauthorized',
+});
+
+const auditProbe = await rpc('audit_merchant_inventory_integrity', {
+  p_owner_id: VICTIM_OWNER,
+});
+tests.push({
+  name: 'anon cannot audit victim inventory',
+  pass:
+    auditProbe.status === 401 ||
+    auditProbe.status === 404 ||
+    auditProbe.json?.code === 'PGRST202' ||
+    auditProbe.text?.includes('audit_merchant_inventory_integrity') ||
+    auditProbe.json?.error === 'forbidden' ||
+    auditProbe.json?.success === false,
 });
 
 const storeProbe = await rpc('get_store_for_user', {

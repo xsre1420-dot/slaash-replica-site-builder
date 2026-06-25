@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { isRecoveryUrl } from '@/lib/authUtils';
+import {
+  exchangeAuthCodeForSession,
+  getAuthSession,
+  subscribeAuthStateChange,
+} from '@/services/authService';
 
 export type PasswordRecoveryMode = 'checking' | 'request' | 'update';
 
@@ -26,7 +30,7 @@ export function usePasswordRecoveryMode() {
       if (search.has('code')) {
         const code = search.get('code');
         if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          const { error } = await exchangeAuthCodeForSession(code);
           if (!error) {
             setUpdateMode();
             window.history.replaceState({}, '', window.location.pathname);
@@ -35,7 +39,7 @@ export function usePasswordRecoveryMode() {
         }
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
+      const { session } = await getAuthSession();
       if (cancelled) return;
 
       if (session && isRecoveryUrl()) {
@@ -45,7 +49,7 @@ export function usePasswordRecoveryMode() {
       }
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = subscribeAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') setUpdateMode();
     });
 

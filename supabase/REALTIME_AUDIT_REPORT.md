@@ -1,9 +1,10 @@
 # Realtime Audit Report
 
-**Date:** 2026-06-19  
+**Date:** 2026-06-19 (updated — event metrics + expanded noise filter)  
 **Role:** Supabase Realtime Specialist  
 **Scope:** Orders, notifications, inventory, dashboard, analytics  
-**Stack:** Supabase `postgres_changes` via shared `merchantRealtimeHub`
+**Stack:** Supabase `postgres_changes` via shared `merchantRealtimeHub`  
+**See also:** [REALTIME_ARCHITECTURE_AUDIT_REPORT.md](./REALTIME_ARCHITECTURE_AUDIT_REPORT.md) · [REALTIME_EVENT_OPTIMIZATION_REPORT.md](./REALTIME_EVENT_OPTIMIZATION_REPORT.md) · [REALTIME_SCALABILITY_REPORT.md](./REALTIME_SCALABILITY_REPORT.md)
 
 ---
 
@@ -16,7 +17,7 @@
 | **Inventory** | Via `products` channel (stock patches) | Shared hub, cache-first | **92/100** |
 | **Dashboard** | Via order channel → cache flush + refetch | Debounced 500ms | **91/100** |
 | **Analytics / Statistics** | Order-driven invalidation (no analytics table sub) | Cache + refetch on order events | **88/100** |
-| **Overall realtime health** | | | **91/100** |
+| **Overall realtime health** | | | **93/100** |
 
 **Channels per active merchant:** 2 max (`products-realtime-{ownerId}`, `orders-realtime-{ownerId}`)  
 **Public storefront:** 0 Realtime channels (HTTP tracking only)

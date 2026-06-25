@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { scheduleIdle } from '@/utils/scheduleIdle';
+import { trackStoreVisitBySlug } from '@/services/analyticsTrackingService';
 
 const dedupeKey = (slug: string, path: string) => `visit-tracked:${slug}:${path}`;
 const slugDedupeKey = (slug: string) => `visit-tracked-slug:${slug}`;
@@ -43,18 +43,18 @@ export function useStoreVisitTracking(storeSlug?: string) {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       inflightRef.current = key;
 
-      const visitPromise = (supabase as any).rpc('track_store_visit_by_slug', {
-        p_store_slug: normalized,
-        p_page_path: pagePath,
-        p_user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-      });
+      const visitPromise = trackStoreVisitBySlug(
+        normalized,
+        pagePath,
+        typeof navigator !== 'undefined' ? navigator.userAgent : null
+      );
 
       const timeoutPromise = new Promise<never>((_, reject) => {
         window.setTimeout(() => reject(new Error('visit_timeout')), VISIT_RPC_TIMEOUT_MS);
       });
 
       void Promise.race([visitPromise, timeoutPromise])
-        .then(({ data }: { data?: { success?: boolean } }) => {
+        .then((data) => {
           if (data?.success) {
             try {
               const now = String(Date.now());

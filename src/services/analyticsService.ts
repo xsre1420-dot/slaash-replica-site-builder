@@ -18,4 +18,9 @@ export {
 
 export { trackStoreVisitBySlug, trackProductViewBySlug } from '@/services/analyticsTrackingService';
 
+export {
+  auditMerchantAnalyticsHealth,
+  type AnalyticsHealthResult,
+} from '@/services/analyticsHealthService';
+
 export { fetchCustomerMetricsForPeriod, type CustomerPeriodMetrics } from '@/services/customerService';

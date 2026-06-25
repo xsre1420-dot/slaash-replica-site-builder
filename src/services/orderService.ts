@@ -18,7 +18,7 @@ import {
 } from '@/lib/security/rateLimiter';
 import type { MarketingAttribution } from '@/lib/attribution';
 import { escapeIlikePattern, sanitizePostgrestFilterValue } from '@/lib/security/postgrestFilter';
-import { invalidateStorefrontForOwner } from '@/services/storefrontProductService';
+import { invalidateStorefrontScope } from '@/services/storefrontProductService';
 import { assertMerchantOwner } from '@/lib/tenantGuard';
 import type { OrderDashboardStats, WorkflowTabCounts } from '@/types/orders';
 import {
@@ -657,7 +657,7 @@ export const createOrder = async (
         recordHealthEvent('order', true);
         if (!wasIdempotent) {
           flushOrderCache(ownerId);
-          void invalidateStorefrontForOwner(ownerId);
+          void invalidateStorefrontScope(ownerId, 'full', { bumpVersion: true });
         }
         return {
           ...order,

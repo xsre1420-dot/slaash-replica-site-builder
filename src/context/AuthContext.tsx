@@ -1,14 +1,26 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode, useMemo, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { invalidateOwnerCache, setCurrentOwner, setCurrentStore } from '@/services/productService';
+import {
+  checkUsernameAvailability,
+  exchangeAuthCodeForSession,
+  fetchUserProfile,
+  getAuthSession,
+  resetPasswordForEmail,
+  resendSignupVerification,
+  setAuthSession,
+  signInWithPassword,
+  signOut as authSignOut,
+  signUpWithEmail,
+  subscribeAuthStateChange,
+  updateAuthPassword,
+} from '@/services/authService';
 import { setObservabilityUser } from '@/lib/observability';
 import {
   mapAuthError,
   normalizeUsername,
   validatePassword,
   setAuthRememberMe,
-  getAuthCallbackUrl,
   logAuthFailure,
 } from '@/lib/authUtils';
 import { isProduction } from '@/lib/env';
@@ -88,16 +100,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const loadProfile = async (userId: string, fallbackMeta?: Record<string, unknown>, email?: string) => {
     try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('id, username, store_name')
-        .or(`id.eq.${userId},user_id.eq.${userId}`)
-        .maybeSingle();
-
-      if (error) {
-        console.warn('Profile fetch failed:', error.message);
-        logAuthFailure('profile.load', error);
-      }
+      const profile = await fetchUserProfile(userId);
 
       if (profile) {
         setUserAndOwner({
@@ -128,7 +131,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = subscribeAuthStateChange((event, session) => {
       // Defer Supabase calls/state updates to avoid auth deadlocks (Supabase recommendation)
       setTimeout(() => {
         if (session?.user) {
@@ -148,8 +151,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }, 0);
     });
 
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
+    getAuthSession()
+      .then(({ session }) => {
         if (session?.user) {
           const meta = session.user.user_metadata ?? {};
           setUserAndOwner({
@@ -178,10 +181,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       enforceRateLimit(`login:${email.trim().toLowerCase()}`, RATE_LIMITS.login);
       setAuthRememberMe(rememberMe);
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
+      const { data, error } = await signInWithPassword(email, password);
 
       if (error) {
         logAuthFailure('login', error);
@@ -212,10 +212,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       enforceRateLimit('access_code', RATE_LIMITS.accessCode);
       setAuthRememberMe(rememberMe);
       const result = await redeemAccessCode(code);
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: result.accessToken,
-        refresh_token: result.refreshToken,
-      });
+      const { error: sessionError } = await setAuthSession(
+        result.accessToken,
+        result.refreshToken
+      );
 
       if (sessionError) {
         logAuthFailure('login.access_code.session', sessionError);
@@ -236,12 +236,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const checkUsernameAvailable = async (username: string) => {
     try {
       const normalized = normalizeUsername(username);
-      const { data, error } = await (supabase as unknown as { rpc: (n: string, p: object) => Promise<{ data: boolean | null; error: { message: string } | null }> }).rpc(
-        'is_username_available',
-        { p_username: normalized }
-      );
-      if (error) return { available: false, error: 'تعذر التحقق من اسم المستخدم' };
-      return { available: data !== false };
+      const result = await checkUsernameAvailability(normalized);
+      if (result.error) return { available: false, error: result.error };
+      return { available: result.available };
     } catch {
       return { available: false, error: 'تعذر التحقق من اسم المستخدم' };
     }
@@ -270,17 +267,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { error: 'اسم المستخدم مستخدم بالفعل — اختر اسماً آخر' };
       }
 
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          emailRedirectTo: getAuthCallbackUrl(),
-          data: {
-            username: normalizedUsername,
-            store_name: storeName?.trim() || 'متجري',
-            selected_plan: selectedPlanId || 'free',
-          },
-        },
+      const { data, error } = await signUpWithEmail(email, password, {
+        username: normalizedUsername,
+        store_name: storeName?.trim() || 'متجري',
+        selected_plan: selectedPlanId || 'free',
       });
 
       if (error) {
@@ -298,9 +288,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const resetPassword = async (email: string) => {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
+      const { error } = await resetPasswordForEmail(
+        email,
+        `${window.location.origin}/reset-password`
+      );
       if (error) return { error: mapAuthError(error.message) };
       return { success: true };
     } catch {
@@ -313,7 +304,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const passwordError = validatePassword(newPassword);
       if (passwordError) return { error: passwordError };
 
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      const { error } = await updateAuthPassword(newPassword);
       if (error) return { error: mapAuthError(error.message) };
       return {};
     } catch {
@@ -323,13 +314,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const resendVerificationEmail = async (email: string) => {
     try {
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email: email.trim(),
-        options: {
-          emailRedirectTo: getAuthCallbackUrl(),
-        },
-      });
+      const { error } = await resendSignupVerification(email);
       if (error) return { error: mapAuthError(error.message) };
       return { success: true };
     } catch {
@@ -341,7 +326,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const prevId = lastUserIdRef.current;
     invalidateOwnerCache(prevId);
     teardownMerchantRealtimeHub();
-    await supabase.auth.signOut();
+    await authSignOut();
     setUserAndOwner(null);
   };
 

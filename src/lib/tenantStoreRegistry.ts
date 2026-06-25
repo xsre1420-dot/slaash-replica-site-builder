@@ -165,17 +165,22 @@ export function invalidateTenantStore(slug: string): void {
 }
 
 if (typeof window !== 'undefined') {
-  window.addEventListener(STOREFRONT_PRODUCTS_CHANGED, ((event: CustomEvent<{ slug?: string }>) => {
+  window.addEventListener(STOREFRONT_PRODUCTS_CHANGED, ((event: CustomEvent<{ slug?: string; scope?: string }>) => {
     const slug = event.detail?.slug?.trim().toLowerCase();
-    if (slug) invalidateTenantStore(slug);
+    const scope = event.detail?.scope;
+    if (!slug) return;
+    if (scope === 'products' || scope === 'product') return;
+    invalidateTenantStore(slug);
   }) as EventListener);
 
   window.addEventListener('storage', (event: StorageEvent) => {
     if (event.key !== 'storefront:invalidate' || !event.newValue) return;
     try {
-      const payload = JSON.parse(event.newValue) as { slug?: string };
+      const payload = JSON.parse(event.newValue) as { slug?: string; scope?: string };
       const slug = payload.slug?.trim().toLowerCase();
-      if (slug) invalidateTenantStore(slug);
+      if (!slug) return;
+      if (payload.scope === 'products' || payload.scope === 'product') return;
+      invalidateTenantStore(slug);
     } catch {
       /* ignore malformed payload */
     }

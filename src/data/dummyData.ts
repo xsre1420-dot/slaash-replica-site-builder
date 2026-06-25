@@ -6,9 +6,10 @@ import { Product, Category } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { getAuthenticatedUserId } from '@/lib/authSession';
 import { runOncePerKey, type AddProductResult } from "@/lib/productCreateLock";
-import { invalidateStorefrontForOwner } from "@/services/storefrontProductService";
+import { invalidateStorefrontForOwner, invalidateStorefrontScope } from "@/services/storefrontProductService";
 import { markLocalStorefrontMutation } from '@/lib/localMutationGuard';
 import { patchStorefrontProductFromOwner } from '@/services/storefrontCacheService';
+import { applyStockQuantityPatch, InventoryRestockError } from '@/services/inventoryService';
 import { isStorefrontVisible } from '@/lib/productLifecycle';
 import { cache, CacheKeys, CacheTTL, dedup, clearInflight } from '@/lib/cache';
 import { mapDbProduct, safeMapDbProduct } from "@/mappers/productMapper";
@@ -613,7 +614,31 @@ export const updateProduct = async (productId: string, updatedProduct: Partial<P
     if (!existingData) return { success: false, error: 'Product not found' };
 
     const existing = mapDbProduct(existingData);
-    const merged = mergeProductForUpdate(existing, updatedProduct);
+    let workingProduct = existing;
+    const patchForMerge = { ...updatedProduct };
+
+    if ('stockQuantity' in updatedProduct && updatedProduct.stockQuantity !== undefined) {
+      try {
+        const newQty = await applyStockQuantityPatch(
+          productId,
+          user.id,
+          existing.stockQuantity,
+          updatedProduct.stockQuantity
+        );
+        workingProduct = { ...existing, stockQuantity: newQty };
+      } catch (err) {
+        return {
+          success: false,
+          error:
+            err instanceof InventoryRestockError
+              ? err.message
+              : 'تعذر تحديث المخزون — حاول مرة أخرى',
+        };
+      }
+      delete patchForMerge.stockQuantity;
+    }
+
+    const merged = mergeProductForUpdate(workingProduct, patchForMerge);
 
     const selectAttempts = [
       PRODUCT_DETAIL_SELECT,
@@ -833,7 +858,7 @@ export const addCategory = async (category: Category): Promise<{ success: boolea
       const current = cache.get<Category[]>(key) || [];
       cache.set(key, [...current, { id: data.id, name: data.name, order: data.display_order }], CacheTTL.MEDIUM, CacheTTL.STALE);
     }
-    void invalidateStorefrontForOwner(user.id);
+    void invalidateStorefrontScope(user.id, 'categories');
     return { success: true };
   } catch {
     return { success: false, error: 'Failed to add category' };
@@ -866,11 +891,12 @@ export const updateCategory = async (categoryId: string, updatedCategory: Catego
 
       if (productsError) return { success: false, error: productsError.message };
       syncMerchantProductCatalog(user.id);
+      void invalidateStorefrontScope(user.id, 'full');
+    } else {
+      const current = cache.get<Category[]>(key) || [];
+      cache.set(key, current.map(c => c.id === categoryId ? { ...updatedCategory, id: categoryId } : c), CacheTTL.MEDIUM, CacheTTL.STALE);
+      void invalidateStorefrontScope(user.id, 'categories');
     }
-
-    const current = cache.get<Category[]>(key) || [];
-    cache.set(key, current.map(c => c.id === categoryId ? { ...updatedCategory, id: categoryId } : c), CacheTTL.MEDIUM, CacheTTL.STALE);
-    void invalidateStorefrontForOwner(user.id);
     return { success: true };
   } catch {
     return { success: false, error: 'Failed to update category' };
@@ -893,7 +919,7 @@ export const deleteCategory = async (categoryId: string): Promise<{ success: boo
     const key = CacheKeys.categories(getOwnerId());
     const current = cache.get<Category[]>(key) || [];
     cache.set(key, current.filter(c => c.id !== categoryId), CacheTTL.MEDIUM, CacheTTL.STALE);
-    void invalidateStorefrontForOwner(user.id);
+    void invalidateStorefrontScope(user.id, 'categories');
     return { success: true };
   } catch {
     return { success: false, error: 'Failed to delete category' };

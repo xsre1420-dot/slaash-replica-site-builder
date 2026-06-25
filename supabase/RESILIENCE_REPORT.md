@@ -3,11 +3,11 @@
 **Date:** 2026-06-19  
 **Role:** Site Reliability Engineer (SRE)  
 **Scope:** Failure simulation, recovery paths, data integrity under stress  
-**Related:** [`ORDER_RELIABILITY_REPORT.md`](./ORDER_RELIABILITY_REPORT.md) · [`SCALABILITY_ROADMAP.md`](./SCALABILITY_ROADMAP.md) · [`REALTIME_AUDIT_REPORT.md`](./REALTIME_AUDIT_REPORT.md)
+**Related:** [`ORDER_RELIABILITY_REPORT.md`](./ORDER_RELIABILITY_REPORT.md) · [`CHAOS_TESTING_REPORT.md`](./CHAOS_TESTING_REPORT.md) · [`FAILURE_RECOVERY_REPORT.md`](./FAILURE_RECOVERY_REPORT.md) · [`RELIABILITY_REPORT.md`](./RELIABILITY_REPORT.md) · [`CHAOS_RISK_ASSESSMENT.md`](./CHAOS_RISK_ASSESSMENT.md)
 
 ---
 
-## Resilience score: **90 / 100**
+## Resilience score: **91 / 100** (updated post v53–v55 chaos validation)
 
 | Dimension | Score | Notes |
 |-----------|-------|-------|

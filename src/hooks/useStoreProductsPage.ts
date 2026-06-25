@@ -2,10 +2,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Product } from '@/types';
 import { cache, CacheTTL } from '@/lib/cache';
 import { cacheGet, cacheSet, cacheDeleteByPrefix } from '@/utils/indexedDB';
+import { ProductCacheKeys } from '@/services/storefrontCacheTiers';
 import {
   fetchStorefrontProductsPage,
   getStorefrontFirstPageFromCache,
   STOREFRONT_PRODUCTS_CHANGED,
+  type StorefrontInvalidationScope,
 } from '@/services/storefrontProductService';
 
 const PAGE_SIZE = 24;
@@ -48,8 +50,18 @@ export const useStoreProductsPage = (
       if (append) setLoadingMore(true);
       else setLoading(true);
 
-      const cacheKey = `tenant-products:${reqKey}`;
-      const idbKey = `idb:${cacheKey}`;
+      const cacheKey = ProductCacheKeys.tenantPage(
+        normalizedSlug,
+        categoryFilter || '',
+        searchFilter || '',
+        cursor || 'start'
+      );
+      const idbKey = ProductCacheKeys.idbPage(
+        normalizedSlug,
+        categoryFilter || '',
+        searchFilter || '',
+        cursor || 'start'
+      );
 
       try {
         if (!force && !append) {
@@ -148,15 +160,28 @@ export const useStoreProductsPage = (
     fetchPage(false, null);
   }, [enabled, normalizedSlug, categoryFilter, searchFilter, fetchPage]);
 
+const PRODUCT_SCOPES: StorefrontInvalidationScope[] = ['full', 'products', 'product'];
+
   useEffect(() => {
     if (!enabled) return;
 
-    const onProductsChanged = () => {
+    const shouldRefetchProducts = (scope?: StorefrontInvalidationScope) =>
+      !scope || PRODUCT_SCOPES.includes(scope);
+
+    const onProductsChanged = (event: Event) => {
+      const scope = (event as CustomEvent<{ scope?: StorefrontInvalidationScope }>).detail?.scope;
+      if (!shouldRefetchProducts(scope)) return;
       refetch();
     };
 
     const onStorage = (event: StorageEvent) => {
-      if (event.key !== 'storefront:invalidate') return;
+      if (event.key !== 'storefront:invalidate' || !event.newValue) return;
+      try {
+        const payload = JSON.parse(event.newValue) as { scope?: StorefrontInvalidationScope };
+        if (!shouldRefetchProducts(payload.scope)) return;
+      } catch {
+        /* fall through to refetch */
+      }
       refetch();
     };
 

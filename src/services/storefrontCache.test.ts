@@ -17,6 +17,7 @@ vi.mock('@/integrations/supabase/client', () => ({
 vi.mock('@/services/storefrontEdgeService', () => ({
   fetchStorefrontBundleViaEdge: vi.fn().mockResolvedValue(null),
   fetchStorefrontPageViaEdge: vi.fn().mockResolvedValue(null),
+  requestEdgeStorefrontPurge: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock('@/utils/indexedDB', () => ({

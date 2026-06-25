@@ -33,8 +33,7 @@ type ProductRealtimePayload = {
 
 export type OrderRealtimeEvent =
   | { type: 'insert'; orderId: string }
-  | { type: 'update'; orderId: string; status?: string; paymentStatus?: string }
-  | { type: 'refetch' };
+  | { type: 'update'; orderId: string; status?: string; paymentStatus?: string };
 
 type ProductUiHandler = () => void;
 type OrderChangeHandler = () => void;
@@ -60,6 +59,16 @@ interface OrderEntry {
 
 const productEntries = new Map<string, ProductEntry>();
 const orderEntries = new Map<string, OrderEntry>();
+
+/** In-process counters for ops / health dashboards (resets on page reload). */
+const hubMetrics = {
+  productEventsReceived: 0,
+  productEventsFiltered: 0,
+  productUiFlushes: 0,
+  orderEventsReceived: 0,
+  orderEventsFiltered: 0,
+  orderRefetchFlushes: 0,
+};
 
 const ORDER_DEBOUNCE_MS = 500;
 const PRODUCT_UI_DEBOUNCE_MS = 300;
@@ -142,6 +151,7 @@ function scheduleChannelReconnect(
 }
 
 function flushProductUiHandlers(userId: string, entry: ProductEntry) {
+  hubMetrics.productUiFlushes += 1;
   for (const handler of entry.uiHandlers) handler();
 }
 
@@ -167,9 +177,14 @@ function applyProductPayload(userId: string, payload: ProductRealtimePayload) {
   const entry = productEntries.get(userId);
   if (!entry) return;
 
+  hubMetrics.productEventsReceived += 1;
+
   if (payload.eventType === 'UPDATE') {
     const changed = getChangedFieldKeys(payload.new, payload.old);
-    if (isNoiseOnlyChange(changed, PRODUCT_NOISE_FIELDS)) return;
+    if (isNoiseOnlyChange(changed, PRODUCT_NOISE_FIELDS)) {
+      hubMetrics.productEventsFiltered += 1;
+      return;
+    }
 
     if (payload.new) {
       patchCachedProduct(userId, payload.new);
@@ -266,6 +281,44 @@ function ensureOrderChannel(userId: string): OrderEntry {
   }
 
   const resubscribe = () => ensureOrderChannel(userId);
+
+  const handleOrderPayload = (payload: {
+    eventType: string;
+    new: Record<string, unknown>;
+    old: Record<string, unknown>;
+  }) => {
+    hubMetrics.orderEventsReceived += 1;
+    const current = orderEntries.get(userId);
+    if (!current) return;
+
+    const orderId = String((payload.new as { id?: string })?.id ?? '');
+    if (!orderId) return;
+
+    if (payload.eventType === 'UPDATE') {
+      const changed = getChangedFieldKeys(payload.new, payload.old);
+      if (isNoiseOnlyChange(changed, ORDER_NOISE_FIELDS)) {
+        hubMetrics.orderEventsFiltered += 1;
+        return;
+      }
+
+      const row = payload.new as { status?: string; payment_status?: string };
+      for (const h of current.handlers) {
+        h.onEvent?.({
+          type: 'update',
+          orderId,
+          status: row?.status,
+          paymentStatus: row?.payment_status,
+        });
+      }
+    } else if (payload.eventType === 'INSERT') {
+      for (const h of current.handlers) {
+        h.onEvent?.({ type: 'insert', orderId });
+      }
+    }
+
+    scheduleOrderRefetch(userId, current);
+  };
+
   const channel = supabase
     .channel(`orders-realtime-${userId}`)
     .on(
@@ -277,14 +330,11 @@ function ensureOrderChannel(userId: string): OrderEntry {
         filter: `owner_id=eq.${userId}`,
       },
       (payload) => {
-        const orderId = String((payload.new as { id?: string })?.id ?? '');
-        const current = orderEntries.get(userId);
-        if (!current || !orderId) return;
-
-        for (const h of current.handlers) {
-          h.onEvent?.({ type: 'insert', orderId });
-        }
-        scheduleOrderRefetch(userId, current);
+        handleOrderPayload({
+          eventType: payload.eventType,
+          new: payload.new as Record<string, unknown>,
+          old: payload.old as Record<string, unknown>,
+        });
       }
     )
     .on(
@@ -296,26 +346,11 @@ function ensureOrderChannel(userId: string): OrderEntry {
         filter: `owner_id=eq.${userId}`,
       },
       (payload) => {
-        const changed = getChangedFieldKeys(
-          payload.new as Record<string, unknown> | undefined,
-          payload.old as Record<string, unknown> | undefined
-        );
-        if (isNoiseOnlyChange(changed, ORDER_NOISE_FIELDS)) return;
-
-        const row = payload.new as { id?: string; status?: string; payment_status?: string };
-        const orderId = String(row?.id ?? '');
-        const current = orderEntries.get(userId);
-        if (!current || !orderId) return;
-
-        for (const h of current.handlers) {
-          h.onEvent?.({
-            type: 'update',
-            orderId,
-            status: row?.status,
-            paymentStatus: row?.payment_status,
-          });
-        }
-        scheduleOrderRefetch(userId, current);
+        handleOrderPayload({
+          eventType: payload.eventType,
+          new: payload.new as Record<string, unknown>,
+          old: payload.old as Record<string, unknown>,
+        });
       }
     );
 
@@ -334,6 +369,7 @@ function scheduleOrderRefetch(userId: string, entry: OrderEntry, immediate = fal
   entry.debounceTimer = setTimeout(() => {
     entry.debounceTimer = null;
     entry.pendingRefetch = false;
+    hubMetrics.orderRefetchFlushes += 1;
     flushOrderCache(userId);
     for (const h of entry.handlers) {
       h.onChange?.();
@@ -398,23 +434,68 @@ export function teardownMerchantRealtimeHub(): void {
   orderEntries.clear();
 }
 
+export type MerchantRealtimeHubMetrics = {
+  productEventsReceived: number;
+  productEventsFiltered: number;
+  productUiFlushes: number;
+  orderEventsReceived: number;
+  orderEventsFiltered: number;
+  orderRefetchFlushes: number;
+  productFilterRate: number;
+  orderFilterRate: number;
+};
+
 export type MerchantRealtimeHubStatus = {
   activeProductChannels: number;
   activeOrderChannels: number;
+  productHandlerCount: number;
+  orderHandlerCount: number;
   pendingReconnects: number;
   maxAttemptsExceeded: number;
+  metrics: MerchantRealtimeHubMetrics;
 };
+
+function buildHubMetrics(): MerchantRealtimeHubMetrics {
+  const productFilterRate =
+    hubMetrics.productEventsReceived > 0
+      ? hubMetrics.productEventsFiltered / hubMetrics.productEventsReceived
+      : 0;
+  const orderFilterRate =
+    hubMetrics.orderEventsReceived > 0
+      ? hubMetrics.orderEventsFiltered / hubMetrics.orderEventsReceived
+      : 0;
+
+  return {
+    ...hubMetrics,
+    productFilterRate: Math.round(productFilterRate * 1000) / 1000,
+    orderFilterRate: Math.round(orderFilterRate * 1000) / 1000,
+  };
+}
+
+/** Reset in-process event counters (tests / admin diagnostics). */
+export function resetMerchantRealtimeHubMetricsForTests(): void {
+  hubMetrics.productEventsReceived = 0;
+  hubMetrics.productEventsFiltered = 0;
+  hubMetrics.productUiFlushes = 0;
+  hubMetrics.orderEventsReceived = 0;
+  hubMetrics.orderEventsFiltered = 0;
+  hubMetrics.orderRefetchFlushes = 0;
+}
 
 /** Snapshot for platform health dashboard (in-process client state). */
 export function getMerchantRealtimeHubStatus(): MerchantRealtimeHubStatus {
   let pendingReconnects = 0;
   let maxAttemptsExceeded = 0;
+  let productHandlerCount = 0;
+  let orderHandlerCount = 0;
 
   for (const entry of productEntries.values()) {
+    productHandlerCount += entry.uiHandlers.size;
     if (entry.reconnectTimer) pendingReconnects += 1;
     if (entry.reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) maxAttemptsExceeded += 1;
   }
   for (const entry of orderEntries.values()) {
+    orderHandlerCount += entry.handlers.size;
     if (entry.reconnectTimer) pendingReconnects += 1;
     if (entry.reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) maxAttemptsExceeded += 1;
   }
@@ -422,7 +503,10 @@ export function getMerchantRealtimeHubStatus(): MerchantRealtimeHubStatus {
   return {
     activeProductChannels: productEntries.size,
     activeOrderChannels: orderEntries.size,
+    productHandlerCount,
+    orderHandlerCount,
     pendingReconnects,
     maxAttemptsExceeded,
+    metrics: buildHubMetrics(),
   };
 }

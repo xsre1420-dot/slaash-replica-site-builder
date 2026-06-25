@@ -16,16 +16,27 @@ import { isStorefrontVisible } from '@/lib/productLifecycle';
 import {
   fetchStorefrontBundleViaEdge,
   fetchStorefrontPageViaEdge,
+  requestEdgeStorefrontPurge,
 } from '@/services/storefrontEdgeService';
 import {
   getStorefrontCached,
   setStorefrontCached,
   StorefrontCacheKeys,
 } from '@/services/storefrontCacheService';
+import {
+  flushStorefrontProductCaches,
+  flushStorefrontProductDetail,
+  flushStorefrontStoreCaches,
+  ProductCacheKeys,
+  recordStorefrontScopedFlush,
+  type StorefrontInvalidationScope,
+} from '@/services/storefrontCacheTiers';
 import type { StorefrontBundleCache, StorefrontProductsPage } from '@/types/storefrontCache';
 
 const MINIMAL_STOREFRONT_SELECT =
   'id, name, description, category, price, image_url, additional_images, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, original_price, is_active, archived_at, created_at, updated_at';
+
+export type { StorefrontInvalidationScope } from '@/services/storefrontCacheTiers';
 
 export const STOREFRONT_PRODUCTS_CHANGED = 'storefront:products-changed';
 
@@ -98,6 +109,7 @@ async function fetchStorefrontBundleFresh(
         products: edge.products,
         nextCursor: edge.nextCursor,
         hasMore: edge.hasMore,
+        cacheVersion: edge.cacheVersion,
       };
       setStorefrontCached(key, payload);
       return payload;
@@ -399,14 +411,14 @@ export async function fetchStorefrontProductsPage(
     if (cachedBundle?.products) {
       return pageFromBundle(cachedBundle);
     }
-    const pageCacheKey = `storefront-page:${normalized}:::${limit}`;
+    const pageCacheKey = ProductCacheKeys.page(normalized, '', '', '', limit);
     const cachedPage = cache.get<StorefrontProductsPage>(pageCacheKey);
     if (cachedPage?.products) {
       return cachedPage;
     }
   }
 
-  const dedupeKey = `storefront-page:${normalized}:${cursor}:${category}:${search}:${limit}`;
+  const dedupeKey = ProductCacheKeys.page(normalized, cursor, category, search, limit);
 
   return dedup(dedupeKey, async () => {
     if (isFirstPage) {
@@ -623,7 +635,26 @@ export async function fetchStorefrontProductsByIds(
   return fetchCheckoutProductsByIds(slug, productIds);
 }
 
-export async function invalidateStorefrontForOwner(ownerId: string): Promise<void> {
+export async function bumpStorefrontCacheVersion(ownerId: string): Promise<number | null> {
+  if (!ownerId) return null;
+  try {
+    const { data, error } = await (supabase as any).rpc('bump_storefront_cache_version', {
+      p_owner_id: ownerId,
+    });
+    if (error) return null;
+    return data != null ? Number(data) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function invalidateStorefrontScope(
+  ownerId: string,
+  scope: StorefrontInvalidationScope,
+  options?: { productId?: string; bumpVersion?: boolean }
+): Promise<void> {
+  recordStorefrontScopedFlush(scope);
+
   const { data } = await supabase
     .from('store_settings')
     .select('store_slug')
@@ -645,37 +676,77 @@ export async function invalidateStorefrontForOwner(ownerId: string): Promise<voi
     }
   }
 
-  flushSlugResolutionCache(ownerId, slug);
+  if (scope === 'full') {
+    flushSlugResolutionCache(ownerId, slug);
+  }
+
+  if (options?.bumpVersion) {
+    await bumpStorefrontCacheVersion(ownerId);
+  }
 
   if (slug) {
-    cache.del(StorefrontCacheKeys.bundle(slug));
-    cache.flushByPrefix(`tenant-products:${slug}`);
-    cache.flushByPrefix(StorefrontCacheKeys.meta(slug));
-    cache.flushByPrefix(`edge-bundle:${slug}`);
-    cache.flushByPrefix(`edge-page:${slug}`);
-    cache.flushByPrefix(`storefront-page:${slug}:`);
-    cache.flushByPrefix(`${StorefrontCacheKeys.product(slug, '')}`.replace(/:$/, ':'));
-    cache.flushByPrefix(`storefront-product:${slug}:`);
-    cache.del(StorefrontCacheKeys.footer(slug));
-    await cacheDeleteByPrefix(`idb:tenant-products:${slug}`);
-    await cacheDeleteByPrefix(`idb:tenant-meta:${slug}`);
-  } else {
+    switch (scope) {
+      case 'settings':
+      case 'categories':
+        flushStorefrontStoreCaches(slug);
+        void requestEdgeStorefrontPurge(slug);
+        break;
+      case 'products':
+        flushStorefrontProductCaches(slug);
+        cache.flushByPrefix(`edge-page:${slug}`);
+        cache.flushByPrefix(`storefront-product:${slug}:`);
+        await cacheDeleteByPrefix(`idb:tenant-products:${slug}`);
+        void requestEdgeStorefrontPurge(slug);
+        break;
+      case 'product':
+        if (options?.productId) {
+          flushStorefrontProductDetail(slug, options.productId);
+        }
+        break;
+      case 'full':
+        cache.del(StorefrontCacheKeys.bundle(slug));
+        cache.del(StorefrontCacheKeys.version(slug));
+        cache.flushByPrefix(`tenant-products:${slug}`);
+        cache.flushByPrefix(StorefrontCacheKeys.meta(slug));
+        cache.flushByPrefix(`edge-bundle:${slug}`);
+        cache.flushByPrefix(`edge-page:${slug}`);
+        cache.flushByPrefix(`edge-meta:${slug}`);
+        cache.flushByPrefix(`storefront-page:${slug}:`);
+        cache.flushByPrefix(`storefront-product:${slug}:`);
+        cache.del(StorefrontCacheKeys.footer(slug));
+        await cacheDeleteByPrefix(`idb:tenant-products:${slug}`);
+        await cacheDeleteByPrefix(`idb:tenant-meta:${slug}`);
+        void requestEdgeStorefrontPurge(slug);
+        break;
+    }
+  } else if (scope === 'full' || scope === 'products') {
     cache.flushByPrefix(`tenant-products:${ownerId}`);
     await cacheDeleteByPrefix(`idb:tenant-products:${ownerId}`);
   }
 
   if (typeof window !== 'undefined') {
     window.dispatchEvent(
-      new CustomEvent(STOREFRONT_PRODUCTS_CHANGED, { detail: { ownerId, slug } })
+      new CustomEvent(STOREFRONT_PRODUCTS_CHANGED, {
+        detail: { ownerId, slug, scope, productId: options?.productId },
+      })
     );
-    try {
-      localStorage.setItem(
-        'storefront:invalidate',
-        JSON.stringify({ ownerId, slug, at: Date.now() })
-      );
-    } catch {
-      /* ignore quota */
+    if (scope === 'full' || scope === 'products' || scope === 'settings' || scope === 'categories') {
+      try {
+        localStorage.setItem(
+          'storefront:invalidate',
+          JSON.stringify({ ownerId, slug, scope, at: Date.now() })
+        );
+      } catch {
+        /* ignore quota */
+      }
     }
   }
+}
+
+export async function invalidateStorefrontForOwner(
+  ownerId: string,
+  options?: { bumpVersion?: boolean }
+): Promise<void> {
+  return invalidateStorefrontScope(ownerId, 'full', options);
 }
 

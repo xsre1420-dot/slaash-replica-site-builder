@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { invalidateStoreMarketingCache } from "@/services/marketingService";
+import {
+  fetchMerchantMarketingSettings,
+  upsertMerchantMarketingSettings,
+} from "@/services/marketingService";
 
 interface MarketingSettings {
   meta_pixel_id: string;
@@ -33,29 +35,16 @@ export default function MarketingSettingsTab() {
 
   const loadSettings = useCallback(async () => {
     if (!user) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase as any)
-      .from('marketing_settings')
-      .select('meta_pixel_id, google_analytics_id, marketing_enabled, email_marketing_enabled, sms_marketing_enabled')
-      .eq('owner_id', user.id)
-      .single();
-
-    const { data: storeData } = await (supabase as any)
-      .from('store_settings')
-      .select('store_slug')
-      .eq('owner_id', user.id)
-      .maybeSingle();
-
-    setStoreSlug(storeData?.store_slug || null);
-
+    const data = await fetchMerchantMarketingSettings(user.id);
+    setStoreSlug(data?.store_slug || null);
     if (data) {
       setSettings({
-        meta_pixel_id: data.meta_pixel_id || '',
+        meta_pixel_id: data.meta_pixel_id,
         facebook_access_token: '',
-        google_analytics_id: data.google_analytics_id || '',
-        marketing_enabled: data.marketing_enabled || false,
-        email_marketing_enabled: data.email_marketing_enabled || false,
-        sms_marketing_enabled: data.sms_marketing_enabled || false
+        google_analytics_id: data.google_analytics_id,
+        marketing_enabled: data.marketing_enabled,
+        email_marketing_enabled: data.email_marketing_enabled,
+        sms_marketing_enabled: data.sms_marketing_enabled,
       });
     }
   }, [user]);
@@ -65,26 +54,13 @@ export default function MarketingSettingsTab() {
   const saveSettings = async () => {
     if (!user) return;
     setLoading(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const payload: Record<string, unknown> = {
-      owner_id: user.id,
-      meta_pixel_id: settings.meta_pixel_id,
-      google_analytics_id: settings.google_analytics_id,
-      marketing_enabled: settings.marketing_enabled,
-      email_marketing_enabled: settings.email_marketing_enabled,
-      sms_marketing_enabled: settings.sms_marketing_enabled,
-    };
-    if (settings.facebook_access_token.trim()) {
-      payload.facebook_access_token = settings.facebook_access_token.trim();
-    }
+    const result = await upsertMerchantMarketingSettings(user.id, {
+      ...settings,
+    });
 
-    const { error } = await (supabase as any)
-      .from('marketing_settings')
-      .upsert(payload, { onConflict: ['owner_id'] });
-
-    if (error) toast.error("فشل في حفظ الإعدادات");
+    if (!result.success) toast.error("فشل في حفظ الإعدادات");
     else {
-      invalidateStoreMarketingCache(storeSlug || undefined, user.id);
+      if (result.storeSlug) setStoreSlug(result.storeSlug);
       toast.success("تم حفظ إعدادات التسويق بنجاح");
     }
     setLoading(false);

@@ -3,8 +3,8 @@
 **Date:** 2026-06-19  
 **Role:** Principal Analytics Systems Architect  
 **Scope:** Store visits · product views · orders · customer activity · revenue tracking  
-**Migrations:** v38 (`analytics_optimization`) · v42 (`hot_table_optimizations`) · **v51** (`analytics_event_buffer`)  
-**Related:** [ANALYTICS_ACCURACY_REPORT.md](./ANALYTICS_ACCURACY_REPORT.md) · [EVENT_ARCHITECTURE_REPORT.md](./EVENT_ARCHITECTURE_REPORT.md) · [WRITE_AMPLIFICATION_REPORT.md](./WRITE_AMPLIFICATION_REPORT.md)
+**Migrations:** v38 · v51 · v52 · **v54**  
+**Related:** [ANALYTICS_ARCHITECTURE_AUDIT_REPORT.md](./ANALYTICS_ARCHITECTURE_AUDIT_REPORT.md) · [ANALYTICS_WRITE_REDUCTION_REPORT.md](./ANALYTICS_WRITE_REDUCTION_REPORT.md) · [ANALYTICS_SCALABILITY_REPORT.md](./ANALYTICS_SCALABILITY_REPORT.md)
 
 ---
 
@@ -17,26 +17,11 @@
 | **Read aggregation** | Bundle RPCs (v38) | Unchanged — read-only | 91 |
 | **Synchronous rollups** | Per-row visit trigger | **Batch job** at buffer flush | 90 |
 | **Scalability headroom** | Visit chain SPOF | Event buffer + consolidated UPSERT | 88 |
-| **Overall analytics architecture** | **78/100** | **91/100** | +13 |
+| **Overall analytics architecture** | **78/100** | **91/100** | **93/100** | +15 |
 
-**Deploy:** `npm run db:deploy` (through v51).
+**Deploy:** `npm run db:deploy` (through v54).
 
-**Recommended cron (Supabase Dashboard → Database → Extensions → pg_cron):**
-
-```sql
-SELECT cron.schedule(
-  'process-analytics-buffer',
-  '*/1 * * * *',
-  $$SELECT public.process_analytics_event_buffer(500)$$
-);
-SELECT cron.schedule(
-  'prune-analytics-outbox',
-  '0 3 * * *',
-  $$SELECT public.prune_analytics_event_outbox(7)$$
-);
-```
-
-Without cron, the buffer auto-flushes when **≥75** pending events (typically during traffic spikes).
+**v54 change:** Tracking RPCs no longer invoke inline batch flush — storefront hot path is always 1 outbox INSERT. Background processing via pg_cron (auto-scheduled when extension available).
 
 ---
 

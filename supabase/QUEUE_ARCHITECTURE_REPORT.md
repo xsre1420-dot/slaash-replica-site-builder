@@ -1,8 +1,9 @@
 # Queue Architecture Report
 
-**Audit date:** 2026-06-19  
+**Audit date:** 2026-06-19 (updated v55)  
 **Role:** Distributed Systems Architecture Review  
-**Scope:** Product publishing, image processing, analytics, notifications, inventory sync, bulk operations
+**Scope:** Product publishing, image processing, analytics, notifications, inventory sync, bulk operations  
+**Status:** Webhook outbox consumer shipped v55 — see [BACKGROUND_PROCESSING_AUDIT_REPORT.md](./BACKGROUND_PROCESSING_AUDIT_REPORT.md)
 
 ---
 

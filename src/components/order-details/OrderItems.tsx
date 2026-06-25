@@ -19,6 +19,7 @@ const OrderItems = ({ items }: OrderItemsProps) => {
             <OptimizedImage
               src={item.product.image || '/placeholder.svg'}
               alt={item.product.name}
+              variant="thumbnail"
               className="w-full h-full object-cover"
             />
           </div>
