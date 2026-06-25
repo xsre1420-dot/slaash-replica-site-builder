@@ -38,6 +38,25 @@ const MINIMAL_STOREFRONT_SELECT =
 
 export type { StorefrontInvalidationScope } from '@/services/storefrontCacheTiers';
 
+/** Lazy-load store policies (omitted from v57 slim bundle for payload reduction). */
+export async function fetchStorePolicies(
+  slug: string
+): Promise<{ returnPolicy: string; privacyPolicy: string }> {
+  const normalized = slug.trim().toLowerCase();
+  try {
+    const { data, error } = await (supabase as any).rpc('get_store_policies', {
+      p_slug: normalized,
+    });
+    if (error || !data) return { returnPolicy: '', privacyPolicy: '' };
+    return {
+      returnPolicy: String(data.return_policy || ''),
+      privacyPolicy: String(data.privacy_policy || ''),
+    };
+  } catch {
+    return { returnPolicy: '', privacyPolicy: '' };
+  }
+}
+
 export const STOREFRONT_PRODUCTS_CHANGED = 'storefront:products-changed';
 
 const ACTIVE_PRODUCTS_FILTER = 'is_active.eq.true,is_active.is.null';

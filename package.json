@@ -38,6 +38,7 @@
     "db:scalability-test": "node scripts/scalability-audit-test.mjs",
     "db:chaos-test": "node scripts/chaos-audit-test.mjs",
     "db:production-readiness-test": "node scripts/production-readiness-test.mjs",
+    "db:payload-test": "node scripts/payload-audit-test.mjs",
     "storage:audit": "node scripts/storage-audit.mjs",
     "storage:isolation-test": "node scripts/storage-isolation-test.mjs",
     "health:monitor": "node scripts/health-monitor-check.mjs",

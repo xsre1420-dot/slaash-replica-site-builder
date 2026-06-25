@@ -5,6 +5,7 @@ import {
   loadStorefrontBundle,
   peekStorefrontBundle,
   resolveStoreOwnerBySlug,
+  fetchStorePolicies,
   STOREFRONT_PRODUCTS_CHANGED,
 } from '@/services/storefrontProductService';
 import { StorefrontCacheKeys } from '@/services/storefrontCacheService';
@@ -77,6 +78,28 @@ const buildStoreInfo = (
   privacyPolicy: String(store.privacy_policy || ''),
   paymentMethods: store.payment_methods,
 });
+
+async function hydrateStorePolicies(slug: string, storeInfo: TenantStoreInfo): Promise<TenantStoreInfo> {
+  if (storeInfo.returnPolicy || storeInfo.privacyPolicy) return storeInfo;
+  const policies = await fetchStorePolicies(slug);
+  return {
+    ...storeInfo,
+    returnPolicy: policies.returnPolicy || storeInfo.returnPolicy,
+    privacyPolicy: policies.privacyPolicy || storeInfo.privacyPolicy,
+  };
+}
+
+function schedulePolicyHydration(slug: string, storeInfo: TenantStoreInfo) {
+  if (storeInfo.returnPolicy || storeInfo.privacyPolicy) return;
+  void hydrateStorePolicies(slug, storeInfo).then((enriched) => {
+    if (!enriched.returnPolicy && !enriched.privacyPolicy) return;
+    const entry = entries.get(slug);
+    if (!entry?.snapshot.storeInfo) return;
+    setSnapshot(slug, {
+      storeInfo: { ...entry.snapshot.storeInfo!, ...enriched },
+    });
+  });
+}
 
 async function fetchStoreMeta(normalizedSlug: string) {
   const bundle = await loadStorefrontBundle(normalizedSlug);
@@ -218,6 +241,7 @@ export async function fetchTenantStore(slug: string, force = false): Promise<voi
             loading: false,
             error: null,
           });
+          schedulePolicyHydration(slug, fromBundle.storeInfo);
           return;
         }
       }
@@ -260,6 +284,7 @@ export async function fetchTenantStore(slug: string, force = false): Promise<voi
         loading: false,
         error: null,
       });
+      schedulePolicyHydration(slug, data.storeInfo);
     } catch (err: unknown) {
       setSnapshot(slug, {
         loading: false,
