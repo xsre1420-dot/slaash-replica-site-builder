@@ -11,6 +11,7 @@ import {
   getAuthCallbackUrl,
   logAuthFailure,
 } from '@/lib/authUtils';
+import { isProduction } from '@/lib/env';
 import {
   enforceRateLimit,
   formatRateLimitMessageAr,
@@ -252,6 +253,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     storeName?: string,
     selectedPlanId?: string
   ): Promise<AuthResult> => {
+    if (isProduction()) {
+      return {
+        error: 'التسجيل المباشر غير متاح. استخدم صفحة «طلب الوصول» للحصول على رمز تفعيل.',
+      };
+    }
+
     try {
       const passwordError = validatePassword(password);
       if (passwordError) return { error: passwordError };

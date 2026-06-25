@@ -205,3 +205,90 @@ export const bootstrapOwnerStore = async (userId: string): Promise<BootstrapResu
 };
 
 export { defaultStoreSettings, type StoreSettings };
+
+export type MerchantComplianceSettings = {
+  storeSlug: string;
+  returnPolicy: string;
+  privacyPolicy: string;
+  termsConditions: string;
+  whatsappNumber: string;
+  whatsappWelcomeMessage: string;
+  whatsappOrderConfirmation: string;
+  paymentCashOnDelivery: boolean;
+  paymentCreditCard: boolean;
+  paymentEwallet: boolean;
+};
+
+export const mapMerchantComplianceSettings = (
+  data: Record<string, unknown>
+): MerchantComplianceSettings => {
+  const methods = Array.isArray(data.payment_methods) ? (data.payment_methods as string[]) : [];
+  return {
+    storeSlug: String(data.store_slug || ''),
+    returnPolicy: String(data.return_policy || ''),
+    privacyPolicy: String(data.privacy_policy || ''),
+    termsConditions: String(data.terms_conditions || ''),
+    whatsappNumber: String(data.whatsapp_number || ''),
+    whatsappWelcomeMessage: String(data.whatsapp_welcome_message || ''),
+    whatsappOrderConfirmation: String(data.whatsapp_order_confirmation || ''),
+    paymentCashOnDelivery: methods.length === 0 || methods.includes('cash_on_delivery'),
+    paymentCreditCard: methods.includes('credit_card'),
+    paymentEwallet: methods.includes('digital_wallet'),
+  };
+};
+
+/** Policies, slug, WhatsApp, and payment methods — single service path for Settings page. */
+export const fetchMerchantComplianceSettings = async (
+  ownerId: string
+): Promise<MerchantComplianceSettings | null> => {
+  const cacheKey = CacheKeys.storeSettings(ownerId);
+  const cached = cache.get<Record<string, unknown>>(cacheKey);
+  if (cached) return mapMerchantComplianceSettings(cached);
+
+  const { data, error } = await supabase
+    .from('store_settings')
+    .select(STORE_SETTINGS_SELECT)
+    .eq('owner_id', ownerId)
+    .maybeSingle();
+
+  if (error && error.code !== 'PGRST116') {
+    console.error('Error loading merchant compliance settings:', error);
+    return null;
+  }
+  if (!data) return null;
+
+  cache.set(cacheKey, data, CacheTTL.LONG, CacheTTL.STALE);
+  return mapMerchantComplianceSettings(data as Record<string, unknown>);
+};
+
+export const saveMerchantComplianceSettings = async (
+  ownerId: string,
+  settings: MerchantComplianceSettings
+): Promise<{ success: boolean; error?: string }> => {
+  const paymentMethods = [
+    settings.paymentCashOnDelivery ? 'cash_on_delivery' : null,
+    settings.paymentCreditCard ? 'credit_card' : null,
+    settings.paymentEwallet ? 'digital_wallet' : null,
+  ].filter(Boolean) as string[];
+
+  const result = await upsertStoreSettings(ownerId, {
+    store_slug: settings.storeSlug,
+    return_policy: settings.returnPolicy || null,
+    privacy_policy: settings.privacyPolicy || null,
+    terms_conditions: settings.termsConditions || null,
+    whatsapp_number: settings.whatsappNumber || null,
+    whatsapp_welcome_message: settings.whatsappWelcomeMessage || null,
+    whatsapp_order_confirmation: settings.whatsappOrderConfirmation || null,
+    payment_methods: paymentMethods,
+  });
+
+  if (!result.success) return result;
+
+  try {
+    await supabase.from('stores').update({ store_slug: settings.storeSlug }).eq('user_id', ownerId);
+  } catch {
+    /* stores table may not exist before migration */
+  }
+
+  return { success: true };
+};

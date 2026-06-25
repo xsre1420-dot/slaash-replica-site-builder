@@ -11,12 +11,18 @@ export interface LocalBackupSnapshot {
 
 const BACKUP_PREFIXES = ['cart:', 'checkout-', 'obs:', 'dr:'];
 
+const SENSITIVE_KEY_PATTERN = /idempotency|access_token|refresh_token|password/i;
+
 const collectStorage = (storage: Storage): Record<string, string> => {
   const out: Record<string, string> = {};
   for (let i = 0; i < storage.length; i++) {
     const key = storage.key(i);
     if (!key) continue;
     if (BACKUP_PREFIXES.some((p) => key.includes(p))) {
+      if (SENSITIVE_KEY_PATTERN.test(key)) {
+        out[key] = '[redacted]';
+        continue;
+      }
       const value = storage.getItem(key);
       if (value != null) out[key] = value;
     }

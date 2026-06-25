@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStore } from "@/context/StoreContext";
@@ -17,6 +16,10 @@ import DesignTab from "@/components/settings/DesignTab";
 import CustomDomainTab from "@/components/settings/CustomDomainTab";
 import { validateStoreSlug, normalizeStoreSlugInput } from "@/lib/storeSlug";
 import { ATTENTION_PARAM } from "@/lib/attentionHighlight";
+import {
+  fetchMerchantComplianceSettings,
+  saveMerchantComplianceSettings,
+} from "@/services/storeService";
 
 const Settings = () => {
   const { user } = useAuth();
@@ -53,43 +56,37 @@ const Settings = () => {
   });
 
   useEffect(() => {
-    // Load all settings from database (single source of truth)
     if (!user?.id) return;
 
-    (supabase as any)
-      .from('store_settings')
-      .select('store_slug, return_policy, privacy_policy, terms_conditions, whatsapp_number, whatsapp_welcome_message, whatsapp_order_confirmation, payment_methods')
-      .eq('owner_id', user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data) {
-          const methods = Array.isArray(data.payment_methods) ? data.payment_methods as string[] : [];
-          setSettings(prev => {
-            const merged = {
-              ...prev,
-              storeSlug: data.store_slug || prev.storeSlug,
-              returnPolicy: data.return_policy || prev.returnPolicy,
-              termsConditions: data.terms_conditions || prev.termsConditions,
-              privacyPolicy: data.privacy_policy || prev.privacyPolicy,
-              whatsappNumber: data.whatsapp_number || prev.whatsappNumber,
-              whatsappWelcomeMessage: data.whatsapp_welcome_message || prev.whatsappWelcomeMessage,
-              whatsappOrderConfirmation: data.whatsapp_order_confirmation || prev.whatsappOrderConfirmation,
-              paymentCashOnDelivery: methods.length === 0 || methods.includes('cash_on_delivery'),
-              paymentCreditCard: methods.includes('credit_card'),
-              paymentEwallet: methods.includes('digital_wallet'),
-            };
-            lastSavedRef.current = JSON.stringify(merged);
-            return merged;
-          });
-        } else {
-          isDbLoaded.current = true;
-          setSettings(prev => {
-            lastSavedRef.current = JSON.stringify(prev);
-            return prev;
-          });
-        }
+    void fetchMerchantComplianceSettings(user.id).then((compliance) => {
+      if (!compliance) {
         isDbLoaded.current = true;
+        setSettings((prev) => {
+          lastSavedRef.current = JSON.stringify(prev);
+          return prev;
+        });
+        return;
+      }
+
+      setSettings((prev) => {
+        const merged = {
+          ...prev,
+          storeSlug: compliance.storeSlug || prev.storeSlug,
+          returnPolicy: compliance.returnPolicy || prev.returnPolicy,
+          termsConditions: compliance.termsConditions || prev.termsConditions,
+          privacyPolicy: compliance.privacyPolicy || prev.privacyPolicy,
+          whatsappNumber: compliance.whatsappNumber || prev.whatsappNumber,
+          whatsappWelcomeMessage: compliance.whatsappWelcomeMessage || prev.whatsappWelcomeMessage,
+          whatsappOrderConfirmation: compliance.whatsappOrderConfirmation || prev.whatsappOrderConfirmation,
+          paymentCashOnDelivery: compliance.paymentCashOnDelivery,
+          paymentCreditCard: compliance.paymentCreditCard,
+          paymentEwallet: compliance.paymentEwallet,
+        };
+        lastSavedRef.current = JSON.stringify(merged);
+        return merged;
       });
+      isDbLoaded.current = true;
+    });
   }, [user?.id]);
 
   useEffect(() => {
@@ -155,39 +152,25 @@ const Settings = () => {
         deliveryPrices: settings.deliveryPrices
       });
       if (user?.id) {
-        const { error: slugError } = await (supabase as any)
-          .from('store_settings')
-          .update({
-            store_slug: normalizedSlug,
-            return_policy: settings.returnPolicy || null,
-            privacy_policy: settings.privacyPolicy || null,
-            terms_conditions: settings.termsConditions || null,
-            whatsapp_number: settings.whatsappNumber || null,
-            whatsapp_welcome_message: settings.whatsappWelcomeMessage || null,
-            whatsapp_order_confirmation: settings.whatsappOrderConfirmation || null,
-            payment_methods: [
-              settings.paymentCashOnDelivery ? 'cash_on_delivery' : null,
-              settings.paymentCreditCard ? 'credit_card' : null,
-              settings.paymentEwallet ? 'digital_wallet' : null,
-            ].filter(Boolean),
-          })
-          .eq('owner_id', user.id);
+        const saveResult = await saveMerchantComplianceSettings(user.id, {
+          storeSlug: normalizedSlug,
+          returnPolicy: settings.returnPolicy,
+          privacyPolicy: settings.privacyPolicy,
+          termsConditions: settings.termsConditions,
+          whatsappNumber: settings.whatsappNumber,
+          whatsappWelcomeMessage: settings.whatsappWelcomeMessage,
+          whatsappOrderConfirmation: settings.whatsappOrderConfirmation,
+          paymentCashOnDelivery: settings.paymentCashOnDelivery,
+          paymentCreditCard: settings.paymentCreditCard,
+          paymentEwallet: settings.paymentEwallet,
+        });
 
-        if (slugError) {
+        if (!saveResult.success) {
           const message =
-            slugError.code === '23505' || slugError.message?.includes('unique')
+            saveResult.error?.includes('unique') || saveResult.error?.includes('23505')
               ? 'رابط المتجر مستخدم بالفعل — اختر رابطاً آخر'
-              : slugError.message || 'فشل في حفظ رابط المتجر';
+              : saveResult.error || 'فشل في حفظ رابط المتجر';
           throw new Error(message);
-        }
-
-        try {
-          await (supabase as any)
-            .from('stores')
-            .update({ store_slug: normalizedSlug })
-            .eq('user_id', user.id);
-        } catch {
-          /* stores table may not exist before migration */
         }
       }
       

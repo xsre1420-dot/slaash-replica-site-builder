@@ -2,11 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
 import { logStructured, withEdgeSpan } from '../_shared/observability.ts';
 import { addMonths, generateAuthPassword, hashAccessCode } from '../_shared/accessCodeUtils.ts';
 import { checkEdgeRateLimit, clientIpFromRequest } from '../_shared/rateLimiter.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getEdgeCorsHeaders } from '../_shared/cors.ts';
 
 interface RedeemBody {
   code: string;
@@ -41,11 +37,22 @@ const signInWithEphemeralPassword = async (
 };
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get('origin');
+  const corsHeaders = getEdgeCorsHeaders(origin);
+
   if (req.method === 'OPTIONS') {
+    if (!corsHeaders) return new Response('Forbidden', { status: 403 });
     return new Response('ok', { headers: corsHeaders });
   }
 
   return withEdgeSpan('redeem-access-code', async () => {
+    if (!corsHeaders) {
+      return new Response(JSON.stringify({ error: 'Forbidden origin' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     if (req.method !== 'POST') {
       return new Response(JSON.stringify({ error: 'Method not allowed' }), {
         status: 405,

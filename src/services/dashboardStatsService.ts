@@ -62,6 +62,25 @@ export const fetchDashboardStatisticsBatch = async (
   });
 };
 
+/** Single-period KPI fetch — used when dashboard batch RPC is unavailable. */
+export const fetchStoreStatisticsPeriod = async (
+  ownerId: string,
+  start: string,
+  end: string
+): Promise<PeriodMetrics | null> => {
+  try {
+    const { data, error } = await (supabase as any).rpc('get_store_statistics', {
+      p_owner_id: ownerId,
+      p_start: start,
+      p_end: end,
+    });
+    if (error || !data) return null;
+    return parseRpcPeriodMetrics(data as Record<string, unknown>);
+  } catch {
+    return null;
+  }
+};
+
 export const buildOrderDashboardStatsFromBatch = (
   batch: DashboardBatchPayload
 ): OrderDashboardStats => {

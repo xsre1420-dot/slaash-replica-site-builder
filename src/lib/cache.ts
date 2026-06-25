@@ -139,9 +139,6 @@ export function flushOrderCache(ownerId: string): void {
   cache.flushByPrefix(`stats:${ownerId}:`);
 }
 
-/** Alias — analytics KPIs are owner-scoped (one store per merchant account). */
-export const flushMerchantAnalyticsCache = flushOrderCache;
-
 /** Invalidate cached merchant data for a single tenant (avoids cross-tenant flush). */
 export function flushOwnerCache(ownerId: string): void {
   flushOrderCache(ownerId);

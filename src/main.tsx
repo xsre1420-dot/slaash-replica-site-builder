@@ -1,12 +1,12 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { env } from '@/lib/env';
+import { env, isObservabilityClientEnabled } from '@/lib/env';
 import { initObservability, registerGlobalErrorHandlers } from '@/lib/observability';
 import App from './App.tsx';
 import './index.css';
 
 initObservability({
-  webhookUrl: env.VITE_OBSERVABILITY_WEBHOOK_URL || undefined,
+  webhookUrl: isObservabilityClientEnabled() ? env.VITE_OBSERVABILITY_WEBHOOK_URL : undefined,
   sampleRate: env.VITE_OBSERVABILITY_SAMPLE_RATE,
 });
 

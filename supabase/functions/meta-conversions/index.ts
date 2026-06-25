@@ -1,10 +1,16 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
 import { logStructured, withEdgeSpan } from '../_shared/observability.ts';
 import { checkEdgeRateLimit, clientIpFromRequest } from '../_shared/rateLimiter.ts';
+import { getEdgeCorsHeaders, hasSupabaseAuthHeader } from '../_shared/cors.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const META_API_VERSION = 'v21.0';
+
+const jsonHeaders = (extra: Record<string, string> = {}) => ({
+  'Content-Type': 'application/json',
+  ...extra,
+});
 
 async function sha256Hex(value: string): Promise<string> {
   const normalized = value.trim().toLowerCase().replace(/\D/g, '');
@@ -27,15 +33,37 @@ interface MetaConversionPayload {
 
 Deno.serve(async (req) => {
   return withEdgeSpan('meta-conversions', async () => {
+    const origin = req.headers.get('origin');
+    const cors = getEdgeCorsHeaders(origin);
+
+    if (req.method === 'OPTIONS') {
+      if (!cors) return new Response('Forbidden', { status: 403 });
+      return new Response('ok', { headers: cors });
+    }
+
     if (req.method !== 'POST') {
-      return new Response('Method not allowed', { status: 405 });
+      return new Response('Method not allowed', { status: 405, headers: cors ?? undefined });
+    }
+
+    if (!cors) {
+      return new Response(JSON.stringify({ success: false, error: 'forbidden_origin' }), {
+        status: 403,
+        headers: jsonHeaders(),
+      });
+    }
+
+    if (!hasSupabaseAuthHeader(req)) {
+      return new Response(JSON.stringify({ success: false, error: 'unauthorized' }), {
+        status: 401,
+        headers: jsonHeaders(cors),
+      });
     }
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       logStructured('error', 'meta-conversions.misconfigured');
       return new Response(JSON.stringify({ success: false, error: 'misconfigured' }), {
         status: 503,
-        headers: { 'Content-Type': 'application/json' },
+        headers: jsonHeaders(cors),
       });
     }
 
@@ -45,7 +73,7 @@ Deno.serve(async (req) => {
     } catch {
       return new Response(JSON.stringify({ success: false, error: 'invalid_json' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' },
+        headers: jsonHeaders(cors),
       });
     }
 
@@ -54,7 +82,7 @@ Deno.serve(async (req) => {
     if (!rate.allowed) {
       return new Response(JSON.stringify({ success: false, error: 'rate_limited' }), {
         status: 429,
-        headers: { 'Content-Type': 'application/json' },
+        headers: jsonHeaders(cors),
       });
     }
 
@@ -63,7 +91,15 @@ Deno.serve(async (req) => {
     if (!slug || !orderId || !Number.isFinite(body.value)) {
       return new Response(JSON.stringify({ success: false, error: 'invalid_payload' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' },
+        headers: jsonHeaders(cors),
+      });
+    }
+
+    const orderRate = checkEdgeRateLimit(`meta-order:${orderId}`, 2, 24 * 60 * 60 * 1000);
+    if (!orderRate.allowed) {
+      return new Response(JSON.stringify({ success: false, error: 'rate_limited' }), {
+        status: 429,
+        headers: jsonHeaders(cors),
       });
     }
 
@@ -89,7 +125,7 @@ Deno.serve(async (req) => {
     if (!ownerId) {
       return new Response(JSON.stringify({ success: false, error: 'store_not_found' }), {
         status: 404,
-        headers: { 'Content-Type': 'application/json' },
+        headers: jsonHeaders(cors),
       });
     }
 
@@ -106,7 +142,7 @@ Deno.serve(async (req) => {
       logStructured('warn', 'meta-conversions.verify_failed', { orderId, slug, message: verifyError.message });
       return new Response(JSON.stringify({ success: false, error: 'verification_failed' }), {
         status: 403,
-        headers: { 'Content-Type': 'application/json' },
+        headers: jsonHeaders(cors),
       });
     }
 
@@ -119,7 +155,7 @@ Deno.serve(async (req) => {
       });
       return new Response(JSON.stringify({ success: false, error: verifyPayload?.error ?? 'invalid_order' }), {
         status: 403,
-        headers: { 'Content-Type': 'application/json' },
+        headers: jsonHeaders(cors),
       });
     }
 
@@ -136,14 +172,10 @@ Deno.serve(async (req) => {
     ) {
       return new Response(JSON.stringify({ success: true, skipped: true, reason: 'not_configured' }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' },
+        headers: jsonHeaders(cors),
       });
     }
 
-    const clientIp =
-      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      req.headers.get('x-real-ip') ||
-      undefined;
     const userAgent = req.headers.get('user-agent') || undefined;
 
     const userData: Record<string, unknown> = {};
@@ -185,16 +217,21 @@ Deno.serve(async (req) => {
 
     if (!metaRes.ok) {
       logStructured('warn', 'meta-conversions.failed', { orderId, slug, metaBody });
-      return new Response(JSON.stringify({ success: false, error: 'meta_api_error', details: metaBody }), {
+      return new Response(JSON.stringify({ success: false, error: 'meta_api_error' }), {
         status: 502,
-        headers: { 'Content-Type': 'application/json' },
+        headers: jsonHeaders(cors),
       });
     }
 
+    await supabase.rpc('mark_meta_conversion_sent', {
+      p_order_id: orderId,
+      p_owner_id: ownerId,
+    });
+
     logStructured('info', 'meta-conversions.sent', { orderId, slug, events_received: metaBody?.events_received });
-    return new Response(JSON.stringify({ success: true, meta: metaBody }), {
+    return new Response(JSON.stringify({ success: true }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: jsonHeaders(cors),
     });
   });
 });

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
 import { useStore } from "@/context/StoreContext";
-import { useTenantStore } from "@/hooks/useTenantStore";
+import { useTenantStore } from "@/context/TenantStoreContext";
 import { useAuth } from "@/context/AuthContext";
 import { Order } from "@/types";
 import { saveOrderToDatabase } from "@/utils/orderUtils";

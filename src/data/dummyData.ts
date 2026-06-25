@@ -1,4 +1,7 @@
-
+/**
+ * Merchant product catalog engine (cache, pagination, lifecycle, categories).
+ * Import via `@/services/productService` — do not import this file directly.
+ */
 import { Product, Category } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { getAuthenticatedUserId } from '@/lib/authSession';

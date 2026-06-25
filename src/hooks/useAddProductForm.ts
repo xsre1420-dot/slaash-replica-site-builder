@@ -1,9 +1,7 @@
 import { useMemo, useCallback, useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { getAuthenticatedUserId } from '@/lib/authSession';
 import { createProductIdempotencyKey } from '@/lib/productCreateLock';
-import { addProduct, loadAllMerchantProducts } from '@/services/productService';
+import { addProduct, loadAllMerchantProducts, getCategories } from '@/services/productService';
 import { useToast } from '@/hooks/use-toast';
 import { Product, Category, ColorOption, ProductVariant } from '@/types';
 import { formatPriceInput, isValidPrice, convertArabicToEnglish } from '@/utils/numberUtils';
@@ -100,15 +98,8 @@ export function useAddProductForm() {
 
   const loadCategories = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('owner_id', user.id)
-        .order('display_order', { ascending: true });
-      if (error) throw error;
-      setCategories(data.map((cat) => ({ id: cat.id, name: cat.name, order: cat.display_order })));
+      const rows = await getCategories();
+      setCategories(rows);
     } catch {
       /* fallback */
     }

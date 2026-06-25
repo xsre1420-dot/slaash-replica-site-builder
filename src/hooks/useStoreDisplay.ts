@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useStore } from '@/context/StoreContext';
-import { useTenantStore } from '@/hooks/useTenantStore';
+import { useTenantStore } from '@/context/TenantStoreContext';
 import { DeliveryPrice } from '@/utils/deliveryUtils';
 
 export interface StoreDisplaySettings {

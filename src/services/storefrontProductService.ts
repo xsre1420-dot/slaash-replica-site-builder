@@ -119,14 +119,6 @@ export async function resolveStoreOwnerBySlug(slug: string): Promise<string | nu
     /* RPC may be unavailable */
   }
 
-  const { data: settings } = await supabase
-    .from('store_settings')
-    .select('owner_id')
-    .ilike('store_slug', normalized)
-    .maybeSingle();
-
-  if (settings?.owner_id) return settings.owner_id;
-
   try {
     const { data: storeRow } = await (supabase as any)
       .from('stores')

@@ -84,26 +84,6 @@ const fetchStoreStatisticsRpc = async (
   }
 };
 
-export const invalidateStatisticsCache = (
-  ownerId: string,
-  dateRange: string,
-  customStart?: string,
-  customEnd?: string
-): void => {
-  const rangeKey = dateRange === 'custom' ? `${customStart}_${customEnd}` : dateRange;
-  const cacheKey = CacheKeys.statistics(ownerId, rangeKey);
-  cache.del(cacheKey);
-  clearInflight(cacheKey);
-};
-
-/** Clear all merchant analytics caches (orders stats, dashboard batch, statistics ranges). */
-export const invalidateMerchantAnalyticsCache = (ownerId: string): void => {
-  cache.flushByPrefix(`stats:${ownerId}:`);
-  cache.del(CacheKeys.dashboardBatch(ownerId));
-  cache.del(CacheKeys.ordersStatsSummary(ownerId));
-  clearInflight(CacheKeys.dashboardBatch(ownerId));
-};
-
 const fetchProductCount = async (
   ownerId: string,
   kpis?: Record<string, unknown>

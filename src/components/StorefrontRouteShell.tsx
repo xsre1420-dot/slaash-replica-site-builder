@@ -1,5 +1,5 @@
 import { Outlet, useParams } from 'react-router-dom';
-import { TenantStoreProvider } from '@/hooks/useTenantStore';
+import { TenantStoreProvider } from '@/context/TenantStoreContext';
 
 /** Shares one tenant-meta fetch across Store / ProductDetails / Checkout on the same slug. */
 const StorefrontRouteShell = () => {

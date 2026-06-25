@@ -66,8 +66,7 @@ If RPC unavailable or returns empty KPIs:
 ### Cache invalidation
 
 - `flushOrderCache(ownerId)` — called on order mutations; clears orders list, dashboard batch, and all `stats:{ownerId}:*` keys.
-- `invalidateMerchantAnalyticsCache(ownerId)` — explicit analytics-only flush (statistics + dashboard batch).
-- `invalidateStatisticsCache(ownerId, range)` — single date-range entry.
+- Manual statistics refresh uses `fetchStatisticsData(..., { skipCache: true })`.
 
 ---
 

@@ -10,6 +10,8 @@ const envSchema = z.object({
   VITE_SUPABASE_PROJECT_ID: z.string().optional(),
   VITE_APP_ENV: z.enum(['development', 'staging', 'production']).default('development'),
   VITE_OBSERVABILITY_WEBHOOK_URL: z.union([z.string().url(), z.literal('')]).optional(),
+  /** Never enable client-side webhook posting in production unless you accept URL exposure. */
+  VITE_OBSERVABILITY_CLIENT_ENABLED: z.enum(['true', 'false', '0', '1']).optional(),
   VITE_OBSERVABILITY_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional(),
   VITE_FAILOVER_SUPABASE_URL: z.union([z.string().url(), z.literal('')]).optional(),
   VITE_FAILOVER_SUPABASE_PUBLISHABLE_KEY: z.string().min(20).optional(),
@@ -30,6 +32,7 @@ const raw = {
   VITE_SUPABASE_PROJECT_ID: import.meta.env.VITE_SUPABASE_PROJECT_ID as string | undefined,
   VITE_APP_ENV: (import.meta.env.VITE_APP_ENV as AppEnv['VITE_APP_ENV']) || 'development',
   VITE_OBSERVABILITY_WEBHOOK_URL: import.meta.env.VITE_OBSERVABILITY_WEBHOOK_URL as string | undefined,
+  VITE_OBSERVABILITY_CLIENT_ENABLED: import.meta.env.VITE_OBSERVABILITY_CLIENT_ENABLED as string | undefined,
   VITE_OBSERVABILITY_SAMPLE_RATE: import.meta.env.VITE_OBSERVABILITY_SAMPLE_RATE as number | undefined,
   VITE_FAILOVER_SUPABASE_URL: import.meta.env.VITE_FAILOVER_SUPABASE_URL as string | undefined,
   VITE_FAILOVER_SUPABASE_PUBLISHABLE_KEY: import.meta.env.VITE_FAILOVER_SUPABASE_PUBLISHABLE_KEY as string | undefined,
@@ -66,3 +69,14 @@ export const env: AppEnv = parsed.success
 
 export const isProduction = () => env.VITE_APP_ENV === 'production';
 export const isStaging = () => env.VITE_APP_ENV === 'staging';
+
+/** Client-side observability webhook is off in production unless explicitly enabled. */
+export const isObservabilityClientEnabled = (): boolean => {
+  if (env.VITE_OBSERVABILITY_CLIENT_ENABLED === 'true' || env.VITE_OBSERVABILITY_CLIENT_ENABLED === '1') {
+    return !!env.VITE_OBSERVABILITY_WEBHOOK_URL;
+  }
+  if (env.VITE_OBSERVABILITY_CLIENT_ENABLED === 'false' || env.VITE_OBSERVABILITY_CLIENT_ENABLED === '0') {
+    return false;
+  }
+  return !isProduction() && !!env.VITE_OBSERVABILITY_WEBHOOK_URL;
+};

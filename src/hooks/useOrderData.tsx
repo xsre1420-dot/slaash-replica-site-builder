@@ -4,8 +4,6 @@ import { Order } from "@/types";
 import { fetchOrderById } from "@/services/orderService";
 import { flushOwnerCache } from "@/lib/cache";
 
-export { mapDbOrder } from "@/mappers/orderMapper";
-
 export const useOrderData = (orderId: string | undefined) => {
   const { user } = useAuth();
   const [order, setOrder] = useState<Order | null>(null);

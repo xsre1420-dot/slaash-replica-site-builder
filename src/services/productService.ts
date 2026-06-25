@@ -1,6 +1,6 @@
 /**
- * Canonical product & category data layer.
- * @deprecated Import from here instead of `@/data/dummyData` in new code.
+ * Merchant product & category layer — canonical import for catalog CRUD.
+ * Implementation: `data/dummyData.ts` (migration to explicit ownerId in progress).
  */
 export {
   checkSupabaseConnection,

@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import App from '@/App';
 import { AuthProvider } from '@/context/AuthContext';
 import { StoreBootstrapProvider } from '@/context/StoreBootstrapContext';
-import Signup from '@/pages/Signup';
+import RequestAccess from '@/pages/RequestAccess';
 import Login from '@/pages/Login';
 
 vi.mock('@/integrations/supabase/client', () => {
@@ -77,12 +77,12 @@ describe('Auth pages integration', () => {
     );
   }, 15000);
 
-  it('renders signup without ErrorBoundary crash', async () => {
+  it('renders request-access signup flow without ErrorBoundary crash', async () => {
     render(
       <MemoryRouter initialEntries={['/signup']}>
         <AuthProvider>
           <StoreBootstrapProvider>
-            <Signup />
+            <RequestAccess />
           </StoreBootstrapProvider>
         </AuthProvider>
       </MemoryRouter>
@@ -91,7 +91,7 @@ describe('Auth pages integration', () => {
     await waitFor(
       () => {
         expect(screen.queryByText('حدث خطأ غير متوقع')).not.toBeInTheDocument();
-        expect(screen.getByText('إنشاء حساب جديد')).toBeInTheDocument();
+        expect(screen.getByText('اختر مدة اشتراكك')).toBeInTheDocument();
       },
       { timeout: 8000 }
     );

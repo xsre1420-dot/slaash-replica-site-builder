@@ -8,7 +8,7 @@ import MarketingScripts from "@/components/MarketingScripts";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useStoreVisitTracking } from "@/hooks/useStoreVisitTracking";
 import CartDrawer from "@/components/CartDrawer";
-import { useTenantStore } from "@/hooks/useTenantStore";
+import { useTenantStore } from "@/context/TenantStoreContext";
 import { useStoreProductsPage } from "@/hooks/useStoreProductsPage";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import WhatsAppButton from "@/components/WhatsAppButton";

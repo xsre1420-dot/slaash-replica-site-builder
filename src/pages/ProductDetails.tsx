@@ -6,7 +6,7 @@ import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { Product } from "@/types";
 import { useCart } from "@/context/CartContext";
 import { useStore } from "@/context/StoreContext";
-import { useTenantStore } from "@/hooks/useTenantStore";
+import { useTenantStore } from "@/context/TenantStoreContext";
 import { Truck, Shield, RotateCcw, Check, Package, BadgeCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";

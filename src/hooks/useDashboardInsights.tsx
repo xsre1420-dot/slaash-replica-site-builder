@@ -22,16 +22,15 @@ import {
   getTodayBoundsIso,
   getWeekBoundsIso,
   getYesterdayBoundsIso,
-  parseRpcPeriodMetrics,
   summarizeInventoryAlerts,
   type PeriodMetrics,
 } from '@/utils/dashboardInsightsUtils';
 import {
   buildOrderDashboardStatsFromBatch,
   fetchDashboardStatisticsBatch,
+  fetchStoreStatisticsPeriod,
 } from '@/services/dashboardStatsService';
 import { fetchOrderStatsRows } from '@/services/orderService';
-import { supabase } from '@/integrations/supabase/client';
 import type { Order } from '@/types';
 
 export type DashboardActionItem = {
@@ -55,25 +54,12 @@ export type DashboardInsights = {
   loading: boolean;
 };
 
-const fetchRpcPeriod = async (
+const fetchRpcPeriod = (
   ownerId: string,
   start: string,
   end: string
-): Promise<PeriodMetrics | null> => {
-  try {
-    const { data, error } = await (supabase as any).rpc('get_store_statistics', {
-      p_owner_id: ownerId,
-      p_start: start,
-      p_end: end,
-    });
-    if (error || !data) return null;
-    return parseRpcPeriodMetrics(data as Record<string, unknown>);
-  } catch {
-    return null;
-  }
-};
+): Promise<PeriodMetrics | null> => fetchStoreStatisticsPeriod(ownerId, start, end);
 
-/** @deprecated Use fetchDashboardStatisticsBatch — kept for partial fallback */
 export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
