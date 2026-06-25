@@ -17,13 +17,24 @@ export const sanitizeInternalRedirect = (path: string | undefined | null, fallba
   return trimmed;
 };
 
-/** Structured auth error logging (always logged; dev shows full detail) */
+/** Structured auth error logging + health monitoring */
 export const logAuthFailure = (operation: string, detail: unknown): void => {
   const payload =
     detail instanceof Error
       ? { message: detail.message, name: detail.name }
       : detail;
   console.error(`[auth.${operation}]`, payload);
+
+  void import('@/lib/observability/healthMonitor').then(({ recordHealthEvent }) => {
+    const domain = operation.startsWith('register') ? 'auth.register' : 'auth.login';
+    const message =
+      detail instanceof Error
+        ? detail.message
+        : typeof detail === 'object' && detail && 'message' in detail
+          ? String((detail as { message: unknown }).message)
+          : String(detail);
+    recordHealthEvent(domain, false, { message: `${operation}: ${message}` });
+  });
 };
 
 export const normalizeUsername = (username: string): string =>

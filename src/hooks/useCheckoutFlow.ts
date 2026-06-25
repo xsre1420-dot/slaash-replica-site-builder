@@ -20,7 +20,7 @@ import {
 } from "@/utils/checkoutSession";
 import { tryRecoverCheckoutOrder } from "@/services/checkoutRecoveryService";
 import { mapOrderError } from "@/utils/orderErrors";
-import { logger, metrics, reportError, alertOnError } from "@/lib/observability";
+import { logger, metrics, reportError, alertOnError, recordHealthEvent } from "@/lib/observability";
 import { getStoredMarketingAttribution, clearMarketingAttribution } from "@/lib/attribution";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import {
@@ -40,11 +40,10 @@ import {
   parseEnabledPaymentMethods,
   PaymentMethodId,
 } from "@/utils/paymentUtils";
-import { cache } from "@/lib/cache";
+import { cache, flushOrderCache, flushOwnerCache } from "@/lib/cache";
 import { toast } from "sonner";
 import { formatPhoneForStorage, isValidIraqiPhone } from "@/utils/phoneUtils";
 import { loadCheckoutCustomer, saveCheckoutCustomer } from "@/utils/checkoutCustomer";
-import { cache, flushOrderCache, flushOwnerCache } from "@/lib/cache";
 import { invalidateStorefrontForOwner, resolveStoreSlugByOwnerId } from "@/services/storefrontProductService";
 
 const COUPON_STORAGE_KEY = (ownerId: string) => `checkout-coupon:${ownerId}`;
@@ -379,6 +378,7 @@ export const useCheckoutFlow = () => {
       });
       markCheckoutCompleted(ownerId, orderId);
       metrics.increment(idempotent ? 'checkout.submit.recovered' : 'checkout.submit.success');
+      recordHealthEvent('checkout', true);
       logger.info('checkout.submit.success', { orderId, ownerId, idempotent });
       toast.success(
         idempotent
@@ -582,6 +582,9 @@ export const useCheckoutFlow = () => {
       releaseLockOnExit = false;
     } catch (error) {
       metrics.increment('checkout.submit.failed');
+      recordHealthEvent('checkout', false, {
+        message: error instanceof Error ? error.message : String(error),
+      });
       reportError(error, { source: 'checkout.submit', ownerId });
       alertOnError('checkout.submit', error, { ownerId });
 

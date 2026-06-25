@@ -17,6 +17,8 @@ The platform has **strong server-side tenant isolation** (RLS + SECURITY DEFINER
 
 **Deploy:** `npm run db:deploy` (migration **v31**) + redeploy edge functions (`meta-conversions`, `redeem-access-code`).
 
+> **Latest audit:** [`SECURITY_AUDIT_REPORT.md`](./SECURITY_AUDIT_REPORT.md) — score **89/100**, migration **v39**.
+
 ---
 
 ## 1. Authentication

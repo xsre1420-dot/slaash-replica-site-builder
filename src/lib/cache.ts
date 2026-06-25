@@ -116,6 +116,12 @@ export const CacheKeys = {
   statistics: (ownerId: string, range: string) => `stats:${ownerId}:${range}`,
   tenantMeta: (slug: string) => `tenant-meta:${slug}`,
   tenantProducts: (slug: string, pageKey: string) => `tenant-products:${slug}:${pageKey}`,
+  /** owner_id → store_slug (checkout, invalidation, cross-tab sync) */
+  ownerSlug: (ownerId: string) => `owner-slug:${ownerId}`,
+  /** store_slug → owner_id (product detail, fallbacks) */
+  slugOwner: (slug: string) => `slug-owner:${slug}`,
+  storefrontProduct: (slug: string, productId: string) => `storefront-product:${slug}:${productId}`,
+  footerSuggested: (slug: string) => `footer-suggested:${slug}`,
 } as const;
 
 export const CacheTTL = {
@@ -146,4 +152,13 @@ export function flushOwnerCache(ownerId: string): void {
   cache.del(CacheKeys.categories(ownerId));
   cache.del(CacheKeys.storeSettings(ownerId));
   cache.del(CacheKeys.store(ownerId));
+  cache.del(CacheKeys.ownerSlug(ownerId));
+}
+
+/** Drop slug ↔ owner resolution entries after settings or slug changes. */
+export function flushSlugResolutionCache(ownerId: string, slug?: string | null): void {
+  cache.del(CacheKeys.ownerSlug(ownerId));
+  if (slug?.trim()) {
+    cache.del(CacheKeys.slugOwner(slug.trim().toLowerCase()));
+  }
 }

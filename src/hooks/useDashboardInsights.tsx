@@ -73,6 +73,7 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
   });
   const [hasSlug, setHasSlug] = useState<boolean | null>(null);
   const [pendingReviewsCount, setPendingReviewsCount] = useState(0);
+  const [catalogKpis, setCatalogKpis] = useState<{ productCount: number; lowStockCount: number } | null>(null);
   const [kpiLoading, setKpiLoading] = useState(true);
 
   useEffect(() => {
@@ -100,6 +101,7 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
         week: EMPTY_PERIOD,
         previousWeek: EMPTY_PERIOD,
       });
+      setCatalogKpis(null);
       setKpiLoading(false);
       return;
     }
@@ -122,6 +124,7 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
         previousWeek: batch.previousWeek,
       });
       setPendingFulfillment(buildOrderDashboardStatsFromBatch(batch).pendingFulfillment);
+      setCatalogKpis(batch.catalogKpis);
       setKpiLoading(false);
       return;
     }
@@ -173,11 +176,16 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
     void loadPeriods();
   }, [loadPeriods, refreshKey]);
 
-  const products = useMemo(() => getProductsSync(), [refreshKey, user?.id]);
-  const productCount = products.length;
-  const lowStockCount = countLowStockProducts(products);
-  const inventorySummary = summarizeInventoryAlerts(products);
-  const draftCount = countDraftProducts(products);
+  const products = useMemo(
+    () => (catalogKpis != null ? [] : getProductsSync()),
+    [catalogKpis, refreshKey, user?.id]
+  );
+  const productCount = catalogKpis?.productCount ?? products.length;
+  const lowStockCount = catalogKpis?.lowStockCount ?? countLowStockProducts(products);
+  const inventorySummary = catalogKpis
+    ? { low: catalogKpis.lowStockCount, out: 0 }
+    : summarizeInventoryAlerts(products);
+  const draftCount = catalogKpis ? 0 : countDraftProducts(products);
 
   const actions = useMemo((): DashboardActionItem[] => {
     const items: DashboardActionItem[] = [];

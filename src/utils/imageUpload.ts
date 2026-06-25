@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { generateUUID } from '@/lib/uuid';
+import { getAuthenticatedUserId } from '@/lib/authSession';
 
 const BUCKET = 'product-images';
 const MAX_WIDTH = 1200;
@@ -139,7 +140,17 @@ const generateThumbnail = async (file: File): Promise<Blob> => {
   return compressImage(file, THUMBNAIL_SIZE, THUMBNAIL_SIZE, 0.7);
 };
 
+const isSafeStoragePath = (path: string): boolean =>
+  /^[0-9a-f-]{36}\/(([0-9a-f-]{36}\.(webp|jpg|jpeg|png))|(thumbs\/[0-9a-f-]{36}\.(webp|jpg|jpeg|png)))$/i.test(
+    path
+  );
+
 export const uploadImage = async (file: File, userId: string): Promise<string> => {
+  const authenticatedId = await getAuthenticatedUserId();
+  if (!authenticatedId || authenticatedId !== userId) {
+    throw new Error('غير مصرح برفع الصورة — تأكد من تسجيل الدخول');
+  }
+
   const normalized = normalizeImageFile(file);
 
   if (normalized.size > 5 * 1024 * 1024) {
@@ -197,8 +208,7 @@ export const isBlobUrl = (url: string): boolean => url.startsWith('blob:');
 
 export const deleteImage = async (publicUrl: string): Promise<void> => {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const userId = session?.user?.id;
+    const userId = await getAuthenticatedUserId();
     if (!userId) {
       throw new Error('يجب تسجيل الدخول لحذف الصورة');
     }
@@ -208,6 +218,10 @@ export const deleteImage = async (publicUrl: string): Promise<void> => {
     if (pathParts.length < 2) return;
 
     const filePath = decodeURIComponent(pathParts[1]);
+    if (!isSafeStoragePath(filePath)) {
+      throw new Error('مسار الصورة غير صالح');
+    }
+
     const pathOwnerId = filePath.split('/')[0];
 
     if (pathOwnerId !== userId) {

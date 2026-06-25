@@ -5,9 +5,11 @@ import { getOrCreateIdempotencyKey } from '@/utils/checkoutSession';
 import { tryRecoverCheckoutOrder } from '@/services/checkoutRecoveryService';
 import { mapOrderRpcFailure, mapOrderError } from '@/utils/orderErrors';
 import { computeOrderStats, normalizeOrderPhone, type OrderListFilters, type OrderWorkflowTab } from '@/utils/orderWorkflowUtils';
+import { DEFAULT_ORDER_FILTERS } from '@/utils/orderWorkflowUtils';
 import { filtersToRpcParams, filtersToRpcParamsWithoutWorkflow, serializeOrderFilters } from '@/utils/orderQueryBuilder';
 import { cache, CacheKeys, CacheTTL, dedup, flushOrderCache } from '@/lib/cache';
 import { instrumentAsync, instrumentQuery, logger, metrics } from '@/lib/observability';
+import { recordHealthEvent } from '@/lib/observability/healthMonitor';
 import {
   enforceRateLimit,
   formatRateLimitMessageAr,
@@ -32,8 +34,12 @@ export const ORDER_DETAIL_SELECT =
 export const ORDER_LIST_SELECT =
   'id, status, total_amount, created_at, updated_at, customer_name, customer_phone, customer_address, customer_governorate, notes, delivery_fee, delivery_status, payment_method, payment_status, coupon_code, discount_amount, order_items(id, product_id, product_name, product_price, quantity, subtotal, variant_metadata)';
 
-const enrichOrdersWithProductImages = async (orders: Order[], ownerId: string): Promise<Order[]> => {
-  if (orders.length === 0) return orders;
+const enrichOrdersWithProductImages = async (
+  orders: Order[],
+  ownerId: string,
+  options?: { skip?: boolean }
+): Promise<Order[]> => {
+  if (options?.skip || orders.length === 0) return orders;
 
   const productIds = [
     ...new Set(
@@ -324,18 +330,32 @@ export const fetchRecentOrders = async (ownerId: string, limit = 5): Promise<Ord
   const cached = cache.get<Order[]>(cacheKey);
   if (cached) return cached;
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any).rpc('list_merchant_orders', {
+    p_owner_id: ownerId,
+    ...filtersToRpcParams(DEFAULT_ORDER_FILTERS, 0, limit),
+  });
+
+  if (!error && data?.orders) {
+    const mapped = (data.orders as unknown[]).map((row) =>
+      mapDbOrder(row as Record<string, unknown>)
+    );
+    const enriched = await enrichOrdersWithProductImages(mapped, ownerId, { skip: true });
+    cache.set(cacheKey, enriched, CacheTTL.MEDIUM, CacheTTL.STALE);
+    return enriched;
+  }
+
+  const { data: rows, error: queryError } = await supabase
     .from('orders')
     .select(ORDER_LIST_SELECT)
     .eq('owner_id', ownerId)
     .order('created_at', { ascending: false })
     .limit(limit);
 
-  if (error || !data) return [];
+  if (queryError || !rows) return [];
 
-  const mapped = data.map((row) => mapDbOrder(row as Record<string, unknown>));
-  const enriched = await enrichOrdersWithProductImages(mapped, ownerId);
-  cache.set(cacheKey, enriched, CacheTTL.SHORT, CacheTTL.STALE);
+  const mapped = rows.map((row) => mapDbOrder(row as Record<string, unknown>));
+  const enriched = await enrichOrdersWithProductImages(mapped, ownerId, { skip: true });
+  cache.set(cacheKey, enriched, CacheTTL.MEDIUM, CacheTTL.STALE);
   return enriched;
 };
 
@@ -634,6 +654,7 @@ export const createOrder = async (
         }
 
         logger.info('order.create.success', { orderId, ownerId, attempt, wasIdempotent });
+        recordHealthEvent('order', true);
         if (!wasIdempotent) {
           flushOrderCache(ownerId);
           void invalidateStorefrontForOwner(ownerId);
@@ -705,6 +726,7 @@ export const createOrder = async (
         continue;
       }
 
+      recordHealthEvent('order', false, { message: lastError });
       throw new Error(lastError);
     }
 
@@ -718,6 +740,7 @@ export const createOrder = async (
       return buildRecoveredOrderResult(order, recovered);
     }
 
+    recordHealthEvent('order', false, { message: lastError });
     throw new Error(lastError);
   }, { ownerId, paymentMethod, itemCount: order.items.length });
 

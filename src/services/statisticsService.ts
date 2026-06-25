@@ -2,6 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { DatabaseData } from '@/types/statistics';
 import { cache, CacheKeys, CacheTTL, clearInflight, dedup } from '@/lib/cache';
+import { assertMerchantOwner } from '@/lib/tenantGuard';
 
 const withTimeout = <T>(promise: Promise<T>, ms = 12000): Promise<T> => {
   return Promise.race([
@@ -271,7 +272,7 @@ export const fetchStatisticsData = async (
   dateRange: string,
   customStart?: string,
   customEnd?: string,
-  options?: { skipCache?: boolean }
+  options?: { skipCache?: boolean; includeChartOrders?: boolean }
 ): Promise<DatabaseData> => {
   const { data: { user } } = await supabase.auth.getUser();
   const ownerId = user?.id;
@@ -284,6 +285,8 @@ export const fetchStatisticsData = async (
   if (!ownerId) {
     return { orders: [], orderItems: [], customers: [], products: [], visits: [], dateBounds: bounds };
   }
+
+  await assertMerchantOwner(ownerId);
 
   if (options?.skipCache) {
     cache.del(cacheKey);
@@ -325,10 +328,14 @@ export const fetchStatisticsData = async (
       const visitsFrom = rpcReady ? periodStart : fallbackFrom;
       const skipVisits = rpcReady && hasUsableStatisticsKpis(previousKpis);
       const skipOrderItems = rpcReady && hasTopSellingProductsKpi(kpis);
+      const includeChartOrders = options?.includeChartOrders !== false;
+      const skipOrders = rpcReady && !includeChartOrders;
 
       const [ordersResult, visitsResult, productCount, orderItems] = await withTimeout(
         Promise.all([
-          fetchOrdersForStatistics(ownerId, ordersFrom, periodEnd, ordersCap),
+          skipOrders
+            ? Promise.resolve({ orders: [] as DatabaseData['orders'] })
+            : fetchOrdersForStatistics(ownerId, ordersFrom, periodEnd, ordersCap),
           skipVisits
             ? Promise.resolve({ visits: [] as DatabaseData['visits'] })
             : fetchVisitsForStatistics(ownerId, visitsFrom, periodEnd, visitsCap),

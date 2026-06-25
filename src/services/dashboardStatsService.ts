@@ -7,6 +7,11 @@ import {
 import { netRevenueFromRpc } from '@/utils/analyticsMetrics';
 import type { OrderDashboardStats, WorkflowTabCounts } from '@/types/orders';
 
+export type DashboardCatalogKpis = {
+  productCount: number;
+  lowStockCount: number;
+};
+
 export type DashboardBatchPayload = {
   today: PeriodMetrics | null;
   yesterday: PeriodMetrics | null;
@@ -15,6 +20,20 @@ export type DashboardBatchPayload = {
   month: PeriodMetrics | null;
   allTime: Record<string, unknown> | null;
   workflowCounts: WorkflowTabCounts | null;
+  catalogKpis: DashboardCatalogKpis | null;
+};
+
+const parseCatalogKpis = (payload: Record<string, unknown>): DashboardCatalogKpis | null => {
+  const raw = payload.catalog_kpis ?? payload.all_time;
+  if (!raw || typeof raw !== 'object') return null;
+  const record = raw as Record<string, unknown>;
+  const productCount = Number(record.product_count);
+  const lowStockCount = Number(record.low_stock_count);
+  if (!Number.isFinite(productCount) && !Number.isFinite(lowStockCount)) return null;
+  return {
+    productCount: Number.isFinite(productCount) ? productCount : 0,
+    lowStockCount: Number.isFinite(lowStockCount) ? lowStockCount : 0,
+  };
 };
 
 const parsePeriod = (value: unknown): PeriodMetrics | null => {
@@ -52,6 +71,7 @@ export const fetchDashboardStatisticsBatch = async (
         month: parsePeriod(payload.month),
         allTime: (payload.all_time as Record<string, unknown>) ?? null,
         workflowCounts: (payload.workflow_counts as WorkflowTabCounts) ?? null,
+        catalogKpis: parseCatalogKpis(payload),
       };
 
       cache.set(cacheKey, result, CacheTTL.ANALYTICS, CacheTTL.ANALYTICS_STALE);

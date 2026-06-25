@@ -1,15 +1,10 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
-
-interface SuggestedProduct {
-  id: string;
-  name: string;
-  price: number;
-  image_url?: string;
-  category: string;
-}
+import {
+  fetchSuggestedProductsForOwner,
+  fetchSuggestedProductsForStore,
+} from "@/services/suggestedProductsService";
 
 interface SuggestedProductsProps {
   currentProductId: string;
@@ -17,53 +12,35 @@ interface SuggestedProductsProps {
   category?: string;
 }
 
-const SuggestedProducts = ({ currentProductId, storeSlug, category }: SuggestedProductsProps) => {
-  const [suggestedProducts, setSuggestedProducts] = useState<SuggestedProduct[]>([]);
+const SuggestedProducts = ({ currentProductId, storeSlug }: SuggestedProductsProps) => {
+  const [suggestedProducts, setSuggestedProducts] = useState<
+    Awaited<ReturnType<typeof fetchSuggestedProductsForStore>>
+  >([]);
 
   useEffect(() => {
-    const fetchSuggestedProducts = async () => {
+    const load = async () => {
       if (!currentProductId) return;
 
       try {
         if (storeSlug) {
-          const { data, error } = await (supabase as any).rpc('get_suggested_products_for_store', {
-            p_slug: storeSlug.trim().toLowerCase(),
-            p_product_id: currentProductId,
-          });
-
-          if (!error && Array.isArray(data)) {
-            setSuggestedProducts(data.slice(0, 4));
-          }
+          setSuggestedProducts(
+            await fetchSuggestedProductsForStore(storeSlug, currentProductId, 4)
+          );
           return;
         }
 
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user?.id) return;
+        const { getAuthenticatedUserId } = await import("@/lib/authSession");
+        const ownerId = await getAuthenticatedUserId();
+        if (!ownerId) return;
 
-        const { data: suggestedData, error: suggestedError } = await (supabase as any)
-          .from('suggested_products')
-          .select('suggested_product_id')
-          .eq('product_id', currentProductId)
-          .eq('owner_id', user.id)
-          .limit(10);
-
-        if (suggestedError || !suggestedData?.length) return;
-
-        const productIds = suggestedData.map((sp: any) => sp.suggested_product_id);
-        const { data: productsData, error: productsError } = await supabase
-          .from('products')
-          .select('id, name, price, image_url, category')
-          .in('id', productIds)
-          .eq('owner_id', user.id);
-
-        if (!productsError && productsData) {
-          setSuggestedProducts(productsData.slice(0, 4));
-        }
+        setSuggestedProducts(
+          await fetchSuggestedProductsForOwner(currentProductId, ownerId, 4)
+        );
       } catch (error) {
-        console.error('Error in fetchSuggestedProducts:', error);
+        console.error("Error in fetchSuggestedProducts:", error);
       }
     };
-    fetchSuggestedProducts();
+    void load();
   }, [currentProductId, storeSlug]);
 
   if (suggestedProducts.length === 0) return null;

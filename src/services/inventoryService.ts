@@ -1,4 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
+import { assertMerchantOwner } from '@/lib/tenantGuard';
+import { recordHealthEvent } from '@/lib/observability/healthMonitor';
 import type { InventoryProductRow } from '@/utils/inventoryPageUtils';
 
 export class InventoryRestockError extends Error {
@@ -25,6 +27,8 @@ export const restockProduct = async ({
     throw new InventoryRestockError('لا يمكن خصم المخزون يدوياً — يُخصم تلقائياً عند الطلب');
   }
 
+  await assertMerchantOwner(ownerId);
+
   const previousQty = product.stock_quantity ?? 0;
   const hasMinChange = minLevel !== undefined && minLevel !== (product.min_stock_level ?? 5);
 
@@ -48,9 +52,11 @@ export const restockProduct = async ({
           .eq('id', product.id)
           .eq('owner_id', ownerId);
       }
+      recordHealthEvent('inventory', true);
       return { newQuantity: payload.stock_quantity, added: addAmount };
     }
 
+    recordHealthEvent('inventory', false, { message: payload?.error ?? error?.message });
     throw new InventoryRestockError('تعذر تحديث المخزون — حاول مرة أخرى');
   }
 
@@ -85,6 +91,7 @@ export const fetchProductMovements = async (
     tenantId = authData.user?.id;
   }
   if (!tenantId) return [];
+  await assertMerchantOwner(tenantId);
 
   const { data, error } = await (supabase as any)
     .from('inventory_movements')

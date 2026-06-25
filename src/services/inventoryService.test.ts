@@ -7,6 +7,10 @@ const { mockUpdate, mockInsert, mockRpc } = vi.hoisted(() => ({
   mockRpc: vi.fn(),
 }));
 
+vi.mock('@/lib/tenantGuard', () => ({
+  assertMerchantOwner: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     rpc: mockRpc,

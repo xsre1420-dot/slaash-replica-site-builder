@@ -4,7 +4,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchApprovedReviewsForOwner,
+  fetchApprovedReviewsForStore,
+  submitMerchantReview,
+  submitStorefrontReview,
+} from "@/services/storefrontReviewService";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 
@@ -47,41 +52,8 @@ const RatingSection = ({ productId, storeSlug, reviews = [] }: RatingSectionProp
 
     try {
       if (storeSlug) {
-        const { data, error } = await (supabase as any).rpc("get_approved_product_reviews", {
-          p_slug: storeSlug.trim().toLowerCase(),
-          p_product_id: productId,
-        });
-
-        if (!error && Array.isArray(data)) {
-          const mapped = data.map((r: any) => ({
-            id: r.id,
-            name: r.reviewer_name,
-            rating: r.rating,
-            comment: r.comment,
-            date: new Date(r.created_at).toLocaleDateString("ar-EG"),
-            helpful: r.helpful_count ?? 0,
-            avatar: "",
-          }));
-          setDbReviews(mapped);
-        }
-        return;
-      }
-
-      if (!user?.id) {
-        setDbReviews([]);
-        return;
-      }
-
-      const { data, error } = await (supabase as any)
-        .from("product_reviews")
-        .select("id, reviewer_name, rating, comment, created_at, helpful_count")
-        .eq("product_id", productId)
-        .eq("owner_id", user.id)
-        .eq("is_approved", true)
-        .order("created_at", { ascending: false });
-
-      if (!error && data) {
-        const mapped = data.map((r: any) => ({
+        const data = await fetchApprovedReviewsForStore(storeSlug, productId);
+        const mapped = data.map((r) => ({
           id: r.id,
           name: r.reviewer_name,
           rating: r.rating,
@@ -91,7 +63,25 @@ const RatingSection = ({ productId, storeSlug, reviews = [] }: RatingSectionProp
           avatar: "",
         }));
         setDbReviews(mapped);
+        return;
       }
+
+      if (!user?.id) {
+        setDbReviews([]);
+        return;
+      }
+
+      const data = await fetchApprovedReviewsForOwner(productId, user.id);
+      const mapped = data.map((r) => ({
+        id: r.id,
+        name: r.reviewer_name,
+        rating: r.rating,
+        comment: r.comment,
+        date: new Date(r.created_at).toLocaleDateString("ar-EG"),
+        helpful: r.helpful_count ?? 0,
+        avatar: "",
+      }));
+      setDbReviews(mapped);
     } finally {
       setLoading(false);
     }
@@ -136,29 +126,22 @@ const RatingSection = ({ productId, storeSlug, reviews = [] }: RatingSectionProp
     setSubmitting(true);
     try {
       if (storeSlug) {
-        const { data, error } = await (supabase as any).rpc("submit_product_review_for_store", {
-          p_slug: storeSlug.trim().toLowerCase(),
-          p_product_id: productId,
-          p_reviewer_name: newReview.name.trim(),
-          p_rating: newReview.rating,
-          p_comment: newReview.comment.trim(),
-        });
-
-        if (error || !data?.success) throw new Error("فشل إرسال التقييم");
-      } else {
-        if (!user?.id) throw new Error("يجب تسجيل الدخول");
-
-        const { error } = await supabase.from("product_reviews").insert({
-          product_id: productId,
-          owner_id: user.id,
-          reviewer_name: newReview.name.trim(),
-          reviewer_email: null,
+        const result = await submitStorefrontReview(storeSlug, {
+          productId,
+          reviewerName: newReview.name.trim(),
           rating: newReview.rating,
           comment: newReview.comment.trim(),
-          is_approved: false,
         });
-
-        if (error) throw error;
+        if (!result.success) throw new Error(result.error);
+      } else {
+        if (!user?.id) throw new Error("يجب تسجيل الدخول");
+        const result = await submitMerchantReview(user.id, {
+          productId,
+          reviewerName: newReview.name.trim(),
+          rating: newReview.rating,
+          comment: newReview.comment.trim(),
+        });
+        if (!result.success) throw new Error(result.error);
       }
 
       toast({

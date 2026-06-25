@@ -59,10 +59,14 @@ const Statistics = () => {
   const [selectedMetric, setSelectedMetric] = useState("revenue");
   const [activeTab, setActiveTab] = useState("overview");
 
+  const needsChartOrders =
+    activeTab === 'overview' || activeTab === 'payments' || activeTab === 'performance';
+
   const { stats, rawOrders, loading, error, refetch, dateBounds, truncated, fetchWarnings } = useRealStatistics(
     dateRange,
     startDate,
-    endDate
+    endDate,
+    { includeChartOrders: needsChartOrders }
   );
 
   useRealtimeOrders(() => {

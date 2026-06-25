@@ -3,7 +3,7 @@ import { Order } from '@/types';
 import { fetchRecentOrders } from '@/services/orderService';
 import { useAuth } from '@/context/AuthContext';
 import { useStoreHydration } from '@/context/StoreBootstrapContext';
-import { flushOwnerCache } from '@/lib/cache';
+import { cache, CacheKeys } from '@/lib/cache';
 
 export const useRecentOrders = (limit = 5) => {
   const { user } = useAuth();
@@ -32,7 +32,7 @@ export const useRecentOrders = (limit = 5) => {
   }, [isReady, hydrationVersion, reload]);
 
   const refetch = useCallback(() => {
-    if (user?.id) flushOwnerCache(user.id);
+    if (user?.id) cache.del(CacheKeys.ordersRecent(user.id));
     void reload();
   }, [reload, user?.id]);
 

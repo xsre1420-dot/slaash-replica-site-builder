@@ -30,6 +30,7 @@ const AdminLeads = lazy(() => import("./pages/admin/AdminLeads"));
 const AdminLeadDetail = lazy(() => import("./pages/admin/AdminLeadDetail"));
 const AdminSubscriptions = lazy(() => import("./pages/admin/AdminSubscriptions"));
 const AdminCustomers = lazy(() => import("./pages/admin/AdminCustomers"));
+const AdminPlatformHealth = lazy(() => import("./pages/admin/AdminPlatformHealth"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const Builder = lazy(() => import("./pages/Builder"));
@@ -124,6 +125,7 @@ const App = () => (
                     <Route path="/admin/leads/:leadId" element={<AdminRoute><AdminLeadDetail /></AdminRoute>} />
                     <Route path="/admin/subscriptions" element={<AdminRoute><AdminSubscriptions /></AdminRoute>} />
                     <Route path="/admin/customers" element={<AdminRoute><AdminCustomers /></AdminRoute>} />
+                    <Route path="/admin/health" element={<AdminRoute><AdminPlatformHealth /></AdminRoute>} />
                     <Route element={<StorefrontRouteShell />}>
                       <Route path="/store/:username" element={<Store />} />
                       <Route path="/store/:username/product/:productId" element={<ProductDetails />} />

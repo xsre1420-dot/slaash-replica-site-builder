@@ -1,4 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
+import { cache, CacheKeys, CacheTTL, dedup } from '@/lib/cache';
+import { invalidateStorefrontForOwner } from '@/services/storefrontProductService';
 
 export interface FooterSuggestedProduct {
   id: string;
@@ -24,17 +26,26 @@ export async function fetchFooterSuggestedForStorefront(
   const slug = storeSlug?.trim().toLowerCase();
 
   if (slug && /^[a-z0-9-]+$/.test(slug)) {
-    try {
-      const { data, error } = await (supabase as any).rpc('get_storefront_footer_products', {
-        p_slug: slug,
-      });
+    const cacheKey = CacheKeys.footerSuggested(slug);
+    const cached = cache.get<FooterSuggestedProduct[]>(cacheKey);
+    if (cached) return cached;
 
-      if (!error && Array.isArray(data)) {
-        return data as FooterSuggestedProduct[];
+    return dedup(cacheKey, async () => {
+      try {
+        const { data, error } = await (supabase as any).rpc('get_storefront_footer_products', {
+          p_slug: slug,
+        });
+
+        if (!error && Array.isArray(data)) {
+          const products = data as FooterSuggestedProduct[];
+          cache.set(cacheKey, products, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+          return products;
+        }
+      } catch {
+        /* RPC may be missing on older DBs */
       }
-    } catch {
-      /* RPC may be missing on older DBs */
-    }
+      return [];
+    });
   }
 
   if (!ownerId) return [];
@@ -118,6 +129,7 @@ export async function addFooterSuggestedProduct(
   });
 
   if (error) throw error;
+  void invalidateStorefrontForOwner(ownerId);
 }
 
 export async function removeFooterSuggestedProduct(rowId: string, ownerId: string): Promise<void> {
@@ -128,6 +140,7 @@ export async function removeFooterSuggestedProduct(rowId: string, ownerId: strin
     .eq('owner_id', ownerId);
 
   if (error) throw error;
+  void invalidateStorefrontForOwner(ownerId);
 }
 
 export { MAX_FOOTER_SUGGESTIONS };

@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { getAuthenticatedUserId } from "@/lib/authSession";
+import { bulkImportProducts } from "@/services/productsCrudService";
 import { syncMerchantProductCatalog } from "@/services/productService";
 import { fetchStoreByUserId } from "@/services/storeService";
 
@@ -117,8 +118,8 @@ export const BulkUpload = ({ onComplete }: { onComplete: () => void }) => {
   const handleUpload = async () => {
     if (parsed.length === 0) return;
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
       toast.error("يرجى تسجيل الدخول أولاً");
       return;
     }
@@ -134,67 +135,16 @@ export const BulkUpload = ({ onComplete }: { onComplete: () => void }) => {
 
     setUploading(true);
     setProgress(0);
-    let success = 0;
-    let failed = 0;
-    const uploadErrors: string[] = [];
 
-    const store = await fetchStoreByUserId(user.id);
-    const storeId = store?.id ?? null;
-
-    const chunkSize = 20;
-    for (let i = 0; i < deduped.length; i += chunkSize) {
-      const chunk = deduped.slice(i, i + chunkSize).map(p => ({
-        name: p.name,
-        description: p.description,
-        category: p.category,
-        price: p.price,
-        cost: p.cost || null,
-        stock_quantity: p.stock_quantity || 0,
-        sizes: p.sizes || null,
-        image_url: p.image_url || null,
-        owner_id: user.id,
-        is_active: false,
-        ...(storeId ? { store_id: storeId } : {}),
-      }));
-
-      const { data: inserted, error } = await supabase
-        .from("products")
-        .insert(chunk)
-        .select("id, stock_quantity");
-
-      if (error) {
-        failed += chunk.length;
-        uploadErrors.push(`خطأ في رفع الدفعة ${Math.floor(i / chunkSize) + 1}: ${error.message}`);
-      } else {
-        success += inserted?.length ?? chunk.length;
-
-        const movements = (inserted ?? [])
-          .filter((row) => (row.stock_quantity ?? 0) > 0)
-          .map((row) => ({
-            product_id: row.id,
-            owner_id: user.id,
-            quantity_delta: row.stock_quantity,
-            reason: 'initial_stock',
-          }));
-
-        if (movements.length > 0) {
-          const { error: movementError } = await supabase
-            .from('inventory_movements')
-            .insert(movements);
-          if (movementError) {
-            uploadErrors.push(`تنبيه: تم رفع المنتجات لكن سجل المخزون فشل: ${movementError.message}`);
-          }
-        }
-      }
-      setProgress(Math.round(((i + chunkSize) / deduped.length) * 100));
-    }
-
-    setResult({ success, failed, errors: uploadErrors });
+    const store = await fetchStoreByUserId(userId);
+    const result = await bulkImportProducts(deduped, userId, store?.id ?? null);
+    setProgress(100);
+    setResult(result);
     setUploading(false);
 
-    if (success > 0) {
-      syncMerchantProductCatalog(user.id);
-      toast.success(`تم رفع ${success} منتج كمسودة — انشرها من صفحة المنتجات`);
+    if (result.success > 0) {
+      syncMerchantProductCatalog(userId);
+      toast.success(`تم رفع ${result.success} منتج كمسودة — انشرها من صفحة المنتجات`);
       onComplete();
     }
   };

@@ -3,7 +3,11 @@ import { Globe, Check, AlertCircle, Copy, ExternalLink, Loader2 } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchCustomDomainSettings,
+  removeCustomDomain,
+  saveCustomDomain,
+} from "@/services/storeService";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
@@ -21,18 +25,13 @@ const CustomDomainTab = ({ storeSlug }: CustomDomainTabProps) => {
 
   useEffect(() => {
     if (user?.id) {
-      (supabase as any)
-        .from('store_settings')
-        .select('custom_domain, domain_verified')
-        .eq('owner_id', user.id)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (data?.custom_domain) {
-            setDomain(data.custom_domain);
-            setSavedDomain(data.custom_domain);
-            setVerified(data.domain_verified ?? false);
-          }
-        });
+      void fetchCustomDomainSettings(user.id).then((data) => {
+        if (data?.custom_domain) {
+          setDomain(data.custom_domain);
+          setSavedDomain(data.custom_domain);
+          setVerified(data.domain_verified);
+        }
+      });
     }
   }, [user?.id]);
 
@@ -56,13 +55,9 @@ const CustomDomainTab = ({ storeSlug }: CustomDomainTabProps) => {
 
     setSaving(true);
     try {
-      const { error } = await (supabase as any)
-        .from('store_settings')
-        .update({ custom_domain: cleaned, domain_verified: false })
-        .eq('owner_id', user.id);
-
-      if (error) {
-        if (error.code === '23505') {
+      const result = await saveCustomDomain(user.id, cleaned);
+      if (!result.success) {
+        if (result.code === '23505') {
           toast.error("هذا النطاق مستخدم بالفعل من متجر آخر");
         } else {
           toast.error("فشل في حفظ النطاق");
@@ -85,10 +80,7 @@ const CustomDomainTab = ({ storeSlug }: CustomDomainTabProps) => {
     if (!user?.id) return;
     setSaving(true);
     try {
-      await (supabase as any)
-        .from('store_settings')
-        .update({ custom_domain: null, domain_verified: false })
-        .eq('owner_id', user.id);
+      await removeCustomDomain(user.id);
       
       setDomain("");
       setSavedDomain(null);

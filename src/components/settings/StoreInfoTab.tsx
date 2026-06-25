@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Upload, X, ChevronLeft, ChevronRight, Star, ImageIcon, Store, Loader2, Settings } from "lucide-react";
 import { getAuthenticatedUserId } from "@/lib/authSession";
-import { uploadImage } from "@/utils/imageUpload";
+import { uploadImage, deleteImage } from "@/utils/imageUpload";
+import { cleanupRemovedBrandingImages } from "@/utils/productImageCleanup";
 import { toast } from "sonner";
 import { normalizeStoreSlugInput, validateStoreSlug } from "@/lib/storeSlug";
 import AttentionStrip from "@/components/ui/AttentionStrip";
@@ -38,8 +39,12 @@ const StoreInfoTab = ({ settings, setSettings }: StoreInfoTabProps) => {
 
     setUploadingLogo(true);
     try {
+      const previousLogo = settings.storeLogo;
       const publicUrl = await uploadImage(file, userId);
       setSettings((prev: any) => ({ ...prev, storeLogo: publicUrl }));
+      if (previousLogo && previousLogo !== publicUrl) {
+        void cleanupRemovedBrandingImages({ storeLogo: previousLogo }, { storeLogo: publicUrl });
+      }
       toast.success("تم رفع الشعار بنجاح");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "فشل في رفع الشعار");
@@ -76,6 +81,7 @@ const StoreInfoTab = ({ settings, setSettings }: StoreInfoTabProps) => {
   };
 
   const removeBannerImage = (index: number) => {
+    const removedUrl = settings.bannerImages[index];
     setSettings((prev: any) => {
       const newImages = prev.bannerImages.filter((_: any, i: number) => i !== index);
       let newPrimaryIndex = prev.primaryBannerIndex;
@@ -83,6 +89,11 @@ const StoreInfoTab = ({ settings, setSettings }: StoreInfoTabProps) => {
       else if (index < prev.primaryBannerIndex) newPrimaryIndex = prev.primaryBannerIndex - 1;
       return { ...prev, bannerImages: newImages, primaryBannerIndex: Math.min(newPrimaryIndex, newImages.length - 1) };
     });
+    if (removedUrl) {
+      void deleteImage(removedUrl).catch(() => {
+        /* best-effort storage cleanup */
+      });
+    }
     if (currentImageIndex >= settings.bannerImages.length - 1) {
       setCurrentImageIndex(Math.max(0, settings.bannerImages.length - 2));
     }

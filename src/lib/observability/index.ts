@@ -12,6 +12,17 @@ import {
   newTrace,
 } from './context';
 import { isProduction } from '@/lib/env';
+import {
+  getAllDomainHealth,
+  getDomainHealth,
+  recordHealthEvent,
+  recordDatabaseFailure,
+  recordDatabaseSuccess,
+  resetHealthMonitorForTests,
+  SLOW_QUERY_THRESHOLD_MS,
+  type HealthDomain,
+  type DomainHealthStats,
+} from './healthMonitor';
 
 export interface ObservabilityConfig {
   webhookUrl?: string;
@@ -76,4 +87,12 @@ export {
   setObservabilityRoute,
   setObservabilityUser,
   newTrace,
+  getAllDomainHealth,
+  getDomainHealth,
+  recordHealthEvent,
+  recordDatabaseFailure,
+  recordDatabaseSuccess,
+  SLOW_QUERY_THRESHOLD_MS,
+  type HealthDomain,
+  type DomainHealthStats,
 };

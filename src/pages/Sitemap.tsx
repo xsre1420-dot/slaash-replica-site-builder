@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { listPublicStoreSlugs } from '@/services/storeService';
 import { withRateLimit } from '@/lib/security/rateLimiter';
 
 /**
@@ -7,21 +7,11 @@ import { withRateLimit } from '@/lib/security/rateLimiter';
  * Mount on /sitemap.xml route or call from edge function
  */
 export async function generateSitemapXml(baseUrl: string): Promise<string> {
-  const { data, error } = await withRateLimit(
+  const stores = await withRateLimit(
     'sitemap:generate',
     { maxRequests: 5, windowMs: 60_000 },
-    async () =>
-      (supabase as any).rpc('list_public_store_slugs', {
-        p_limit: 5000,
-        p_offset: 0,
-      })
+    async () => listPublicStoreSlugs(5000, 0)
   );
-
-  if (error) {
-    console.warn('[sitemap] list_public_store_slugs failed:', error.message);
-  }
-
-  const stores = (data as Array<{ store_slug?: string; updated_at?: string }> | null) || [];
   const urls = stores
     .filter((s) => s.store_slug)
     .map((s) => {

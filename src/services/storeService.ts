@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { cache, CacheKeys, CacheTTL } from '@/lib/cache';
+import { invalidateStorefrontForOwner } from '@/services/storefrontProductService';
 import { isSchemaColumnError } from '@/lib/productUpdateUtils';
 import { mapDbProduct } from '@/mappers/productMapper';
 import { defaultStoreSettings, StoreProfile, StoreSettings } from '@/types/store';
@@ -80,12 +81,14 @@ export const upsertStoreSettings = async (
   }
 
   cache.del(CacheKeys.storeSettings(ownerId));
+  void invalidateStorefrontForOwner(ownerId);
   return { success: true };
 };
 
 export const invalidateStoreSettingsCache = (ownerId: string) => {
   cache.del(CacheKeys.storeSettings(ownerId));
   cache.del(CacheKeys.store(ownerId));
+  void invalidateStorefrontForOwner(ownerId);
 };
 
 export interface StoreRecord {
@@ -291,4 +294,71 @@ export const saveMerchantComplianceSettings = async (
   }
 
   return { success: true };
+};
+
+export type CustomDomainSettings = {
+  custom_domain: string | null;
+  domain_verified: boolean;
+};
+
+export const fetchCustomDomainSettings = async (
+  ownerId: string
+): Promise<CustomDomainSettings | null> => {
+  const { data, error } = await supabase
+    .from('store_settings')
+    .select('custom_domain, domain_verified')
+    .eq('owner_id', ownerId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return {
+    custom_domain: data.custom_domain ?? null,
+    domain_verified: Boolean(data.domain_verified),
+  };
+};
+
+export const saveCustomDomain = async (
+  ownerId: string,
+  domain: string
+): Promise<{ success: boolean; error?: string; code?: string }> => {
+  const { error } = await supabase
+    .from('store_settings')
+    .update({ custom_domain: domain, domain_verified: false })
+    .eq('owner_id', ownerId);
+
+  if (error) {
+    return { success: false, error: error.message, code: error.code };
+  }
+  cache.del(CacheKeys.storeSettings(ownerId));
+  return { success: true };
+};
+
+export const removeCustomDomain = async (
+  ownerId: string
+): Promise<{ success: boolean; error?: string }> => {
+  const { error } = await supabase
+    .from('store_settings')
+    .update({ custom_domain: null, domain_verified: false })
+    .eq('owner_id', ownerId);
+
+  if (error) return { success: false, error: error.message };
+  cache.del(CacheKeys.storeSettings(ownerId));
+  return { success: true };
+};
+
+export type PublicStoreSlug = { store_slug?: string; updated_at?: string };
+
+export const listPublicStoreSlugs = async (
+  limit = 5000,
+  offset = 0
+): Promise<PublicStoreSlug[]> => {
+  const { data, error } = await (supabase as any).rpc('list_public_store_slugs', {
+    p_limit: limit,
+    p_offset: offset,
+  });
+  if (error) {
+    console.warn('[storeService] list_public_store_slugs failed:', error.message);
+    return [];
+  }
+  return (data as PublicStoreSlug[]) ?? [];
 };

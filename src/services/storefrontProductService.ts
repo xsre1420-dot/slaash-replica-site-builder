@@ -8,7 +8,7 @@ import {
   MERCHANT_PRODUCTS_LIST_SELECT,
   isSchemaColumnError,
 } from '@/lib/productUpdateUtils';
-import { cache, CacheTTL, dedup } from '@/lib/cache';
+import { cache, CacheKeys, CacheTTL, dedup, flushSlugResolutionCache } from '@/lib/cache';
 import { cacheDeleteByPrefix } from '@/utils/indexedDB';
 import { isStorefrontVisible } from '@/lib/productLifecycle';
 import {
@@ -113,56 +113,82 @@ export async function resolveStoreOwnerBySlug(slug: string): Promise<string | nu
   const cachedOwner = peekStorefrontBundle(normalized)?.store?.owner_id;
   if (cachedOwner) return String(cachedOwner);
 
-  try {
-    const { data: meta, error } = await (supabase as any).rpc('get_store_meta', { p_slug: normalized });
-    if (!error && meta?.store?.owner_id) {
-      return String(meta.store.owner_id);
+  const resolutionKey = CacheKeys.slugOwner(normalized);
+  const cached = cache.get<string>(resolutionKey);
+  if (cached) return cached;
+
+  return dedup(resolutionKey, async () => {
+    try {
+      const { data: meta, error } = await (supabase as any).rpc('get_store_meta', { p_slug: normalized });
+      if (!error && meta?.store?.owner_id) {
+        const ownerId = String(meta.store.owner_id);
+        cache.set(resolutionKey, ownerId, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+        cache.set(CacheKeys.ownerSlug(ownerId), normalized, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+        return ownerId;
+      }
+    } catch {
+      /* RPC may be unavailable */
     }
-  } catch {
-    /* RPC may be unavailable */
-  }
 
-  try {
-    const { data: storeRow } = await (supabase as any)
-      .from('stores')
-      .select('user_id')
-      .ilike('store_slug', normalized)
-      .maybeSingle();
-    if (storeRow?.user_id) return storeRow.user_id as string;
-  } catch {
-    /* stores table may not exist in older DBs */
-  }
+    try {
+      const { data: storeRow } = await (supabase as any)
+        .from('stores')
+        .select('user_id')
+        .ilike('store_slug', normalized)
+        .maybeSingle();
+      if (storeRow?.user_id) {
+        const ownerId = storeRow.user_id as string;
+        cache.set(resolutionKey, ownerId, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+        cache.set(CacheKeys.ownerSlug(ownerId), normalized, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+        return ownerId;
+      }
+    } catch {
+      /* stores table may not exist in older DBs */
+    }
 
-  return null;
+    return null;
+  });
 }
 
 export async function resolveStoreSlugByOwnerId(ownerId: string): Promise<string | null> {
   if (!ownerId) return null;
 
-  const { data: settings } = await supabase
-    .from('store_settings')
-    .select('store_slug')
-    .eq('owner_id', ownerId)
-    .maybeSingle();
+  const resolutionKey = CacheKeys.ownerSlug(ownerId);
+  const cached = cache.get<string>(resolutionKey);
+  if (cached) return cached;
 
-  if (settings?.store_slug?.trim()) {
-    return settings.store_slug.trim().toLowerCase();
-  }
-
-  try {
-    const { data: storeRow } = await (supabase as any)
-      .from('stores')
+  return dedup(resolutionKey, async () => {
+    const { data: settings } = await supabase
+      .from('store_settings')
       .select('store_slug')
-      .eq('user_id', ownerId)
+      .eq('owner_id', ownerId)
       .maybeSingle();
-    if (storeRow?.store_slug?.trim()) {
-      return String(storeRow.store_slug).trim().toLowerCase();
-    }
-  } catch {
-    /* stores table may not exist in older DBs */
-  }
 
-  return null;
+    if (settings?.store_slug?.trim()) {
+      const slug = settings.store_slug.trim().toLowerCase();
+      cache.set(resolutionKey, slug, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+      cache.set(CacheKeys.slugOwner(slug), ownerId, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+      return slug;
+    }
+
+    try {
+      const { data: storeRow } = await (supabase as any)
+        .from('stores')
+        .select('store_slug')
+        .eq('user_id', ownerId)
+        .maybeSingle();
+      if (storeRow?.store_slug?.trim()) {
+        const slug = String(storeRow.store_slug).trim().toLowerCase();
+        cache.set(resolutionKey, slug, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+        cache.set(CacheKeys.slugOwner(slug), ownerId, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+        return slug;
+      }
+    } catch {
+      /* stores table may not exist in older DBs */
+    }
+
+    return null;
+  });
 }
 
 export async function fetchOwnerActiveProductsByIds(
@@ -441,6 +467,23 @@ export async function fetchStorefrontProductById(
   const id = productId.trim();
   if (!/^[a-z0-9-]+$/.test(normalized) || !id) return null;
 
+  const productCacheKey = CacheKeys.storefrontProduct(normalized, id);
+  const cachedProduct = cache.get<Product>(productCacheKey);
+  if (cachedProduct) return cachedProduct;
+
+  return dedup(productCacheKey, async () => {
+    const product = await fetchStorefrontProductByIdUncached(normalized, id);
+    if (product) {
+      cache.set(productCacheKey, product, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+    }
+    return product;
+  });
+}
+
+async function fetchStorefrontProductByIdUncached(
+  normalized: string,
+  id: string
+): Promise<Product | null> {
   try {
     const { data, error } = await (supabase as any).rpc('get_store_product_by_id', {
       p_slug: normalized,
@@ -592,6 +635,8 @@ export async function invalidateStorefrontForOwner(ownerId: string): Promise<voi
     }
   }
 
+  flushSlugResolutionCache(ownerId, slug);
+
   if (slug) {
     cache.del(`storefront-bundle:${slug}`);
     cache.flushByPrefix(`tenant-products:${slug}`);
@@ -599,7 +644,10 @@ export async function invalidateStorefrontForOwner(ownerId: string): Promise<voi
     cache.flushByPrefix(`edge-bundle:${slug}`);
     cache.flushByPrefix(`edge-page:${slug}`);
     cache.flushByPrefix(`storefront-page:${slug}:`);
+    cache.flushByPrefix(`storefront-product:${slug}:`);
+    cache.del(CacheKeys.footerSuggested(slug));
     await cacheDeleteByPrefix(`idb:tenant-products:${slug}`);
+    await cacheDeleteByPrefix(`idb:tenant-meta:${slug}`);
   } else {
     cache.flushByPrefix(`tenant-products:${ownerId}`);
     await cacheDeleteByPrefix(`idb:tenant-products:${ownerId}`);

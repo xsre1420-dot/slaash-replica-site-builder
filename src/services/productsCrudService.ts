@@ -22,6 +22,7 @@ import { fetchStoreByUserId } from '@/services/storeService';
 import { syncProductCachesAfterMutation } from '@/lib/productCacheSync';
 import {
   collectProductImageUrls,
+  cleanupRemovedProductImages,
   deleteProductStorageImages,
 } from '@/utils/productImageCleanup';
 import type { Product } from '@/types';
@@ -215,6 +216,7 @@ export async function updateProduct(
         .maybeSingle();
 
       if (!error && data) {
+        void cleanupRemovedProductImages(existingRow, data as Record<string, unknown>);
         syncProductCachesAfterMutation(ownerId);
         return { success: true, data: mapDbProduct(data as Record<string, unknown>) };
       }
@@ -254,4 +256,90 @@ export async function deleteProduct(productId: string): Promise<ProductsCrudResu
   syncProductCachesAfterMutation(ownerId);
 
   return { success: true, data: { id: productId } };
+}
+
+export type BulkImportRow = {
+  name: string;
+  description: string;
+  category: string;
+  price: number;
+  cost?: number;
+  stock_quantity?: number;
+  sizes?: string[];
+  image_url?: string;
+};
+
+export type BulkImportResult = {
+  success: number;
+  failed: number;
+  errors: string[];
+};
+
+/** CSV bulk import — drafts with optional initial stock movements. */
+export async function bulkImportProducts(
+  rows: BulkImportRow[],
+  ownerId: string,
+  storeId: string | null,
+  options?: { chunkSize?: number }
+): Promise<BulkImportResult> {
+  const chunkSize = options?.chunkSize ?? 20;
+  let success = 0;
+  let failed = 0;
+  const errors: string[] = [];
+
+  const deduped = rows.filter((product, index, list) => {
+    const key = product.name.trim().toLowerCase();
+    return list.findIndex((p) => p.name.trim().toLowerCase() === key) === index;
+  });
+
+  for (let i = 0; i < deduped.length; i += chunkSize) {
+    const chunk = deduped.slice(i, i + chunkSize).map((p) => ({
+      name: p.name,
+      description: p.description,
+      category: p.category,
+      price: p.price,
+      cost: p.cost ?? null,
+      stock_quantity: p.stock_quantity ?? 0,
+      sizes: p.sizes ?? null,
+      image_url: p.image_url ?? null,
+      owner_id: ownerId,
+      is_active: false,
+      ...(storeId ? { store_id: storeId } : {}),
+    }));
+
+    const { data: inserted, error } = await supabase
+      .from('products')
+      .insert(chunk)
+      .select('id, stock_quantity');
+
+    if (error) {
+      failed += chunk.length;
+      errors.push(`خطأ في رفع الدفعة ${Math.floor(i / chunkSize) + 1}: ${error.message}`);
+      continue;
+    }
+
+    success += inserted?.length ?? chunk.length;
+
+    const movements = (inserted ?? [])
+      .filter((row) => (row.stock_quantity ?? 0) > 0)
+      .map((row) => ({
+        product_id: row.id,
+        owner_id: ownerId,
+        quantity_delta: row.stock_quantity,
+        reason: 'initial_stock',
+      }));
+
+    if (movements.length > 0) {
+      const { error: movementError } = await supabase.from('inventory_movements').insert(movements);
+      if (movementError) {
+        errors.push(`تنبيه: تم رفع المنتجات لكن سجل المخزون فشل: ${movementError.message}`);
+      }
+    }
+  }
+
+  if (success > 0) {
+    syncProductCachesAfterMutation(ownerId);
+  }
+
+  return { success, failed, errors };
 }

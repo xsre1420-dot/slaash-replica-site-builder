@@ -20,6 +20,7 @@ import {
   PRODUCT_NOISE_FIELDS,
   shouldInvalidateStorefront,
 } from '@/lib/merchantRealtimeUtils';
+import { recordHealthEvent } from '@/lib/observability/healthMonitor';
 
 type ProductRealtimePayload = {
   eventType: string;
@@ -120,7 +121,10 @@ function scheduleChannelReconnect(
   const entry = productEntry?.channel === channel ? productEntry : orderEntry?.channel === channel ? orderEntry : null;
   if (!entry) return;
   if (entry.reconnectTimer) return;
-  if (entry.reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) return;
+  if (entry.reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
+    recordHealthEvent('realtime', false, { message: `max reconnect attempts for ${userId}` });
+    return;
+  }
 
   const delay = reconnectDelay(entry.reconnectAttempt);
   entry.reconnectAttempt += 1;
@@ -378,4 +382,33 @@ export function teardownMerchantRealtimeHub(): void {
     if (entry.channel) void supabase.removeChannel(entry.channel);
   }
   orderEntries.clear();
+}
+
+export type MerchantRealtimeHubStatus = {
+  activeProductChannels: number;
+  activeOrderChannels: number;
+  pendingReconnects: number;
+  maxAttemptsExceeded: number;
+};
+
+/** Snapshot for platform health dashboard (in-process client state). */
+export function getMerchantRealtimeHubStatus(): MerchantRealtimeHubStatus {
+  let pendingReconnects = 0;
+  let maxAttemptsExceeded = 0;
+
+  for (const entry of productEntries.values()) {
+    if (entry.reconnectTimer) pendingReconnects += 1;
+    if (entry.reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) maxAttemptsExceeded += 1;
+  }
+  for (const entry of orderEntries.values()) {
+    if (entry.reconnectTimer) pendingReconnects += 1;
+    if (entry.reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) maxAttemptsExceeded += 1;
+  }
+
+  return {
+    activeProductChannels: productEntries.size,
+    activeOrderChannels: orderEntries.size,
+    pendingReconnects,
+    maxAttemptsExceeded,
+  };
 }

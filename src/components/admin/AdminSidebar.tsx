@@ -12,6 +12,7 @@ import {
   Shield,
   Sparkles,
   GitBranch,
+  Activity,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,7 @@ const mainNav = [
   { to: '/admin/leads', icon: Users, label: 'طلبات الاشتراك', end: false },
   { to: '/admin/subscriptions', icon: CreditCard, label: 'الاشتراكات', end: false },
   { to: '/admin/customers', icon: UserCheck, label: 'العملاء', end: false },
+  { to: '/admin/health', icon: Activity, label: 'صحة المنصة', end: false },
 ];
 
 const quickLinks = [

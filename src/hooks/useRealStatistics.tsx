@@ -4,10 +4,16 @@ import { RealStatistics } from "@/types/statistics";
 import { calculateStatistics, getDefaultStatistics } from "@/utils/statisticsCalculator";
 import { fetchStatisticsData, getStatisticsDateBounds } from "@/services/statisticsService";
 
+export type UseRealStatisticsOptions = {
+  /** When false, KPI RPC only — defer order rows until charts/payment tabs need them. */
+  includeChartOrders?: boolean;
+};
+
 export const useRealStatistics = (
   dateRange: string = "7",
   startDate?: string,
-  endDate?: string
+  endDate?: string,
+  options?: UseRealStatisticsOptions
 ) => {
   const [stats, setStats] = useState<RealStatistics | null>(null);
   const [rawOrders, setRawOrders] = useState<any[]>([]);
@@ -21,6 +27,8 @@ export const useRealStatistics = (
     [dateRange, startDate, endDate]
   );
 
+  const includeChartOrders = options?.includeChartOrders !== false;
+
   const fetchRealStatistics = useCallback(async (skipCache = false) => {
     if (dateRange === 'custom' && (!startDate || !endDate)) {
       setError('يرجى اختيار تاريخ البداية والنهاية');
@@ -31,7 +39,10 @@ export const useRealStatistics = (
     setError(null);
 
     try {
-      const data = await fetchStatisticsData(dateRange, startDate, endDate, { skipCache });
+      const data = await fetchStatisticsData(dateRange, startDate, endDate, {
+        skipCache,
+        includeChartOrders,
+      });
       const bounds = data.dateBounds || dateBounds;
       const calculatedStats = calculateStatistics(data, bounds);
       setStats(calculatedStats);
@@ -55,7 +66,7 @@ export const useRealStatistics = (
     } finally {
       setLoading(false);
     }
-  }, [dateRange, startDate, endDate, dateBounds]);
+  }, [dateRange, startDate, endDate, dateBounds, includeChartOrders]);
 
   useEffect(() => {
     fetchRealStatistics();

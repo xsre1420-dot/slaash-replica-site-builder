@@ -28,8 +28,10 @@ import {
 import { OWNER_PRODUCTS_PAGE_SIZE } from '@/constants/pagination';
 import {
   collectProductImageUrls,
+  cleanupRemovedProductImages,
   deleteProductStorageImages,
 } from '@/utils/productImageCleanup';
+import { recordHealthEvent } from '@/lib/observability/healthMonitor';
 
 /** @deprecated Use `@/services/productService` for new imports. */
 
@@ -459,6 +461,7 @@ export const addProduct = async (
 
       if (error) {
         console.error('[products] insert failed:', error);
+        recordHealthEvent('product.create', false, { message: error.message });
         return { success: false, error: mapProductInsertError(error.message) };
       }
 
@@ -507,12 +510,16 @@ export const addProduct = async (
 
         products = cache.get<Product[]>(CacheKeys.products(userId)) || [];
         products_list = products;
+        recordHealthEvent('product.create', true);
         return { success: true, productId };
       }
 
       return { success: true };
     } catch (err) {
       console.error('[products] addProduct unexpected error:', err);
+      recordHealthEvent('product.create', false, {
+        message: err instanceof Error ? err.message : 'unknown',
+      });
       return { success: false, error: err instanceof Error ? err.message : 'فشل في إضافة المنتج' };
     }
   });
@@ -578,6 +585,7 @@ export const updateProduct = async (productId: string, updatedProduct: Partial<P
       return { success: false, error: lastError || 'فشل في تحديث المنتج' };
     }
 
+    void cleanupRemovedProductImages(existingData, data);
     syncProductCachesAfterMutation(user.id, data);
     products = cache.get<Product[]>(CacheKeys.products(user.id)) || [];
 
@@ -606,8 +614,10 @@ export const publishProduct = async (productId: string) => {
     if (!error && data?.success && data?.product) {
       syncProductCachesAfterMutation(user.id, data.product as Record<string, unknown>);
       products = cache.get<Product[]>(CacheKeys.products(user.id)) || [];
+      recordHealthEvent('product.publish', true);
       return { success: true };
     }
+    recordHealthEvent('product.publish', false, { message: error?.message ?? 'rpc failed' });
   } catch {
     /* RPC optional until migration applied */
   }
@@ -738,6 +748,7 @@ export const addCategory = async (category: Category): Promise<{ success: boolea
       const current = cache.get<Category[]>(key) || [];
       cache.set(key, [...current, { id: data.id, name: data.name, order: data.display_order }], CacheTTL.MEDIUM, CacheTTL.STALE);
     }
+    void invalidateStorefrontForOwner(user.id);
     return { success: true };
   } catch {
     return { success: false, error: 'Failed to add category' };
@@ -774,6 +785,7 @@ export const updateCategory = async (categoryId: string, updatedCategory: Catego
 
     const current = cache.get<Category[]>(key) || [];
     cache.set(key, current.map(c => c.id === categoryId ? { ...updatedCategory, id: categoryId } : c), CacheTTL.MEDIUM, CacheTTL.STALE);
+    void invalidateStorefrontForOwner(user.id);
     return { success: true };
   } catch {
     return { success: false, error: 'Failed to update category' };
@@ -796,6 +808,7 @@ export const deleteCategory = async (categoryId: string): Promise<{ success: boo
     const key = CacheKeys.categories(getOwnerId());
     const current = cache.get<Category[]>(key) || [];
     cache.set(key, current.filter(c => c.id !== categoryId), CacheTTL.MEDIUM, CacheTTL.STALE);
+    void invalidateStorefrontForOwner(user.id);
     return { success: true };
   } catch {
     return { success: false, error: 'Failed to delete category' };
