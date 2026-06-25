@@ -1149,6 +1149,24 @@ export type Database = {
         }
         Relationships: []
       }
+      rpc_rate_limits: {
+        Row: {
+          hit_count: number
+          rate_key: string
+          window_start: string
+        }
+        Insert: {
+          hit_count?: number
+          rate_key: string
+          window_start?: string
+        }
+        Update: {
+          hit_count?: number
+          rate_key?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       shipment_tracking_events: {
         Row: {
           created_at: string
@@ -1327,7 +1345,9 @@ export type Database = {
         Row: {
           banner_images: string[] | null
           created_at: string
+          custom_domain: string | null
           delivery_prices: Json | null
+          domain_verified: boolean | null
           facebook_url: string | null
           id: string
           instagram_url: string | null
@@ -1353,7 +1373,9 @@ export type Database = {
         Insert: {
           banner_images?: string[] | null
           created_at?: string
+          custom_domain?: string | null
           delivery_prices?: Json | null
+          domain_verified?: boolean | null
           facebook_url?: string | null
           id?: string
           instagram_url?: string | null
@@ -1379,7 +1401,9 @@ export type Database = {
         Update: {
           banner_images?: string[] | null
           created_at?: string
+          custom_domain?: string | null
           delivery_prices?: Json | null
+          domain_verified?: boolean | null
           facebook_url?: string | null
           id?: string
           instagram_url?: string | null
@@ -1813,6 +1837,10 @@ export type Database = {
       calculate_delivery_fee_by_slug: {
         Args: { p_governorate: string; p_store_slug: string }
         Returns: number
+      }
+      check_rpc_rate_limit: {
+        Args: { p_key: string; p_max?: number; p_window_seconds?: number }
+        Returns: boolean
       }
       checkout_resolve_duplicate_order: {
         Args: {
