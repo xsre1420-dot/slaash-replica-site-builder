@@ -1,0 +1,2147 @@
+{
+  "audited_at": "2026-06-25T21:41:32.959069+00:00",
+  "duplicate_candidates": [],
+  "indexes": [
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE UNIQUE INDEX analytics_event_outbox_pkey ON public.analytics_event_outbox USING btree (id)",
+      "indexname": "analytics_event_outbox_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "analytics_event_outbox"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_analytics_event_outbox_pending ON public.analytics_event_outbox USING btree (created_at) WHERE (processed_at IS NULL)",
+      "indexname": "idx_analytics_event_outbox_pending",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "analytics_event_outbox"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_analytics_event_outbox_product_dedupe ON public.analytics_event_outbox USING btree (owner_id, event_type, ((payload ->> 'product_id'::text)), ((payload ->> 'visitor_ip'::text)), created_at DESC) WHERE (event_type = 'product_view'::text)",
+      "indexname": "idx_analytics_event_outbox_product_dedupe",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "analytics_event_outbox"
+    },
+    {
+      "idx_scan": 55983,
+      "idx_tup_read": 55972,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_analytics_event_outbox_visit_dedupe ON public.analytics_event_outbox USING btree (owner_id, event_type, ((payload ->> 'visitor_ip'::text)), ((payload ->> 'page_path'::text)), created_at DESC) WHERE (event_type = 'store_visit'::text)",
+      "indexname": "idx_analytics_event_outbox_visit_dedupe",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "analytics_event_outbox"
+    },
+    {
+      "idx_scan": 3,
+      "idx_tup_read": 4,
+      "index_size": "16 kB",
+      "indexdef": "CREATE UNIQUE INDEX categories_pkey ON public.categories USING btree (id)",
+      "indexname": "categories_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "categories"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_categories_owner_display_order ON public.categories USING btree (owner_id, display_order)",
+      "indexname": "idx_categories_owner_display_order",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "categories"
+    },
+    {
+      "idx_scan": 3,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_categories_store_id ON public.categories USING btree (store_id)",
+      "indexname": "idx_categories_store_id",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "categories"
+    },
+    {
+      "idx_scan": 3,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX customers_pkey ON public.customers USING btree (id)",
+      "indexname": "customers_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "customers"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_customers_owner_first_last ON public.customers USING btree (owner_id, first_order_date, last_order_date)",
+      "indexname": "idx_customers_owner_first_last",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "customers"
+    },
+    {
+      "idx_scan": 228,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_customers_owner_id ON public.customers USING btree (owner_id)",
+      "indexname": "idx_customers_owner_id",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "customers"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_customers_owner_phone ON public.customers USING btree (owner_id, phone)",
+      "indexname": "idx_customers_owner_phone",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "customers"
+    },
+    {
+      "idx_scan": 2,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_customers_owner_store ON public.customers USING btree (owner_id, store_id)",
+      "indexname": "idx_customers_owner_store",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "customers"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_customers_phone ON public.customers USING btree (phone)",
+      "indexname": "idx_customers_phone",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "customers"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_import_jobs_owner ON public.import_jobs USING btree (owner_id, created_at DESC)",
+      "indexname": "idx_import_jobs_owner",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "import_jobs"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_import_jobs_pending ON public.import_jobs USING btree (status, created_at) WHERE (status = ANY (ARRAY['pending'::text, 'processing'::text]))",
+      "indexname": "idx_import_jobs_pending",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "import_jobs"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX import_jobs_pkey ON public.import_jobs USING btree (id)",
+      "indexname": "import_jobs_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "import_jobs"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_inventory_movements_order_reason ON public.inventory_movements USING btree (order_id, reason)",
+      "indexname": "idx_inventory_movements_order_reason",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "inventory_movements"
+    },
+    {
+      "idx_scan": 1,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_inventory_movements_owner_created ON public.inventory_movements USING btree (owner_id, created_at DESC)",
+      "indexname": "idx_inventory_movements_owner_created",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "inventory_movements"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_inventory_movements_product_owner_created ON public.inventory_movements USING btree (product_id, owner_id, created_at DESC)",
+      "indexname": "idx_inventory_movements_product_owner_created",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "inventory_movements"
+    },
+    {
+      "idx_scan": 4,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX inventory_movements_pkey ON public.inventory_movements USING btree (id)",
+      "indexname": "inventory_movements_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "inventory_movements"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_leads_selected_plan ON public.leads USING btree (selected_plan_id) WHERE (selected_plan_id IS NOT NULL)",
+      "indexname": "idx_leads_selected_plan",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "leads"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_leads_status_created ON public.leads USING btree (status, created_at DESC)",
+      "indexname": "idx_leads_status_created",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "leads"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_leads_unread ON public.leads USING btree (created_at DESC) WHERE ((admin_read_at IS NULL) AND (status = 'new'::text))",
+      "indexname": "idx_leads_unread",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "leads"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_leads_whatsapp ON public.leads USING btree (whatsapp_number)",
+      "indexname": "idx_leads_whatsapp",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "leads"
+    },
+    {
+      "idx_scan": 4,
+      "idx_tup_read": 4,
+      "index_size": "16 kB",
+      "indexdef": "CREATE UNIQUE INDEX leads_pkey ON public.leads USING btree (id)",
+      "indexname": "leads_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "leads"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_marketing_coupons_active_lookup ON public.marketing_coupons USING btree (owner_id, upper(code)) WHERE (is_active = true)",
+      "indexname": "idx_marketing_coupons_active_lookup",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "marketing_coupons"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX idx_marketing_coupons_owner_code_ci ON public.marketing_coupons USING btree (owner_id, upper(code))",
+      "indexname": "idx_marketing_coupons_owner_code_ci",
+      "is_primary": false,
+      "is_unique": true,
+      "tablename": "marketing_coupons"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_marketing_coupons_owner_created ON public.marketing_coupons USING btree (owner_id, created_at DESC)",
+      "indexname": "idx_marketing_coupons_owner_created",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "marketing_coupons"
+    },
+    {
+      "idx_scan": 5,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX marketing_coupons_pkey ON public.marketing_coupons USING btree (id)",
+      "indexname": "marketing_coupons_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "marketing_coupons"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX marketing_settings_owner_id_key ON public.marketing_settings USING btree (owner_id)",
+      "indexname": "marketing_settings_owner_id_key",
+      "is_primary": false,
+      "is_unique": true,
+      "tablename": "marketing_settings"
+    },
+    {
+      "idx_scan": 3,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX marketing_settings_pkey ON public.marketing_settings USING btree (id)",
+      "indexname": "marketing_settings_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "marketing_settings"
+    },
+    {
+      "idx_scan": 12,
+      "idx_tup_read": 28,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_merchant_access_codes_lead ON public.merchant_access_codes USING btree (lead_id, created_at DESC)",
+      "indexname": "idx_merchant_access_codes_lead",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "merchant_access_codes"
+    },
+    {
+      "idx_scan": 575,
+      "idx_tup_read": 1747,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_merchant_access_codes_status ON public.merchant_access_codes USING btree (status)",
+      "indexname": "idx_merchant_access_codes_status",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "merchant_access_codes"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE UNIQUE INDEX merchant_access_codes_auth_email_key ON public.merchant_access_codes USING btree (auth_email)",
+      "indexname": "merchant_access_codes_auth_email_key",
+      "is_primary": false,
+      "is_unique": true,
+      "tablename": "merchant_access_codes"
+    },
+    {
+      "idx_scan": 5,
+      "idx_tup_read": 2,
+      "index_size": "16 kB",
+      "indexdef": "CREATE UNIQUE INDEX merchant_access_codes_code_hash_key ON public.merchant_access_codes USING btree (code_hash)",
+      "indexname": "merchant_access_codes_code_hash_key",
+      "is_primary": false,
+      "is_unique": true,
+      "tablename": "merchant_access_codes"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE UNIQUE INDEX merchant_access_codes_pkey ON public.merchant_access_codes USING btree (id)",
+      "indexname": "merchant_access_codes_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "merchant_access_codes"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX order_audit_log_pkey ON public.order_audit_log USING btree (id)",
+      "indexname": "order_audit_log_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "order_audit_log"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_order_chargebacks_order ON public.order_chargebacks USING btree (order_id)",
+      "indexname": "idx_order_chargebacks_order",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "order_chargebacks"
+    },
+    {
+      "idx_scan": 1,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX order_chargebacks_pkey ON public.order_chargebacks USING btree (id)",
+      "indexname": "order_chargebacks_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "order_chargebacks"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_order_items_order_id ON public.order_items USING btree (order_id)",
+      "indexname": "idx_order_items_order_id",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "order_items"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_order_items_order_id_id ON public.order_items USING btree (order_id, id)",
+      "indexname": "idx_order_items_order_id_id",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "order_items"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_order_items_owner_created ON public.order_items USING btree (owner_id, created_at DESC)",
+      "indexname": "idx_order_items_owner_created",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "order_items"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_order_items_owner_order ON public.order_items USING btree (owner_id, order_id)",
+      "indexname": "idx_order_items_owner_order",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "order_items"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_order_items_product_id ON public.order_items USING btree (product_id)",
+      "indexname": "idx_order_items_product_id",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "order_items"
+    },
+    {
+      "idx_scan": 1,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX order_items_pkey ON public.order_items USING btree (id)",
+      "indexname": "order_items_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "order_items"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_order_refunds_order ON public.order_refunds USING btree (order_id)",
+      "indexname": "idx_order_refunds_order",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "order_refunds"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX order_refunds_pkey ON public.order_refunds USING btree (id)",
+      "indexname": "order_refunds_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "order_refunds"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_order_returns_order ON public.order_returns USING btree (order_id)",
+      "indexname": "idx_order_returns_order",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "order_returns"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX order_returns_pkey ON public.order_returns USING btree (id)",
+      "indexname": "order_returns_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "order_returns"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX idx_order_webhook_outbox_order_created_unique ON public.order_webhook_outbox USING btree (order_id, event_type) WHERE (event_type = 'order.created'::text)",
+      "indexname": "idx_order_webhook_outbox_order_created_unique",
+      "is_primary": false,
+      "is_unique": true,
+      "tablename": "order_webhook_outbox"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_order_webhook_outbox_owner ON public.order_webhook_outbox USING btree (owner_id, created_at DESC)",
+      "indexname": "idx_order_webhook_outbox_owner",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "order_webhook_outbox"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_order_webhook_outbox_pending ON public.order_webhook_outbox USING btree (status, created_at) WHERE (status = 'pending'::text)",
+      "indexname": "idx_order_webhook_outbox_pending",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "order_webhook_outbox"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_order_webhook_outbox_retry ON public.order_webhook_outbox USING btree (status, next_attempt_at, created_at) WHERE (status = ANY (ARRAY['pending'::text, 'failed'::text]))",
+      "indexname": "idx_order_webhook_outbox_retry",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "order_webhook_outbox"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX order_webhook_outbox_pkey ON public.order_webhook_outbox USING btree (id)",
+      "indexname": "order_webhook_outbox_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "order_webhook_outbox"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_orders_created_at ON public.orders USING btree (created_at)",
+      "indexname": "idx_orders_created_at",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_orders_customer_name_trgm ON public.orders USING gin (customer_name gin_trgm_ops)",
+      "indexname": "idx_orders_customer_name_trgm",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_orders_customer_phone_trgm ON public.orders USING gin (customer_phone gin_trgm_ops)",
+      "indexname": "idx_orders_customer_phone_trgm",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_orders_marketing_attribution ON public.orders USING gin (marketing_attribution) WHERE (marketing_attribution IS NOT NULL)",
+      "indexname": "idx_orders_marketing_attribution",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_orders_owner_completed_created ON public.orders USING btree (owner_id, created_at DESC) WHERE (status = 'completed'::text)",
+      "indexname": "idx_orders_owner_completed_created",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_orders_owner_created_id ON public.orders USING btree (owner_id, created_at DESC, id DESC)",
+      "indexname": "idx_orders_owner_created_id",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_orders_owner_created_status ON public.orders USING btree (owner_id, created_at DESC) INCLUDE (status, total_amount, payment_status, delivery_status)",
+      "indexname": "idx_orders_owner_created_status",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_orders_owner_customer_phone ON public.orders USING btree (owner_id, customer_phone)",
+      "indexname": "idx_orders_owner_customer_phone",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_orders_owner_delivery_status ON public.orders USING btree (owner_id, delivery_status)",
+      "indexname": "idx_orders_owner_delivery_status",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX idx_orders_owner_idempotency ON public.orders USING btree (owner_id, idempotency_key) WHERE (idempotency_key IS NOT NULL)",
+      "indexname": "idx_orders_owner_idempotency",
+      "is_primary": false,
+      "is_unique": true,
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_orders_owner_payment_status ON public.orders USING btree (owner_id, payment_status)",
+      "indexname": "idx_orders_owner_payment_status",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_orders_owner_pending_created ON public.orders USING btree (owner_id, created_at DESC) WHERE (status = 'pending'::text)",
+      "indexname": "idx_orders_owner_pending_created",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_orders_owner_total_amount ON public.orders USING btree (owner_id, total_amount)",
+      "indexname": "idx_orders_owner_total_amount",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_orders_store_created ON public.orders USING btree (store_id, created_at DESC) WHERE (store_id IS NOT NULL)",
+      "indexname": "idx_orders_store_created",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 4,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_orders_store_id ON public.orders USING btree (store_id)",
+      "indexname": "idx_orders_store_id",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 2,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX orders_pkey ON public.orders USING btree (id)",
+      "indexname": "orders_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX idx_payment_transactions_idempotency ON public.payment_transactions USING btree (owner_id, idempotency_key) WHERE ((idempotency_key IS NOT NULL) AND (TRIM(BOTH FROM idempotency_key) <> ''::text))",
+      "indexname": "idx_payment_transactions_idempotency",
+      "is_primary": false,
+      "is_unique": true,
+      "tablename": "payment_transactions"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_payment_transactions_order ON public.payment_transactions USING btree (order_id)",
+      "indexname": "idx_payment_transactions_order",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "payment_transactions"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX idx_payment_transactions_provider_payment ON public.payment_transactions USING btree (provider, provider_payment_id) WHERE ((provider_payment_id IS NOT NULL) AND (TRIM(BOTH FROM provider_payment_id) <> ''::text))",
+      "indexname": "idx_payment_transactions_provider_payment",
+      "is_primary": false,
+      "is_unique": true,
+      "tablename": "payment_transactions"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX payment_transactions_pkey ON public.payment_transactions USING btree (id)",
+      "indexname": "payment_transactions_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "payment_transactions"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX payment_webhook_events_pkey ON public.payment_webhook_events USING btree (id)",
+      "indexname": "payment_webhook_events_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "payment_webhook_events"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX payment_webhook_events_provider_event_id_key ON public.payment_webhook_events USING btree (provider, event_id)",
+      "indexname": "payment_webhook_events_provider_event_id_key",
+      "is_primary": false,
+      "is_unique": true,
+      "tablename": "payment_webhook_events"
+    },
+    {
+      "idx_scan": 456,
+      "idx_tup_read": 418,
+      "index_size": "16 kB",
+      "indexdef": "CREATE UNIQUE INDEX platform_admins_pkey ON public.platform_admins USING btree (user_id)",
+      "indexname": "platform_admins_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "platform_admins"
+    },
+    {
+      "idx_scan": 169,
+      "idx_tup_read": 118,
+      "index_size": "16 kB",
+      "indexdef": "CREATE UNIQUE INDEX platform_schema_version_pkey ON public.platform_schema_version USING btree (version)",
+      "indexname": "platform_schema_version_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "platform_schema_version"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_product_create_idempotency_product ON public.product_create_idempotency USING btree (product_id)",
+      "indexname": "idx_product_create_idempotency_product",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "product_create_idempotency"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX product_create_idempotency_pkey ON public.product_create_idempotency USING btree (owner_id, idempotency_key)",
+      "indexname": "product_create_idempotency_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "product_create_idempotency"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_product_reviews_owner_pending ON public.product_reviews USING btree (owner_id) WHERE (is_approved = false)",
+      "indexname": "idx_product_reviews_owner_pending",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "product_reviews"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_reviews_product_owner_approved ON public.product_reviews USING btree (product_id, owner_id, is_approved, created_at DESC) WHERE (is_approved = true)",
+      "indexname": "idx_reviews_product_owner_approved",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "product_reviews"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX product_reviews_pkey ON public.product_reviews USING btree (id)",
+      "indexname": "product_reviews_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "product_reviews"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_product_views_owner_created ON public.product_views USING btree (owner_id, created_at DESC)",
+      "indexname": "idx_product_views_owner_created",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "product_views"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_product_views_owner_product_created ON public.product_views USING btree (owner_id, product_id, created_at DESC)",
+      "indexname": "idx_product_views_owner_product_created",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "product_views"
+    },
+    {
+      "idx_scan": 114,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_product_views_rate_limit ON public.product_views USING btree (owner_id, product_id, visitor_ip, created_at DESC)",
+      "indexname": "idx_product_views_rate_limit",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "product_views"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX product_views_pkey ON public.product_views USING btree (id)",
+      "indexname": "product_views_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "product_views"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_products_description_trgm ON public.products USING gin (description gin_trgm_ops)",
+      "indexname": "idx_products_description_trgm",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "24 kB",
+      "indexdef": "CREATE INDEX idx_products_name_trgm ON public.products USING gin (name gin_trgm_ops)",
+      "indexname": "idx_products_name_trgm",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_products_owner_active_catalog ON public.products USING btree (owner_id) WHERE ((archived_at IS NULL) AND (COALESCE(is_active, true) = true))",
+      "indexname": "idx_products_owner_active_catalog",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_products_owner_category_created ON public.products USING btree (owner_id, category, created_at DESC, id DESC) WHERE ((archived_at IS NULL) AND (COALESCE(is_active, true) = true))",
+      "indexname": "idx_products_owner_category_created",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 593,
+      "idx_tup_read": 24,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_products_owner_lifecycle ON public.products USING btree (owner_id, archived_at, is_active, created_at DESC)",
+      "indexname": "idx_products_owner_lifecycle",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_products_owner_merchant_created ON public.products USING btree (owner_id, created_at DESC, id DESC)",
+      "indexname": "idx_products_owner_merchant_created",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_products_owner_name ON public.products USING btree (owner_id, name)",
+      "indexname": "idx_products_owner_name",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_products_owner_search_name ON public.products USING btree (owner_id, name text_pattern_ops) WHERE (archived_at IS NULL)",
+      "indexname": "idx_products_owner_search_name",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_products_owner_stock_monitor ON public.products USING btree (owner_id, stock_quantity) WHERE ((archived_at IS NULL) AND (COALESCE(is_active, true) = true) AND (stock_quantity IS NOT NULL))",
+      "indexname": "idx_products_owner_stock_monitor",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_products_owner_storefront_created ON public.products USING btree (owner_id, created_at DESC, id DESC) WHERE ((archived_at IS NULL) AND (COALESCE(is_active, true) = true))",
+      "indexname": "idx_products_owner_storefront_created",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_products_sku_owner ON public.products USING btree (owner_id, sku) WHERE (sku IS NOT NULL)",
+      "indexname": "idx_products_sku_owner",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_products_slug_owner ON public.products USING btree (owner_id, product_slug) WHERE (product_slug IS NOT NULL)",
+      "indexname": "idx_products_slug_owner",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_products_store_active_created ON public.products USING btree (store_id, created_at DESC) WHERE ((store_id IS NOT NULL) AND (archived_at IS NULL) AND (COALESCE(is_active, true) = true))",
+      "indexname": "idx_products_store_active_created",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 2,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_products_store_id ON public.products USING btree (store_id)",
+      "indexname": "idx_products_store_id",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 3,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE UNIQUE INDEX products_pkey ON public.products USING btree (id)",
+      "indexname": "products_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 252,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_profiles_user_id ON public.profiles USING btree (user_id)",
+      "indexname": "idx_profiles_user_id",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "profiles"
+    },
+    {
+      "idx_scan": 255,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE UNIQUE INDEX profiles_pkey ON public.profiles USING btree (id)",
+      "indexname": "profiles_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "profiles"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE UNIQUE INDEX profiles_username_key ON public.profiles USING btree (username)",
+      "indexname": "profiles_username_key",
+      "is_primary": false,
+      "is_unique": true,
+      "tablename": "profiles"
+    },
+    {
+      "idx_scan": 9,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX restaurant_owners_pkey ON public.restaurant_owners USING btree (id)",
+      "indexname": "restaurant_owners_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "restaurant_owners"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX restaurant_owners_username_key ON public.restaurant_owners USING btree (username)",
+      "indexname": "restaurant_owners_username_key",
+      "is_primary": false,
+      "is_unique": true,
+      "tablename": "restaurant_owners"
+    },
+    {
+      "idx_scan": 1,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE UNIQUE INDEX rpc_rate_limits_pkey ON public.rpc_rate_limits USING btree (rate_key)",
+      "indexname": "rpc_rate_limits_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "rpc_rate_limits"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_shipment_events_shipment ON public.shipment_tracking_events USING btree (shipment_id)",
+      "indexname": "idx_shipment_events_shipment",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "shipment_tracking_events"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX shipment_tracking_events_pkey ON public.shipment_tracking_events USING btree (id)",
+      "indexname": "shipment_tracking_events_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "shipment_tracking_events"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_shipments_owner ON public.shipments USING btree (owner_id)",
+      "indexname": "idx_shipments_owner",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "shipments"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_shipments_status ON public.shipments USING btree (status)",
+      "indexname": "idx_shipments_status",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "shipments"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX shipments_order_id_key ON public.shipments USING btree (order_id)",
+      "indexname": "shipments_order_id_key",
+      "is_primary": false,
+      "is_unique": true,
+      "tablename": "shipments"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX shipments_pkey ON public.shipments USING btree (id)",
+      "indexname": "shipments_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "shipments"
+    },
+    {
+      "idx_scan": 7,
+      "idx_tup_read": 5,
+      "index_size": "16 kB",
+      "indexdef": "CREATE UNIQUE INDEX store_daily_stats_pkey ON public.store_daily_stats USING btree (owner_id, stat_date)",
+      "indexname": "store_daily_stats_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "store_daily_stats"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_store_plugins_store_id ON public.store_plugins USING btree (store_id)",
+      "indexname": "idx_store_plugins_store_id",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "store_plugins"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX store_plugins_pkey ON public.store_plugins USING btree (id)",
+      "indexname": "store_plugins_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "store_plugins"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX store_plugins_store_id_plugin_id_key ON public.store_plugins USING btree (store_id, plugin_id)",
+      "indexname": "store_plugins_store_id_plugin_id_key",
+      "is_primary": false,
+      "is_unique": true,
+      "tablename": "store_plugins"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX idx_store_settings_custom_domain ON public.store_settings USING btree (custom_domain) WHERE (custom_domain IS NOT NULL)",
+      "indexname": "idx_store_settings_custom_domain",
+      "is_primary": false,
+      "is_unique": true,
+      "tablename": "store_settings"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_store_settings_slug_cache_version ON public.store_settings USING btree (store_slug, storefront_cache_version) WHERE (store_slug IS NOT NULL)",
+      "indexname": "idx_store_settings_slug_cache_version",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "store_settings"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_store_settings_slug_lower_trim ON public.store_settings USING btree (lower(TRIM(BOTH FROM store_slug))) WHERE (store_slug IS NOT NULL)",
+      "indexname": "idx_store_settings_slug_lower_trim",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "store_settings"
+    },
+    {
+      "idx_scan": 277,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE UNIQUE INDEX store_settings_owner_id_key ON public.store_settings USING btree (owner_id)",
+      "indexname": "store_settings_owner_id_key",
+      "is_primary": false,
+      "is_unique": true,
+      "tablename": "store_settings"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE UNIQUE INDEX store_settings_pkey ON public.store_settings USING btree (id)",
+      "indexname": "store_settings_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "store_settings"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_store_subscriptions_owner ON public.store_subscriptions USING btree (owner_id)",
+      "indexname": "idx_store_subscriptions_owner",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "store_subscriptions"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_store_subscriptions_status ON public.store_subscriptions USING btree (status)",
+      "indexname": "idx_store_subscriptions_status",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "store_subscriptions"
+    },
+    {
+      "idx_scan": 2,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE UNIQUE INDEX store_subscriptions_owner_id_key ON public.store_subscriptions USING btree (owner_id)",
+      "indexname": "store_subscriptions_owner_id_key",
+      "is_primary": false,
+      "is_unique": true,
+      "tablename": "store_subscriptions"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE UNIQUE INDEX store_subscriptions_pkey ON public.store_subscriptions USING btree (id)",
+      "indexname": "store_subscriptions_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "store_subscriptions"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_store_visitor_daily_keys_date ON public.store_visitor_daily_keys USING btree (stat_date)",
+      "indexname": "idx_store_visitor_daily_keys_date",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "store_visitor_daily_keys"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX store_visitor_daily_keys_pkey ON public.store_visitor_daily_keys USING btree (owner_id, stat_date, visitor_ip)",
+      "indexname": "store_visitor_daily_keys_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "store_visitor_daily_keys"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "24 kB",
+      "indexdef": "CREATE INDEX idx_store_visits_created_brin ON public.store_visits USING brin (created_at)",
+      "indexname": "idx_store_visits_created_brin",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "store_visits"
+    },
+    {
+      "idx_scan": 229,
+      "idx_tup_read": 1,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_store_visits_owner_created ON public.store_visits USING btree (owner_id, created_at DESC)",
+      "indexname": "idx_store_visits_owner_created",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "store_visits"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_store_visits_owner_ip_created ON public.store_visits USING btree (owner_id, visitor_ip, created_at DESC)",
+      "indexname": "idx_store_visits_owner_ip_created",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "store_visits"
+    },
+    {
+      "idx_scan": 43600,
+      "idx_tup_read": 43598,
+      "index_size": "16 kB",
+      "indexdef": "CREATE INDEX idx_store_visits_owner_ip_path_created ON public.store_visits USING btree (owner_id, visitor_ip, page_path, created_at DESC)",
+      "indexname": "idx_store_visits_owner_ip_path_created",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "store_visits"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE UNIQUE INDEX store_visits_pkey ON public.store_visits USING btree (id)",
+      "indexname": "store_visits_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "store_visits"
+    },
+    {
+      "idx_scan": 6,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_storefront_footer_products_owner_order ON public.storefront_footer_products USING btree (owner_id, display_order)",
+      "indexname": "idx_storefront_footer_products_owner_order",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "storefront_footer_products"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX storefront_footer_products_owner_product_unique ON public.storefront_footer_products USING btree (owner_id, product_id)",
+      "indexname": "storefront_footer_products_owner_product_unique",
+      "is_primary": false,
+      "is_unique": true,
+      "tablename": "storefront_footer_products"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX storefront_footer_products_pkey ON public.storefront_footer_products USING btree (id)",
+      "indexname": "storefront_footer_products_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "storefront_footer_products"
+    },
+    {
+      "idx_scan": 19582,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE UNIQUE INDEX idx_stores_slug_lower ON public.stores USING btree (lower(store_slug)) WHERE (store_slug IS NOT NULL)",
+      "indexname": "idx_stores_slug_lower",
+      "is_primary": false,
+      "is_unique": true,
+      "tablename": "stores"
+    },
+    {
+      "idx_scan": 3,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE UNIQUE INDEX stores_pkey ON public.stores USING btree (id)",
+      "indexname": "stores_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "stores"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE UNIQUE INDEX stores_slug_key ON public.stores USING btree (slug)",
+      "indexname": "stores_slug_key",
+      "is_primary": false,
+      "is_unique": true,
+      "tablename": "stores"
+    },
+    {
+      "idx_scan": 1,
+      "idx_tup_read": 0,
+      "index_size": "16 kB",
+      "indexdef": "CREATE UNIQUE INDEX stores_user_id_unique ON public.stores USING btree (user_id)",
+      "indexname": "stores_user_id_unique",
+      "is_primary": false,
+      "is_unique": true,
+      "tablename": "stores"
+    },
+    {
+      "idx_scan": 19,
+      "idx_tup_read": 18,
+      "index_size": "16 kB",
+      "indexdef": "CREATE UNIQUE INDEX subscription_plans_pkey ON public.subscription_plans USING btree (id)",
+      "indexname": "subscription_plans_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "subscription_plans"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_subscriptions_end_date ON public.subscriptions USING btree (end_date) WHERE (status = 'active'::text)",
+      "indexname": "idx_subscriptions_end_date",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "subscriptions"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE INDEX idx_subscriptions_status ON public.subscriptions USING btree (status)",
+      "indexname": "idx_subscriptions_status",
+      "is_primary": false,
+      "is_unique": false,
+      "tablename": "subscriptions"
+    },
+    {
+      "idx_scan": 1,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX subscriptions_pkey ON public.subscriptions USING btree (id)",
+      "indexname": "subscriptions_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "subscriptions"
+    },
+    {
+      "idx_scan": 76,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX subscriptions_user_id_key ON public.subscriptions USING btree (user_id)",
+      "indexname": "subscriptions_user_id_key",
+      "is_primary": false,
+      "is_unique": true,
+      "tablename": "subscriptions"
+    },
+    {
+      "idx_scan": 0,
+      "idx_tup_read": 0,
+      "index_size": "8192 bytes",
+      "indexdef": "CREATE UNIQUE INDEX suggested_products_pkey ON public.suggested_products USING btree (id)",
+      "indexname": "suggested_products_pkey",
+      "is_primary": true,
+      "is_unique": true,
+      "tablename": "suggested_products"
+    }
+  ],
+  "schema_version": 62,
+  "tables": [
+    {
+      "est_rows": -1,
+      "index_count": 4,
+      "tablename": "analytics_event_outbox",
+      "total_size": "72 kB"
+    },
+    {
+      "est_rows": 0,
+      "index_count": 3,
+      "tablename": "categories",
+      "total_size": "48 kB"
+    },
+    {
+      "est_rows": 0,
+      "index_count": 6,
+      "tablename": "customers",
+      "total_size": "56 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 3,
+      "tablename": "import_jobs",
+      "total_size": "32 kB"
+    },
+    {
+      "est_rows": 0,
+      "index_count": 4,
+      "tablename": "inventory_movements",
+      "total_size": "40 kB"
+    },
+    {
+      "est_rows": 1,
+      "index_count": 5,
+      "tablename": "leads",
+      "total_size": "96 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 4,
+      "tablename": "marketing_coupons",
+      "total_size": "40 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 2,
+      "tablename": "marketing_settings",
+      "total_size": "24 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 5,
+      "tablename": "merchant_access_codes",
+      "total_size": "96 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 1,
+      "tablename": "order_audit_log",
+      "total_size": "16 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 2,
+      "tablename": "order_chargebacks",
+      "total_size": "24 kB"
+    },
+    {
+      "est_rows": 0,
+      "index_count": 6,
+      "tablename": "order_items",
+      "total_size": "56 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 2,
+      "tablename": "order_refunds",
+      "total_size": "24 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 2,
+      "tablename": "order_returns",
+      "total_size": "24 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 5,
+      "tablename": "order_webhook_outbox",
+      "total_size": "48 kB"
+    },
+    {
+      "est_rows": 0,
+      "index_count": 16,
+      "tablename": "orders",
+      "total_size": "160 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 4,
+      "tablename": "payment_transactions",
+      "total_size": "40 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 2,
+      "tablename": "payment_webhook_events",
+      "total_size": "24 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 1,
+      "tablename": "platform_admins",
+      "total_size": "32 kB"
+    },
+    {
+      "est_rows": 51,
+      "index_count": 1,
+      "tablename": "platform_schema_version",
+      "total_size": "32 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 2,
+      "tablename": "product_create_idempotency",
+      "total_size": "24 kB"
+    },
+    {
+      "est_rows": 0,
+      "index_count": 3,
+      "tablename": "product_reviews",
+      "total_size": "32 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 4,
+      "tablename": "product_views",
+      "total_size": "40 kB"
+    },
+    {
+      "est_rows": 24,
+      "index_count": 15,
+      "tablename": "products",
+      "total_size": "240 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 3,
+      "tablename": "profiles",
+      "total_size": "64 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 2,
+      "tablename": "restaurant_owners",
+      "total_size": "24 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 1,
+      "tablename": "rpc_rate_limits",
+      "total_size": "32 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 2,
+      "tablename": "shipment_tracking_events",
+      "total_size": "24 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 4,
+      "tablename": "shipments",
+      "total_size": "40 kB"
+    },
+    {
+      "est_rows": 2,
+      "index_count": 1,
+      "tablename": "store_daily_stats",
+      "total_size": "24 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 3,
+      "tablename": "store_plugins",
+      "total_size": "32 kB"
+    },
+    {
+      "est_rows": 1,
+      "index_count": 5,
+      "tablename": "store_settings",
+      "total_size": "88 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 4,
+      "tablename": "store_subscriptions",
+      "total_size": "80 kB"
+    },
+    {
+      "est_rows": 0,
+      "index_count": 2,
+      "tablename": "store_visitor_daily_keys",
+      "total_size": "24 kB"
+    },
+    {
+      "est_rows": 6,
+      "index_count": 5,
+      "tablename": "store_visits",
+      "total_size": "128 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 3,
+      "tablename": "storefront_footer_products",
+      "total_size": "24 kB"
+    },
+    {
+      "est_rows": 0,
+      "index_count": 4,
+      "tablename": "stores",
+      "total_size": "80 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 1,
+      "tablename": "subscription_plans",
+      "total_size": "32 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 4,
+      "tablename": "subscriptions",
+      "total_size": "40 kB"
+    },
+    {
+      "est_rows": -1,
+      "index_count": 1,
+      "tablename": "suggested_products",
+      "total_size": "8192 bytes"
+    }
+  ],
+  "unused_indexes": [
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_analytics_event_outbox_pending ON public.analytics_event_outbox USING btree (created_at) WHERE (processed_at IS NULL)",
+      "indexname": "idx_analytics_event_outbox_pending",
+      "tablename": "analytics_event_outbox"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_analytics_event_outbox_product_dedupe ON public.analytics_event_outbox USING btree (owner_id, event_type, ((payload ->> 'product_id'::text)), ((payload ->> 'visitor_ip'::text)), created_at DESC) WHERE (event_type = 'product_view'::text)",
+      "indexname": "idx_analytics_event_outbox_product_dedupe",
+      "tablename": "analytics_event_outbox"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_categories_owner_display_order ON public.categories USING btree (owner_id, display_order)",
+      "indexname": "idx_categories_owner_display_order",
+      "tablename": "categories"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_customers_owner_first_last ON public.customers USING btree (owner_id, first_order_date, last_order_date)",
+      "indexname": "idx_customers_owner_first_last",
+      "tablename": "customers"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_customers_owner_phone ON public.customers USING btree (owner_id, phone)",
+      "indexname": "idx_customers_owner_phone",
+      "tablename": "customers"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_customers_phone ON public.customers USING btree (phone)",
+      "indexname": "idx_customers_phone",
+      "tablename": "customers"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_import_jobs_owner ON public.import_jobs USING btree (owner_id, created_at DESC)",
+      "indexname": "idx_import_jobs_owner",
+      "tablename": "import_jobs"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_import_jobs_pending ON public.import_jobs USING btree (status, created_at) WHERE (status = ANY (ARRAY['pending'::text, 'processing'::text]))",
+      "indexname": "idx_import_jobs_pending",
+      "tablename": "import_jobs"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_inventory_movements_order_reason ON public.inventory_movements USING btree (order_id, reason)",
+      "indexname": "idx_inventory_movements_order_reason",
+      "tablename": "inventory_movements"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_inventory_movements_product_owner_created ON public.inventory_movements USING btree (product_id, owner_id, created_at DESC)",
+      "indexname": "idx_inventory_movements_product_owner_created",
+      "tablename": "inventory_movements"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_leads_selected_plan ON public.leads USING btree (selected_plan_id) WHERE (selected_plan_id IS NOT NULL)",
+      "indexname": "idx_leads_selected_plan",
+      "tablename": "leads"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_leads_status_created ON public.leads USING btree (status, created_at DESC)",
+      "indexname": "idx_leads_status_created",
+      "tablename": "leads"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_leads_unread ON public.leads USING btree (created_at DESC) WHERE ((admin_read_at IS NULL) AND (status = 'new'::text))",
+      "indexname": "idx_leads_unread",
+      "tablename": "leads"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_leads_whatsapp ON public.leads USING btree (whatsapp_number)",
+      "indexname": "idx_leads_whatsapp",
+      "tablename": "leads"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_marketing_coupons_active_lookup ON public.marketing_coupons USING btree (owner_id, upper(code)) WHERE (is_active = true)",
+      "indexname": "idx_marketing_coupons_active_lookup",
+      "tablename": "marketing_coupons"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_marketing_coupons_owner_created ON public.marketing_coupons USING btree (owner_id, created_at DESC)",
+      "indexname": "idx_marketing_coupons_owner_created",
+      "tablename": "marketing_coupons"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_order_chargebacks_order ON public.order_chargebacks USING btree (order_id)",
+      "indexname": "idx_order_chargebacks_order",
+      "tablename": "order_chargebacks"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_order_items_order_id ON public.order_items USING btree (order_id)",
+      "indexname": "idx_order_items_order_id",
+      "tablename": "order_items"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_order_items_order_id_id ON public.order_items USING btree (order_id, id)",
+      "indexname": "idx_order_items_order_id_id",
+      "tablename": "order_items"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_order_items_owner_created ON public.order_items USING btree (owner_id, created_at DESC)",
+      "indexname": "idx_order_items_owner_created",
+      "tablename": "order_items"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_order_items_owner_order ON public.order_items USING btree (owner_id, order_id)",
+      "indexname": "idx_order_items_owner_order",
+      "tablename": "order_items"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_order_items_product_id ON public.order_items USING btree (product_id)",
+      "indexname": "idx_order_items_product_id",
+      "tablename": "order_items"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_order_refunds_order ON public.order_refunds USING btree (order_id)",
+      "indexname": "idx_order_refunds_order",
+      "tablename": "order_refunds"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_order_returns_order ON public.order_returns USING btree (order_id)",
+      "indexname": "idx_order_returns_order",
+      "tablename": "order_returns"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_order_webhook_outbox_owner ON public.order_webhook_outbox USING btree (owner_id, created_at DESC)",
+      "indexname": "idx_order_webhook_outbox_owner",
+      "tablename": "order_webhook_outbox"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_order_webhook_outbox_pending ON public.order_webhook_outbox USING btree (status, created_at) WHERE (status = 'pending'::text)",
+      "indexname": "idx_order_webhook_outbox_pending",
+      "tablename": "order_webhook_outbox"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_order_webhook_outbox_retry ON public.order_webhook_outbox USING btree (status, next_attempt_at, created_at) WHERE (status = ANY (ARRAY['pending'::text, 'failed'::text]))",
+      "indexname": "idx_order_webhook_outbox_retry",
+      "tablename": "order_webhook_outbox"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_orders_created_at ON public.orders USING btree (created_at)",
+      "indexname": "idx_orders_created_at",
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_orders_customer_name_trgm ON public.orders USING gin (customer_name gin_trgm_ops)",
+      "indexname": "idx_orders_customer_name_trgm",
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_orders_customer_phone_trgm ON public.orders USING gin (customer_phone gin_trgm_ops)",
+      "indexname": "idx_orders_customer_phone_trgm",
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_orders_marketing_attribution ON public.orders USING gin (marketing_attribution) WHERE (marketing_attribution IS NOT NULL)",
+      "indexname": "idx_orders_marketing_attribution",
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_orders_owner_completed_created ON public.orders USING btree (owner_id, created_at DESC) WHERE (status = 'completed'::text)",
+      "indexname": "idx_orders_owner_completed_created",
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_orders_owner_created_id ON public.orders USING btree (owner_id, created_at DESC, id DESC)",
+      "indexname": "idx_orders_owner_created_id",
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_orders_owner_created_status ON public.orders USING btree (owner_id, created_at DESC) INCLUDE (status, total_amount, payment_status, delivery_status)",
+      "indexname": "idx_orders_owner_created_status",
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_orders_owner_customer_phone ON public.orders USING btree (owner_id, customer_phone)",
+      "indexname": "idx_orders_owner_customer_phone",
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_orders_owner_delivery_status ON public.orders USING btree (owner_id, delivery_status)",
+      "indexname": "idx_orders_owner_delivery_status",
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_orders_owner_payment_status ON public.orders USING btree (owner_id, payment_status)",
+      "indexname": "idx_orders_owner_payment_status",
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_orders_owner_pending_created ON public.orders USING btree (owner_id, created_at DESC) WHERE (status = 'pending'::text)",
+      "indexname": "idx_orders_owner_pending_created",
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_orders_owner_total_amount ON public.orders USING btree (owner_id, total_amount)",
+      "indexname": "idx_orders_owner_total_amount",
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_orders_store_created ON public.orders USING btree (store_id, created_at DESC) WHERE (store_id IS NOT NULL)",
+      "indexname": "idx_orders_store_created",
+      "tablename": "orders"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_payment_transactions_order ON public.payment_transactions USING btree (order_id)",
+      "indexname": "idx_payment_transactions_order",
+      "tablename": "payment_transactions"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_product_create_idempotency_product ON public.product_create_idempotency USING btree (product_id)",
+      "indexname": "idx_product_create_idempotency_product",
+      "tablename": "product_create_idempotency"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_product_reviews_owner_pending ON public.product_reviews USING btree (owner_id) WHERE (is_approved = false)",
+      "indexname": "idx_product_reviews_owner_pending",
+      "tablename": "product_reviews"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_reviews_product_owner_approved ON public.product_reviews USING btree (product_id, owner_id, is_approved, created_at DESC) WHERE (is_approved = true)",
+      "indexname": "idx_reviews_product_owner_approved",
+      "tablename": "product_reviews"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_product_views_owner_created ON public.product_views USING btree (owner_id, created_at DESC)",
+      "indexname": "idx_product_views_owner_created",
+      "tablename": "product_views"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_product_views_owner_product_created ON public.product_views USING btree (owner_id, product_id, created_at DESC)",
+      "indexname": "idx_product_views_owner_product_created",
+      "tablename": "product_views"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_products_description_trgm ON public.products USING gin (description gin_trgm_ops)",
+      "indexname": "idx_products_description_trgm",
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_products_name_trgm ON public.products USING gin (name gin_trgm_ops)",
+      "indexname": "idx_products_name_trgm",
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_products_owner_active_catalog ON public.products USING btree (owner_id) WHERE ((archived_at IS NULL) AND (COALESCE(is_active, true) = true))",
+      "indexname": "idx_products_owner_active_catalog",
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_products_owner_category_created ON public.products USING btree (owner_id, category, created_at DESC, id DESC) WHERE ((archived_at IS NULL) AND (COALESCE(is_active, true) = true))",
+      "indexname": "idx_products_owner_category_created",
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_products_owner_merchant_created ON public.products USING btree (owner_id, created_at DESC, id DESC)",
+      "indexname": "idx_products_owner_merchant_created",
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_products_owner_name ON public.products USING btree (owner_id, name)",
+      "indexname": "idx_products_owner_name",
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_products_owner_search_name ON public.products USING btree (owner_id, name text_pattern_ops) WHERE (archived_at IS NULL)",
+      "indexname": "idx_products_owner_search_name",
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_products_owner_stock_monitor ON public.products USING btree (owner_id, stock_quantity) WHERE ((archived_at IS NULL) AND (COALESCE(is_active, true) = true) AND (stock_quantity IS NOT NULL))",
+      "indexname": "idx_products_owner_stock_monitor",
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_products_owner_storefront_created ON public.products USING btree (owner_id, created_at DESC, id DESC) WHERE ((archived_at IS NULL) AND (COALESCE(is_active, true) = true))",
+      "indexname": "idx_products_owner_storefront_created",
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_products_sku_owner ON public.products USING btree (owner_id, sku) WHERE (sku IS NOT NULL)",
+      "indexname": "idx_products_sku_owner",
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_products_slug_owner ON public.products USING btree (owner_id, product_slug) WHERE (product_slug IS NOT NULL)",
+      "indexname": "idx_products_slug_owner",
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_products_store_active_created ON public.products USING btree (store_id, created_at DESC) WHERE ((store_id IS NOT NULL) AND (archived_at IS NULL) AND (COALESCE(is_active, true) = true))",
+      "indexname": "idx_products_store_active_created",
+      "tablename": "products"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_shipment_events_shipment ON public.shipment_tracking_events USING btree (shipment_id)",
+      "indexname": "idx_shipment_events_shipment",
+      "tablename": "shipment_tracking_events"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_shipments_owner ON public.shipments USING btree (owner_id)",
+      "indexname": "idx_shipments_owner",
+      "tablename": "shipments"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_shipments_status ON public.shipments USING btree (status)",
+      "indexname": "idx_shipments_status",
+      "tablename": "shipments"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_store_plugins_store_id ON public.store_plugins USING btree (store_id)",
+      "indexname": "idx_store_plugins_store_id",
+      "tablename": "store_plugins"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_store_settings_slug_cache_version ON public.store_settings USING btree (store_slug, storefront_cache_version) WHERE (store_slug IS NOT NULL)",
+      "indexname": "idx_store_settings_slug_cache_version",
+      "tablename": "store_settings"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_store_settings_slug_lower_trim ON public.store_settings USING btree (lower(TRIM(BOTH FROM store_slug))) WHERE (store_slug IS NOT NULL)",
+      "indexname": "idx_store_settings_slug_lower_trim",
+      "tablename": "store_settings"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_store_subscriptions_owner ON public.store_subscriptions USING btree (owner_id)",
+      "indexname": "idx_store_subscriptions_owner",
+      "tablename": "store_subscriptions"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_store_subscriptions_status ON public.store_subscriptions USING btree (status)",
+      "indexname": "idx_store_subscriptions_status",
+      "tablename": "store_subscriptions"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_store_visitor_daily_keys_date ON public.store_visitor_daily_keys USING btree (stat_date)",
+      "indexname": "idx_store_visitor_daily_keys_date",
+      "tablename": "store_visitor_daily_keys"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_store_visits_created_brin ON public.store_visits USING brin (created_at)",
+      "indexname": "idx_store_visits_created_brin",
+      "tablename": "store_visits"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_store_visits_owner_ip_created ON public.store_visits USING btree (owner_id, visitor_ip, created_at DESC)",
+      "indexname": "idx_store_visits_owner_ip_created",
+      "tablename": "store_visits"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_subscriptions_end_date ON public.subscriptions USING btree (end_date) WHERE (status = 'active'::text)",
+      "indexname": "idx_subscriptions_end_date",
+      "tablename": "subscriptions"
+    },
+    {
+      "idx_scan": 0,
+      "indexdef": "CREATE INDEX idx_subscriptions_status ON public.subscriptions USING btree (status)",
+      "indexname": "idx_subscriptions_status",
+      "tablename": "subscriptions"
+    }
+  ]
+}

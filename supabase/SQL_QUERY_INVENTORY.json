@@ -1,0 +1,1033 @@
+{
+  "summary": {
+    "generatedAt": "2026-06-25T21:03:55.475Z",
+    "rpcCount": 70,
+    "tableCount": 18,
+    "totalCallSites": 177,
+    "criticalRpcs": [
+      "get_storefront_page_bundle",
+      "get_store_products_page",
+      "get_checkout_products_by_ids",
+      "create_order_with_stock_deduction"
+    ],
+    "highRpcs": [
+      "get_store_meta",
+      "list_merchant_orders",
+      "get_owner_products_page",
+      "get_dashboard_statistics_batch"
+    ]
+  },
+  "inventory": [
+    {
+      "kind": "rpc",
+      "name": "get_storefront_page_bundle",
+      "callSites": 2,
+      "files": [
+        "src/services/storefrontProductService.ts",
+        "supabase/functions/get-store-products/index.ts"
+      ],
+      "tier": "critical",
+      "estPerSession": 1,
+      "path": "storefront"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_store_products_page",
+      "callSites": 2,
+      "files": [
+        "src/services/storefrontProductService.ts",
+        "supabase/functions/get-store-products/index.ts"
+      ],
+      "tier": "critical",
+      "estPerSession": 2,
+      "path": "storefront"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_checkout_products_by_ids",
+      "callSites": 1,
+      "files": [
+        "src/services/storefrontProductService.ts"
+      ],
+      "tier": "critical",
+      "estPerSession": 1,
+      "path": "checkout"
+    },
+    {
+      "kind": "rpc",
+      "name": "create_order_with_stock_deduction",
+      "callSites": 1,
+      "files": [
+        "src/services/orderService.ts"
+      ],
+      "tier": "critical",
+      "estPerSession": 0.05,
+      "path": "checkout"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_store_meta",
+      "callSites": 3,
+      "files": [
+        "src/lib/tenantStoreRegistry.ts",
+        "src/services/storefrontProductService.ts",
+        "supabase/functions/get-store-products/index.ts"
+      ],
+      "tier": "high",
+      "estPerSession": 2,
+      "path": "storefront"
+    },
+    {
+      "kind": "rpc",
+      "name": "list_merchant_orders",
+      "callSites": 1,
+      "files": [
+        "src/services/orderService.ts"
+      ],
+      "tier": "high",
+      "estPerSession": 2,
+      "path": "dashboard"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_owner_products_page",
+      "callSites": 1,
+      "files": [
+        "src/services/merchantProductCatalogService.ts"
+      ],
+      "tier": "high",
+      "estPerSession": 3,
+      "path": "dashboard"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_dashboard_statistics_batch",
+      "callSites": 1,
+      "files": [
+        "src/services/dashboardStatsService.ts"
+      ],
+      "tier": "high",
+      "estPerSession": 1,
+      "path": "dashboard"
+    },
+    {
+      "kind": "rpc",
+      "name": "increment_product_stock",
+      "callSites": 3,
+      "files": [
+        "src/services/inventoryService.ts"
+      ],
+      "tier": "medium",
+      "estPerSession": 0.2,
+      "path": "inventory"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_store_statistics",
+      "callSites": 2,
+      "files": [
+        "src/services/dashboardStatsService.ts",
+        "src/services/statisticsService.ts"
+      ],
+      "tier": "medium",
+      "estPerSession": 1,
+      "path": "analytics"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_statistics_page_bundle",
+      "callSites": 1,
+      "files": [
+        "src/services/statisticsService.ts"
+      ],
+      "tier": "medium",
+      "estPerSession": 1,
+      "path": "analytics"
+    },
+    {
+      "kind": "rpc",
+      "name": "count_merchant_orders_by_workflow",
+      "callSites": 1,
+      "files": [
+        "src/services/orderService.ts"
+      ],
+      "tier": "medium",
+      "estPerSession": 1,
+      "path": "dashboard"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_merchant_product_by_id",
+      "callSites": 1,
+      "files": [
+        "src/services/merchantProductCatalogService.ts"
+      ],
+      "tier": "medium",
+      "estPerSession": 2,
+      "path": "dashboard"
+    },
+    {
+      "kind": "rpc",
+      "name": "platform_health_check",
+      "callSites": 1,
+      "files": [
+        "src/services/platformHealthService.ts"
+      ],
+      "tier": "low",
+      "estPerSession": 0.01,
+      "path": "ops"
+    },
+    {
+      "kind": "table",
+      "name": "products",
+      "callSites": 28,
+      "files": [
+        "src/services/footerSuggestedProductsService.ts",
+        "src/services/marketingService.ts",
+        "src/services/merchantProductCatalogService.ts",
+        "src/services/orderService.ts",
+        "src/services/platformHealthService.ts",
+        "src/services/productsCrudService.ts",
+        "src/services/reviewService.ts",
+        "src/services/statisticsService.ts",
+        "src/services/storefrontProductService.ts",
+        "src/services/suggestedProductsService.ts",
+        "src/utils/checkoutValidation.ts"
+      ],
+      "joins": [
+        "stores",
+        "categories"
+      ],
+      "filters": [
+        "owner_id",
+        "archived_at",
+        "is_active"
+      ],
+      "sort": "created_at DESC"
+    },
+    {
+      "kind": "table",
+      "name": "store_settings",
+      "callSites": 14,
+      "files": [
+        "src/lib/storeUrl.ts",
+        "src/services/marketingService.ts",
+        "src/services/platformHealthService.ts",
+        "src/services/storeService.ts",
+        "src/services/storefrontProductService.ts",
+        "supabase/functions/meta-conversions/index.ts"
+      ],
+      "joins": [
+        "stores"
+      ],
+      "filters": [
+        "owner_id",
+        "store_slug"
+      ]
+    },
+    {
+      "kind": "table",
+      "name": "orders",
+      "callSites": 9,
+      "files": [
+        "src/services/orderService.ts",
+        "src/services/statisticsService.ts"
+      ],
+      "joins": [
+        "order_items",
+        "order_refunds"
+      ],
+      "filters": [
+        "owner_id",
+        "status",
+        "payment_status"
+      ],
+      "sort": "created_at DESC"
+    },
+    {
+      "kind": "table",
+      "name": "stores",
+      "callSites": 7,
+      "files": [
+        "src/lib/storeUrl.ts",
+        "src/services/storeService.ts",
+        "src/services/storefrontProductService.ts",
+        "supabase/functions/meta-conversions/index.ts"
+      ]
+    },
+    {
+      "kind": "table",
+      "name": "product_reviews",
+      "callSites": 7,
+      "files": [
+        "src/services/reviewService.ts",
+        "src/services/storefrontReviewService.ts"
+      ],
+      "joins": [
+        "products"
+      ],
+      "filters": [
+        "owner_id",
+        "is_approved"
+      ],
+      "sort": "created_at DESC"
+    },
+    {
+      "kind": "table",
+      "name": "categories",
+      "callSites": 5,
+      "files": [
+        "src/services/merchantProductCatalogService.ts",
+        "src/services/suggestedProductsService.ts"
+      ],
+      "joins": [],
+      "filters": [
+        "owner_id"
+      ],
+      "sort": "display_order"
+    },
+    {
+      "kind": "table",
+      "name": "suggested_products",
+      "callSites": 4,
+      "files": [
+        "src/services/suggestedProductsService.ts"
+      ]
+    },
+    {
+      "kind": "table",
+      "name": "storefront_footer_products",
+      "callSites": 4,
+      "files": [
+        "src/services/footerSuggestedProductsService.ts"
+      ]
+    },
+    {
+      "kind": "table",
+      "name": "marketing_coupons",
+      "callSites": 4,
+      "files": [
+        "src/services/couponService.ts"
+      ]
+    },
+    {
+      "kind": "table",
+      "name": "marketing_settings",
+      "callSites": 3,
+      "files": [
+        "src/services/marketingService.ts",
+        "supabase/functions/meta-conversions/index.ts"
+      ]
+    },
+    {
+      "kind": "table",
+      "name": "subscriptions",
+      "callSites": 3,
+      "files": [
+        "supabase/functions/redeem-access-code/index.ts"
+      ]
+    },
+    {
+      "kind": "rpc",
+      "name": "finalize_order_webhook_delivery",
+      "callSites": 3,
+      "files": [
+        "supabase/functions/process-order-webhook-outbox/index.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "admin_list_leads",
+      "callSites": 2,
+      "files": [
+        "src/services/leadAdminService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "table",
+      "name": "customers",
+      "callSites": 2,
+      "files": [
+        "src/services/customerService.ts"
+      ],
+      "joins": [],
+      "filters": [
+        "owner_id",
+        "phone"
+      ],
+      "sort": "last_order_at DESC"
+    },
+    {
+      "kind": "table",
+      "name": "merchant_access_codes",
+      "callSites": 2,
+      "files": [
+        "supabase/functions/redeem-access-code/index.ts"
+      ]
+    },
+    {
+      "kind": "rpc",
+      "name": "get_suggested_products_for_store",
+      "callSites": 1,
+      "files": [
+        "src/services/suggestedProductsService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_my_subscription",
+      "callSites": 1,
+      "files": [
+        "src/services/subscriptionService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_store_for_user",
+      "callSites": 1,
+      "files": [
+        "src/services/storeService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_owner_bootstrap",
+      "callSites": 1,
+      "files": [
+        "src/services/storeService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "list_public_store_slugs",
+      "callSites": 1,
+      "files": [
+        "src/services/storeService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_approved_product_reviews",
+      "callSites": 1,
+      "files": [
+        "src/services/storefrontReviewService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "submit_product_review_for_store",
+      "callSites": 1,
+      "files": [
+        "src/services/storefrontReviewService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_store_policies",
+      "callSites": 1,
+      "files": [
+        "src/services/storefrontProductService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_owner_checkout_products_by_ids",
+      "callSites": 1,
+      "files": [
+        "src/services/storefrontProductService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_store_products_by_slug",
+      "callSites": 1,
+      "files": [
+        "src/services/storefrontProductService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_store_product_by_id",
+      "callSites": 1,
+      "files": [
+        "src/services/storefrontProductService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "bump_storefront_cache_version",
+      "callSites": 1,
+      "files": [
+        "src/services/storefrontProductService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_order_items_for_statistics",
+      "callSites": 1,
+      "files": [
+        "src/services/statisticsService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "table",
+      "name": "store_visits",
+      "callSites": 1,
+      "files": [
+        "src/services/statisticsService.ts"
+      ],
+      "joins": [],
+      "filters": [
+        "owner_id",
+        "created_at"
+      ],
+      "sort": "created_at DESC",
+      "pagination": "append"
+    },
+    {
+      "kind": "table",
+      "name": "order_items",
+      "callSites": 1,
+      "files": [
+        "src/services/statisticsService.ts"
+      ],
+      "joins": [
+        "orders",
+        "products"
+      ],
+      "filters": [
+        "owner_id",
+        "order_id"
+      ],
+      "sort": "created_at DESC"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_merchant_product_reviews",
+      "callSites": 1,
+      "files": [
+        "src/services/reviewService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "approve_product_review",
+      "callSites": 1,
+      "files": [
+        "src/services/reviewService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "record_product_idempotency",
+      "callSites": 1,
+      "files": [
+        "src/services/productsCrudService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_order_payment_summary",
+      "callSites": 1,
+      "files": [
+        "src/services/paymentService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "record_order_refund",
+      "callSites": 1,
+      "files": [
+        "src/services/paymentService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "record_order_chargeback",
+      "callSites": 1,
+      "files": [
+        "src/services/paymentService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "attach_order_marketing_attribution",
+      "callSites": 1,
+      "files": [
+        "src/services/orderService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_store_marketing_public",
+      "callSites": 1,
+      "files": [
+        "src/services/marketingService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_store_marketing_for_owner",
+      "callSites": 1,
+      "files": [
+        "src/services/marketingService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "submit_access_lead",
+      "callSites": 1,
+      "files": [
+        "src/services/leadAdminService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "admin_get_lead",
+      "callSites": 1,
+      "files": [
+        "src/services/leadAdminService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "admin_update_lead",
+      "callSites": 1,
+      "files": [
+        "src/services/leadAdminService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "admin_unread_leads_count",
+      "callSites": 1,
+      "files": [
+        "src/services/leadAdminService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "admin_leads_stats",
+      "callSites": 1,
+      "files": [
+        "src/services/leadAdminService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "admin_mark_lead_contacted",
+      "callSites": 1,
+      "files": [
+        "src/services/leadAdminService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "admin_list_subscriptions",
+      "callSites": 1,
+      "files": [
+        "src/services/leadAdminService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "admin_upsert_subscription",
+      "callSites": 1,
+      "files": [
+        "src/services/leadAdminService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "is_platform_admin",
+      "callSites": 1,
+      "files": [
+        "src/services/leadAdminService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "admin_generate_access_code",
+      "callSites": 1,
+      "files": [
+        "src/services/leadAdminService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "admin_list_lead_access_codes",
+      "callSites": 1,
+      "files": [
+        "src/services/leadAdminService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "audit_merchant_inventory_integrity",
+      "callSites": 1,
+      "files": [
+        "src/services/inventoryService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "table",
+      "name": "inventory_movements",
+      "callSites": 1,
+      "files": [
+        "src/services/inventoryService.ts"
+      ],
+      "joins": [
+        "products"
+      ],
+      "filters": [
+        "owner_id",
+        "product_id"
+      ],
+      "sort": "created_at DESC"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_storefront_footer_products",
+      "callSites": 1,
+      "files": [
+        "src/services/footerSuggestedProductsService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "calculate_delivery_fee",
+      "callSites": 1,
+      "files": [
+        "src/services/deliveryService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "calculate_delivery_fee_by_slug",
+      "callSites": 1,
+      "files": [
+        "src/services/deliveryService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_order_shipment",
+      "callSites": 1,
+      "files": [
+        "src/services/deliveryService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "update_shipment_status",
+      "callSites": 1,
+      "files": [
+        "src/services/deliveryService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "mark_delivery_failed",
+      "callSites": 1,
+      "files": [
+        "src/services/deliveryService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "retry_failed_delivery",
+      "callSites": 1,
+      "files": [
+        "src/services/deliveryService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "validate_store_coupon_by_slug",
+      "callSites": 1,
+      "files": [
+        "src/services/couponService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "validate_store_coupon",
+      "callSites": 1,
+      "files": [
+        "src/services/couponService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_order_by_idempotency_key",
+      "callSites": 1,
+      "files": [
+        "src/services/checkoutRecoveryService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_background_jobs_status",
+      "callSites": 1,
+      "files": [
+        "src/services/backgroundJobsService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "retry_order_webhook_events",
+      "callSites": 1,
+      "files": [
+        "src/services/backgroundJobsService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "table",
+      "name": "profiles",
+      "callSites": 1,
+      "files": [
+        "src/services/authService.ts"
+      ]
+    },
+    {
+      "kind": "rpc",
+      "name": "audit_merchant_analytics_health",
+      "callSites": 1,
+      "files": [
+        "src/services/analyticsHealthService.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "table",
+      "name": "leads",
+      "callSites": 1,
+      "files": [
+        "supabase/functions/redeem-access-code/index.ts"
+      ]
+    },
+    {
+      "kind": "rpc",
+      "name": "claim_order_webhook_outbox_batch",
+      "callSites": 1,
+      "files": [
+        "supabase/functions/process-order-webhook-outbox/index.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "process_product_import_batch",
+      "callSites": 1,
+      "files": [
+        "supabase/functions/process-import-jobs/index.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "process_payment_webhook_event",
+      "callSites": 1,
+      "files": [
+        "supabase/functions/payment-webhook/index.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "verify_order_for_meta_conversion",
+      "callSites": 1,
+      "files": [
+        "supabase/functions/meta-conversions/index.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "mark_meta_conversion_sent",
+      "callSites": 1,
+      "files": [
+        "supabase/functions/meta-conversions/index.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "get_storefront_cache_version",
+      "callSites": 1,
+      "files": [
+        "supabase/functions/get-store-products/index.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    },
+    {
+      "kind": "rpc",
+      "name": "check_rpc_rate_limit",
+      "callSites": 1,
+      "files": [
+        "supabase/functions/get-store-products/index.ts"
+      ],
+      "tier": "unknown",
+      "estPerSession": 0,
+      "path": "misc"
+    }
+  ]
+}

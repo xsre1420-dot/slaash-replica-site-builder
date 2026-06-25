@@ -15,6 +15,7 @@ const Index = () => (
     <main>
       <LandingHero />
       <LandingFeatures />
+       
       <LandingDashboardPreview />
       <LandingBenefits />
       <LandingTestimonials />

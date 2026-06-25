@@ -39,6 +39,330 @@ export type Database = {
   }
   public: {
     Tables: {
+      analytics_event_outbox: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: number
+          owner_id: string
+          payload: Json
+          processed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: number
+          owner_id: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: number
+          owner_id?: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Relationships: []
+      }
+      analytics_event_outbox_default: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: number
+          owner_id: string
+          payload: Json
+          processed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: number
+          owner_id: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: number
+          owner_id?: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Relationships: []
+      }
+      analytics_event_outbox_y2025m12: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: number
+          owner_id: string
+          payload: Json
+          processed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: number
+          owner_id: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: number
+          owner_id?: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Relationships: []
+      }
+      analytics_event_outbox_y2026m01: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: number
+          owner_id: string
+          payload: Json
+          processed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: number
+          owner_id: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: number
+          owner_id?: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Relationships: []
+      }
+      analytics_event_outbox_y2026m02: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: number
+          owner_id: string
+          payload: Json
+          processed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: number
+          owner_id: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: number
+          owner_id?: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Relationships: []
+      }
+      analytics_event_outbox_y2026m03: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: number
+          owner_id: string
+          payload: Json
+          processed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: number
+          owner_id: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: number
+          owner_id?: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Relationships: []
+      }
+      analytics_event_outbox_y2026m04: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: number
+          owner_id: string
+          payload: Json
+          processed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: number
+          owner_id: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: number
+          owner_id?: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Relationships: []
+      }
+      analytics_event_outbox_y2026m05: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: number
+          owner_id: string
+          payload: Json
+          processed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: number
+          owner_id: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: number
+          owner_id?: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Relationships: []
+      }
+      analytics_event_outbox_y2026m06: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: number
+          owner_id: string
+          payload: Json
+          processed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: number
+          owner_id: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: number
+          owner_id?: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Relationships: []
+      }
+      analytics_event_outbox_y2026m07: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: number
+          owner_id: string
+          payload: Json
+          processed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: number
+          owner_id: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: number
+          owner_id?: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Relationships: []
+      }
+      analytics_event_outbox_y2026m08: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: number
+          owner_id: string
+          payload: Json
+          processed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: number
+          owner_id: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: number
+          owner_id?: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Relationships: []
+      }
+      analytics_event_outbox_y2026m09: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: number
+          owner_id: string
+          payload: Json
+          processed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: number
+          owner_id: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: number
+          owner_id?: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -124,6 +448,65 @@ export type Database = {
           },
         ]
       }
+      import_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          errors: Json
+          failed_count: number
+          id: string
+          job_type: string
+          owner_id: string
+          payload: Json
+          processed_rows: number
+          started_at: string | null
+          status: string
+          store_id: string | null
+          success_count: number
+          total_rows: number
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          errors?: Json
+          failed_count?: number
+          id?: string
+          job_type?: string
+          owner_id: string
+          payload?: Json
+          processed_rows?: number
+          started_at?: string | null
+          status?: string
+          store_id?: string | null
+          success_count?: number
+          total_rows?: number
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          errors?: Json
+          failed_count?: number
+          id?: string
+          job_type?: string
+          owner_id?: string
+          payload?: Json
+          processed_rows?: number
+          started_at?: string | null
+          status?: string
+          store_id?: string | null
+          success_count?: number
+          total_rows?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_jobs_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_movements: {
         Row: {
           created_at: string
@@ -168,6 +551,999 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      inventory_movements_archive: {
+        Row: {
+          archived_at: string
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          archived_at?: string
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          archived_at?: string
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_default: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2024m06: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2024m07: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2024m08: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2024m09: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2024m10: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2024m11: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2024m12: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2025m01: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2025m02: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2025m03: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2025m04: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2025m05: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2025m06: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2025m07: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2025m08: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2025m09: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2025m10: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2025m11: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2025m12: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2026m01: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2026m02: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2026m03: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2026m04: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2026m05: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2026m06: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2026m07: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2026m08: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2026m09: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2026m10: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2026m11: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
+      }
+      inventory_movements_y2026m12: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id: string
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: []
       }
       leads: {
         Row: {
@@ -518,6 +1894,48 @@ export type Database = {
         }
         Relationships: []
       }
+      order_items_archive: {
+        Row: {
+          archived_at: string
+          created_at: string
+          id: string
+          order_id: string | null
+          owner_id: string | null
+          product_id: string | null
+          product_name: string | null
+          product_price: number | null
+          quantity: number | null
+          subtotal: number | null
+          variant_metadata: Json | null
+        }
+        Insert: {
+          archived_at?: string
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string | null
+          product_id?: string | null
+          product_name?: string | null
+          product_price?: number | null
+          quantity?: number | null
+          subtotal?: number | null
+          variant_metadata?: Json | null
+        }
+        Update: {
+          archived_at?: string
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          owner_id?: string | null
+          product_id?: string | null
+          product_name?: string | null
+          product_price?: number | null
+          quantity?: number | null
+          subtotal?: number | null
+          variant_metadata?: Json | null
+        }
+        Relationships: []
+      }
       order_refunds: {
         Row: {
           amount: number
@@ -603,6 +2021,44 @@ export type Database = {
           },
         ]
       }
+      order_side_effects_outbox: {
+        Row: {
+          created_at: string
+          effects_pending: string[]
+          id: number
+          last_error: string | null
+          order_id: string
+          owner_id: string
+          processed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          effects_pending?: string[]
+          id?: number
+          last_error?: string | null
+          order_id: string
+          owner_id: string
+          processed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          effects_pending?: string[]
+          id?: number
+          last_error?: string | null
+          order_id?: string
+          owner_id?: string
+          processed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_side_effects_outbox_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_webhook_outbox: {
         Row: {
           attempts: number
@@ -610,6 +2066,7 @@ export type Database = {
           event_type: string
           id: string
           last_error: string | null
+          next_attempt_at: string
           order_id: string
           owner_id: string
           payload: Json
@@ -623,6 +2080,7 @@ export type Database = {
           event_type?: string
           id?: string
           last_error?: string | null
+          next_attempt_at?: string
           order_id: string
           owner_id: string
           payload?: Json
@@ -636,6 +2094,7 @@ export type Database = {
           event_type?: string
           id?: string
           last_error?: string | null
+          next_attempt_at?: string
           order_id?: string
           owner_id?: string
           payload?: Json
@@ -763,6 +2222,90 @@ export type Database = {
           },
         ]
       }
+      orders_archive: {
+        Row: {
+          archived_at: string
+          coupon_code: string | null
+          created_at: string | null
+          customer_address: string | null
+          customer_governorate: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          delivery_fee: number | null
+          delivery_status: string
+          delivery_time: number | null
+          discount_amount: number | null
+          id: string
+          idempotency_key: string | null
+          marketing_attribution: Json | null
+          meta_conversion_sent_at: string | null
+          notes: string | null
+          owner_id: string | null
+          payment_method: string | null
+          payment_status: string
+          restaurant_owner_id: string | null
+          status: string | null
+          store_id: string | null
+          total_amount: number | null
+          total_price: number
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string
+          coupon_code?: string | null
+          created_at?: string | null
+          customer_address?: string | null
+          customer_governorate?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          delivery_fee?: number | null
+          delivery_status?: string
+          delivery_time?: number | null
+          discount_amount?: number | null
+          id?: string
+          idempotency_key?: string | null
+          marketing_attribution?: Json | null
+          meta_conversion_sent_at?: string | null
+          notes?: string | null
+          owner_id?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          restaurant_owner_id?: string | null
+          status?: string | null
+          store_id?: string | null
+          total_amount?: number | null
+          total_price: number
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string
+          coupon_code?: string | null
+          created_at?: string | null
+          customer_address?: string | null
+          customer_governorate?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          delivery_fee?: number | null
+          delivery_status?: string
+          delivery_time?: number | null
+          discount_amount?: number | null
+          id?: string
+          idempotency_key?: string | null
+          marketing_attribution?: Json | null
+          meta_conversion_sent_at?: string | null
+          notes?: string | null
+          owner_id?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          restaurant_owner_id?: string | null
+          status?: string | null
+          store_id?: string | null
+          total_amount?: number | null
+          total_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payment_transactions: {
         Row: {
           amount: number
@@ -873,6 +2416,36 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_data_lifecycle_policies: {
+        Row: {
+          archive_after_days: number | null
+          data_tier: string
+          hot_retention_days: number | null
+          notes: string | null
+          partition_strategy: string
+          purge_after_days: number | null
+          table_name: string
+        }
+        Insert: {
+          archive_after_days?: number | null
+          data_tier: string
+          hot_retention_days?: number | null
+          notes?: string | null
+          partition_strategy?: string
+          purge_after_days?: number | null
+          table_name: string
+        }
+        Update: {
+          archive_after_days?: number | null
+          data_tier?: string
+          hot_retention_days?: number | null
+          notes?: string | null
+          partition_strategy?: string
+          purge_after_days?: number | null
+          table_name?: string
+        }
+        Relationships: []
+      }
       platform_schema_version: {
         Row: {
           applied_at: string
@@ -890,6 +2463,35 @@ export type Database = {
           version?: number
         }
         Relationships: []
+      }
+      product_create_idempotency: {
+        Row: {
+          created_at: string
+          idempotency_key: string
+          owner_id: string
+          product_id: string
+        }
+        Insert: {
+          created_at?: string
+          idempotency_key: string
+          owner_id: string
+          product_id: string
+        }
+        Update: {
+          created_at?: string
+          idempotency_key?: string
+          owner_id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_create_idempotency_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_reviews: {
         Row: {
@@ -1315,27 +2917,6 @@ export type Database = {
         }
         Relationships: []
       }
-      store_visitor_daily_keys: {
-        Row: {
-          created_at: string
-          owner_id: string
-          stat_date: string
-          visitor_ip: string
-        }
-        Insert: {
-          created_at?: string
-          owner_id: string
-          stat_date: string
-          visitor_ip: string
-        }
-        Update: {
-          created_at?: string
-          owner_id?: string
-          stat_date?: string
-          visitor_ip?: string
-        }
-        Relationships: []
-      }
       store_plugins: {
         Row: {
           config: Json
@@ -1384,6 +2965,7 @@ export type Database = {
           menu_accent_color: string | null
           menu_background_color: string | null
           menu_text_color: string | null
+          order_webhook_url: string | null
           owner_id: string
           payment_methods: Json | null
           primary_banner_index: number | null
@@ -1394,6 +2976,7 @@ export type Database = {
           store_logo: string | null
           store_name: string | null
           store_slug: string | null
+          storefront_cache_version: number
           terms_conditions: string | null
           updated_at: string
           whatsapp_number: string | null
@@ -1412,6 +2995,7 @@ export type Database = {
           menu_accent_color?: string | null
           menu_background_color?: string | null
           menu_text_color?: string | null
+          order_webhook_url?: string | null
           owner_id: string
           payment_methods?: Json | null
           primary_banner_index?: number | null
@@ -1422,6 +3006,7 @@ export type Database = {
           store_logo?: string | null
           store_name?: string | null
           store_slug?: string | null
+          storefront_cache_version?: number
           terms_conditions?: string | null
           updated_at?: string
           whatsapp_number?: string | null
@@ -1440,6 +3025,7 @@ export type Database = {
           menu_accent_color?: string | null
           menu_background_color?: string | null
           menu_text_color?: string | null
+          order_webhook_url?: string | null
           owner_id?: string
           payment_methods?: Json | null
           primary_banner_index?: number | null
@@ -1450,6 +3036,7 @@ export type Database = {
           store_logo?: string | null
           store_name?: string | null
           store_slug?: string | null
+          storefront_cache_version?: number
           terms_conditions?: string | null
           updated_at?: string
           whatsapp_number?: string | null
@@ -1502,11 +3089,32 @@ export type Database = {
           },
         ]
       }
+      store_visitor_daily_keys: {
+        Row: {
+          created_at: string
+          owner_id: string
+          stat_date: string
+          visitor_ip: string
+        }
+        Insert: {
+          created_at?: string
+          owner_id: string
+          stat_date: string
+          visitor_ip: string
+        }
+        Update: {
+          created_at?: string
+          owner_id?: string
+          stat_date?: string
+          visitor_ip?: string
+        }
+        Relationships: []
+      }
       store_visits: {
         Row: {
           created_at: string
           id: string
-          owner_id: string | null
+          owner_id: string
           page_path: string | null
           user_agent: string | null
           visitor_ip: string | null
@@ -1514,7 +3122,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
-          owner_id?: string | null
+          owner_id: string
           page_path?: string | null
           user_agent?: string | null
           visitor_ip?: string | null
@@ -1522,7 +3130,871 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
-          owner_id?: string | null
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_default: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2024m06: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2024m07: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2024m08: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2024m09: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2024m10: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2024m11: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2024m12: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2025m01: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2025m02: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2025m03: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2025m04: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2025m05: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2025m06: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2025m07: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2025m08: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2025m09: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2025m10: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2025m11: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2025m12: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2026m01: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2026m02: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2026m03: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2026m04: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2026m05: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2026m06: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2026m07: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2026m08: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2026m09: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2026m10: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2026m11: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: []
+      }
+      store_visits_y2026m12: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          page_path: string | null
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          page_path?: string | null
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
           page_path?: string | null
           user_agent?: string | null
           visitor_ip?: string | null
@@ -1772,12 +4244,36 @@ export type Database = {
     }
     Functions: {
       _access_code_random_part: { Args: { p_len: number }; Returns: string }
+      _dashboard_period_json: {
+        Args: {
+          p_completed_revenue: number
+          p_orders: number
+          p_refunds?: number
+          p_source?: string
+          p_visits: number
+        }
+        Returns: Json
+      }
       _platform_col_exists: {
         Args: { p_column: string; p_table: string }
         Returns: boolean
       }
       _platform_fn_exists: { Args: { p_name: string }; Returns: boolean }
+      _platform_is_partitioned: { Args: { p_table: string }; Returns: boolean }
+      _platform_rename_table_constraints: {
+        Args: { p_suffix?: string; p_table: string }
+        Returns: undefined
+      }
       _platform_table_exists: { Args: { p_table: string }; Returns: boolean }
+      _product_sizes_to_jsonb: { Args: { p_sizes: unknown }; Returns: Json }
+      _product_sizes_to_text_array: {
+        Args: { p_sizes: unknown }
+        Returns: string[]
+      }
+      _resolve_store_owner_by_slug: {
+        Args: { p_slug: string }
+        Returns: string
+      }
       adjust_product_variants: {
         Args: {
           p_color: string
@@ -1855,11 +4351,31 @@ export type Database = {
         Returns: Json
       }
       approve_product_review: { Args: { p_review_id: string }; Returns: Json }
+      archive_inventory_movements_batch: {
+        Args: { p_batch_size?: number; p_older_than_days?: number }
+        Returns: Json
+      }
+      archive_orders_batch: {
+        Args: { p_batch_size?: number; p_older_than_days?: number }
+        Returns: Json
+      }
       attach_order_marketing_attribution: {
         Args: { p_attribution?: Json; p_order_id: string; p_store_slug: string }
         Returns: Json
       }
+      audit_merchant_analytics_health: {
+        Args: { p_owner_id: string }
+        Returns: Json
+      }
+      audit_merchant_inventory_integrity: {
+        Args: { p_owner_id: string }
+        Returns: Json
+      }
       auth_user_store_ids: { Args: never; Returns: string[] }
+      bump_storefront_cache_version: {
+        Args: { p_owner_id: string }
+        Returns: number
+      }
       calculate_delivery_fee: {
         Args: { p_governorate: string; p_owner_id: string }
         Returns: number
@@ -1880,6 +4396,10 @@ export type Database = {
         }
         Returns: Json
       }
+      claim_order_webhook_outbox_batch: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
       count_merchant_orders_by_workflow: {
         Args: {
           p_date_from?: string
@@ -1892,6 +4412,10 @@ export type Database = {
           p_payment_status?: string
           p_search?: string
         }
+        Returns: Json
+      }
+      create_merchant_product_with_stock: {
+        Args: { p_initial_stock?: number; p_owner_id: string; p_payload: Json }
         Returns: Json
       }
       create_order_with_stock_deduction:
@@ -1941,11 +4465,21 @@ export type Database = {
         }
         Returns: number
       }
+      enqueue_product_import_job: {
+        Args: { p_owner_id: string; p_rows: Json; p_store_id: string }
+        Returns: Json
+      }
       expire_product_discounts: { Args: never; Returns: number }
+      finalize_order_webhook_delivery: {
+        Args: { p_error?: string; p_id: string; p_success: boolean }
+        Returns: Json
+      }
+      get_analytics_pipeline_status: { Args: never; Returns: Json }
       get_approved_product_reviews: {
         Args: { p_product_id: string; p_slug: string }
         Returns: Json
       }
+      get_background_jobs_status: { Args: never; Returns: Json }
       get_checkout_products_by_ids: {
         Args: { p_product_ids: string[]; p_slug: string }
         Returns: Json
@@ -1953,6 +4487,10 @@ export type Database = {
       get_current_restaurant_owner_id: { Args: never; Returns: string }
       get_dashboard_statistics_batch: {
         Args: { p_owner_id: string }
+        Returns: Json
+      }
+      get_merchant_product_by_id: {
+        Args: { p_product_id: string }
         Returns: Json
       }
       get_merchant_product_reviews: {
@@ -2004,10 +4542,22 @@ export type Database = {
       get_owner_products_page: {
         Args: {
           p_category?: string
+          p_cursor?: string
           p_limit?: number
           p_offset?: number
           p_owner_id: string
+          p_profile?: string
           p_search?: string
+        }
+        Returns: Json
+      }
+      get_statistics_page_bundle: {
+        Args: {
+          p_current_end: string
+          p_current_start: string
+          p_owner_id: string
+          p_previous_end: string
+          p_previous_start: string
         }
         Returns: Json
       }
@@ -2026,7 +4576,11 @@ export type Database = {
         Returns: Json
       }
       get_store_marketing_public: { Args: { p_slug: string }; Returns: Json }
-      get_store_meta: { Args: { p_slug: string }; Returns: Json }
+      get_store_meta: {
+        Args: { p_include_policies?: boolean; p_slug: string }
+        Returns: Json
+      }
+      get_store_policies: { Args: { p_slug: string }; Returns: Json }
       get_store_product_by_id: {
         Args: { p_product_id: string; p_slug: string }
         Returns: Json
@@ -2035,7 +4589,6 @@ export type Database = {
         Args: { p_slug: string }
         Returns: {
           additional_images: string[]
-          archived_at: string
           category: string
           colors: Json
           description: string
@@ -2043,7 +4596,6 @@ export type Database = {
           discount_value: number
           id: string
           image_url: string
-          is_active: boolean
           name: string
           original_price: number
           price: number
@@ -2065,6 +4617,10 @@ export type Database = {
       get_store_statistics: {
         Args: { p_end: string; p_owner_id: string; p_start: string }
         Returns: Json
+      }
+      get_storefront_cache_version: {
+        Args: { p_slug: string }
+        Returns: number
       }
       get_storefront_footer_products: {
         Args: { p_slug: string }
@@ -2092,12 +4648,14 @@ export type Database = {
       increment_product_stock: {
         Args: {
           p_delta: number
+          p_min_stock_level?: number
           p_owner_id: string
           p_product_id: string
           p_reason?: string
         }
         Returns: Json
       }
+      is_checkout_fast_path: { Args: never; Returns: boolean }
       is_payment_method_allowed: {
         Args: { p_owner_id: string; p_payment_method: string }
         Returns: boolean
@@ -2114,6 +4672,7 @@ export type Database = {
       }
       list_merchant_orders: {
         Args: {
+          p_cursor?: string
           p_date_from?: string
           p_date_to?: string
           p_delivery_status?: string
@@ -2139,6 +4698,10 @@ export type Database = {
       log_sensitive_access: {
         Args: { operation: string; record_id: string; table_name: string }
         Returns: undefined
+      }
+      lookup_product_idempotency: {
+        Args: { p_key: string; p_owner_id: string }
+        Returns: string
       }
       mark_delivery_failed: {
         Args: { p_owner_id: string; p_reason?: string; p_shipment_id: string }
@@ -2170,10 +4733,13 @@ export type Database = {
           customer_phone: string | null
           delivery_fee: number | null
           delivery_status: string
+          delivery_time: number | null
           discount_amount: number | null
           id: string
           idempotency_key: string | null
           marketing_attribution: Json | null
+          meta_conversion_sent_at: string | null
+          notes: string | null
           owner_id: string | null
           payment_method: string | null
           payment_status: string
@@ -2201,7 +4767,54 @@ export type Database = {
         }
         Returns: string
       }
+      platform_benchmark_hot_queries: {
+        Args: { p_owner_id?: string; p_slug?: string; p_warm_cache?: boolean }
+        Returns: Json
+      }
+      platform_data_lifecycle_audit: { Args: never; Returns: Json }
+      platform_database_resource_audit: { Args: never; Returns: Json }
+      platform_distributed_scaling_audit: { Args: never; Returns: Json }
+      platform_drop_partitions_before: {
+        Args: { p_before: string; p_parent_table: string }
+        Returns: Json
+      }
+      platform_ensure_monthly_partitions: {
+        Args: {
+          p_future_months?: number
+          p_parent_table: string
+          p_past_months?: number
+        }
+        Returns: Json
+      }
+      platform_fk_index_audit: { Args: never; Returns: Json }
       platform_health_check: { Args: never; Returns: Json }
+      platform_internals_audit: { Args: never; Returns: Json }
+      platform_lifecycle_audit: { Args: never; Returns: Json }
+      platform_postgresql_internals_audit: { Args: never; Returns: Json }
+      platform_run_data_lifecycle: { Args: never; Returns: Json }
+      platform_run_internals_maintenance: {
+        Args: {
+          p_analyze?: boolean
+          p_prune_analytics?: boolean
+          p_prune_rate_limits?: boolean
+        }
+        Returns: Json
+      }
+      platform_scaling_audit: { Args: never; Returns: Json }
+      platform_transaction_integrity_audit: { Args: never; Returns: Json }
+      platform_verify_partition_pruning: {
+        Args: { p_days?: number; p_table?: string }
+        Returns: Json
+      }
+      platform_write_path_audit: { Args: never; Returns: Json }
+      process_analytics_event_buffer: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
+      process_order_side_effects_batch: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
       process_payment_webhook_event: {
         Args: {
           p_event_id: string
@@ -2209,6 +4822,10 @@ export type Database = {
           p_payload: Json
           p_provider: string
         }
+        Returns: Json
+      }
+      process_product_import_batch: {
+        Args: { p_batch_size?: number; p_job_id: string }
         Returns: Json
       }
       product_checkout_available_qty: {
@@ -2221,7 +4838,32 @@ export type Database = {
         Returns: number
       }
       product_variant_stock_sum: { Args: { p_variants: Json }; Returns: number }
+      prune_analytics_event_outbox: {
+        Args: { p_keep_days?: number }
+        Returns: number
+      }
+      prune_import_jobs: { Args: { p_keep_days?: number }; Returns: number }
+      prune_order_side_effects_outbox: {
+        Args: { p_keep_days?: number }
+        Returns: number
+      }
+      prune_order_webhook_outbox: {
+        Args: { p_keep_days?: number }
+        Returns: number
+      }
+      prune_rpc_rate_limits: {
+        Args: { p_max_age_seconds?: number }
+        Returns: number
+      }
+      prune_store_visits: {
+        Args: { p_retention_days?: number }
+        Returns: number
+      }
       publish_owner_product: { Args: { p_product_id: string }; Returns: Json }
+      record_initial_stock_movements: {
+        Args: { p_items: Json; p_owner_id: string }
+        Returns: Json
+      }
       record_order_chargeback: {
         Args: {
           p_amount: number
@@ -2252,13 +4894,33 @@ export type Database = {
             }
             Returns: Json
           }
+      record_product_idempotency: {
+        Args: { p_key: string; p_owner_id: string; p_product_id: string }
+        Returns: boolean
+      }
+      record_product_initial_stock: {
+        Args: { p_owner_id: string; p_product_id: string; p_quantity: number }
+        Returns: Json
+      }
+      recover_stale_webhook_processing: {
+        Args: { p_stale_minutes?: number }
+        Returns: number
+      }
       resolve_checkout_owner: {
         Args: { p_owner_id: string; p_store_slug: string }
         Returns: string
       }
       resolve_store_owner_by_slug: { Args: { p_slug: string }; Returns: string }
+      restore_orders_from_archive: {
+        Args: { p_order_ids: string[] }
+        Returns: Json
+      }
       retry_failed_delivery: {
         Args: { p_note?: string; p_owner_id: string; p_shipment_id: string }
+        Returns: Json
+      }
+      retry_order_webhook_events: {
+        Args: { p_event_ids?: string[]; p_owner_id: string }
         Returns: Json
       }
       scale_variants_to_total: {
@@ -2277,8 +4939,21 @@ export type Database = {
         }
         Returns: Json
       }
+      storefront_compact_variants: { Args: { p_variants: Json }; Returns: Json }
+      storefront_product_card_json: {
+        Args: { p: Database["public"]["Tables"]["products"]["Row"] }
+        Returns: Json
+      }
+      storefront_product_grid_json: {
+        Args: { p: Database["public"]["Tables"]["products"]["Row"] }
+        Returns: Json
+      }
       storefront_product_json: {
         Args: { p: Database["public"]["Tables"]["products"]["Row"] }
+        Returns: Json
+      }
+      storefront_store_shell_json: {
+        Args: { p_cache_version?: number; p_owner_id: string }
         Returns: Json
       }
       submit_access_lead: {
