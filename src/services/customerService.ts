@@ -20,13 +20,13 @@ export async function fetchCustomerMetricsForPeriod(
   const [newResult, returningResult] = await Promise.all([
     supabase
       .from('customers')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('owner_id', ownerId)
       .gte('first_order_date', periodStart)
       .lte('first_order_date', periodEnd),
     supabase
       .from('customers')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('owner_id', ownerId)
       .lt('first_order_date', periodStart)
       .gte('last_order_date', periodStart)

@@ -630,18 +630,19 @@ export async function fetchCheckoutProductsByIds(
       if (map.size > 0) return map;
     }
   } catch {
-    /* fall through to per-id RPC */
+    /* fall through to owner-scoped batch */
   }
 
-  await Promise.all(
-    uniqueIds.map(async (id) => {
-      if (map.has(id)) return;
-      const product = await fetchStorefrontProductById(normalized, id);
-      if (product && isStorefrontVisible(product)) {
-        map.set(id, product);
+  const missingIds = uniqueIds.filter((id) => !map.has(id));
+  if (missingIds.length > 0) {
+    const ownerId = await resolveStoreOwnerBySlug(normalized);
+    if (ownerId) {
+      const ownerMap = await queryProductsByIdsForOwner(ownerId, missingIds);
+      for (const [id, product] of ownerMap) {
+        if (isStorefrontVisible(product)) map.set(id, product);
       }
-    })
-  );
+    }
+  }
 
   return map;
 }

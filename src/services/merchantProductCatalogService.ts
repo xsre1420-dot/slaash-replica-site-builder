@@ -202,7 +202,13 @@ export const loadProductsPage = async (
         const rpcProducts = ((rpcData.products as Record<string, unknown>[]) || [])
           .map((row) => safeMapDbProduct(row))
           .filter((p): p is Product => p != null);
-        const rpcTotal = Number(rpcData.total) || rpcProducts.length;
+        let rpcTotal = rpcData.total != null ? Number(rpcData.total) : undefined;
+        if (rpcTotal == null && cursor) {
+          const page0Key = `${CacheKeys.products(ownerId)}:p:0:s${search || ''}:c${category || ''}:v${profile}`;
+          const page0 = cache.get<ProductsPageResult>(page0Key);
+          if (page0) rpcTotal = page0.total;
+        }
+        rpcTotal = rpcTotal ?? rpcProducts.length;
         const hasFilters = !!(search?.trim() || (category && category !== 'all'));
         if (rpcProducts.length > 0 || rpcTotal > 0 || page > 0 || hasFilters) {
           return useRpcResult(rpcProducts, rpcTotal, !!rpcData.has_more, rpcData.next_cursor ?? null);

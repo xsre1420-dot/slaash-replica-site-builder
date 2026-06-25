@@ -42,10 +42,17 @@ const enrichOrdersWithProductImages = async (
 ): Promise<Order[]> => {
   if (options?.skip || orders.length === 0) return orders;
 
+  const missingImage = orders.some((order) =>
+    order.items.some((item) => item.product.id && !item.product.image)
+  );
+  if (!missingImage) return orders;
+
   const productIds = [
     ...new Set(
       orders.flatMap((order) =>
-        order.items.map((item) => item.product.id).filter(Boolean)
+        order.items
+          .filter((item) => item.product.id && !item.product.image)
+          .map((item) => item.product.id)
       )
     ),
   ];
@@ -132,9 +139,13 @@ export type OrdersPageResult = {
   nextCursor?: string | null;
 };
 
-const mapRpcOrderRows = (rows: unknown[], ownerId: string): Promise<Order[]> => {
+const mapRpcOrderRows = (
+  rows: unknown[],
+  ownerId: string,
+  options?: { skipImageEnrichment?: boolean }
+): Promise<Order[]> => {
   const mapped = rows.map((row) => mapDbOrder(row as Record<string, unknown>));
-  return enrichOrdersWithProductImages(mapped, ownerId);
+  return enrichOrdersWithProductImages(mapped, ownerId, { skip: options?.skipImageEnrichment });
 };
 
 /** Server-side filtered order list with exact total count (RPC + fallback). */
@@ -165,7 +176,14 @@ export const fetchOrdersFiltered = async (
 
     if (!error && data?.orders) {
       const orders = await mapRpcOrderRows(data.orders as unknown[], ownerId);
-      const total = Number(data.total ?? 0);
+      let total = data.total != null ? Number(data.total) : undefined;
+      if (total == null && cursor) {
+        const page0 = cache.get<OrdersPageResult>(
+          CacheKeys.ordersFiltered(ownerId, filterKey, 0, '')
+        );
+        if (page0) total = page0.total;
+      }
+      total = total ?? 0;
       const result: OrdersPageResult = {
         orders,
         total,
@@ -322,10 +340,7 @@ export const fetchWorkflowTabCounts = async (
     return EMPTY_WORKFLOW_COUNTS;
   }
 
-  const allMapped = await mapRpcOrderRows(
-    fallbackRows.map((row) => row as Record<string, unknown>),
-    ownerId
-  );
+  const allMapped = fallbackRows.map((row) => mapDbOrder(row as Record<string, unknown>));
   const baseFiltered = filterOrdersList(allMapped, { ...filters, workflowTab: 'all' });
   const counts = countOrdersByWorkflowTab(baseFiltered);
   cache.set(cacheKey, counts, CacheTTL.SHORT, CacheTTL.STALE);

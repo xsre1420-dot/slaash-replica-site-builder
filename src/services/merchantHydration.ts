@@ -1,9 +1,10 @@
 /**
- * Central merchant data hydration — loads ALL store data from Supabase after login.
- * Single source of truth: database. In-memory cache is repopulated here.
+ * Central merchant data hydration — loads store data from Supabase after login.
+ * Avoids redundant round-trips when get_owner_bootstrap already populated cache.
  */
 import { cache, CacheKeys, CacheTTL } from '@/lib/cache';
 import type { Product } from '@/types';
+import type { Category } from '@/types';
 import {
   getCategories,
   loadProductsPage,
@@ -28,10 +29,15 @@ export interface HydrationResult {
   settingsLoaded: boolean;
 }
 
+const readCachedProducts = (userId: string): Product[] =>
+  cache.get<Product[]>(CacheKeys.products(userId)) ?? [];
+
+const readCachedCategories = (userId: string): Category[] =>
+  cache.get<Category[]>(CacheKeys.categories(userId)) ?? [];
+
 export const hydrateMerchantStore = async (userId: string): Promise<HydrationResult> => {
   logger.info('merchant.hydrate.start', { userId });
 
-  // Non-blocking — do not extend cold-start critical path
   void fetchPlatformHealth(false).then((health) => {
     if (!health.ok) {
       logger.warn('platform.health.deferred', {
@@ -42,26 +48,31 @@ export const hydrateMerchantStore = async (userId: string): Promise<HydrationRes
     }
   });
 
-  // Try combined RPC first (populates cache when migration applied)
   const bootstrap = await bootstrapOwnerStore(userId);
-  const hasBootstrapSettings = cache.has(CacheKeys.storeSettings(userId));
+
+  const needsStore = !cache.has(CacheKeys.store(userId));
+  const needsSettings = !cache.has(CacheKeys.storeSettings(userId));
+  const needsProducts = readCachedProducts(userId).length === 0;
+  const needsCategories = readCachedCategories(userId).length === 0;
 
   const [storeRecord, storeProfile, productsPage, categories, ordersPage] = await Promise.all([
-    fetchStoreByUserId(userId),
-    fetchStoreSettings(userId, !hasBootstrapSettings),
-    bootstrap?.storeId
-      ? Promise.resolve({
-          products: cache.get<Product[]>(CacheKeys.products(userId)) || [],
-          hasMore: (bootstrap.productsLoaded ?? 0) >= 50,
-          total: bootstrap.productsLoaded ?? 0,
-        })
-      : loadProductsPage(0, undefined, true),
-    getCategories(true),
+    needsStore ? fetchStoreByUserId(userId) : Promise.resolve(cache.get(CacheKeys.store(userId)) ?? null),
+    needsSettings ? fetchStoreSettings(userId) : Promise.resolve(null),
+    needsProducts
+      ? loadProductsPage(0, undefined, false)
+      : Promise.resolve({
+          products: readCachedProducts(userId),
+          hasMore: (bootstrap?.productsLoaded ?? readCachedProducts(userId).length) >= 50,
+          total: bootstrap?.productsLoaded ?? readCachedProducts(userId).length,
+        }),
+    needsCategories ? getCategories(false) : Promise.resolve(readCachedCategories(userId)),
     fetchOrdersFiltered(userId, DEFAULT_ORDER_FILTERS, 0, ORDERS_PER_PAGE),
   ]);
 
   if (storeRecord?.id) {
     setCurrentStore(storeRecord.id);
+  } else if (bootstrap?.storeId) {
+    setCurrentStore(bootstrap.storeId);
   }
 
   const orders = ordersPage.orders;
@@ -71,13 +82,22 @@ export const hydrateMerchantStore = async (userId: string): Promise<HydrationRes
 
   const result: HydrationResult = {
     userId,
-    storeId: storeRecord?.id ?? null,
+    storeId: storeRecord?.id ?? bootstrap?.storeId ?? null,
     productsCount: productsPage.products.length,
     categoriesCount: categories.length,
     ordersCount: ordersPage.total || orders.length,
-    settingsLoaded: !!storeProfile,
+    settingsLoaded: !!storeProfile || cache.has(CacheKeys.storeSettings(userId)),
   };
 
-  logger.info('merchant.hydrate.complete', result);
+  logger.info('merchant.hydrate.complete', {
+    ...result,
+    bootstrapHit: !!bootstrap?.storeId,
+    skippedFetches: {
+      store: !needsStore,
+      settings: !needsSettings,
+      products: !needsProducts,
+      categories: !needsCategories,
+    },
+  });
   return result;
 };

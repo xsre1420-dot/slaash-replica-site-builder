@@ -1,4 +1,6 @@
-import { getAllDomainHealth, type DomainHealthStats } from '@/lib/observability/healthMonitor';
+import { getReadRoutingSummary } from '@/lib/disasterRecovery/readRouting';
+import { isKvCacheEnabled } from '@/lib/cache/kvAdapter';
+import { getAllCircuitBreakerStatuses } from '@/lib/resilience/circuitBreaker';
 import { getMerchantRealtimeHubStatus } from '@/lib/merchantRealtimeHub';
 import { checkEndpointHealth, isFailoverActive, resolveSupabaseConfig } from '@/lib/disasterRecovery/failover';
 import { DR_STORAGE_KEYS } from '@/lib/disasterRecovery/config';
@@ -32,6 +34,12 @@ export type PlatformMonitoringSnapshot = {
     recentFailures: number;
   };
   api: { status: SubsystemStatus; recentFailures: number; slowQueries: number };
+  scaling: {
+    readReplicaConfigured: boolean;
+    edgeEnabled: boolean;
+    kvCacheEnabled: boolean;
+    circuitBreakers: ReturnType<typeof getAllCircuitBreakerStatuses>;
+  };
   errorDomains: DomainHealthStats[];
 };
 
@@ -148,6 +156,11 @@ export async function fetchPlatformMonitoringSnapshot(
       status: apiStatus,
       recentFailures: (apiStats?.failures ?? 0) + (dbStats?.failures ?? 0),
       slowQueries: dbStats?.slowCount ?? 0,
+    },
+    scaling: {
+      ...getReadRoutingSummary(),
+      kvCacheEnabled: isKvCacheEnabled(),
+      circuitBreakers: getAllCircuitBreakerStatuses(),
     },
     errorDomains,
   };

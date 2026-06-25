@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
+import { getServiceSupabase } from '../_shared/supabaseClient.ts';
 import { isProduction, requireInProduction } from '../_shared/env.ts';
 import { logStructured, withEdgeSpan } from '../_shared/observability.ts';
 
@@ -87,9 +87,7 @@ Deno.serve(async (req) => {
 
     logStructured('info', 'payment-webhook.received', { eventId, eventType });
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, serviceKey);
+    const supabase = getServiceSupabase();
 
     const { data, error } = await supabase.rpc('process_payment_webhook_event', {
       p_provider: 'stripe',

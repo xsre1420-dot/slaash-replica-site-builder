@@ -299,21 +299,29 @@ export const fetchStatisticsData = async (
       const skipOrderItems = rpcReady && hasTopSellingProductsKpi(kpis);
       const includeChartOrders = options?.includeChartOrders !== false;
       const skipOrders = rpcReady && !includeChartOrders;
+      const needsCustomerMetrics =
+        rpcReady &&
+        kpis != null &&
+        (kpis.new_customers == null || kpis.returning_customers == null);
 
-      const [ordersResult, visitsResult, productCount, orderItems] = await withTimeout(
-        Promise.all([
-          skipOrders
-            ? Promise.resolve({ orders: [] as DatabaseData['orders'] })
-            : fetchOrdersForStatistics(ownerId, ordersFrom, periodEnd, ordersCap),
-          skipVisits
-            ? Promise.resolve({ visits: [] as DatabaseData['visits'] })
-            : fetchVisitsForStatistics(ownerId, visitsFrom, periodEnd, visitsCap),
-          fetchProductCount(ownerId, kpis),
-          skipOrderItems
-            ? Promise.resolve([] as DatabaseData['orderItems'])
-            : fetchOrderItemsForStatistics(ownerId, periodStart, periodEnd),
-        ])
-      );
+      const [ordersResult, visitsResult, productCount, orderItems, customerMetrics] =
+        await withTimeout(
+          Promise.all([
+            skipOrders
+              ? Promise.resolve({ orders: [] as DatabaseData['orders'] })
+              : fetchOrdersForStatistics(ownerId, ordersFrom, periodEnd, ordersCap),
+            skipVisits
+              ? Promise.resolve({ visits: [] as DatabaseData['visits'] })
+              : fetchVisitsForStatistics(ownerId, visitsFrom, periodEnd, visitsCap),
+            fetchProductCount(ownerId, kpis),
+            skipOrderItems
+              ? Promise.resolve([] as DatabaseData['orderItems'])
+              : fetchOrderItemsForStatistics(ownerId, periodStart, periodEnd),
+            needsCustomerMetrics
+              ? fetchCustomerMetricsForPeriod(ownerId, periodStart, periodEnd)
+              : Promise.resolve(null),
+          ])
+        );
 
       const fetchWarnings: string[] = [];
 
@@ -331,16 +339,7 @@ export const fetchStatisticsData = async (
       const visits = visitsResult.visits;
 
       let enrichedKpis = kpis;
-      if (
-        rpcReady &&
-        kpis &&
-        (kpis.new_customers == null || kpis.returning_customers == null)
-      ) {
-        const customerMetrics = await fetchCustomerMetricsForPeriod(
-          ownerId,
-          periodStart,
-          periodEnd
-        );
+      if (needsCustomerMetrics && customerMetrics) {
         enrichedKpis = { ...kpis, ...customerMetrics };
       }
 

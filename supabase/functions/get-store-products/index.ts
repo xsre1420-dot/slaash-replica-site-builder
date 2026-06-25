@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
+import { getAnonSupabase } from '../_shared/supabaseClient.ts';
 import { isProduction } from '../_shared/env.ts';
 import { logStructured, withEdgeSpan } from '../_shared/observability.ts';
 import {
@@ -70,17 +70,18 @@ function rpcParams(slug: string, limit: number, cursor: string | null, category:
   };
 }
 
-async function resolveCacheVersion(
-  supabase: ReturnType<typeof createClient>,
-  slug: string
-): Promise<number> {
-  const cached = getCachedVersion(slug);
-  if (cached != null) return cached;
-
-  const { data, error } = await supabase.rpc('get_storefront_cache_version', { p_slug: slug });
-  const version = !error && data != null ? Number(data) : 1;
-  setCachedVersion(slug, version);
-  return version;
+function tryMemoryCache(
+  slug: string,
+  kind: string,
+  cursor: string,
+  category: string,
+  search: string,
+  limit: number
+): string | null {
+  const cachedVersion = getCachedVersion(slug);
+  if (cachedVersion == null) return null;
+  const cacheKey = buildPayloadKey(slug, cachedVersion, kind, cursor, category, search, limit);
+  return getMemoryCached(cacheKey, cachedVersion);
 }
 
 function jsonResponse(
@@ -148,9 +149,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const supabase = getAnonSupabase();
 
     if (requestBody.purge === true) {
       const removed = purgeSlugFromMemory(slug);
@@ -166,12 +165,10 @@ Deno.serve(async (req) => {
     const wantProductsOnly = requestBody.page === true && !wantBundle && !wantMetaOnly;
     const kind = wantBundle ? 'bundle' : wantProductsOnly ? 'page' : 'meta';
 
-    const cacheVersion = await resolveCacheVersion(supabase, slug);
-    const cacheKey = buildPayloadKey(slug, cacheVersion, kind, cursor, category, search, limit);
-
-    const cached = getMemoryCached(cacheKey, cacheVersion);
-    if (cached) {
-      return jsonResponse(cached, corsHeaders, 'HIT', cacheVersion);
+    const memoryHit = tryMemoryCache(slug, kind, cursor, category, search, limit);
+    if (memoryHit) {
+      const version = getCachedVersion(slug)!;
+      return jsonResponse(memoryHit, corsHeaders, 'HIT', version);
     }
 
     const { data: dbAllowed, error: rateErr } = await supabase.rpc('check_rpc_rate_limit', {
@@ -203,7 +200,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      const version = Number(bundle.cache_version ?? cacheVersion);
+      const version = Number(bundle.cache_version ?? 1);
       setCachedVersion(slug, version);
       const payload = JSON.stringify({
         storeInfo: bundle.store,
@@ -228,7 +225,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      const version = Number(meta.cache_version ?? cacheVersion);
+      const version = Number(meta.cache_version ?? 1);
       setCachedVersion(slug, version);
       const payload = JSON.stringify({
         storeInfo: meta.store,
@@ -253,15 +250,18 @@ Deno.serve(async (req) => {
       });
     }
 
+    const version = Number(page?.cache_version ?? 1);
+    setCachedVersion(slug, version);
     const payload = JSON.stringify({
       products: page?.products || [],
       next_cursor: page?.next_cursor || null,
       has_more: page?.has_more || false,
-      cache_version: cacheVersion,
+      cache_version: version,
       success: true,
     });
-    setMemoryCache(cacheKey, payload, cacheVersion);
-    return jsonResponse(payload, corsHeaders, 'MISS', cacheVersion);
+    const versionedKey = buildPayloadKey(slug, version, kind, cursor, category, search, limit);
+    setMemoryCache(versionedKey, payload, version);
+    return jsonResponse(payload, corsHeaders, 'MISS', version);
   } catch (error) {
     logStructured('error', 'get-store-products.error', {
       clientIP,

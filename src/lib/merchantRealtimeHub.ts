@@ -72,11 +72,36 @@ const hubMetrics = {
 
 const ORDER_DEBOUNCE_MS = 500;
 const PRODUCT_UI_DEBOUNCE_MS = 300;
-const MAX_RECONNECT_ATTEMPTS = 6;
+const MAX_RECONNECT_ATTEMPTS = 8;
 const RECONNECT_BASE_MS = 1_000;
-const RECONNECT_MAX_MS = 30_000;
+const RECONNECT_MAX_MS = 45_000;
+const REALTIME_HEARTBEAT_MS = 25_000;
 
+let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 let visibilityHookInstalled = false;
+
+function startRealtimeHeartbeat() {
+  if (heartbeatTimer || typeof window === 'undefined') return;
+  heartbeatTimer = setInterval(() => {
+    for (const entry of productEntries.values()) {
+      if (entry.channel && entry.uiHandlers.size > 0) {
+        void entry.channel.send({ type: 'broadcast', event: 'heartbeat', payload: { t: Date.now() } });
+      }
+    }
+    for (const entry of orderEntries.values()) {
+      if (entry.channel && entry.handlers.size > 0) {
+        void entry.channel.send({ type: 'broadcast', event: 'heartbeat', payload: { t: Date.now() } });
+      }
+    }
+  }, REALTIME_HEARTBEAT_MS);
+}
+
+function stopRealtimeHeartbeat() {
+  if (heartbeatTimer) {
+    clearInterval(heartbeatTimer);
+    heartbeatTimer = null;
+  }
+}
 
 function installVisibilityHook() {
   if (visibilityHookInstalled || typeof document === 'undefined') return;
@@ -221,6 +246,7 @@ function applyProductPayload(userId: string, payload: ProductRealtimePayload) {
 
 function ensureProductChannel(userId: string): ProductEntry {
   installVisibilityHook();
+  startRealtimeHeartbeat();
 
   let entry = productEntries.get(userId);
   if (entry?.channel) return entry;
@@ -264,6 +290,7 @@ function ensureProductChannel(userId: string): ProductEntry {
 
 function ensureOrderChannel(userId: string): OrderEntry {
   installVisibilityHook();
+  startRealtimeHeartbeat();
 
   let entry = orderEntries.get(userId);
   if (entry?.channel) return entry;
@@ -457,6 +484,7 @@ export function teardownMerchantRealtimeHub(): void {
     if (entry.channel) void supabase.removeChannel(entry.channel);
   }
   orderEntries.clear();
+  stopRealtimeHeartbeat();
 }
 
 export type MerchantRealtimeHubMetrics = {

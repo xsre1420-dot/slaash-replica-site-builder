@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { callSupabaseRpc } from '@/integrations/supabase/rpc';
 import { getAuthenticatedUserId } from '@/lib/authSession';
 import { assertMerchantOwner } from '@/lib/tenantGuard';
+import { cache, CacheKeys } from '@/lib/cache';
 import { runOncePerKey, type AddProductResult } from '@/lib/productCreateLock';
 import { recordHealthEvent } from '@/lib/observability/healthMonitor';
 import { removeCachedProduct } from '@/services/merchantProductCatalogService';
@@ -26,7 +27,7 @@ import {
   PRODUCT_INSERT_RETURN_MINIMAL,
   PRODUCT_MINIMAL_SELECT,
 } from '@/lib/productUpdateUtils';
-import { fetchStoreByUserId } from '@/services/storeService';
+import { fetchStoreByUserId, type StoreRecord } from '@/services/storeService';
 import { syncProductCachesAfterMutation } from '@/lib/productCacheSync';
 import {
   collectProductImageUrls,
@@ -61,6 +62,9 @@ async function requireOwnerId(): Promise<string | null> {
 }
 
 async function resolveStoreId(ownerId: string): Promise<string | null> {
+  const cachedStore = cache.get<StoreRecord>(CacheKeys.store(ownerId));
+  if (cachedStore?.id) return cachedStore.id;
+
   const store = await fetchStoreByUserId(ownerId);
   return store?.id ?? null;
 }
@@ -170,8 +174,45 @@ export async function createProduct(product: Product): Promise<ProductsCrudResul
 
   const storeId = await resolveStoreId(ownerId);
   const payloads = buildProductInsertPayload(product, ownerId, storeId);
-  const attempts = [payloads.full, payloads.extended, payloads.standard, payloads.minimal];
+  const stockQty = Math.max(product.stockQuantity ?? 0, 0);
 
+  const atomicPayloads = [payloads.full, payloads.extended, payloads.standard, payloads.minimal];
+  for (const row of atomicPayloads) {
+    const { data: atomicData, error: atomicError } = await callSupabaseRpc<{
+      success?: boolean;
+      product_id?: string;
+      error?: string;
+      detail?: string;
+    }>('create_merchant_product_with_stock', {
+      p_owner_id: ownerId,
+      p_payload: row,
+      p_initial_stock: stockQty,
+    });
+
+    if (!atomicError && atomicData?.success && atomicData.product_id) {
+      const fetched = await fetchRowById(atomicData.product_id, ownerId);
+      if (fetched) {
+        syncProductCachesAfterMutation(ownerId);
+        return { success: true, data: mapDbProduct(fetched) };
+      }
+    }
+
+    if (atomicError && !isSchemaColumnError(atomicError)) {
+      const rpcErr = atomicData?.error ?? atomicError;
+      if (rpcErr && rpcErr !== 'product_create_failed') {
+        return { success: false, error: mapProductInsertError(String(rpcErr)) };
+      }
+    }
+    if (atomicData?.error && !isSchemaColumnError(atomicData.detail ?? atomicData.error)) {
+      if (atomicData.error !== 'product_create_failed') {
+        return { success: false, error: mapProductInsertError(atomicData.error) };
+      }
+    }
+    if (atomicError && isSchemaColumnError(atomicError)) break;
+    if (atomicData?.detail && isSchemaColumnError(atomicData.detail)) break;
+  }
+
+  const attempts = [payloads.full, payloads.extended, payloads.standard, payloads.minimal];
   for (const row of attempts) {
     const { data, error } = await supabase
       .from('products')
@@ -183,7 +224,6 @@ export async function createProduct(product: Product): Promise<ProductsCrudResul
       syncProductCachesAfterMutation(ownerId);
       const mapped = mapDbProduct(data as Record<string, unknown>);
 
-      const stockQty = product.stockQuantity ?? 0;
       if (stockQty > 0) {
         const { data: stockData, error: stockError } = await callSupabaseRpc<{ success?: boolean }>(
           'record_product_initial_stock',

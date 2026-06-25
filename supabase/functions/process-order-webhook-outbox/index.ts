@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
+import { getServiceSupabase } from '../_shared/supabaseClient.ts';
 import { logStructured, withEdgeSpan } from '../_shared/observability.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
@@ -47,12 +47,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const supabase = getServiceSupabase();
 
     const limit = Math.min(
       Math.max(Number(new URL(req.url).searchParams.get('limit') || 50), 1),
       200
     );
+
+    const { data: sideEffectsData } = await supabase.rpc('process_order_side_effects_batch', {
+      p_limit: limit,
+    });
 
     const { data: claimData, error: claimError } = await supabase.rpc(
       'claim_order_webhook_outbox_batch',
@@ -137,6 +141,7 @@ Deno.serve(async (req) => {
 
     const summary = {
       success: true,
+      side_effects: sideEffectsData ?? null,
       claimed: jobs.length,
       delivered_without_url: (claimData as { delivered_without_url?: number })?.delivered_without_url ?? 0,
       delivered,

@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
+import { getServiceSupabase } from '../_shared/supabaseClient.ts';
 import { logStructured, withEdgeSpan } from '../_shared/observability.ts';
 import { checkEdgeRateLimit, clientIpFromRequest } from '../_shared/rateLimiter.ts';
 import { getEdgeCorsHeaders, hasSupabaseAuthHeader } from '../_shared/cors.ts';
@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const supabase = getServiceSupabase();
 
     const { data: storeRow } = await supabase
       .from('store_settings')

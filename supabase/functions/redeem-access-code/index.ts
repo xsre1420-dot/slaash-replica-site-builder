@@ -1,4 +1,5 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
+import { getAnonSupabase, getServiceSupabase } from '../_shared/supabaseClient.ts';
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
 import { logStructured, withEdgeSpan } from '../_shared/observability.ts';
 import { addMonths, generateAuthPassword, hashAccessCode } from '../_shared/accessCodeUtils.ts';
 import { checkEdgeRateLimit, clientIpFromRequest } from '../_shared/rateLimiter.ts';
@@ -10,8 +11,8 @@ interface RedeemBody {
 }
 
 const signInWithEphemeralPassword = async (
-  adminClient: ReturnType<typeof createClient>,
-  authClient: ReturnType<typeof createClient>,
+  adminClient: SupabaseClient,
+  authClient: SupabaseClient,
   userId: string,
   email: string
 ) => {
@@ -101,7 +102,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const adminClient = createClient(supabaseUrl, serviceKey);
+    const adminClient = getServiceSupabase();
     const codeHash = await hashAccessCode(rawCode);
 
     const { data: codeRow, error: codeError } = await adminClient
@@ -248,7 +249,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const authClient = createClient(supabaseUrl, anonKey);
+    const authClient = getAnonSupabase();
     let session;
     try {
       session = await signInWithEphemeralPassword(

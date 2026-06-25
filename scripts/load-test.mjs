@@ -40,7 +40,8 @@ if (!baseUrl || !anonKey) {
 
 const rpc = async (fn, body, signal) => {
   const started = performance.now();
-  const res = await fetch(`${baseUrl}/rest/v1/rpc/${fn}`, {
+  const url = `${baseUrl}/rest/v1/rpc/${fn}`;
+  const res = await fetch(url, {
     method: 'POST',
     headers: {
       apikey: anonKey,
@@ -64,13 +65,12 @@ const rpc = async (fn, body, signal) => {
       ) {
         ok = false;
       }
-      // v41: soft rate-limit still counts as success (analytics sampled, not failed)
       if (fn === 'track_store_visit_by_slug' && parsed?.success === true) ok = true;
     } catch {
       /* non-json ok */
     }
   }
-  return { ok, status: res.status, elapsed, fn };
+  return { ok, status: res.status, elapsed, fn, url, body: text.slice(0, 200) };
 };
 
 const percentile = (arr, p) => {
@@ -85,7 +85,7 @@ async function validateSlug(slug) {
     const res = await fetch(`${baseUrl}/rest/v1/rpc/get_store_meta`, {
       method: 'POST',
       headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ p_slug: slug }),
+      body: JSON.stringify({ p_slug: slug, p_include_policies: false }),
     });
     if (!res.ok) return false;
     const data = await res.json();
@@ -184,6 +184,7 @@ async function runPhase(label, users, durationSec, slug, sessionMode) {
   let success = 0;
   let failed = 0;
   const statusCounts = {};
+  const errorSamples = {};
   const endAt = Date.now() + durationSec * 1000;
   let iterations = 0;
 
@@ -201,6 +202,9 @@ async function runPhase(label, users, durationSec, slug, sessionMode) {
             failed += 1;
             const key = String(r.status || 'timeout');
             statusCounts[key] = (statusCounts[key] || 0) + 1;
+            if (!errorSamples[key] && r.fn) {
+              errorSamples[key] = { fn: r.fn, url: r.url, body: r.body };
+            }
           }
         }
       } catch {
@@ -235,6 +239,7 @@ async function runPhase(label, users, durationSec, slug, sessionMode) {
     p99: percentile(latencies, 99),
     max: latencies.length ? Math.max(...latencies) : 0,
     statusCounts,
+    errorSamples,
   };
 }
 
@@ -334,6 +339,14 @@ console.log(`Observed breaking point (this run):         ~${capacity.hardLimitEs
 const last = phases[phases.length - 1];
 if (last?.statusCounts && Object.keys(last.statusCounts).length) {
   console.log('\nError breakdown (last phase):', last.statusCounts);
+  if (last.errorSamples && Object.keys(last.errorSamples).length) {
+    console.log('\nSample errors (last phase):');
+    for (const [status, sample] of Object.entries(last.errorSamples)) {
+      console.log(`  [${status}] ${sample.fn}`);
+      console.log(`    URL: ${sample.url}`);
+      console.log(`    Body: ${sample.body}`);
+    }
+  }
 }
 
 console.log('\n────────────────── Notes ──────────────────');

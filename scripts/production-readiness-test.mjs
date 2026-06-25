@@ -95,7 +95,7 @@ tests.push({
   name: 'merchant workflow chain (provision + publish + checkout)',
   pass:
     read('supabase/migrations/20260613000001_platform_core_stores_schema.sql').includes('provision_new_store') &&
-    read('src/data/dummyData.ts').includes('publish_owner_product') &&
+    read('src/services/productsCrudService.ts').includes('publish_owner_product') &&
     read('src/hooks/useCheckoutFlow.ts').includes('createOrder'),
 });
 

@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
+import { getUserSupabase } from '../_shared/supabaseClient.ts';
 import { getEdgeCorsHeaders, hasSupabaseAuthHeader } from '../_shared/cors.ts';
 import { logStructured } from '../_shared/observability.ts';
 
@@ -34,9 +34,7 @@ Deno.serve(async (req) => {
   }
 
   const authHeader = req.headers.get('authorization') ?? '';
-  const userClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY') ?? '', {
-    global: { headers: { Authorization: authHeader } },
-  });
+  const userClient = getUserSupabase(authHeader);
 
   const { data: userData, error: userError } = await userClient.auth.getUser();
   if (userError || !userData.user) {

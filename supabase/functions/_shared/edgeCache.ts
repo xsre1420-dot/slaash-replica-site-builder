@@ -1,7 +1,9 @@
 /**
  * Version-aware in-memory cache for Supabase Edge Functions.
  * Payload entries are keyed by slug + cache_version so catalog bumps invalidate instantly.
+ * Optional L2: UPSTASH_REDIS_REST_URL for cross-isolate version coherence.
  */
+import { edgeKvGet, edgeKvSet, isEdgeKvEnabled } from './distributedKv.ts';
 
 const EDGE_MEMORY_TTL_MS = 120_000;
 const EDGE_VERSION_TTL_MS = 30_000;
@@ -26,12 +28,23 @@ export function edgeCacheStats(): {
 
 export function getCachedVersion(slug: string): number | null {
   const hit = versionCache.get(slug);
-  if (!hit) return null;
-  if (Date.now() > hit.expiresAt) {
-    versionCache.delete(slug);
-    return null;
+  if (hit && Date.now() <= hit.expiresAt) {
+    return hit.version;
   }
-  return hit.version;
+  if (hit) versionCache.delete(slug);
+  return null;
+}
+
+export async function getCachedVersionAsync(slug: string): Promise<number | null> {
+  const local = getCachedVersion(slug);
+  if (local != null) return local;
+  if (!isEdgeKvEnabled()) return null;
+  const raw = await edgeKvGet(`sf:v:${slug}`);
+  if (!raw) return null;
+  const version = Number(raw);
+  if (!Number.isFinite(version)) return null;
+  setCachedVersion(slug, version);
+  return version;
 }
 
 export function setCachedVersion(slug: string, version: number): void {
@@ -40,6 +53,9 @@ export function setCachedVersion(slug: string, version: number): void {
     if (oldest) versionCache.delete(oldest);
   }
   versionCache.set(slug, { version, expiresAt: Date.now() + EDGE_VERSION_TTL_MS });
+  if (isEdgeKvEnabled()) {
+    void edgeKvSet(`sf:v:${slug}`, String(version), Math.ceil(EDGE_VERSION_TTL_MS / 1000));
+  }
 }
 
 export function buildPayloadKey(
