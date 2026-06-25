@@ -417,6 +417,31 @@ export function subscribeMerchantOrders(
   };
 }
 
+/** Force reconnect product + order channels (merchant manual recovery). */
+export function forceReconnectMerchantRealtime(userId: string): void {
+  const productEntry = productEntries.get(userId);
+  if (productEntry) {
+    if (productEntry.uiDebounceTimer) clearTimeout(productEntry.uiDebounceTimer);
+    if (productEntry.reconnectTimer) clearTimeout(productEntry.reconnectTimer);
+    if (productEntry.channel) void supabase.removeChannel(productEntry.channel);
+    productEntry.channel = null;
+    productEntry.reconnectAttempt = 0;
+    productEntry.pendingUiNotify = false;
+    ensureProductChannel(userId);
+  }
+
+  const orderEntry = orderEntries.get(userId);
+  if (orderEntry) {
+    if (orderEntry.debounceTimer) clearTimeout(orderEntry.debounceTimer);
+    if (orderEntry.reconnectTimer) clearTimeout(orderEntry.reconnectTimer);
+    if (orderEntry.channel) void supabase.removeChannel(orderEntry.channel);
+    orderEntry.channel = null;
+    orderEntry.reconnectAttempt = 0;
+    orderEntry.pendingRefetch = false;
+    ensureOrderChannel(userId);
+  }
+}
+
 /** Drop all merchant channels — call before replacing the Supabase client. */
 export function teardownMerchantRealtimeHub(): void {
   for (const [, entry] of productEntries) {

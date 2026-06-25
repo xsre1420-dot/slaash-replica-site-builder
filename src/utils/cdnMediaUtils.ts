@@ -57,6 +57,13 @@ export function buildStoragePublicUrl(
   supabaseUrl?: string
 ): string | null {
   if (!objectPath?.trim()) return null;
+  const cdnBase =
+    (typeof import.meta !== 'undefined' &&
+      (import.meta.env.VITE_CDN_BASE_URL as string | undefined)?.replace(/\/$/, '')) ||
+    '';
+  if (cdnBase) {
+    return `${cdnBase}/${objectPath.replace(/^\//, '')}`;
+  }
   const base =
     supabaseUrl?.replace(/\/$/, '') ||
     (typeof import.meta !== 'undefined' &&

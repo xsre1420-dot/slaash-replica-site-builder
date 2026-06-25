@@ -14,7 +14,7 @@ const tests = [];
 const tiers = read('src/services/storefrontCacheTiers.ts');
 const productService = read('src/services/storefrontProductService.ts');
 const hook = read('src/hooks/useStoreProductsPage.ts');
-const dummyData = read('src/data/dummyData.ts');
+const catalogService = read('src/services/merchantProductCatalogService.ts');
 const storeService = read('src/services/storeService.ts');
 
 tests.push({
@@ -33,7 +33,7 @@ tests.push({
 
 tests.push({
   name: 'category CRUD uses categories scope when products unchanged',
-  pass: dummyData.includes("invalidateStorefrontScope(user.id, 'categories')"),
+  pass: catalogService.includes("invalidateStorefrontScope(user.id, 'categories')"),
 });
 
 tests.push({

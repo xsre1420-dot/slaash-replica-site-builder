@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { getAuthenticatedUserId } from "@/lib/authSession";
 import { bulkImportProducts } from "@/services/productsCrudService";
+import { enqueueProductImportJob, runImportJobToCompletion } from "@/services/importJobService";
 import { syncMerchantProductCatalog } from "@/services/productService";
 import { fetchStoreByUserId } from "@/services/storeService";
 
@@ -26,6 +27,10 @@ interface UploadResult {
   failed: number;
   errors: string[];
 }
+
+/** Inline browser import cap — larger batches use import_jobs queue. */
+const MAX_INLINE_CSV_ROWS = 150;
+const MAX_QUEUED_CSV_ROWS = 5000;
 
 export const BulkUpload = ({ onComplete }: { onComplete: () => void }) => {
   const [open, setOpen] = useState(false);
@@ -102,6 +107,15 @@ export const BulkUpload = ({ onComplete }: { onComplete: () => void }) => {
     reader.onload = (evt) => {
       try {
         const products = parseCSV(evt.target?.result as string);
+        if (products.length > MAX_QUEUED_CSV_ROWS) {
+          toast.error(`الحد الأقصى ${MAX_QUEUED_CSV_ROWS} منتج لكل ملف`);
+          setParsed([]);
+          setParsing(false);
+          return;
+        }
+        if (products.length > MAX_INLINE_CSV_ROWS) {
+          toast.info(`سيتم استيراد ${products.length} منتج في الخلفية (أكثر من ${MAX_INLINE_CSV_ROWS})`);
+        }
         setParsed(products);
         if (products.length === 0) {
           toast.error("لم يتم العثور على منتجات صالحة");
@@ -137,6 +151,34 @@ export const BulkUpload = ({ onComplete }: { onComplete: () => void }) => {
     setProgress(0);
 
     const store = await fetchStoreByUserId(userId);
+
+    if (deduped.length > MAX_INLINE_CSV_ROWS) {
+      const queued = await enqueueProductImportJob(userId, store?.id ?? null, deduped);
+      if (!queued.success || !queued.jobId) {
+        toast.error(queued.error ?? "فشل إنشاء مهمة الاستيراد");
+        setUploading(false);
+        return;
+      }
+
+      const final = await runImportJobToCompletion(queued.jobId, (processed, total) => {
+        setProgress(Math.round((processed / total) * 100));
+      });
+
+      setUploading(false);
+      if (!final.success) {
+        toast.error(final.error ?? "فشل الاستيراد الخلفي");
+        return;
+      }
+
+      const imported = final.processedRows ?? deduped.length;
+      setResult({ success: imported, failed: 0, errors: [] });
+      setProgress(100);
+      syncMerchantProductCatalog(userId);
+      toast.success(`تم استيراد ${imported} منتج كمسودة — انشرها من صفحة المنتجات`);
+      onComplete();
+      return;
+    }
+
     const result = await bulkImportProducts(deduped, userId, store?.id ?? null);
     setProgress(100);
     setResult(result);

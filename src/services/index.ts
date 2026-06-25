@@ -11,7 +11,7 @@ export * as Database from '@/services/database';
 /** Authentication & profiles */
 export * as AuthService from '@/services/authService';
 
-/** Merchant catalog (re-exports legacy dummyData engine + CRUD) */
+/** Merchant catalog — productsCrudService + merchantProductCatalogService */
 export * as ProductService from '@/services/productService';
 
 /** Store settings & merchant store profile */

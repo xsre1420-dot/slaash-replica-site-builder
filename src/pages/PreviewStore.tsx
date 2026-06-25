@@ -2,11 +2,10 @@ import { ArrowRight, ShoppingCart, Plus, Search } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { getCategories } from "@/services/productService";
-import {
-  fetchStorefrontProductsByOwnerId,
-  STOREFRONT_PRODUCTS_CHANGED,
-} from "@/services/storefrontProductService";
 import { useStoreHydration } from "@/context/StoreBootstrapContext";
+import { useMerchantProductsPage } from "@/hooks/useMerchantProductsPage";
+import { getProductLifecycleStatus } from "@/lib/productLifecycle";
+import { STOREFRONT_PRODUCTS_CHANGED } from "@/services/storefrontProductService";
 import { Product, Category } from "@/types";
 import { useCart } from "@/context/CartContext";
 import { useStore } from "@/context/StoreContext";
@@ -18,7 +17,6 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 const PreviewStore = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -36,14 +34,35 @@ const PreviewStore = () => {
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
-  const [productsLoading, setProductsLoading] = useState(true);
   const debouncedSearch = useDebouncedValue(searchQuery, 300);
 
-  const products = useMemo(() => {
-    if (!debouncedSearch.trim()) return allProducts;
-    const q = debouncedSearch.trim().toLowerCase();
-    return allProducts.filter((p) => p.name.toLowerCase().includes(q));
-  }, [allProducts, debouncedSearch]);
+  const ownerCategoryFilter = useMemo(() => {
+    if (selectedCategory === 'all') return 'all';
+    const cat = categories.find((c) => c.id === selectedCategory);
+    return cat?.name ?? selectedCategory;
+  }, [selectedCategory, categories]);
+
+  const catalog = useMerchantProductsPage(debouncedSearch, ownerCategoryFilter);
+
+  const publishedProducts = useMemo(
+    () => catalog.products.filter((p) => getProductLifecycleStatus(p) === 'published'),
+    [catalog.products]
+  );
+
+  const products = publishedProducts;
+
+  const productsLoading = catalog.loading;
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const onChanged = (e: Event) => {
+      const detail = (e as CustomEvent<{ ownerId?: string }>).detail;
+      if (detail?.ownerId && detail.ownerId !== user.id) return;
+      void catalog.reload();
+    };
+    window.addEventListener(STOREFRONT_PRODUCTS_CHANGED, onChanged);
+    return () => window.removeEventListener(STOREFRONT_PRODUCTS_CHANGED, onChanged);
+  }, [user?.id, catalog.reload]);
 
   useEffect(() => {
     if (user?.id) setStoreOwner(user.id);
@@ -82,60 +101,12 @@ const PreviewStore = () => {
 
   const bannerImages = storeSettings.bannerImages || [];
 
-  const filterByCategory = useCallback(
-    (items: Product[]) => {
-      if (selectedCategory === 'all') return items;
-      const cat = categories.find((c) => c.id === selectedCategory);
-      const categoryName = cat?.name ?? selectedCategory;
-      return items.filter((p) => p.category === categoryName);
-    },
-    [selectedCategory, categories]
-  );
-
-  // Load published products directly from DB (same source as inventory)
-  useEffect(() => {
-    if (!isReady || !user?.id) return;
-
-    const loadProductsData = async () => {
-      setProductsLoading(true);
-      try {
-        const rows = await fetchStorefrontProductsByOwnerId(user.id);
-        setAllProducts(filterByCategory(rows));
-      } finally {
-        setProductsLoading(false);
-      }
-    };
-    loadProductsData();
-
-    const onChanged = (e: Event) => {
-      const detail = (e as CustomEvent<{ ownerId?: string }>).detail;
-      if (detail?.ownerId && detail.ownerId !== user.id) return;
-      loadProductsData();
-    };
-
-    window.addEventListener(STOREFRONT_PRODUCTS_CHANGED, onChanged);
-
-    let lastFocusRefresh = 0;
-    const handleFocus = () => {
-      const now = Date.now();
-      if (now - lastFocusRefresh < 15_000) return;
-      lastFocusRefresh = now;
-      loadProductsData();
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => {
-      window.removeEventListener(STOREFRONT_PRODUCTS_CHANGED, onChanged);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [selectedCategory, isReady, hydrationVersion, user?.id, filterByCategory]);
-
   const handleAddToCart = (product: Product) => {
     addToCart(product);
   };
 
   const handleViewProduct = (productId: string) => {
-    const previewProduct = products.find((p) => p.id === productId) ?? allProducts.find((p) => p.id === productId);
+    const previewProduct = products.find((p) => p.id === productId);
     navigate(`/product-details/${productId}`, {
       state: previewProduct ? { previewProduct } : undefined,
     });

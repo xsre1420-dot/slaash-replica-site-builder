@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { toast } from 'sonner';
 import { Order } from '@/types';
 import { dedup, flushOrderCache, cache, CacheKeys } from '@/lib/cache';
 import { useAuth } from '@/context/AuthContext';
@@ -45,8 +46,14 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
   const [tabCounts, setTabCounts] = useState<WorkflowTabCounts>(EMPTY_TAB_COUNTS);
   const knownOrderIdsRef = useRef<Set<string>>(new Set());
   const lastVisibilityRefetchRef = useRef(0);
+  /** Keyset cursor chain: page N uses cursor stored at page N-1 */
+  const pageCursorsRef = useRef<Map<number, string>>(new Map());
 
   const filterKey = useMemo(() => serializeOrderFilters(listFilters), [listFilters]);
+
+  const resetCursorChain = useCallback(() => {
+    pageCursorsRef.current = new Map();
+  }, []);
 
   const applyOrdersPage = useCallback((result: OrdersPageResult, pageNum: number) => {
     setOrders(result.orders);
@@ -57,8 +64,8 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
   }, []);
 
   const readCachedPage = useCallback(
-    (ownerId: string, pageNum: number): OrdersPageResult | null =>
-      cache.get<OrdersPageResult>(CacheKeys.ordersFiltered(ownerId, filterKey, pageNum)),
+    (ownerId: string, pageNum: number, cursor: string | null): OrdersPageResult | null =>
+      cache.get<OrdersPageResult>(CacheKeys.ordersFiltered(ownerId, filterKey, pageNum, cursor ?? '')),
     [filterKey]
   );
 
@@ -87,25 +94,31 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
         setTotal(0);
         setTotalPages(1);
         setLoading(false);
+        resetCursorChain();
         return;
       }
 
-      const warmed = readCachedPage(ownerId, pageNum);
+      const cursor = pageNum > 0 ? pageCursorsRef.current.get(pageNum - 1) ?? null : null;
+      const warmed = readCachedPage(ownerId, pageNum, cursor);
       if (warmed) {
         applyOrdersPage(warmed, pageNum);
+        if (warmed.nextCursor) pageCursorsRef.current.set(pageNum, warmed.nextCursor);
         setLoading(false);
         return;
       }
 
       setLoading(true);
-      const dedupKey = `fetch-orders-${ownerId}-${filterKey}-${pageNum}`;
+      const dedupKey = `fetch-orders-${ownerId}-${filterKey}-${pageNum}-${cursor ?? 'start'}`;
 
       try {
         const result = await dedup(dedupKey, () =>
-          fetchOrdersFiltered(ownerId, listFilters, pageNum, ORDERS_PER_PAGE)
+          fetchOrdersFiltered(ownerId, listFilters, pageNum, ORDERS_PER_PAGE, cursor)
         );
 
         applyOrdersPage(result, pageNum);
+        if (result.nextCursor) {
+          pageCursorsRef.current.set(pageNum, result.nextCursor);
+        }
       } catch (err) {
         console.error('[useOrders] load failed:', err);
         toast.error('تعذر تحميل الطلبات');
@@ -113,7 +126,7 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
         setLoading(false);
       }
     },
-    [user?.id, filterKey, listFilters, readCachedPage, applyOrdersPage]
+    [user?.id, filterKey, listFilters, readCachedPage, applyOrdersPage, resetCursorChain]
   );
 
   useEffect(() => {
@@ -123,9 +136,10 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
 
   useEffect(() => {
     if (!isReady) return;
+    resetCursorChain();
     setPage(0);
     void loadPage(0);
-  }, [isReady, hydrationVersion, loadPage]);
+  }, [isReady, hydrationVersion, loadPage, resetCursorChain]);
 
   useEffect(() => {
     const onVisible = () => {
@@ -188,9 +202,10 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
 
   const refetch = useCallback(() => {
     if (user?.id) flushOrderCache(user.id);
+    resetCursorChain();
     void loadPage(page);
     void loadTabCounts();
-  }, [loadPage, loadTabCounts, page, user?.id]);
+  }, [loadPage, loadTabCounts, page, user?.id, resetCursorChain]);
 
   const isNewOrder = useCallback((orderId: string) => {
     return !knownOrderIdsRef.current.has(orderId);

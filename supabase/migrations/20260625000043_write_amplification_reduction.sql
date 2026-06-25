@@ -1,5 +1,9 @@
 -- v43: Write amplification reduction — single-pass restock, optional min_stock_level
 
+-- v43: Write amplification — single-pass increment_product_stock + optional min_stock_level
+
+DROP FUNCTION IF EXISTS public.increment_product_stock(UUID, UUID, INT, TEXT);
+
 CREATE OR REPLACE FUNCTION public.increment_product_stock(
   p_product_id UUID,
   p_owner_id UUID,

@@ -106,8 +106,8 @@ export const CacheKeys = {
   storeSettings: (ownerId: string) => `store_settings:${ownerId}`,
   store: (userId: string) => `store:${userId}`,
   orders: (ownerId: string, page: number) => `orders:${ownerId}:${page}`,
-  ordersFiltered: (ownerId: string, filterKey: string, page: number) =>
-    `orders:${ownerId}:f:${filterKey}:${page}`,
+  ordersFiltered: (ownerId: string, filterKey: string, page: number, cursor = '') =>
+    `orders:${ownerId}:f:${filterKey}:${page}:${cursor}`,
   ordersWorkflowCounts: (ownerId: string, filterKey: string) =>
     `orders:${ownerId}:wc:${filterKey}`,
   ordersRecent: (ownerId: string) => `orders:${ownerId}:recent`,

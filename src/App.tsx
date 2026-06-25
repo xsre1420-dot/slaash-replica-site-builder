@@ -14,6 +14,7 @@ import { SubscriptionProvider } from "./context/SubscriptionContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
+import RouteErrorBoundary from "./components/RouteErrorBoundary";
 import OfflineBanner from "./components/OfflineBanner";
 import RecoveryBanner from "./components/RecoveryBanner";
 import { StoreBootstrapProvider } from '@/context/StoreBootstrapContext';
@@ -84,6 +85,10 @@ const PageLoader = memo(() => (
   </div>
 ));
 
+const withRouteBoundary = (element: React.ReactNode) => (
+  <RouteErrorBoundary>{element}</RouteErrorBoundary>
+);
+
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
@@ -109,16 +114,16 @@ const App = () => (
                     <Route path="/subscription-expired" element={<SubscriptionExpired />} />
                     <Route path="/auth/callback" element={<AuthCallback />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
-                    <Route path="/builder" element={<ProtectedRoute><Builder /></ProtectedRoute>} />
-                    <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                    <Route path="/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
-                    <Route path="/add-product" element={<ProtectedRoute><AddProduct /></ProtectedRoute>} />
-                    <Route path="/edit-product/:productId" element={<ProtectedRoute><EditProduct /></ProtectedRoute>} />
-                    <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
-                    <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-                    <Route path="/orders/:orderId" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
-                    <Route path="/marketing" element={<ProtectedRoute><Marketing /></ProtectedRoute>} />
-                    <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+                    <Route path="/builder" element={withRouteBoundary(<ProtectedRoute><Builder /></ProtectedRoute>)} />
+                    <Route path="/settings" element={withRouteBoundary(<ProtectedRoute><Settings /></ProtectedRoute>)} />
+                    <Route path="/statistics" element={withRouteBoundary(<ProtectedRoute><Statistics /></ProtectedRoute>)} />
+                    <Route path="/add-product" element={withRouteBoundary(<ProtectedRoute><AddProduct /></ProtectedRoute>)} />
+                    <Route path="/edit-product/:productId" element={withRouteBoundary(<ProtectedRoute><EditProduct /></ProtectedRoute>)} />
+                    <Route path="/products" element={withRouteBoundary(<ProtectedRoute><Products /></ProtectedRoute>)} />
+                    <Route path="/orders" element={withRouteBoundary(<ProtectedRoute><Orders /></ProtectedRoute>)} />
+                    <Route path="/orders/:orderId" element={withRouteBoundary(<ProtectedRoute><OrderDetails /></ProtectedRoute>)} />
+                    <Route path="/marketing" element={withRouteBoundary(<ProtectedRoute><Marketing /></ProtectedRoute>)} />
+                    <Route path="/inventory" element={withRouteBoundary(<ProtectedRoute><Inventory /></ProtectedRoute>)} />
                     <Route path="/admin/login" element={<AdminLogin />} />
                     <Route path="/admin" element={<AdminRoute><Navigate to="/admin/leads" replace /></AdminRoute>} />
                     <Route path="/admin/leads" element={<AdminRoute><AdminLeads /></AdminRoute>} />

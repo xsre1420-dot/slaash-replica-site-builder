@@ -22,13 +22,7 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useState, useEffect, useCallback, useMemo } from "react";
-import {
-  loadProducts,
-  loadAllMerchantProducts,
-  invalidateProducts,
-} from "@/services/productService";
-import { useStoreHydration } from "@/context/StoreBootstrapContext";
+import { useState, useCallback, useMemo } from "react";
 import { Product } from "@/types";
 import { isProductLowStock } from '@/lib/productUpdateUtils';
 import { getProductLifecycleStatus, lifecycleStatusLabel } from '@/lib/productLifecycle';
@@ -43,7 +37,7 @@ type DropResult = import("@hello-pangea/dnd").DropResult;
 
 interface ProductsListProps {
   onProductSelect?: (product: {id: string, name: string}) => void;
-  products?: Product[];
+  products: Product[];
   filteredProducts?: Product[];
   filtersActive?: boolean;
   onProductsChange?: (products: Product[]) => void;
@@ -92,49 +86,15 @@ export const ProductsList = ({
   onArchive,
   onRestore,
   onDuplicate,
-}: ProductsListProps = {}) => {
-  const [localProducts, setLocalProducts] = useState<Product[]>([]);
-  const [isLoadingLocal, setIsLoadingLocal] = useState(!productsFromParent);
+}: ProductsListProps) => {
   const [isDragEnabled, setIsDragEnabled] = useState(false);
-  const { isReady } = useStoreHydration();
-  const managedByParent = productsFromParent !== undefined;
   const syncProducts = onProductsChange ?? onProductsLoaded;
-  const isLoading = isLoadingFromParent ?? isLoadingLocal;
+  const isLoading = isLoadingFromParent ?? false;
 
   const allProducts = useMemo(
-    () => applyDisplayOrder(managedByParent ? (productsFromParent ?? []) : localProducts),
-    [managedByParent, productsFromParent, localProducts]
+    () => applyDisplayOrder(productsFromParent),
+    [productsFromParent]
   );
-
-  useEffect(() => {
-    if (managedByParent || !isReady) return;
-
-    const loadProductsData = async () => {
-      setIsLoadingLocal(true);
-      try {
-        const productsData = applyDisplayOrder(await loadProducts(true));
-        setLocalProducts(productsData);
-        syncProducts?.(productsData);
-      } finally {
-        setIsLoadingLocal(false);
-      }
-    };
-    loadProductsData();
-
-    let lastFocusRefresh = 0;
-    const handleFocus = () => {
-      const now = Date.now();
-      if (now - lastFocusRefresh < 60_000) return;
-      lastFocusRefresh = now;
-      loadProductsData();
-    };
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [isReady, reloadToken, managedByParent, syncProducts]);
-
-  useEffect(() => {
-    if (managedByParent) setIsLoadingLocal(false);
-  }, [managedByParent, productsFromParent]);
 
   const catalog = useMemo(() => {
     if (!filtersActive) return allProducts;
@@ -146,20 +106,15 @@ export const ProductsList = ({
     const items = Array.from(allProducts);
     const [reordered] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reordered);
-    if (managedByParent) {
-      syncProducts?.(items);
-    } else {
-      setLocalProducts(items);
-      syncProducts?.(items);
-    }
+    syncProducts?.(items);
 
     const orderMap: Record<string, number> = {};
     items.forEach((item, index) => { orderMap[item.id] = index; });
     localStorage.setItem('products_display_order', JSON.stringify(orderMap));
     toast.success("تم حفظ ترتيب المنتجات", { duration: 1500 });
-  }, [allProducts, managedByParent, syncProducts]);
+  }, [allProducts, syncProducts]);
 
-  if (!isReady || isLoading) {
+  if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {[1, 2, 3, 4, 5, 6].map((i) => (

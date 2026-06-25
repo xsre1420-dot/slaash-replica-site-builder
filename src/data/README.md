@@ -1,8 +1,10 @@
-# Static data only
+# Runtime data
 
-Place **non-database** configuration here:
+Merchant catalog data lives in Supabase. Use `@/services/productService` (facade) or directly:
 
-- `subscriptionPlans.ts` — public pricing tiers
-- `leadFormOptions.ts` — lead form enums
+- **Writes:** `@/services/productsCrudService`
+- **Reads / cache:** `@/services/merchantProductCatalogService`
+- **Inventory:** `@/services/inventoryService`
+- **Storefront:** `@/services/storefrontProductService`
 
-**Do not add** runtime data layers here. Merchant catalog CRUD lives in `@/services/productService` (backed by `dummyData.ts` pending full migration to `merchantProductCatalog`).
+Do not add runtime data layers in this folder.

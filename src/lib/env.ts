@@ -21,6 +21,8 @@ const envSchema = z.object({
   VITE_STOREFRONT_EDGE_URL: z.union([z.string().url(), z.literal('')]).optional(),
   /** When true, routes public storefront reads through the edge function (shared HTTP cache). */
   VITE_STOREFRONT_EDGE_ENABLED: z.enum(['true', 'false', '0', '1']).optional(),
+  /** Optional CDN origin for Supabase storage public URLs (Cloudflare proxy). */
+  VITE_CDN_BASE_URL: z.union([z.string().url(), z.literal('')]).optional(),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;
@@ -39,6 +41,7 @@ const raw = {
   VITE_SUPABASE_POOLER_URL: import.meta.env.VITE_SUPABASE_POOLER_URL as string | undefined,
   VITE_STOREFRONT_EDGE_URL: import.meta.env.VITE_STOREFRONT_EDGE_URL as string | undefined,
   VITE_STOREFRONT_EDGE_ENABLED: import.meta.env.VITE_STOREFRONT_EDGE_ENABLED as string | undefined,
+  VITE_CDN_BASE_URL: import.meta.env.VITE_CDN_BASE_URL as string | undefined,
 };
 
 const parsed = envSchema.safeParse(raw);

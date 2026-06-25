@@ -26,3 +26,12 @@ verify_jwt = false
 
 [functions.meta-conversions]
 verify_jwt = false
+
+[functions.process-import-jobs]
+verify_jwt = true
+
+[functions.optimize-image]
+verify_jwt = false
+
+[functions.process-order-webhook-outbox]
+verify_jwt = false

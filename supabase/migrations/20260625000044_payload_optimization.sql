@@ -3,6 +3,8 @@
 -- ---------------------------------------------------------------------------
 -- 1) get_owner_products_page — profile-based column projection
 -- ---------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.get_owner_products_page(UUID, INT, INT, TEXT, TEXT);
+
 CREATE OR REPLACE FUNCTION public.get_owner_products_page(
   p_owner_id UUID,
   p_limit INT DEFAULT 50,

@@ -29,7 +29,6 @@ import { Product } from '@/types';
 import { toast } from 'sonner';
 import {
   getCategories,
-  getProductsSync,
   publishProduct,
   setProductLifecycle,
   addProduct,
@@ -283,14 +282,9 @@ const Products = () => {
     if (!state?.refreshProducts) return;
 
     clearFilters();
-    void reloadCatalog().then(() => {
-      const data = getProductsSync();
-      if (state.createdProductId && !data.some((p) => p.id === state.createdProductId)) {
-        toast.error('تم الحفظ لكن تعذر عرض المنتج — حدّث الصفحة');
-      }
-    });
+    void reloadCatalog();
     navigate('/products', { replace: true, state: {} });
-  }, [location.state, navigate, reloadCatalog]);
+  }, [location.state, navigate, reloadCatalog, clearFilters]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {

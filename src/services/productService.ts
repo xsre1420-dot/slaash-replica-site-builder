@@ -1,16 +1,24 @@
 /**
- * Merchant product & category layer — canonical import for catalog CRUD.
- * Implementation: `data/dummyData.ts` (migration to explicit ownerId in progress).
+ * Merchant product & category layer — canonical import for catalog operations.
+ *
+ * Writes: productsCrudService (Supabase CRUD, publish, lifecycle)
+ * Reads/cache: merchantProductCatalogService (pagination, categories, storefront sync)
  */
 export {
   checkSupabaseConnection,
   listProducts,
   getProductById as getProductByIdFromDb,
   createProduct,
-  updateProduct as updateProductInDb,
-  deleteProduct as deleteProductFromDb,
+  addProduct,
+  updateProduct,
+  deleteProduct,
+  publishProduct,
+  setProductLifecycle,
+  bulkImportProducts,
   type ProductsCrudResult,
   type ListProductsOptions,
+  type BulkImportRow,
+  type BulkImportResult,
 } from '@/services/productsCrudService';
 
 export {
@@ -21,11 +29,8 @@ export {
   getCategoriesSync,
   PRODUCTS_PAGE_SIZE,
   loadProductsPage,
-  loadProducts,
-  loadAllMerchantProducts,
   getProductsSync,
   products,
-  reloadProducts,
   invalidateCache,
   invalidateOwnerCache,
   invalidateProducts,
@@ -35,16 +40,16 @@ export {
   removeCachedProduct,
   syncMerchantProductCatalog,
   patchMerchantStockInCache,
-  addProduct,
-  updateProduct,
-  setProductLifecycle,
-  publishProduct,
-  deleteProduct,
-  getProductsByCategory,
   getProductById,
   fetchProductById,
   addCategory,
   updateCategory,
   deleteCategory,
   type ProductsPageResult,
-} from '@/data/dummyData';
+} from '@/services/merchantProductCatalogService';
+
+/** @deprecated Use updateProduct */
+export { updateProduct as updateProductInDb } from '@/services/productsCrudService';
+
+/** @deprecated Use deleteProduct */
+export { deleteProduct as deleteProductFromDb } from '@/services/productsCrudService';

@@ -29,13 +29,14 @@ import { useAddProductForm } from '@/hooks/useAddProductForm';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import AttentionStrip from '@/components/ui/AttentionStrip';
-import { getProductsSync } from '@/services/productService';
+import { useMerchantProductsPage } from '@/hooks/useMerchantProductsPage';
 import { PackagePlus } from 'lucide-react';
 
 const AddProduct = () => {
   const { state, actions } = useAddProductForm();
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
-  const catalogEmpty = getProductsSync().length === 0;
+  const catalog = useMerchantProductsPage('', 'all');
+  const catalogEmpty = !catalog.loading && catalog.total === 0;
 
   return (
     <DashboardLayout>

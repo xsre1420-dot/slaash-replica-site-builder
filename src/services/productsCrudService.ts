@@ -4,15 +4,22 @@
  * and authenticated merchant session for write operations.
  */
 import { supabase } from '@/integrations/supabase/client';
+import { callSupabaseRpc } from '@/integrations/supabase/rpc';
 import { getAuthenticatedUserId } from '@/lib/authSession';
+import { assertMerchantOwner } from '@/lib/tenantGuard';
+import { runOncePerKey, type AddProductResult } from '@/lib/productCreateLock';
+import { recordHealthEvent } from '@/lib/observability/healthMonitor';
+import { removeCachedProduct } from '@/services/merchantProductCatalogService';
 import { mapDbProduct, safeMapDbProduct } from '@/mappers/productMapper';
 import {
   buildProductInsertPayload,
   buildProductUpdateAttempts,
+  buildProductLifecyclePatch,
   isSchemaColumnError,
   mapProductInsertError,
   mergeProductForUpdate,
   patchAffectsCatalogStats,
+  type ProductLifecycleAction,
   MERCHANT_PRODUCTS_LIST_SELECT,
   MERCHANT_PRODUCTS_STANDARD_SELECT,
   PRODUCT_DETAIL_SELECT,
@@ -47,7 +54,10 @@ const SELECT_CHAIN = [
 ];
 
 async function requireOwnerId(): Promise<string | null> {
-  return getAuthenticatedUserId();
+  const ownerId = await getAuthenticatedUserId();
+  if (!ownerId) return null;
+  await assertMerchantOwner(ownerId);
+  return ownerId;
 }
 
 async function resolveStoreId(ownerId: string): Promise<string | null> {
@@ -175,7 +185,7 @@ export async function createProduct(product: Product): Promise<ProductsCrudResul
 
       const stockQty = product.stockQuantity ?? 0;
       if (stockQty > 0) {
-        const { data: stockData, error: stockError } = await (supabase as any).rpc(
+        const { data: stockData, error: stockError } = await callSupabaseRpc<{ success?: boolean }>(
           'record_product_initial_stock',
           {
             p_product_id: mapped.id,
@@ -289,6 +299,7 @@ export async function deleteProduct(productId: string): Promise<ProductsCrudResu
     void deleteProductStorageImages(collectProductImageUrls(row));
   }
 
+  removeCachedProduct(ownerId, productId);
   syncProductCachesAfterMutation(ownerId);
 
   return { success: true, data: { id: productId } };
@@ -366,7 +377,7 @@ export async function bulkImportProducts(
       }));
 
     if (movements.length > 0) {
-      const { data: stockData, error: movementError } = await (supabase as any).rpc(
+      const { data: stockData, error: movementError } = await callSupabaseRpc<{ success?: boolean; error?: string }>(
         'record_initial_stock_movements',
         {
           p_owner_id: ownerId,
@@ -375,7 +386,7 @@ export async function bulkImportProducts(
       );
       if (movementError || !stockData?.success) {
         errors.push(
-          `تنبيه: تم رفع المنتجات لكن سجل المخزون فشل: ${movementError?.message ?? stockData?.error ?? 'unknown'}`
+          `تنبيه: تم رفع المنتجات لكن سجل المخزون فشل: ${movementError ?? stockData?.error ?? 'unknown'}`
         );
       }
     }
@@ -386,4 +397,104 @@ export async function bulkImportProducts(
   }
 
   return { success, failed, errors };
+}
+
+/** Merchant create flow — idempotent insert, initial stock ledger, optional publish. */
+export async function addProduct(
+  product: Product,
+  options?: { idempotencyKey?: string }
+): Promise<AddProductResult> {
+  const userId = await getAuthenticatedUserId();
+  if (!userId) return { success: false, error: 'يجب تسجيل الدخول أولاً' };
+
+  if (!product.image?.trim() || product.image.startsWith('blob:')) {
+    return { success: false, error: 'انتظر اكتمال رفع الصورة قبل الحفظ' };
+  }
+
+  const lockKey = `${userId}:${options?.idempotencyKey ?? product.name}:${product.image}`;
+
+  return runOncePerKey(lockKey, async () => {
+    try {
+      if (options?.idempotencyKey) {
+        const { data: existingId, error: lookupError } = await callSupabaseRpc<string>(
+          'lookup_product_idempotency',
+          { p_owner_id: userId, p_key: options.idempotencyKey }
+        );
+        if (!lookupError && existingId) {
+          return { success: true, productId: existingId };
+        }
+      }
+
+      const publishIntent = product.isActive !== false;
+      const toCreate = publishIntent ? { ...product, isActive: true, archivedAt: null } : product;
+      const created = await createProduct(toCreate);
+
+      if (!created.success) {
+        recordHealthEvent('product.create', false, { message: created.error });
+        return { success: false, error: created.error };
+      }
+
+      const productId = created.data.id;
+
+      if (options?.idempotencyKey) {
+        await callSupabaseRpc('record_product_idempotency', {
+          p_owner_id: userId,
+          p_key: options.idempotencyKey,
+          p_product_id: productId,
+        });
+      }
+
+      if (publishIntent) {
+        const published = await publishProduct(productId);
+        if (!published.success && published.error) {
+          return { success: true, productId, error: published.error };
+        }
+      }
+
+      recordHealthEvent('product.create', true);
+      return { success: true, productId };
+    } catch (err) {
+      recordHealthEvent('product.create', false, {
+        message: err instanceof Error ? err.message : 'unknown',
+      });
+      return { success: false, error: err instanceof Error ? err.message : 'فشل في إضافة المنتج' };
+    }
+  });
+}
+
+/** Single publish path — RPC first, lifecycle patch fallback. */
+export async function publishProduct(
+  productId: string
+): Promise<{ success: boolean; error?: string }> {
+  const ownerId = await requireOwnerId();
+  if (!ownerId) return { success: false, error: 'يجب تسجيل الدخول أولاً' };
+
+  try {
+    const { data, error } = await callSupabaseRpc<{ success?: boolean; product?: Record<string, unknown> }>(
+      'publish_owner_product',
+      { p_product_id: productId }
+    );
+
+    if (!error && data?.success && data?.product) {
+      syncProductCachesAfterMutation(ownerId, data.product as Record<string, unknown>);
+      recordHealthEvent('product.publish', true);
+      return { success: true };
+    }
+    recordHealthEvent('product.publish', false, { message: error ?? 'rpc failed' });
+  } catch {
+    /* fall through to lifecycle patch */
+  }
+
+  return setProductLifecycle(productId, 'publish');
+}
+
+/** Lifecycle transitions (draft / publish / archive). */
+export async function setProductLifecycle(
+  productId: string,
+  action: ProductLifecycleAction
+): Promise<{ success: boolean; error?: string }> {
+  const result = await updateProduct(productId, buildProductLifecyclePatch(action));
+  return result.success
+    ? { success: true }
+    : { success: false, error: result.error };
 }

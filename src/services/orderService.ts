@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { callSupabaseRpc } from '@/integrations/supabase/rpc';
 import { Order, CartItem } from '@/types';
 import { mapDbOrder } from '@/mappers/orderMapper';
 import { getOrCreateIdempotencyKey } from '@/utils/checkoutSession';
@@ -128,6 +129,7 @@ export type OrdersPageResult = {
   page: number;
   pageSize: number;
   totalPages: number;
+  nextCursor?: string | null;
 };
 
 const mapRpcOrderRows = (rows: unknown[], ownerId: string): Promise<Order[]> => {
@@ -140,21 +142,26 @@ export const fetchOrdersFiltered = async (
   ownerId: string,
   filters: OrderListFilters,
   page = 0,
-  pageSize = ORDERS_PER_PAGE
+  pageSize = ORDERS_PER_PAGE,
+  cursor?: string | null
 ): Promise<OrdersPageResult> => {
   await assertMerchantOwner(ownerId);
   return instrumentAsync('orders.fetchFiltered', async () => {
     const filterKey = serializeOrderFilters(filters);
-    const cacheKey = CacheKeys.ordersFiltered(ownerId, filterKey, page);
+    const cacheKey = CacheKeys.ordersFiltered(ownerId, filterKey, page, cursor ?? '');
     const cached = cache.get<OrdersPageResult>(cacheKey);
     if (cached) return cached;
 
     const rpcParams = {
       p_owner_id: ownerId,
-      ...filtersToRpcParams(filters, page, pageSize),
+      ...filtersToRpcParams(filters, page, pageSize, cursor),
     };
 
-    const { data, error } = await (supabase as any).rpc('list_merchant_orders', rpcParams);
+    const { data, error } = await callSupabaseRpc<{
+      orders?: unknown[];
+      total?: number;
+      next_cursor?: string | null;
+    }>('list_merchant_orders', rpcParams);
 
     if (!error && data?.orders) {
       const orders = await mapRpcOrderRows(data.orders as unknown[], ownerId);
@@ -165,17 +172,18 @@ export const fetchOrdersFiltered = async (
         page,
         pageSize,
         totalPages: Math.max(1, Math.ceil(total / pageSize)),
+        nextCursor: data.next_cursor ?? null,
       };
       cache.set(cacheKey, result, CacheTTL.SHORT, CacheTTL.STALE);
       return result;
     }
 
     if (error) {
-      logger.warn('orders.fetchFiltered.rpc_fallback', { message: error.message });
+      logger.warn('orders.fetchFiltered.rpc_fallback', { message: error });
     }
 
     return fetchOrdersFilteredFallback(ownerId, filters, page, pageSize, filterKey);
-  }, { ownerId, page, pageSize });
+  }, { ownerId, page, pageSize, cursor: cursor ?? null });
 };
 
 const fetchOrdersFilteredFallback = async (

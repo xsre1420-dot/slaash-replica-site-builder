@@ -1,7 +1,7 @@
 import { X, ShoppingCart, Plus, Search, Heart, Star, SlidersHorizontal, ArrowUpDown, Grid3X3, List, Mic, MicOff, RefreshCw } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { getProductsByCategory, getCategories, loadProducts } from "@/services/productService";
+import { getCategories, getCategoriesSync } from "@/services/productService";
 import { Product, Category } from "@/types";
 import { useCart } from "@/context/CartContext";
 import MarketingScripts from "@/components/MarketingScripts";
@@ -10,6 +10,7 @@ import { useStoreVisitTracking } from "@/hooks/useStoreVisitTracking";
 import CartDrawer from "@/components/CartDrawer";
 import { useTenantStore } from "@/context/TenantStoreContext";
 import { useStoreProductsPage } from "@/hooks/useStoreProductsPage";
+import { useMerchantProductsPage } from "@/hooks/useMerchantProductsPage";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import ProductCard from "@/components/store/ProductCard";
@@ -55,10 +56,20 @@ const Store = () => {
     return cat?.name ?? undefined;
   }, [selectedCategory, categories]);
 
+  const ownerCategoryFilter = useMemo(() => {
+    if (selectedCategory === 'all') return 'all';
+    const cat = categories.find((c) => c.id === selectedCategory);
+    return cat?.name ?? selectedCategory;
+  }, [selectedCategory, categories]);
+
   const tenantProducts = useStoreProductsPage(storeSlug, {
     category: tenantCategoryFilter,
     search: debouncedSearch,
     enabled: isTenantMode,
+  });
+
+  const ownerCatalog = useMerchantProductsPage(debouncedSearch, ownerCategoryFilter, {
+    enabled: !isTenantMode,
   });
   const [sortBy, setSortBy] = useState<"default" | "price-asc" | "price-desc">("default");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -93,10 +104,18 @@ const Store = () => {
       setAllProducts(tenantProducts.products);
       setIsLoading(tenantProducts.loading);
     } else {
-      setAllProducts(getProductsByCategory(selectedCategory));
+      setAllProducts(ownerCatalog.products);
+      setIsLoading(ownerCatalog.loading);
     }
     setVisibleCount(STORE_PRODUCTS_PAGE_SIZE);
-  }, [selectedCategory, isTenantMode, tenantProducts.products, tenantProducts.loading]);
+  }, [
+    selectedCategory,
+    isTenantMode,
+    tenantProducts.products,
+    tenantProducts.loading,
+    ownerCatalog.products,
+    ownerCatalog.loading,
+  ]);
 
   const loadData = useCallback(async (force = false) => {
     if (isTenantMode) {
@@ -108,14 +127,14 @@ const Store = () => {
     }
     setIsLoading(true);
     try {
-      const [cats] = await Promise.all([getCategories(force), loadProducts(force)]);
-      setCategories([{ id: "all", name: "الكل", order: -1 }, ...cats]);
-      setAllProducts(getProductsByCategory(selectedCategory));
+      const categoriesData = await getCategories(force);
+      setCategories([{ id: "all", name: "الكل", order: -1 }, ...categoriesData]);
+      if (force) await ownerCatalog.reload();
     } catch {
-      setCategories([{ id: "all", name: "الكل", order: -1 }]);
+      setCategories([{ id: "all", name: "الكل", order: -1 }, ...getCategoriesSync()]);
     }
     setIsLoading(false);
-  }, [selectedCategory, isTenantMode, tenant, tenantProducts]);
+  }, [isTenantMode, tenant, tenantProducts, ownerCatalog]);
 
   useEffect(() => {
     if (isTenantMode && !displayLoading) {
@@ -188,13 +207,17 @@ const Store = () => {
         tenantProducts.loadMore();
         return;
       }
+      if (!isTenantMode && ownerCatalog.hasMore) {
+        void ownerCatalog.loadMore();
+        return;
+      }
       if (visibleCount < displayProducts.length) {
         setVisibleCount((prev) => Math.min(prev + STORE_PRODUCTS_PAGE_SIZE, displayProducts.length));
       }
     }, { threshold: 0.1 });
     observer.observe(el);
     return () => observer.disconnect();
-  }, [displayProducts.length, visibleCount, isTenantMode, tenantProducts.hasMore, tenantProducts.loadMore]);
+  }, [displayProducts.length, visibleCount, isTenantMode, tenantProducts.hasMore, tenantProducts.loadMore, ownerCatalog.hasMore, ownerCatalog.loadMore]);
 
   const visibleProducts = displayProducts.slice(0, visibleCount);
 

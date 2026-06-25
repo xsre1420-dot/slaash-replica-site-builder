@@ -3,6 +3,8 @@
 -- ---------------------------------------------------------------------------
 -- 1) Legacy storefront catalog RPC — exclude archived (client fallback path)
 -- ---------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.get_store_products_by_slug(TEXT);
+
 CREATE OR REPLACE FUNCTION public.get_store_products_by_slug(p_slug TEXT)
 RETURNS TABLE (
   id UUID,

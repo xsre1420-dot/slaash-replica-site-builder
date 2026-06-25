@@ -48,7 +48,12 @@ export const serializeOrderFilters = (filters: OrderListFilters): string =>
     max: filters.maxValue ?? null,
   });
 
-export const filtersToRpcParams = (filters: OrderListFilters, page: number, pageSize: number) => {
+export const filtersToRpcParams = (
+  filters: OrderListFilters,
+  page: number,
+  pageSize: number,
+  cursor?: string | null
+) => {
   const range = getDateRangeForPreset(filters.datePreset);
   return {
     p_page: page,
@@ -62,6 +67,7 @@ export const filtersToRpcParams = (filters: OrderListFilters, page: number, page
     p_date_to: range.to,
     p_min_value: filters.minValue ?? null,
     p_max_value: filters.maxValue ?? null,
+    p_cursor: cursor?.trim() || null,
   };
 };
 

@@ -15,6 +15,10 @@ vi.mock('@/lib/authSession', () => ({
   getAuthenticatedUserId: vi.fn().mockResolvedValue('owner-1'),
 }));
 
+vi.mock('@/lib/tenantGuard', () => ({
+  assertMerchantOwner: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('@/services/storeService', () => ({
   fetchStoreByUserId: vi.fn().mockResolvedValue({ id: 'store-1' }),
 }));

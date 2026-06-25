@@ -53,6 +53,8 @@ COMMENT ON INDEX public.idx_customers_owner_phone IS
 -- ---------------------------------------------------------------------------
 -- 3) get_owner_products_page — keyset cursor + stable sort (backward compatible)
 -- ---------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.get_owner_products_page(UUID, INT, INT, TEXT, TEXT, TEXT);
+
 CREATE OR REPLACE FUNCTION public.get_owner_products_page(
   p_owner_id UUID,
   p_limit INT DEFAULT 50,

@@ -20,23 +20,25 @@ export interface MerchantProductsPageState {
 export function useMerchantProductsPage(
   search: string,
   category: string,
-  options?: { profile?: MerchantProductSelectProfile }
+  options?: { profile?: MerchantProductSelectProfile; enabled?: boolean }
 ): MerchantProductsPageState {
   const profile = options?.profile ?? 'grid';
+  const enabled = options?.enabled ?? true;
   const { user } = useAuth();
   const { isReady, hydrationVersion } = useStoreHydration();
-  const [products, setProducts] = useState<Product[]>(() => getProductsSync());
-  const [total, setTotal] = useState(() => getProductsSync().length);
+  const warmFirstPage = enabled ? getProductsSync() : [];
+  const [products, setProducts] = useState<Product[]>(() => warmFirstPage);
+  const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(() => getProductsSync().length === 0);
+  const [loading, setLoading] = useState(() => enabled && warmFirstPage.length === 0);
   const [loadingMore, setLoadingMore] = useState(false);
   const nextCursorRef = useRef<string | null>(null);
   const canUseKeyset = !search?.trim() && (!category || category === 'all');
 
   const fetchPage = useCallback(
     async (pageNum: number, append: boolean, force = false, cursor?: string | null) => {
-      if (!user?.id) {
+      if (!user?.id || !enabled) {
         setProducts([]);
         setTotal(0);
         setHasMore(false);
@@ -75,7 +77,7 @@ export function useMerchantProductsPage(
         setLoadingMore(false);
       }
     },
-    [user?.id, search, category, profile, canUseKeyset]
+    [user?.id, search, category, profile, canUseKeyset, enabled]
   );
 
   const reload = useCallback(async () => {
@@ -94,9 +96,9 @@ export function useMerchantProductsPage(
   }, [search, category, profile]);
 
   useEffect(() => {
-    if (!isReady || !user?.id) return;
+    if (!isReady || !user?.id || !enabled) return;
     void fetchPage(0, false);
-  }, [isReady, hydrationVersion, user?.id, fetchPage]);
+  }, [isReady, hydrationVersion, user?.id, fetchPage, enabled]);
 
   const syncFromCache = useCallback(() => {
     const synced = getProductsSync();

@@ -31,9 +31,8 @@ import {
   removeFooterSuggestedProduct,
   type FooterSuggestedRow,
 } from '@/services/footerSuggestedProductsService';
-import { loadProductsPage, getProductsSync, PRODUCTS_PAGE_SIZE } from '@/services/productService';
-import type { Product } from '@/types';
-import { getProductLifecycleStatus } from '@/lib/productLifecycle';
+import { getProductsSync } from '@/services/productService';
+import { useLazyMerchantProductPicker } from '@/hooks/useLazyMerchantProductPicker';
 
 const remainingProductsPhrase = (count: number): string => {
   if (count === 1) return 'منتج واحد آخر';
@@ -44,15 +43,13 @@ const remainingProductsPhrase = (count: number): string => {
 const FooterSuggestedProductsManager = () => {
   const { user } = useAuth();
   const [rows, setRows] = useState<FooterSuggestedRow[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
 
-  const publishedFromCatalog = useCallback(
-    (catalog: Product[]) => catalog.filter((p) => getProductLifecycleStatus(p) === 'published'),
-    []
-  );
+  const picker = useLazyMerchantProductPicker({
+    lifecycle: 'published',
+    enabled: dialogOpen,
+  });
 
   const reload = useCallback(async () => {
     if (!user?.id) return;
@@ -60,58 +57,27 @@ const FooterSuggestedProductsManager = () => {
     try {
       const footerRows = await listFooterSuggestedForOwner(user.id);
       setRows(footerRows);
-      const cached = getProductsSync();
-      if (cached.length > 0) {
-        setProducts(publishedFromCatalog(cached));
-      }
     } catch {
       toast.error('تعذّر تحميل قائمة المنتجات المقترَحة');
     } finally {
       setLoading(false);
     }
-  }, [publishedFromCatalog, user?.id]);
-
-  const loadPickerCatalog = useCallback(async () => {
-    if (!user?.id) return;
-    const cached = getProductsSync();
-    if (cached.length > 0) {
-      setProducts(publishedFromCatalog(cached));
-      return;
-    }
-    try {
-      const combined: Product[] = [];
-      let page = 0;
-      let hasMore = true;
-      while (hasMore && page < 20) {
-        const result = await loadProductsPage(page, PRODUCTS_PAGE_SIZE, false, undefined, undefined, 'grid');
-        combined.push(...result.products);
-        hasMore = result.hasMore;
-        page += 1;
-      }
-      setProducts(publishedFromCatalog(combined));
-    } catch {
-      toast.error('تعذّر تحميل قائمة المنتجات');
-    }
-  }, [publishedFromCatalog, user?.id]);
+  }, [user?.id]);
 
   useEffect(() => {
     void reload();
   }, [reload]);
 
-  useEffect(() => {
-    if (dialogOpen) void loadPickerCatalog();
-  }, [dialogOpen, loadPickerCatalog]);
-
   const selectedIds = useMemo(() => new Set(rows.map((r) => r.product_id)), [rows]);
 
   const availableProducts = useMemo(
     () =>
-      products.filter(
+      picker.products.filter(
         (p) =>
           !selectedIds.has(p.id) &&
-          p.name.toLowerCase().includes(searchTerm.trim().toLowerCase())
+          p.name.toLowerCase().includes(picker.search.trim().toLowerCase())
       ),
-    [products, selectedIds, searchTerm]
+    [picker.products, picker.search, selectedIds]
   );
 
   const slotsRemaining = MAX_FOOTER_SUGGESTIONS - rows.length;
@@ -123,7 +89,7 @@ const FooterSuggestedProductsManager = () => {
       await addFooterSuggestedProduct(user.id, productId, rows.length);
       toast.success('تمت الإضافة — سيظهر المنتج في أسفل متجرك');
       setDialogOpen(false);
-      setSearchTerm('');
+      picker.setSearch('');
       await reload();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'تعذّر إضافة المنتج');
@@ -140,6 +106,8 @@ const FooterSuggestedProductsManager = () => {
       toast.error('تعذّر حذف المنتج');
     }
   };
+
+  const warmCatalogCount = getProductsSync().length;
 
   return (
     <section
@@ -197,16 +165,26 @@ const FooterSuggestedProductsManager = () => {
                     <Input
                       id="footer-product-search"
                       placeholder="ابحث باسم المنتج..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                      value={picker.search}
+                      onChange={(e) => picker.setSearch(e.target.value)}
                       className="pr-10 text-right rounded-xl min-h-[44px]"
                     />
                   </div>
                 </div>
-                <div className="max-h-72 overflow-y-auto space-y-2">
-                  {availableProducts.length === 0 ? (
+                <div
+                  className="max-h-72 overflow-y-auto space-y-2"
+                  onScroll={(e) => {
+                    const el = e.currentTarget;
+                    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 48) {
+                      picker.loadMore();
+                    }
+                  }}
+                >
+                  {picker.loading && availableProducts.length === 0 ? (
+                    <p className="text-center text-sm text-muted-foreground py-8">جاري التحميل...</p>
+                  ) : availableProducts.length === 0 ? (
                     <p className="text-center text-sm text-muted-foreground py-8">
-                      {products.length === 0
+                      {warmCatalogCount === 0 && !picker.search.trim()
                         ? 'لا توجد منتجات منشورة. انشر منتجاً أولاً.'
                         : 'لا توجد نتائج، أو أن جميع المنتجات مضافة بالفعل.'}
                     </p>
@@ -238,6 +216,9 @@ const FooterSuggestedProductsManager = () => {
                         <Plus className="w-4 h-4 text-muted-foreground shrink-0" />
                       </button>
                     ))
+                  )}
+                  {picker.loadingMore && (
+                    <p className="text-center text-xs text-muted-foreground py-2">تحميل المزيد...</p>
                   )}
                 </div>
               </div>
