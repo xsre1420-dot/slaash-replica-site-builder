@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, type ReactNode } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { fetchMerchantAccess, type MerchantAccessState } from '@/services/subscriptionService';
 
@@ -17,7 +17,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     subscription: null,
   });
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     if (!user) {
       setState({ loading: false, isAdmin: false, hasAccess: false, subscription: null });
       return;
@@ -26,15 +26,17 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     const next = await fetchMerchantAccess();
     setState(next);
     return next;
-  };
+  }, [user]);
 
   useEffect(() => {
     if (authLoading) return;
     void refresh();
-  }, [user?.id, authLoading]);
+  }, [user?.id, authLoading, refresh]);
+
+  const value = useMemo(() => ({ ...state, refresh }), [state, refresh]);
 
   return (
-    <SubscriptionContext.Provider value={{ ...state, refresh }}>
+    <SubscriptionContext.Provider value={value}>
       {children}
     </SubscriptionContext.Provider>
   );

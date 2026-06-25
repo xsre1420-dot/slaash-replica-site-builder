@@ -5,8 +5,8 @@ import { logStructured, withEdgeSpan } from '../_shared/observability.ts';
 const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') || '').split(',').map(s => s.trim()).filter(Boolean);
 
 const HTTP_CACHE_SECONDS = 120;
-const EDGE_MEMORY_TTL_MS = 90_000;
-const EDGE_MEMORY_MAX = 500;
+const EDGE_MEMORY_TTL_MS = 120_000;
+const EDGE_MEMORY_MAX = 2_000;
 
 function getCorsHeaders(origin: string | null): Record<string, string> | null {
   const base = {

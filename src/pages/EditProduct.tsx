@@ -9,7 +9,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/layout/PageHeader";
 import { useState, useEffect, useRef } from "react";
-import { getCategories, fetchProductById, updateProduct, deleteProduct, loadAllMerchantProducts } from "@/services/productService";
+import { getCategories, fetchProductById, updateProduct, deleteProduct } from "@/services/productService";
 import { useStoreHydration } from "@/context/StoreBootstrapContext";
 import { useToast } from "@/hooks/use-toast";
 import { Product, Category, ColorOption } from "@/types";
@@ -182,7 +182,6 @@ const EditProduct = () => {
       const result = await updateProduct(productId, updatedProduct);
 
       if (result.success) {
-        await loadAllMerchantProducts(true);
         sonnerToast.success(PRODUCT_SAVE_TOAST.updatedSuccess, {
           description: 'تم تحديث بيانات المنتج في كل الأقسام',
         });

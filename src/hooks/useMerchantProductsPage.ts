@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import { Product } from '@/types';
 import { PRODUCTS_PAGE_SIZE, loadProductsPage, getProductsSync, invalidateProducts } from '@/services/productService';
+import type { MerchantProductSelectProfile } from '@/lib/productUpdateUtils';
 import { useStoreHydration } from '@/context/StoreBootstrapContext';
 import { useAuth } from '@/context/AuthContext';
 
@@ -18,8 +19,10 @@ export interface MerchantProductsPageState {
 
 export function useMerchantProductsPage(
   search: string,
-  category: string
+  category: string,
+  options?: { profile?: MerchantProductSelectProfile }
 ): MerchantProductsPageState {
+  const profile = options?.profile ?? 'grid';
   const { user } = useAuth();
   const { isReady, hydrationVersion } = useStoreHydration();
   const [products, setProducts] = useState<Product[]>([]);
@@ -48,7 +51,8 @@ export function useMerchantProductsPage(
           PRODUCTS_PAGE_SIZE,
           force,
           search?.trim() || undefined,
-          category !== 'all' ? category : undefined
+          category !== 'all' ? category : undefined,
+          profile
         );
 
         setProducts((prev) => (append ? [...prev, ...result.products] : result.products));
@@ -60,7 +64,7 @@ export function useMerchantProductsPage(
         setLoadingMore(false);
       }
     },
-    [user?.id, search, category]
+    [user?.id, search, category, profile]
   );
 
   const reload = useCallback(async () => {
@@ -85,15 +89,28 @@ export function useMerchantProductsPage(
     }
   }, []);
 
-  return {
-    products,
-    total,
-    hasMore,
-    page,
-    loading,
-    loadingMore,
-    reload,
-    loadMore,
-    syncFromCache,
-  };
+  return useMemo(
+    () => ({
+      products,
+      total,
+      hasMore,
+      page,
+      loading,
+      loadingMore,
+      reload,
+      loadMore,
+      syncFromCache,
+    }),
+    [
+      products,
+      total,
+      hasMore,
+      page,
+      loading,
+      loadingMore,
+      reload,
+      loadMore,
+      syncFromCache,
+    ]
+  );
 }

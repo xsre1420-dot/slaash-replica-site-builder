@@ -4,6 +4,7 @@ import { cache, CacheTTL } from '@/lib/cache';
 import { cacheGet, cacheSet, cacheDeleteByPrefix } from '@/utils/indexedDB';
 import {
   fetchStorefrontProductsPage,
+  getStorefrontFirstPageFromCache,
   STOREFRONT_PRODUCTS_CHANGED,
 } from '@/services/storefrontProductService';
 
@@ -130,8 +131,22 @@ export const useStoreProductsPage = (
   useEffect(() => {
     if (!enabled) return;
     cursorRef.current = null;
+
+    if (!categoryFilter && !searchFilter) {
+      const cachedFirstPage = getStorefrontFirstPageFromCache(normalizedSlug);
+      if (cachedFirstPage?.products.length) {
+        setProducts(cachedFirstPage.products);
+        cursorRef.current = cachedFirstPage.nextCursor;
+        setHasMore(!!cachedFirstPage.hasMore);
+        setError(null);
+        setLoading(false);
+        setLoadingMore(false);
+        return;
+      }
+    }
+
     fetchPage(false, null);
-  }, [enabled, fetchPage]);
+  }, [enabled, normalizedSlug, categoryFilter, searchFilter, fetchPage]);
 
   useEffect(() => {
     if (!enabled) return;

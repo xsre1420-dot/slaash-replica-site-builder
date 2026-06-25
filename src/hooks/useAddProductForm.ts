@@ -1,7 +1,7 @@
 import { useMemo, useCallback, useEffect, useState, useRef } from 'react';
 import { getAuthenticatedUserId } from '@/lib/authSession';
 import { createProductIdempotencyKey } from '@/lib/productCreateLock';
-import { addProduct, loadAllMerchantProducts, getCategories } from '@/services/productService';
+import { addProduct, getCategories } from '@/services/productService';
 import { useToast } from '@/hooks/use-toast';
 import { Product, Category, ColorOption, ProductVariant } from '@/types';
 import { formatPriceInput, isValidPrice, convertArabicToEnglish } from '@/utils/numberUtils';
@@ -248,7 +248,6 @@ export function useAddProductForm() {
 
       if (result.success) {
         setSaveSucceeded(true);
-        await loadAllMerchantProducts(true);
 
         const stockMsg = newProduct.stockQuantity ? ` · المخزون: ${newProduct.stockQuantity}` : '';
         const saveMode: SaveMode = publish ? 'publish' : 'draft';

@@ -138,7 +138,12 @@ function setSnapshot(slug: string, patch: Partial<TenantStoreSnapshot>) {
 export function subscribeTenantStore(slug: string, listener: () => void): () => void {
   const entry = getEntry(slug);
   entry.listeners.add(listener);
-  return () => entry.listeners.delete(listener);
+  return () => {
+    entry.listeners.delete(listener);
+    if (entry.listeners.size === 0 && !entry.inflight) {
+      entries.delete(slug);
+    }
+  };
 }
 
 export function getTenantStoreSnapshot(slug: string): TenantStoreSnapshot | null {

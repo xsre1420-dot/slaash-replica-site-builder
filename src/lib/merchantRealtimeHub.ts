@@ -11,6 +11,7 @@ import {
   removeCachedProduct,
 } from '@/services/productService';
 import { invalidateStorefrontForOwner } from '@/services/storefrontProductService';
+import { markLocalStorefrontMutation, shouldSuppressRealtimeStorefrontInvalidation } from '@/lib/localMutationGuard';
 import { mapDbProduct } from '@/mappers/productMapper';
 import { isStorefrontVisible } from '@/lib/productLifecycle';
 import {
@@ -155,6 +156,11 @@ function scheduleProductUiNotify(userId: string, entry: ProductEntry) {
   }, PRODUCT_UI_DEBOUNCE_MS);
 }
 
+function maybeInvalidateStorefront(userId: string) {
+  if (shouldSuppressRealtimeStorefrontInvalidation(userId)) return;
+  void invalidateStorefrontForOwner(userId);
+}
+
 function applyProductPayload(userId: string, payload: ProductRealtimePayload) {
   const entry = productEntries.get(userId);
   if (!entry) return;
@@ -166,7 +172,7 @@ function applyProductPayload(userId: string, payload: ProductRealtimePayload) {
     if (payload.new) {
       patchCachedProduct(userId, payload.new);
       if (shouldInvalidateStorefront(payload)) {
-        void invalidateStorefrontForOwner(userId);
+        maybeInvalidateStorefront(userId);
       }
       scheduleProductUiNotify(userId, entry);
     }
@@ -175,7 +181,7 @@ function applyProductPayload(userId: string, payload: ProductRealtimePayload) {
 
   if (payload.eventType === 'DELETE' && payload.old?.id) {
     removeCachedProduct(userId, String(payload.old.id));
-    void invalidateStorefrontForOwner(userId);
+    maybeInvalidateStorefront(userId);
     scheduleProductUiNotify(userId, entry);
     return;
   }
@@ -184,7 +190,7 @@ function applyProductPayload(userId: string, payload: ProductRealtimePayload) {
     appendCachedProduct(userId, payload.new);
     const mapped = mapDbProduct(payload.new);
     if (isStorefrontVisible(mapped)) {
-      void invalidateStorefrontForOwner(userId);
+      maybeInvalidateStorefront(userId);
     }
     scheduleProductUiNotify(userId, entry);
   }

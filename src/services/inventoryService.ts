@@ -37,21 +37,19 @@ export const restockProduct = async ({
   }
 
   if (addAmount > 0) {
-    const { data, error } = await (supabase as any).rpc('increment_product_stock', {
+    const rpcParams: Record<string, unknown> = {
       p_product_id: product.id,
       p_owner_id: ownerId,
       p_delta: addAmount,
       p_reason: 'restock',
-    });
+    };
+    if (hasMinChange) {
+      rpcParams.p_min_stock_level = minLevel;
+    }
+
+    const { data, error } = await (supabase as any).rpc('increment_product_stock', rpcParams);
     const payload = data as { success?: boolean; stock_quantity?: number; error?: string };
     if (!error && payload?.success && payload.stock_quantity != null) {
-      if (hasMinChange) {
-        await (supabase as any)
-          .from('products')
-          .update({ min_stock_level: minLevel })
-          .eq('id', product.id)
-          .eq('owner_id', ownerId);
-      }
       recordHealthEvent('inventory', true);
       return { newQuantity: payload.stock_quantity, added: addAmount };
     }

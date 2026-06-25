@@ -277,10 +277,9 @@ export const fetchStatisticsData = async (
   const { data: { user } } = await supabase.auth.getUser();
   const ownerId = user?.id;
   const bounds = getStatisticsDateBounds(dateRange, customStart, customEnd);
-  const cacheKey = CacheKeys.statistics(
-    ownerId || 'anon',
-    dateRange === 'custom' ? `${customStart}_${customEnd}` : dateRange
-  );
+  const rangeKey = dateRange === 'custom' ? `${customStart}_${customEnd}` : dateRange;
+  const chartScope = options?.includeChartOrders === false ? 'kpi' : 'chart';
+  const cacheKey = `${CacheKeys.statistics(ownerId || 'anon', rangeKey)}:${chartScope}`;
 
   if (!ownerId) {
     return { orders: [], orderItems: [], customers: [], products: [], visits: [], dateBounds: bounds };

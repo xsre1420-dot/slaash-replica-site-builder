@@ -346,6 +346,23 @@ export async function fetchStorefrontProductsByOwnerId(
   return queryActiveProductsByOwner(ownerId, options);
 }
 
+const pageFromBundle = (
+  bundle: StorefrontBundleCache
+): StorefrontProductsPage => ({
+  products: bundle.products ?? [],
+  nextCursor: bundle.nextCursor ?? null,
+  hasMore: !!bundle.hasMore,
+});
+
+/** Sync fast-path for hooks — avoids duplicate RPC when bundle already loaded. */
+export function getStorefrontFirstPageFromCache(slug: string): StorefrontProductsPage | null {
+  const normalized = slug.trim().toLowerCase();
+  if (!/^[a-z0-9-]+$/.test(normalized)) return null;
+  const bundle = peekStorefrontBundle(normalized);
+  if (!bundle?.store || !bundle.products) return null;
+  return pageFromBundle(bundle);
+}
+
 export async function fetchStorefrontProductsPage(
   slug: string,
   options: {
@@ -365,19 +382,28 @@ export async function fetchStorefrontProductsPage(
     return { products: [], nextCursor: null, hasMore: false };
   }
 
+  const isFirstPage = !cursor && !category && !search;
+  if (isFirstPage) {
+    const cachedBundle = peekStorefrontBundle(normalized);
+    if (cachedBundle?.products) {
+      return pageFromBundle(cachedBundle);
+    }
+    const pageCacheKey = `storefront-page:${normalized}:::${limit}`;
+    const cachedPage = cache.get<StorefrontProductsPage>(pageCacheKey);
+    if (cachedPage?.products) {
+      return cachedPage;
+    }
+  }
+
   const dedupeKey = `storefront-page:${normalized}:${cursor}:${category}:${search}:${limit}`;
 
   return dedup(dedupeKey, async () => {
-    const isFirstPage = !cursor && !category && !search;
-
     if (isFirstPage) {
       const bundle = peekStorefrontBundle(normalized) ?? (await loadStorefrontBundle(normalized, options));
       if (bundle?.products) {
-        return {
-          products: bundle.products,
-          nextCursor: bundle.nextCursor ?? null,
-          hasMore: !!bundle.hasMore,
-        };
+        const page = pageFromBundle(bundle);
+        cache.set(dedupeKey, page, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+        return page;
       }
     }
 

@@ -102,14 +102,14 @@ const Products = () => {
     [catalogFilters, debouncedSearch]
   );
 
-  const catalog = useMerchantProductsPage(
-    debouncedSearch,
-    catalogFilters.category
-  );
+  const catalog = useMerchantProductsPage(debouncedSearch, catalogFilters.category, { profile: 'grid' });
+
+  const syncFromCacheRef = useRef(catalog.syncFromCache);
+  syncFromCacheRef.current = catalog.syncFromCache;
 
   const handleRealtimeUpdate = useCallback(() => {
-    catalog.syncFromCache();
-  }, [catalog.syncFromCache]);
+    syncFromCacheRef.current();
+  }, []);
   useRealtimeProducts(handleRealtimeUpdate);
 
   const reloadCatalog = catalog.reload;

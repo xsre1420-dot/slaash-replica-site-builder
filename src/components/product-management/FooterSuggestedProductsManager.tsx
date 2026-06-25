@@ -31,7 +31,7 @@ import {
   removeFooterSuggestedProduct,
   type FooterSuggestedRow,
 } from '@/services/footerSuggestedProductsService';
-import { loadAllMerchantProducts, getProductsSync } from '@/services/productService';
+import { loadProductsPage, getProductsSync, PRODUCTS_PAGE_SIZE } from '@/services/productService';
 import type { Product } from '@/types';
 import { getProductLifecycleStatus } from '@/lib/productLifecycle';
 
@@ -79,8 +79,16 @@ const FooterSuggestedProductsManager = () => {
       return;
     }
     try {
-      const catalog = await loadAllMerchantProducts(false);
-      setProducts(publishedFromCatalog(catalog.products));
+      const combined: Product[] = [];
+      let page = 0;
+      let hasMore = true;
+      while (hasMore && page < 20) {
+        const result = await loadProductsPage(page, PRODUCTS_PAGE_SIZE, false, undefined, undefined, 'grid');
+        combined.push(...result.products);
+        hasMore = result.hasMore;
+        page += 1;
+      }
+      setProducts(publishedFromCatalog(combined));
     } catch {
       toast.error('تعذّر تحميل قائمة المنتجات');
     }

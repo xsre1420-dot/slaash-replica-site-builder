@@ -5,7 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 const dedupeKey = (slug: string, path: string) => `visit-tracked:${slug}:${path}`;
 const slugDedupeKey = (slug: string) => `visit-tracked-slug:${slug}`;
 const DEDUPE_MS = 30 * 60 * 1000;
-const DEFER_MS = 2_500;
+const DEFER_MS = 4_000;
+const VISIT_RPC_TIMEOUT_MS = 8_000;
 
 function scheduleIdle(fn: () => void): () => void {
   if (typeof window === 'undefined') return () => undefined;
@@ -59,14 +60,20 @@ export function useStoreVisitTracking(storeSlug?: string) {
     if (inflightRef.current === key) return;
 
     const cancel = scheduleIdle(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       inflightRef.current = key;
 
-      void (supabase as any)
-        .rpc('track_store_visit_by_slug', {
-          p_store_slug: normalized,
-          p_page_path: pagePath,
-          p_user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-        })
+      const visitPromise = (supabase as any).rpc('track_store_visit_by_slug', {
+        p_store_slug: normalized,
+        p_page_path: pagePath,
+        p_user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+      });
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        window.setTimeout(() => reject(new Error('visit_timeout')), VISIT_RPC_TIMEOUT_MS);
+      });
+
+      void Promise.race([visitPromise, timeoutPromise])
         .then(({ data }: { data?: { success?: boolean } }) => {
           if (data?.success) {
             try {
@@ -77,6 +84,9 @@ export function useStoreVisitTracking(storeSlug?: string) {
               /* ignore */
             }
           }
+        })
+        .catch(() => {
+          /* visit tracking is best-effort — never block storefront */
         })
         .finally(() => {
           if (inflightRef.current === key) inflightRef.current = null;

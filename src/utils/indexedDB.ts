@@ -6,6 +6,8 @@
 
 const DB_NAME = 'bidaya-store-cache';
 const DB_VERSION = 1;
+/** Cap persisted storefront entries — unbounded IDB growth was a multi-tab memory/disk risk */
+const MAX_IDB_CACHE_ENTRIES = 120;
 
 interface CachedData<T> {
   key: string;
@@ -35,11 +37,46 @@ const openDB = (): Promise<IDBDatabase> => {
   });
 };
 
+const evictOldestCacheEntries = async (
+  store: IDBObjectStore,
+  keepAtMost: number
+): Promise<void> => {
+  const countRequest = store.count();
+  const count = await new Promise<number>((resolve, reject) => {
+    countRequest.onsuccess = () => resolve(countRequest.result);
+    countRequest.onerror = () => reject(countRequest.error);
+  });
+  if (count < keepAtMost) return;
+
+  const overflow = count - keepAtMost + 1;
+  const entries: CachedData<unknown>[] = [];
+  const cursorRequest = store.openCursor();
+
+  await new Promise<void>((resolve, reject) => {
+    cursorRequest.onsuccess = () => {
+      const cursor = cursorRequest.result;
+      if (!cursor) {
+        resolve();
+        return;
+      }
+      entries.push(cursor.value as CachedData<unknown>);
+      cursor.continue();
+    };
+    cursorRequest.onerror = () => reject(cursorRequest.error);
+  });
+
+  entries
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .slice(0, overflow)
+    .forEach((entry) => store.delete(entry.key));
+};
+
 export const cacheSet = async <T>(key: string, data: T): Promise<void> => {
   try {
     const db = await openDB();
     const tx = db.transaction('cache', 'readwrite');
     const store = tx.objectStore('cache');
+    await evictOldestCacheEntries(store, MAX_IDB_CACHE_ENTRIES);
     store.put({ key, data, timestamp: Date.now() } as CachedData<T>);
     await new Promise<void>((resolve, reject) => {
       tx.oncomplete = () => resolve();

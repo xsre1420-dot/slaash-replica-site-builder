@@ -150,16 +150,20 @@ const PreviewStore = () => {
   };
 
   useEffect(() => {
-    if (bannerImages.length > 1) {
-      const interval = setInterval(() => {
-        setIsTransitioning(true);
-        setTimeout(() => {
-          setCurrentImageIndex((prev) => (prev + 1) % bannerImages.length);
-          setIsTransitioning(false);
-        }, 150);
-      }, 2500);
-      return () => clearInterval(interval);
-    }
+    if (bannerImages.length <= 1) return;
+    let transitionTimer: ReturnType<typeof setTimeout> | null = null;
+    const interval = setInterval(() => {
+      setIsTransitioning(true);
+      transitionTimer = setTimeout(() => {
+        setCurrentImageIndex((prev) => (prev + 1) % bannerImages.length);
+        setIsTransitioning(false);
+        transitionTimer = null;
+      }, 150);
+    }, 2500);
+    return () => {
+      clearInterval(interval);
+      if (transitionTimer) clearTimeout(transitionTimer);
+    };
   }, [bannerImages.length]);
 
   const handleImageNavigation = (index: number) => {

@@ -34,6 +34,7 @@ export {
   patchCachedProduct,
   removeCachedProduct,
   syncMerchantProductCatalog,
+  patchMerchantStockInCache,
   addProduct,
   updateProduct,
   setProductLifecycle,

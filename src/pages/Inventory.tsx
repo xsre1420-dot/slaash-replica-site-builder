@@ -25,7 +25,7 @@ import { restockProduct, InventoryRestockError } from '@/services/inventoryServi
 import { getProductLifecycleStatus, lifecycleStatusLabel } from '@/lib/productLifecycle';
 import { useMerchantProductsPage } from '@/hooks/useMerchantProductsPage';
 import { useProgressiveRender } from '@/hooks/useProgressiveRender';
-import { syncMerchantProductCatalog } from '@/services/productService';
+import { patchMerchantStockInCache } from '@/services/productService';
 import { useRealtimeProducts } from '@/hooks/useRealtimeProducts';
 import AttentionStrip from '@/components/ui/AttentionStrip';
 import { ATTENTION_PARAM } from '@/lib/attentionHighlight';
@@ -74,7 +74,7 @@ function Inventory() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const catalog = useMerchantProductsPage('', 'all');
+  const catalog = useMerchantProductsPage('', 'all', { profile: 'inventory' });
   const loading = catalog.loading;
 
   const products = useMemo(
@@ -84,9 +84,11 @@ function Inventory() {
 
   const reloadInventory = catalog.reload;
 
-  useRealtimeProducts(() => {
-    catalog.syncFromCache();
-  });
+  const syncFromCacheRef = useRef(catalog.syncFromCache);
+  syncFromCacheRef.current = catalog.syncFromCache;
+  useRealtimeProducts(useCallback(() => {
+    syncFromCacheRef.current();
+  }, []));
 
   const performRestock = useCallback(
     async (
@@ -100,7 +102,7 @@ function Inventory() {
       const current = products.find((p) => p.id === productId);
       if (!current) throw new Error('Product not found');
 
-      const { added } = await restockProduct({
+      const { added, newQuantity } = await restockProduct({
         product: current,
         ownerId: user.id,
         addAmount,
@@ -112,7 +114,7 @@ function Inventory() {
         (added > 0 ? `تمت إضافة ${added} وحدة للمخزون` : 'تم تحديث الحد الأدنى للتنبيه');
 
       toast.success(message);
-      syncMerchantProductCatalog(user.id);
+      patchMerchantStockInCache(user.id, productId, newQuantity);
       await reloadInventory();
 
       if (opts?.closeDialog !== false) {

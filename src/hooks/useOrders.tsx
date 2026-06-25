@@ -18,7 +18,7 @@ import {
   OrderWorkflowTab,
 } from '@/utils/orderWorkflowUtils';
 import { serializeOrderFilters } from '@/utils/orderQueryBuilder';
-import { toast } from 'sonner';
+import { markLocalOrderMutation } from '@/lib/localMutationGuard';
 
 const EMPTY_TAB_COUNTS: WorkflowTabCounts = {
   all: 0,
@@ -147,6 +147,7 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
     const result = await updateOrderStatus(orderId, ownerId, newStatus);
 
     if (result.success) {
+      markLocalOrderMutation(orderId);
       setOrders((prev) =>
         prev.map((o) =>
           o.id === orderId
@@ -181,23 +182,38 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
     knownOrderIdsRef.current.add(orderId);
   }, []);
 
-  return {
-    orders,
-    updateOrderStatus: updateOrderStatusLocal,
-    loading,
-    page,
-    total,
-    totalPages,
-    tabCounts,
-    goToPage,
-    refetch,
-    isNewOrder,
-    markOrderKnown,
-    /** @deprecated use goToPage */
-    hasMore: page < totalPages - 1,
-    /** @deprecated use goToPage */
-    loadMore: () => goToPage(page + 1),
-  };
+  return useMemo(
+    () => ({
+      orders,
+      updateOrderStatus: updateOrderStatusLocal,
+      loading,
+      page,
+      total,
+      totalPages,
+      tabCounts,
+      goToPage,
+      refetch,
+      isNewOrder,
+      markOrderKnown,
+      /** @deprecated use goToPage */
+      hasMore: page < totalPages - 1,
+      /** @deprecated use goToPage */
+      loadMore: () => goToPage(page + 1),
+    }),
+    [
+      orders,
+      updateOrderStatusLocal,
+      loading,
+      page,
+      total,
+      totalPages,
+      tabCounts,
+      goToPage,
+      refetch,
+      isNewOrder,
+      markOrderKnown,
+    ]
+  );
 };
 
 export type { WorkflowTabCounts, OrderWorkflowTab };

@@ -40,11 +40,11 @@ import {
   parseEnabledPaymentMethods,
   PaymentMethodId,
 } from "@/utils/paymentUtils";
-import { cache, flushOrderCache, flushOwnerCache } from "@/lib/cache";
+import { flushOwnerCache } from "@/lib/cache";
 import { toast } from "sonner";
 import { formatPhoneForStorage, isValidIraqiPhone } from "@/utils/phoneUtils";
 import { loadCheckoutCustomer, saveCheckoutCustomer } from "@/utils/checkoutCustomer";
-import { invalidateStorefrontForOwner, resolveStoreSlugByOwnerId } from "@/services/storefrontProductService";
+import { resolveStoreSlugByOwnerId } from "@/services/storefrontProductService";
 
 const COUPON_STORAGE_KEY = (ownerId: string) => `checkout-coupon:${ownerId}`;
 
@@ -350,19 +350,9 @@ export const useCheckoutFlow = () => {
       }
       clearMarketingAttribution(checkoutStoreSlug);
 
-      if (checkoutStoreSlug) {
-        cache.del(`tenant-meta:${checkoutStoreSlug.trim().toLowerCase()}`);
-        cache.flushByPrefix(`tenant-products:${checkoutStoreSlug.trim().toLowerCase()}:`);
-      }
-
+      // orderService.createOrder already flushed order cache + storefront for the owner
       if (user?.id === ownerId) {
         flushOwnerCache(ownerId);
-      } else {
-        flushOrderCache(ownerId);
-      }
-
-      if (!idempotent) {
-        void invalidateStorefrontForOwner(ownerId);
       }
 
       setCompletedOrderId(orderId);

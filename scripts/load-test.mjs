@@ -58,7 +58,14 @@ const rpc = async (fn, body, signal) => {
     try {
       const parsed = JSON.parse(text);
       if (parsed?.success === false || parsed?.error) ok = false;
-      if (parsed === null && (fn === 'get_store_meta' || fn === 'get_store_products_page' || fn === 'get_storefront_page_bundle')) ok = false;
+      if (
+        parsed === null &&
+        (fn === 'get_store_meta' || fn === 'get_store_products_page' || fn === 'get_storefront_page_bundle')
+      ) {
+        ok = false;
+      }
+      // v41: soft rate-limit still counts as success (analytics sampled, not failed)
+      if (fn === 'track_store_visit_by_slug' && parsed?.success === true) ok = true;
     } catch {
       /* non-json ok */
     }

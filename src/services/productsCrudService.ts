@@ -173,12 +173,17 @@ export async function createProduct(product: Product): Promise<ProductsCrudResul
 
       const stockQty = product.stockQuantity ?? 0;
       if (stockQty > 0) {
-        void supabase.from('inventory_movements').insert({
-          product_id: mapped.id,
-          owner_id: ownerId,
-          quantity_delta: stockQty,
-          reason: 'initial_stock',
-        });
+        const { data: stockData, error: stockError } = await (supabase as any).rpc(
+          'record_product_initial_stock',
+          {
+            p_product_id: mapped.id,
+            p_owner_id: ownerId,
+            p_quantity: stockQty,
+          }
+        );
+        if (stockError || !stockData?.success) {
+          console.warn('[productsCrud] initial_stock ledger failed:', stockError?.message ?? stockData?.error);
+        }
       }
 
       return { success: true, data: mapped };
@@ -330,9 +335,17 @@ export async function bulkImportProducts(
       }));
 
     if (movements.length > 0) {
-      const { error: movementError } = await supabase.from('inventory_movements').insert(movements);
-      if (movementError) {
-        errors.push(`تنبيه: تم رفع المنتجات لكن سجل المخزون فشل: ${movementError.message}`);
+      const { data: stockData, error: movementError } = await (supabase as any).rpc(
+        'record_initial_stock_movements',
+        {
+          p_owner_id: ownerId,
+          p_items: movements,
+        }
+      );
+      if (movementError || !stockData?.success) {
+        errors.push(
+          `تنبيه: تم رفع المنتجات لكن سجل المخزون فشل: ${movementError?.message ?? stockData?.error ?? 'unknown'}`
+        );
       }
     }
   }

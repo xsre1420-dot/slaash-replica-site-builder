@@ -32,7 +32,7 @@ import {
 } from '@/utils/orderWorkflowUtils';
 import { exportOrdersToCsv } from '@/utils/orderExportUtils';
 import { useOrderDashboardStats } from '@/hooks/useOrderDashboardStats';
-import { useOrderNotifications, eventToNotification } from '@/hooks/useOrderNotifications';
+import { isLocalOrderMutationEcho } from '@/lib/localMutationGuard';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { ORDERS_PER_PAGE } from '@/services/orderService';
 import { toast } from 'sonner';
@@ -98,6 +98,10 @@ const Orders = () => {
 
   const handleRealtimeEvent = useCallback(
     (event: OrderRealtimeEvent) => {
+      if ('orderId' in event && isLocalOrderMutationEcho(event.orderId)) {
+        return;
+      }
+
       const notification = eventToNotification(event);
       if (notification) pushNotification(notification);
 

@@ -77,6 +77,18 @@ describe('inventoryService', () => {
   it('allows min level update without stock movement', async () => {
     const result = await restockProduct({ product, ownerId: 'o1', addAmount: 0, minLevel: 8 });
     expect(result.added).toBe(0);
-    expect(mockInsert).not.toHaveBeenCalled();
+    expect(mockRpc).not.toHaveBeenCalled();
+    expect(mockUpdate).toHaveBeenCalled();
+  });
+
+  it('passes min level to restock RPC when stock and threshold change together', async () => {
+    await restockProduct({ product, ownerId: 'o1', addAmount: 5, minLevel: 8 });
+    expect(mockRpc).toHaveBeenCalledWith(
+      'increment_product_stock',
+      expect.objectContaining({
+        p_min_stock_level: 8,
+      })
+    );
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 });

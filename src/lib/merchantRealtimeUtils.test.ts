@@ -21,6 +21,11 @@ describe('merchantRealtimeUtils', () => {
     expect(isNoiseOnlyChange(changed, PRODUCT_NOISE_FIELDS)).toBe(true);
   });
 
+  it('treats min_stock_level-only changes as noise', () => {
+    const changed = getChangedFieldKeys({ min_stock_level: 8 }, { min_stock_level: 5 });
+    expect(isNoiseOnlyChange(changed, PRODUCT_NOISE_FIELDS)).toBe(true);
+  });
+
   it('does not treat stock changes as noise', () => {
     const changed = getChangedFieldKeys(
       { stock_quantity: 2, updated_at: 'b' },

@@ -16,9 +16,25 @@ export const PRODUCT_DETAIL_SELECT =
 export const PRODUCT_INSERT_RETURN_SELECT =
   'id, name, description, category, price, cost, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, archived_at, min_stock_level, owner_id, created_at, updated_at';
 
-/** Merchant list/load — matches base schema (Inventory page uses same core fields) */
+/** Products grid — no description, cost, or variant JSON (largest list payload savings) */
+export const MERCHANT_PRODUCTS_GRID_SELECT =
+  'id, name, category, price, original_price, image_url, stock_quantity, is_active, archived_at, min_stock_level, discount_type, discount_value, discount_start_date, discount_end_date, created_at, updated_at';
+
+/** Inventory list — stock/variant fields without description, cost, or gallery extras */
+export const MERCHANT_PRODUCTS_INVENTORY_SELECT =
+  'id, name, category, price, image_url, stock_quantity, sizes, colors, variants, is_active, archived_at, min_stock_level, created_at, updated_at';
+
+/** Merchant list/load — full columns (detail-adjacent fallbacks) */
 export const MERCHANT_PRODUCTS_LIST_SELECT =
   'id, name, description, category, price, cost, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, is_active, archived_at, min_stock_level, discount_type, discount_value, discount_start_date, discount_end_date, created_at, updated_at';
+
+export type MerchantProductSelectProfile = 'grid' | 'inventory' | 'full';
+
+export const merchantProductSelectForProfile = (profile: MerchantProductSelectProfile = 'grid'): string => {
+  if (profile === 'inventory') return MERCHANT_PRODUCTS_INVENTORY_SELECT;
+  if (profile === 'full') return MERCHANT_PRODUCTS_LIST_SELECT;
+  return MERCHANT_PRODUCTS_GRID_SELECT;
+};
 
 /** Standard select — archived_at included when migration applied; falls back if missing */
 export const MERCHANT_PRODUCTS_STANDARD_SELECT =

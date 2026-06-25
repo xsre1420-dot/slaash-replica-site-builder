@@ -1,5 +1,5 @@
-/** Fields that change frequently but do not affect merchant UI lists. */
-export const PRODUCT_NOISE_FIELDS = new Set(['updated_at']);
+/** Fields that change frequently but do not affect merchant UI lists or storefront. */
+export const PRODUCT_NOISE_FIELDS = new Set(['updated_at', 'min_stock_level']);
 
 /** Order columns that never warrant a list refetch on their own. */
 export const ORDER_NOISE_FIELDS = new Set(['updated_at']);

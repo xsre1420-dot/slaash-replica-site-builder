@@ -42,7 +42,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const loadStoreSettings = async () => {
     if (!user?.id) return;
 
-    const profile = await fetchStoreSettings(user.id, true);
+    const profile = await fetchStoreSettings(user.id);
     if (profile) {
       setStoreName(profile.storeName);
       setStoreLogo(profile.storeLogo);

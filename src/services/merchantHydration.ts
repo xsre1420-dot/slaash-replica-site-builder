@@ -3,6 +3,7 @@
  * Single source of truth: database. In-memory cache is repopulated here.
  */
 import { cache, CacheKeys, CacheTTL } from '@/lib/cache';
+import type { Product } from '@/types';
 import {
   getCategories,
   loadProductsPage,
@@ -40,12 +41,18 @@ export const hydrateMerchantStore = async (userId: string): Promise<HydrationRes
   }
 
   // Try combined RPC first (populates cache when migration applied)
-  await bootstrapOwnerStore(userId);
+  const bootstrap = await bootstrapOwnerStore(userId);
 
   const [storeRecord, storeProfile, productsPage, categories, orders] = await Promise.all([
     fetchStoreByUserId(userId),
     fetchStoreSettings(userId, true),
-    loadProductsPage(0, undefined, true),
+    bootstrap?.productsLoaded
+      ? Promise.resolve({
+          products: cache.get<Product[]>(CacheKeys.products(userId)) || [],
+          hasMore: (bootstrap.productsLoaded ?? 0) >= 50,
+          total: bootstrap.productsLoaded ?? 0,
+        })
+      : loadProductsPage(0, undefined, true),
     getCategories(true),
     fetchOrdersPage(userId, 0, ORDERS_PER_PAGE),
   ]);

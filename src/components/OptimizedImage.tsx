@@ -33,12 +33,19 @@ const OptimizedImage = memo(({
   const [error, setError] = useState(false);
   const [currentSrc, setCurrentSrc] = useState(src);
   const retriesRef = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setLoaded(false);
     setError(false);
     setCurrentSrc(src);
     retriesRef.current = 0;
+    return () => {
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
   }, [src]);
 
   const handleLoad = useCallback(() => {
@@ -50,7 +57,9 @@ const OptimizedImage = memo(({
   const handleError = useCallback(() => {
     if (retriesRef.current < MAX_RETRIES) {
       retriesRef.current += 1;
-      setTimeout(() => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = setTimeout(() => {
+        retryTimerRef.current = null;
         const separator = src.includes('?') ? '&' : '?';
         setCurrentSrc(`${src}${separator}_r=${retriesRef.current}`);
       }, RETRY_DELAY * retriesRef.current);

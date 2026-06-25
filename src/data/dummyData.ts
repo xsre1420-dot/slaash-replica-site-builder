@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { getAuthenticatedUserId } from '@/lib/authSession';
 import { runOncePerKey, type AddProductResult } from "@/lib/productCreateLock";
 import { invalidateStorefrontForOwner } from "@/services/storefrontProductService";
+import { markLocalStorefrontMutation } from '@/lib/localMutationGuard';
+import { isStorefrontVisible } from '@/lib/productLifecycle';
 import { cache, CacheKeys, CacheTTL, dedup, clearInflight } from '@/lib/cache';
 import { mapDbProduct, safeMapDbProduct } from "@/mappers/productMapper";
 import {
@@ -15,6 +17,8 @@ import {
   MERCHANT_PRODUCTS_LIST_SELECT,
   MERCHANT_PRODUCTS_STANDARD_SELECT,
   PRODUCT_MINIMAL_SELECT,
+  merchantProductSelectForProfile,
+  type MerchantProductSelectProfile,
   PRODUCT_INSERT_RETURN_MINIMAL,
   buildProductInsertPayload,
   buildProductLifecyclePatch,
@@ -99,8 +103,34 @@ export const syncMerchantProductCatalog = (ownerId: string, row?: Record<string,
   cache.flushByPrefix(`${CacheKeys.products(ownerId)}:p`);
   clearInflight(`${CacheKeys.products(ownerId)}:p0:s:c`);
   cache.flushByPrefix(`stats:${ownerId}:`);
-  void invalidateStorefrontForOwner(ownerId);
+
+  const affectsStorefront = !row || isStorefrontVisible(mapDbProduct(row));
+  if (affectsStorefront) {
+    markLocalStorefrontMutation(ownerId);
+    void invalidateStorefrontForOwner(ownerId);
+  }
+
   if (row) appendCachedProduct(ownerId, row);
+};
+
+/** Lighter stock sync after inventory restock — avoids full catalog cache wipe */
+export const patchMerchantStockInCache = (
+  ownerId: string,
+  productId: string,
+  stockQuantity: number
+): void => {
+  const key = CacheKeys.products(ownerId);
+  const cached = cache.get<Product[]>(key);
+  if (cached) {
+    const updated = cached.map((p) =>
+      p.id === productId ? { ...p, stockQuantity } : p
+    );
+    cache.set(key, updated, CacheTTL.MEDIUM, CacheTTL.STALE);
+    syncModuleProductsMirror(updated);
+  }
+  cache.flushByPrefix(`${CacheKeys.products(ownerId)}:p`);
+  markLocalStorefrontMutation(ownerId);
+  void invalidateStorefrontForOwner(ownerId);
 };
 
 const syncProductCachesAfterMutation = syncMerchantProductCatalog;
@@ -178,12 +208,13 @@ export const loadProductsPage = async (
   pageSize = PRODUCTS_PAGE_SIZE,
   force = false,
   search?: string,
-  category?: string
+  category?: string,
+  profile: MerchantProductSelectProfile = 'grid'
 ): Promise<ProductsPageResult> => {
   const ownerId = await getAuthOwnerId();
   if (!ownerId) return { products: [], hasMore: false, total: 0 };
 
-  const key = `${CacheKeys.products(ownerId)}:p${page}:s${search || ''}:c${category || ''}`;
+  const key = `${CacheKeys.products(ownerId)}:p${page}:s${search || ''}:c${category || ''}:v${profile}`;
 
   if (force) {
     cache.flushByPrefix(`${CacheKeys.products(ownerId)}:p`);
@@ -200,7 +231,7 @@ export const loadProductsPage = async (
         cache.set(key, result, CacheTTL.MEDIUM, CacheTTL.STALE);
         if (page === 0) {
           cache.set(CacheKeys.products(ownerId), products, CacheTTL.MEDIUM, CacheTTL.STALE);
-          products_list = products;
+          syncModuleProductsMirror(products);
         }
         return result;
       };
@@ -211,6 +242,7 @@ export const loadProductsPage = async (
         p_offset: page * pageSize,
         p_search: search || null,
         p_category: category && category !== 'all' ? category : null,
+        p_profile: profile,
       });
 
       if (!rpcError && rpcData?.products) {
@@ -248,7 +280,13 @@ export const loadProductsPage = async (
         return query;
       };
 
-      let { data, error, count } = await runDirectQuery(MERCHANT_PRODUCTS_LIST_SELECT);
+      const listSelect = merchantProductSelectForProfile(profile);
+      let { data, error, count } = await runDirectQuery(listSelect);
+
+      if (error && isSchemaColumnError(error.message) && profile !== 'full') {
+        console.warn('[products] profile select failed, using full columns:', error.message);
+        ({ data, error, count } = await runDirectQuery(MERCHANT_PRODUCTS_LIST_SELECT));
+      }
 
       if (error && isSchemaColumnError(error.message)) {
         console.warn('[products] extended select failed, using standard columns:', error.message);
@@ -280,14 +318,21 @@ export const loadProductsPage = async (
 
 let products_list: Product[] = [];
 
+/** Keep legacy module mirrors aligned with the canonical cache entry */
+const syncModuleProductsMirror = (items: Product[]) => {
+  products_list = items;
+  products = items;
+};
+
 export const loadProducts = async (force = false): Promise<Product[]> => {
   const { products } = await loadAllMerchantProducts(force);
   return products;
 };
 
-/** Loads every merchant product page — used by Product Management & Inventory */
+/** Loads every merchant product page — prefer paginated loadProductsPage for UI */
 export const loadAllMerchantProducts = async (
-  force = false
+  force = false,
+  profile: MerchantProductSelectProfile = 'grid'
 ): Promise<ProductsPageResult> => {
   const pageSize = PRODUCTS_PAGE_SIZE;
   let page = 0;
@@ -304,7 +349,7 @@ export const loadAllMerchantProducts = async (
   }
 
   while (hasMore && page < 100) {
-    const result = await loadProductsPage(page, pageSize, force);
+    const result = await loadProductsPage(page, pageSize, force, undefined, undefined, profile);
     combined = page === 0 ? result.products : [...combined, ...result.products];
     total = result.total;
     hasMore = result.hasMore;
@@ -314,7 +359,7 @@ export const loadAllMerchantProducts = async (
   const ownerId = await getAuthOwnerId();
   if (ownerId) {
     cache.set(CacheKeys.products(ownerId), combined, CacheTTL.MEDIUM, CacheTTL.STALE);
-    products_list = combined;
+    syncModuleProductsMirror(combined);
   }
 
   return { products: combined, hasMore: false, total: total || combined.length };
@@ -395,8 +440,7 @@ export const patchCachedProduct = (ownerId: string, row: Record<string, unknown>
   if (!cached) return false;
   const updated = cached.map((p) => (p.id === row.id ? mapDbProduct(row) : p));
   cache.set(key, updated, CacheTTL.MEDIUM, CacheTTL.STALE);
-  products_list = updated;
-  products = updated;
+  syncModuleProductsMirror(updated);
   return true;
 };
 
@@ -406,7 +450,7 @@ export const removeCachedProduct = (ownerId: string, productId: string): boolean
   if (!cached) return false;
   const updated = cached.filter((p) => p.id !== productId);
   cache.set(key, updated, CacheTTL.MEDIUM, CacheTTL.STALE);
-  products = updated;
+  syncModuleProductsMirror(updated);
   return true;
 };
 
@@ -430,7 +474,7 @@ export const addProduct = async (
       const storeId = await resolveStoreIdForOwner(userId);
       const publishIntent = product.isActive !== false;
       const payloads = buildProductInsertPayload(
-        publishIntent ? { ...product, isActive: false } : product,
+        publishIntent ? { ...product, isActive: true, archivedAt: null } : product,
         userId,
         storeId
       );
@@ -466,21 +510,25 @@ export const addProduct = async (
       }
 
       if (data) {
-        syncProductCachesAfterMutation(userId, data as Record<string, unknown>);
+        let finalRow = data as Record<string, unknown>;
+        const productId = String(finalRow.id);
 
         const stockQty = product.stockQuantity ?? 0;
         if (stockQty > 0) {
-          void (supabase as any).from('inventory_movements').insert({
-            product_id: (data as Record<string, unknown>).id,
-            owner_id: userId,
-            quantity_delta: stockQty,
-            reason: 'initial_stock',
-          });
+          const { data: stockData, error: stockError } = await (supabase as any).rpc(
+            'record_product_initial_stock',
+            {
+              p_product_id: productId,
+              p_owner_id: userId,
+              p_quantity: stockQty,
+            }
+          );
+          if (stockError || !stockData?.success) {
+            console.warn('[products] initial_stock ledger failed:', stockError?.message ?? stockData?.error);
+          }
         }
 
-        const productId = String((data as Record<string, unknown>).id);
-
-        if (publishIntent) {
+        if (publishIntent && finalRow.is_active !== true) {
           let published = false;
           try {
             const { data: pubData, error: pubError } = await (supabase as any).rpc(
@@ -488,7 +536,7 @@ export const addProduct = async (
               { p_product_id: productId }
             );
             if (!pubError && pubData?.success && pubData?.product) {
-              syncProductCachesAfterMutation(userId, pubData.product as Record<string, unknown>);
+              finalRow = pubData.product as Record<string, unknown>;
               published = true;
             }
           } catch {
@@ -504,10 +552,10 @@ export const addProduct = async (
                 error: lifecycle.error ?? 'تم إنشاء المنتج لكن فشل النشر',
               };
             }
-            syncProductCachesAfterMutation(userId);
           }
         }
 
+        syncProductCachesAfterMutation(userId, finalRow);
         products = cache.get<Product[]>(CacheKeys.products(userId)) || [];
         products_list = products;
         recordHealthEvent('product.create', true);
