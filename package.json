@@ -42,6 +42,7 @@
     "storage:isolation-test": "node scripts/storage-isolation-test.mjs",
     "health:monitor": "node scripts/health-monitor-check.mjs",
     "load:test": "node scripts/load-test.mjs",
+    "load:test:5k": "node scripts/load-test.mjs --users=5000 --duration=60 --mode=realistic",
     "load:seed": "supabase db query --linked -f scripts/seed-load-test-store.sql",
     "db:check": "node scripts/platform-check.mjs",
     "db:bundle": "node scripts/bundle-platform-migrations.mjs",

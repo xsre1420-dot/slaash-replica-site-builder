@@ -159,12 +159,16 @@ tests.push({
 });
 
 const outboxProbe = await tableSelect('analytics_event_outbox', 'select=id&limit=1');
+const outboxText = String(outboxProbe.text);
 const outboxBlocked =
+  outboxProbe.status === 403 ||
+  outboxProbe.status === 401 ||
   outboxProbe.status === 404 ||
-  String(outboxProbe.text).includes('Could not find') ||
-  String(outboxProbe.text).includes('PGRST205') ||
+  outboxText.includes('Could not find') ||
+  outboxText.includes('PGRST205') ||
+  outboxText.includes('permission denied') ||
   (outboxProbe.status === 200 &&
-    (outboxProbe.text.includes('[]') || outboxProbe.text === '[]'));
+    (outboxText.includes('[]') || outboxText === '[]'));
 tests.push({
   name: 'anon cannot read analytics_event_outbox',
   pass: outboxBlocked,
