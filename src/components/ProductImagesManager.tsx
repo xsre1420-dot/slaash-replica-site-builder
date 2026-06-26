@@ -37,6 +37,15 @@ const ProductImagesManager = ({
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
+      let objectUrl: string | null = null;
+
+      const cleanup = () => {
+        if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
+          objectUrl = null;
+        }
+      };
+
       img.onload = () => {
         const maxDim = 1200;
         let { width, height } = img;
@@ -49,13 +58,20 @@ const ProductImagesManager = ({
         canvas.height = height;
         ctx?.drawImage(img, 0, 0, width, height);
         canvas.toBlob(
-          (blob) => resolve(blob ? new File([blob], file.name, { type: 'image/jpeg' }) : file),
+          (blob) => {
+            cleanup();
+            resolve(blob ? new File([blob], file.name, { type: 'image/jpeg' }) : file);
+          },
           'image/jpeg',
           0.85
         );
       };
-      img.onerror = () => resolve(file);
-      img.src = URL.createObjectURL(file);
+      img.onerror = () => {
+        cleanup();
+        resolve(file);
+      };
+      objectUrl = URL.createObjectURL(file);
+      img.src = objectUrl;
     });
 
   const isImageFile = (file: File) => {

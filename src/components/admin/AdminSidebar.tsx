@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Users,
@@ -14,11 +15,11 @@ import {
   GitBranch,
   Activity,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { fetchLeadStats, type LeadStatsPayload } from '@/services/leadAdminService';
+import { useVisibilityAwareInterval } from '@/hooks/useVisibilityAwareInterval';
 
 type AdminSidebarProps = {
   onNavigate?: () => void;
@@ -69,10 +70,18 @@ const AdminSidebar = ({ onNavigate, userEmail, onLogout }: AdminSidebarProps) =>
   const [stats, setStats] = useState<LeadStatsPayload | null>(null);
 
   useEffect(() => {
-    void fetchLeadStats().then(setStats);
-    const interval = setInterval(() => void fetchLeadStats().then(setStats), 60_000);
-    return () => clearInterval(interval);
+    let cancelled = false;
+    void fetchLeadStats().then((data) => {
+      if (!cancelled) setStats(data);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [location.pathname, location.search]);
+
+  useVisibilityAwareInterval(() => {
+    void fetchLeadStats().then(setStats);
+  }, 60_000);
 
   const isActive = (to: string) => {
     const [path, query] = to.split('?');

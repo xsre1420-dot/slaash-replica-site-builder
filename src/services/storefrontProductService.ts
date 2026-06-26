@@ -10,31 +10,23 @@ import {
   STOREFRONT_DETAIL_SELECT,
   isSchemaColumnError,
 } from '@/lib/productUpdateUtils';
-import { cache, CacheKeys, CacheTTL, dedup, flushSlugResolutionCache } from '@/lib/cache';
-import { cacheDeleteByPrefix } from '@/utils/indexedDB';
+import { cache, CacheKeys, CacheTTL, dedup } from '@/lib/cache';
 import { isStorefrontVisible } from '@/lib/productLifecycle';
 import {
   fetchStorefrontBundleViaEdge,
   fetchStorefrontPageViaEdge,
-  requestEdgeStorefrontPurge,
 } from '@/services/storefrontEdgeService';
 import {
   getStorefrontCached,
   setStorefrontCached,
   StorefrontCacheKeys,
 } from '@/services/storefrontCacheService';
-import {
-  flushStorefrontProductCaches,
-  flushStorefrontProductDetail,
-  flushStorefrontStoreCaches,
-  ProductCacheKeys,
-  recordStorefrontScopedFlush,
-  type StorefrontInvalidationScope,
-} from '@/services/storefrontCacheTiers';
+import { ProductCacheKeys } from '@/services/storefrontCacheTiers';
+import type { StorefrontInvalidationScope } from '@/services/storefrontCacheTiers';
 import type { StorefrontBundleCache, StorefrontProductsPage } from '@/types/storefrontCache';
 
 const MINIMAL_STOREFRONT_SELECT =
-  'id, name, description, category, price, image_url, additional_images, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, original_price, is_active, archived_at, created_at, updated_at';
+  'id, name, category, price, original_price, image_url, stock_quantity, discount_type, discount_value, discount_start_date, discount_end_date, is_active, archived_at, product_slug, created_at';
 
 export type { StorefrontInvalidationScope } from '@/services/storefrontCacheTiers';
 
@@ -85,9 +77,14 @@ async function fetchStorefrontBundleRpc(
     const products = ((data.products as Record<string, unknown>[]) || [])
       .map((row) => safeMapStorefrontProduct(row))
       .filter((p): p is Product => p != null && isStorefrontVisible(p));
+    const featured = ((data.featured as Record<string, unknown>[]) || [])
+      .map((row) => safeMapStorefrontProduct(row))
+      .filter((p): p is Product => p != null && isStorefrontVisible(p));
     return {
       store: data.store as Record<string, unknown>,
+      hero: (data.hero as Record<string, unknown>) ?? null,
       categories: (data.categories as Record<string, unknown>[]) || [],
+      featured,
       products,
       nextCursor: data.next_cursor || null,
       hasMore: !!data.has_more,
@@ -647,6 +644,62 @@ export async function fetchCheckoutProductsByIds(
   return map;
 }
 
+export interface CheckoutPreflightResult {
+  products: Map<string, Product>;
+  deliveryFee: number | null;
+  coupon: { code: string; discountAmount: number } | null;
+}
+
+/** Single RPC — products + delivery + coupon validation for checkout submit. */
+export async function fetchCheckoutPreflightBundle(
+  slug: string,
+  productIds: string[],
+  options: {
+    governorate?: string;
+    couponCode?: string;
+    subtotal?: number;
+  } = {}
+): Promise<CheckoutPreflightResult | null> {
+  const normalized = slug.trim().toLowerCase();
+  const uniqueIds = [...new Set(productIds.filter(Boolean))];
+  if (!/^[a-z0-9-]+$/.test(normalized) || uniqueIds.length === 0) return null;
+
+  try {
+    const { data, error } = await (supabase as any).rpc('get_checkout_preflight_bundle', {
+      p_slug: normalized,
+      p_product_ids: uniqueIds,
+      p_governorate: options.governorate?.trim() || null,
+      p_coupon_code: options.couponCode?.trim() || null,
+      p_subtotal: options.subtotal ?? null,
+    });
+    if (error || !data) return null;
+
+    const products = new Map<string, Product>();
+    const rows = Array.isArray(data.products) ? data.products : [];
+    for (const row of rows) {
+      const mapped = safeMapStorefrontProduct(row);
+      if (mapped && isStorefrontVisible(mapped)) products.set(mapped.id, mapped);
+    }
+
+    let coupon: CheckoutPreflightResult['coupon'] = null;
+    const rawCoupon = data.coupon as Record<string, unknown> | null;
+    if (rawCoupon?.valid === true && rawCoupon.code) {
+      coupon = {
+        code: String(rawCoupon.code),
+        discountAmount: Number(rawCoupon.discount_amount ?? 0),
+      };
+    }
+
+    return {
+      products,
+      deliveryFee: data.delivery_fee != null ? Number(data.delivery_fee) : null,
+      coupon,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** Batch product fetch for checkout — delegates to single RPC round-trip. */
 export async function fetchStorefrontProductsByIds(
   slug: string,
@@ -656,117 +709,11 @@ export async function fetchStorefrontProductsByIds(
 }
 
 export async function bumpStorefrontCacheVersion(ownerId: string): Promise<number | null> {
-  if (!ownerId) return null;
-  try {
-    const { data, error } = await (supabase as any).rpc('bump_storefront_cache_version', {
-      p_owner_id: ownerId,
-    });
-    if (error) return null;
-    return data != null ? Number(data) : null;
-  } catch {
-    return null;
-  }
+  return (await import('@/services/write/storefront/storefrontCacheWriteService')).bumpStorefrontCacheVersion(ownerId);
 }
 
-export async function invalidateStorefrontScope(
-  ownerId: string,
-  scope: StorefrontInvalidationScope,
-  options?: { productId?: string; bumpVersion?: boolean }
-): Promise<void> {
-  recordStorefrontScopedFlush(scope);
-
-  const { data } = await supabase
-    .from('store_settings')
-    .select('store_slug')
-    .eq('owner_id', ownerId)
-    .maybeSingle();
-
-  let slug = data?.store_slug?.trim().toLowerCase();
-
-  if (!slug) {
-    try {
-      const { data: storeRow } = await (supabase as any)
-        .from('stores')
-        .select('store_slug')
-        .eq('user_id', ownerId)
-        .maybeSingle();
-      slug = storeRow?.store_slug?.trim().toLowerCase();
-    } catch {
-      /* stores table may not exist */
-    }
-  }
-
-  if (scope === 'full') {
-    flushSlugResolutionCache(ownerId, slug);
-  }
-
-  if (options?.bumpVersion) {
-    await bumpStorefrontCacheVersion(ownerId);
-  }
-
-  if (slug) {
-    switch (scope) {
-      case 'settings':
-      case 'categories':
-        flushStorefrontStoreCaches(slug);
-        void requestEdgeStorefrontPurge(slug);
-        break;
-      case 'products':
-        flushStorefrontProductCaches(slug);
-        cache.flushByPrefix(`edge-page:${slug}`);
-        cache.flushByPrefix(`storefront-product:${slug}:`);
-        await cacheDeleteByPrefix(`idb:tenant-products:${slug}`);
-        void requestEdgeStorefrontPurge(slug);
-        break;
-      case 'product':
-        if (options?.productId) {
-          flushStorefrontProductDetail(slug, options.productId);
-        }
-        break;
-      case 'full':
-        cache.del(StorefrontCacheKeys.bundle(slug));
-        cache.del(StorefrontCacheKeys.version(slug));
-        cache.flushByPrefix(`tenant-products:${slug}`);
-        cache.flushByPrefix(StorefrontCacheKeys.meta(slug));
-        cache.flushByPrefix(`edge-bundle:${slug}`);
-        cache.flushByPrefix(`edge-page:${slug}`);
-        cache.flushByPrefix(`edge-meta:${slug}`);
-        cache.flushByPrefix(`storefront-page:${slug}:`);
-        cache.flushByPrefix(`storefront-product:${slug}:`);
-        cache.del(StorefrontCacheKeys.footer(slug));
-        await cacheDeleteByPrefix(`idb:tenant-products:${slug}`);
-        await cacheDeleteByPrefix(`idb:tenant-meta:${slug}`);
-        void requestEdgeStorefrontPurge(slug);
-        break;
-    }
-  } else if (scope === 'full' || scope === 'products') {
-    cache.flushByPrefix(`tenant-products:${ownerId}`);
-    await cacheDeleteByPrefix(`idb:tenant-products:${ownerId}`);
-  }
-
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(
-      new CustomEvent(STOREFRONT_PRODUCTS_CHANGED, {
-        detail: { ownerId, slug, scope, productId: options?.productId },
-      })
-    );
-    if (scope === 'full' || scope === 'products' || scope === 'settings' || scope === 'categories') {
-      try {
-        localStorage.setItem(
-          'storefront:invalidate',
-          JSON.stringify({ ownerId, slug, scope, at: Date.now() })
-        );
-      } catch {
-        /* ignore quota */
-      }
-    }
-  }
-}
-
-export async function invalidateStorefrontForOwner(
-  ownerId: string,
-  options?: { bumpVersion?: boolean }
-): Promise<void> {
-  return invalidateStorefrontScope(ownerId, 'full', options);
-}
+export {
+  invalidateStorefrontScope,
+  invalidateStorefrontForOwner,
+} from '@/services/write/storefront/storefrontCacheWriteService';
 

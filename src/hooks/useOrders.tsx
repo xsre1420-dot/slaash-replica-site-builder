@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
 import { Order } from '@/types';
-import { dedup, flushOrderCache, cache, CacheKeys } from '@/lib/cache';
+import { dedup, flushOrderCache, flushOrderListCache, cache, CacheKeys } from '@/lib/cache';
 import { useAuth } from '@/context/AuthContext';
 import { useStoreHydration } from '@/context/StoreBootstrapContext';
 import { mapOrderError } from '@/utils/orderErrors';
@@ -147,7 +147,7 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
       const now = Date.now();
       if (now - lastVisibilityRefetchRef.current < VISIBILITY_REFETCH_MS) return;
       lastVisibilityRefetchRef.current = now;
-      flushOrderCache(user.id);
+      flushOrderListCache(user.id);
       void loadPage(page);
       void loadTabCounts();
     };

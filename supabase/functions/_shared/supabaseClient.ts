@@ -5,6 +5,7 @@ import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-
 
 let serviceClient: SupabaseClient | null = null;
 let anonClient: SupabaseClient | null = null;
+const userClients = new Map<string, SupabaseClient>();
 
 const sharedFetch: typeof fetch = (input, init) =>
   fetch(input, { ...init, keepalive: true });
@@ -15,7 +16,10 @@ const baseClientOptions = {
     autoRefreshToken: false,
     detectSessionInUrl: false,
   },
-  global: { fetch: sharedFetch },
+  global: {
+    fetch: sharedFetch,
+    headers: { 'x-connection-mode': 'pooler' },
+  },
 };
 
 export function getServiceSupabase(): SupabaseClient {
@@ -44,17 +48,27 @@ export function getAnonSupabase(): SupabaseClient {
   return anonClient;
 }
 
-/** User-scoped client — lightweight wrapper; reuses anon singleton transport. */
+/** User-scoped client — cached per auth header to reuse HTTP connections. */
 export function getUserSupabase(authHeader: string): SupabaseClient {
+  const cacheKey = authHeader.slice(0, 64);
+  const cached = userClients.get(cacheKey);
+  if (cached) return cached;
+
   const url = Deno.env.get('SUPABASE_URL') ?? '';
   const key = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-  return createClient(url, key, {
+  const client = createClient(url, key, {
     ...baseClientOptions,
     global: {
       fetch: sharedFetch,
-      headers: { Authorization: authHeader },
+      headers: {
+        Authorization: authHeader,
+        'x-connection-mode': 'pooler',
+      },
     },
   });
+  if (userClients.size > 32) userClients.clear();
+  userClients.set(cacheKey, client);
+  return client;
 }
 
 export function edgeSupabaseStats(): { service: boolean; anon: boolean } {

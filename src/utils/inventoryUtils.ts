@@ -25,7 +25,10 @@ export const normalizeProductStock = (product: Product): Product => {
 };
 
 export const hasVariantOptions = (product: Product): boolean =>
-  (product.sizes?.length ?? 0) > 0 || (product.colors?.length ?? 0) > 0;
+  product.hasOptions === true ||
+  (product.sizes?.length ?? 0) > 0 ||
+  (product.colors?.length ?? 0) > 0 ||
+  (product.variants?.length ?? 0) > 0;
 
 export const requiresSizeSelection = (product: Product): boolean =>
   (product.sizes?.length ?? 0) > 0;

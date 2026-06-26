@@ -2,13 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { computeOrderStats } from '@/utils/orderWorkflowUtils';
 
 const mockFrom = vi.fn();
-const mockRpc = vi.fn();
+const mockCallRpc = vi.fn();
 
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     from: (...args: unknown[]) => mockFrom(...args),
-    rpc: (...args: unknown[]) => mockRpc(...args),
   },
+}));
+
+vi.mock('@/integrations/supabase/rpc', () => ({
+  callSupabaseRpc: (...args: unknown[]) => mockCallRpc(...args),
 }));
 
 vi.mock('@/lib/observability', () => ({
@@ -36,12 +39,12 @@ const workflowCounts = {
 describe('fetchOrderStatsSummary', () => {
   beforeEach(() => {
     mockFrom.mockReset();
-    mockRpc.mockReset();
-    mockRpc.mockResolvedValue({ data: null, error: { message: 'RPC unavailable' } });
+    mockCallRpc.mockReset();
+    mockCallRpc.mockResolvedValue({ data: null, error: 'RPC unavailable' });
   });
 
   it('aggregates stats from batch RPC when available', async () => {
-    mockRpc.mockImplementation((name: string) => {
+    mockCallRpc.mockImplementation((name: string) => {
       if (name === 'get_dashboard_statistics_batch') {
         return Promise.resolve({
           data: {
@@ -56,7 +59,7 @@ describe('fetchOrderStatsSummary', () => {
           error: null,
         });
       }
-      return Promise.resolve({ data: null, error: { message: 'unknown' } });
+      return Promise.resolve({ data: null, error: 'unknown' });
     });
 
     const stats = await fetchOrderStatsSummary('owner-1');

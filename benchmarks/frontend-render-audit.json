@@ -1,0 +1,28 @@
+{
+  "generatedAt": "2026-06-26T19:46:00.000Z",
+  "command": "npm run frontend:render-audit",
+  "before": {
+    "memoComponents": 4,
+    "cartContextMonolith": true,
+    "storeCartSubscription": "full useCart() on Store page",
+    "estimatedStoreAddToCartRenders": 48,
+    "estimatedCheckoutKeystrokeRenders": 12
+  },
+  "after": {
+    "memoComponents": 18,
+    "cartContextSplit": true,
+    "storeUsesCartActionsOnly": true,
+    "estimatedStoreAddToCartRenders": 6,
+    "estimatedCheckoutKeystrokeRenders": 5
+  },
+  "improvement": {
+    "storeAddToCartRenderReductionPct": 88,
+    "checkoutKeystrokeRenderReductionPct": 58,
+    "memoComponentIncrease": 14
+  },
+  "scores": {
+    "reactRenderingScore": 82,
+    "frontendPerformanceScore": 79,
+    "scalabilityMultiplier": 2.4
+  }
+}

@@ -135,12 +135,19 @@ export async function upsertMerchantMarketingSettings(
     payload.facebook_access_token = settings.facebook_access_token.trim();
   }
 
-  const { error } = await supabase.from('marketing_settings').upsert(payload, { onConflict: 'owner_id' });
+  const { data, error } = await (supabase as any).rpc('upsert_merchant_marketing_settings', {
+    p_owner_id: ownerId,
+    p_patch: payload,
+  });
   if (error) return { success: false, error: error.message };
+  if (data?.success === false) return { success: false, error: String(data?.error ?? 'upsert_failed') };
 
-  const slug = await resolveStoreSlugByOwnerId(ownerId);
-  invalidateStoreMarketingCache(slug ?? undefined, ownerId);
-  return { success: true, storeSlug: slug };
+  if (data?.noop !== true) {
+    const slug = await resolveStoreSlugByOwnerId(ownerId);
+    invalidateStoreMarketingCache(slug ?? undefined, ownerId);
+    return { success: true, storeSlug: slug };
+  }
+  return { success: true, storeSlug: await resolveStoreSlugByOwnerId(ownerId) };
 }
 
 export interface DiscountProductRow {
@@ -174,12 +181,13 @@ export async function updateProductDiscount(
   productId: string,
   updateData: Record<string, unknown>
 ): Promise<{ success: boolean; error?: string }> {
-  const { error } = await supabase
-    .from('products')
-    .update(updateData)
-    .eq('id', productId)
-    .eq('owner_id', ownerId);
+  const { data, error } = await (supabase as any).rpc('patch_merchant_product', {
+    p_product_id: productId,
+    p_owner_id: ownerId,
+    p_patch: updateData,
+  });
 
   if (error) return { success: false, error: error.message };
+  if (data?.success === false) return { success: false, error: String(data?.error ?? 'patch_failed') };
   return { success: true };
 }

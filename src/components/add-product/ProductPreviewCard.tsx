@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Eye, ImageOff, TrendingUp } from 'lucide-react';
 import { formatDisplayPrice } from '@/lib/productFormUtils';
 
@@ -12,7 +13,7 @@ interface ProductPreviewCardProps {
   profitMargin?: number | null;
 }
 
-const ProductPreviewCard = ({
+const ProductPreviewCard = memo(function ProductPreviewCard({
   name,
   price,
   compareAtPrice,
@@ -21,7 +22,7 @@ const ProductPreviewCard = ({
   shortDescription,
   isActive = true,
   profitMargin,
-}: ProductPreviewCardProps) => {
+}: ProductPreviewCardProps) {
   const displayPrice = () => {
     if (!price) return '٠';
     const num = parseFloat(price.replace(/,/g, ''));
@@ -94,6 +95,6 @@ const ProductPreviewCard = ({
       </div>
     </div>
   );
-};
+});
 
 export default ProductPreviewCard;

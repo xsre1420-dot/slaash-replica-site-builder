@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { User, Phone, Home, FileText, Check } from "lucide-react";
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { Input } from "@/components/ui/input";
@@ -24,9 +25,9 @@ const fieldIds = {
   notes: "delivery-notes",
 } as const;
 
-const DeliveryForm = ({
+const DeliveryForm = memo(function DeliveryForm({
   customerInfo, onInputChange, selectedGovernorate, onGovernorateChange, deliveryPrices, deliveryFee = 0, formErrors,
-}: DeliveryFormProps) => {
+}: DeliveryFormProps) {
   const fieldClass = (field: string, padding?: string) =>
     cn(
       "text-right border rounded-xl text-sm text-foreground bg-muted/30 h-10 transition-all duration-200",
@@ -155,7 +156,7 @@ const DeliveryForm = ({
       </IconField>
     </div>
   );
-};
+});
 
 const IconField = ({
   id, icon: Icon, label, error, required = true, iconPosition = "right", children,

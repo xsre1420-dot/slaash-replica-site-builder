@@ -15,10 +15,11 @@ import {
   fetchStoreSettings,
   bootstrapOwnerStore,
 } from '@/services/storeService';
-import { fetchOrdersFiltered, ORDERS_PER_PAGE } from '@/services/orderService';
+import { fetchOrdersFiltered, ORDERS_PER_PAGE, type OrdersPageResult } from '@/services/orderService';
 import { logger } from '@/lib/observability';
 import { fetchPlatformHealth } from '@/services/platformHealthService';
 import { DEFAULT_ORDER_FILTERS } from '@/utils/orderWorkflowUtils';
+import { serializeOrderFilters } from '@/utils/orderQueryBuilder';
 
 export interface HydrationResult {
   userId: string;
@@ -54,6 +55,13 @@ export const hydrateMerchantStore = async (userId: string): Promise<HydrationRes
   const needsSettings = !cache.has(CacheKeys.storeSettings(userId));
   const needsProducts = readCachedProducts(userId).length === 0;
   const needsCategories = readCachedCategories(userId).length === 0;
+  const defaultOrdersKey = CacheKeys.ordersFiltered(
+    userId,
+    serializeOrderFilters(DEFAULT_ORDER_FILTERS),
+    0,
+    ''
+  );
+  const needsOrders = !cache.has(defaultOrdersKey);
 
   const [storeRecord, storeProfile, productsPage, categories, ordersPage] = await Promise.all([
     needsStore ? fetchStoreByUserId(userId) : Promise.resolve(cache.get(CacheKeys.store(userId)) ?? null),
@@ -66,7 +74,17 @@ export const hydrateMerchantStore = async (userId: string): Promise<HydrationRes
           total: bootstrap?.productsLoaded ?? readCachedProducts(userId).length,
         }),
     needsCategories ? getCategories(false) : Promise.resolve(readCachedCategories(userId)),
-    fetchOrdersFiltered(userId, DEFAULT_ORDER_FILTERS, 0, ORDERS_PER_PAGE),
+    needsOrders
+      ? fetchOrdersFiltered(userId, DEFAULT_ORDER_FILTERS, 0, ORDERS_PER_PAGE)
+      : Promise.resolve(
+          cache.get<OrdersPageResult>(defaultOrdersKey) ?? {
+            orders: cache.get<import('@/types').Order[]>(CacheKeys.ordersRecent(userId)) ?? [],
+            total: 0,
+            page: 0,
+            pageSize: ORDERS_PER_PAGE,
+            totalPages: 1,
+          }
+        ),
   ]);
 
   if (storeRecord?.id) {
@@ -97,6 +115,7 @@ export const hydrateMerchantStore = async (userId: string): Promise<HydrationRes
       settings: !needsSettings,
       products: !needsProducts,
       categories: !needsCategories,
+      orders: !needsOrders,
     },
   });
   return result;

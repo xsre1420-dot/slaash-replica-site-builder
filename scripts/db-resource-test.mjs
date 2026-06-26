@@ -82,16 +82,26 @@ if (serviceHeaders) {
   tests.push({
     name: 'platform_database_resource_audit reports connection snapshot',
     pass:
-      audit.json?.schema_version >= 68 &&
+      audit.json?.success === true &&
+      audit.json?.phase === '1.4' &&
       typeof conn.total === 'number' &&
       typeof conn.idle_in_transaction === 'number' &&
+      audit.json?.pool_saturation_pct != null &&
       audit.json?.healthy != null,
   });
 
-  const sideEffects = await rpc('process_order_side_effects_batch', { p_limit: 5 }, serviceHeaders);
   tests.push({
-    name: 'process_order_side_effects_batch runs with bounded timeout config',
-    pass: sideEffects.json?.success === true && typeof sideEffects.json?.pending === 'number',
+    name: 'process_background_worker_bundle RPC deployed',
+    pass: audit.json?.background_worker_bundle === true,
+  });
+
+  const rec = await rpc('platform_connection_pool_recommendations', {}, serviceHeaders);
+  tests.push({
+    name: 'platform_connection_pool_recommendations returns sizing tiers',
+    pass:
+      rec.json?.success === true &&
+      Array.isArray(rec.json?.scaling_tiers) &&
+      rec.json?.supavisor?.pool_size_recommended != null,
   });
 } else {
   tests.push({

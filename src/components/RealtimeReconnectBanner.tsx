@@ -6,6 +6,7 @@ import {
   forceReconnectMerchantRealtime,
   getMerchantRealtimeHubStatus,
 } from '@/lib/merchantRealtimeHub';
+import { useVisibilityAwareInterval } from '@/hooks/useVisibilityAwareInterval';
 
 /** Merchant dashboard banner when Realtime channels need manual reconnect. */
 export default function RealtimeReconnectBanner() {
@@ -14,16 +15,15 @@ export default function RealtimeReconnectBanner() {
 
   useEffect(() => {
     if (!user?.id) return;
-
-    const check = () => {
-      const status = getMerchantRealtimeHubStatus();
-      setVisible(status.maxAttemptsExceeded > 0 || status.pendingReconnects > 0);
-    };
-
-    check();
-    const id = window.setInterval(check, 15_000);
-    return () => window.clearInterval(id);
+    const status = getMerchantRealtimeHubStatus();
+    setVisible(status.maxAttemptsExceeded > 0 || status.pendingReconnects > 0);
   }, [user?.id]);
+
+  useVisibilityAwareInterval(() => {
+    if (!user?.id) return;
+    const status = getMerchantRealtimeHubStatus();
+    setVisible(status.maxAttemptsExceeded > 0 || status.pendingReconnects > 0);
+  }, 15_000, !!user?.id);
 
   if (!visible || !user?.id) return null;
 

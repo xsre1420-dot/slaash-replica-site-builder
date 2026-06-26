@@ -14,6 +14,7 @@ export const getSupabaseClient = (): SupabaseClient<Database> => {
   if (client) return client;
 
   const cfg = resolveSupabaseConfig();
+  const usesPooler = Boolean(env.VITE_SUPABASE_POOLER_URL?.trim()) && cfg.label === 'primary';
   const clientOptions: Parameters<typeof createClient<Database>>[2] = {
     auth: {
       storage: createAuthStorage(),
@@ -22,19 +23,15 @@ export const getSupabaseClient = (): SupabaseClient<Database> => {
       detectSessionInUrl: false,
       flowType: 'pkce',
     },
-    global: { fetch: sharedFetch },
+    global: {
+      fetch: sharedFetch,
+      ...(usesPooler ? { headers: { 'x-connection-mode': 'pooler' } } : {}),
+    },
     realtime: {
-      params: { eventsPerSecond: 8 },
+      params: { eventsPerSecond: 6 },
     },
     db: { schema: 'public' },
   };
-
-  if (cfg.label === 'primary' && env.VITE_SUPABASE_POOLER_URL) {
-    clientOptions.global = {
-      fetch: sharedFetch,
-      headers: { 'x-connection-mode': 'pooler' },
-    };
-  }
 
   client = createClient<Database>(cfg.url, cfg.key, clientOptions);
 

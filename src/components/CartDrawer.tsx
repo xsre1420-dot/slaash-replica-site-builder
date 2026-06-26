@@ -1,7 +1,8 @@
+import { memo } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Plus, Minus, Trash2, ArrowLeft, ShieldCheck } from "lucide-react";
-import { useCart } from "@/context/CartContext";
+import { useCartActions, useCartState } from "@/context/CartContext";
 import { useNavigate } from "react-router-dom";
 import { getCheckoutPath } from "@/lib/storefrontPaths";
 
@@ -11,8 +12,9 @@ interface CartDrawerProps {
   storeSlug?: string | null;
 }
 
-export default function CartDrawer({ children, checkoutPath, storeSlug }: CartDrawerProps) {
-  const { cartItems, cartTotal, cartCount, updateQuantity, removeFromCart } = useCart();
+const CartDrawer = memo(function CartDrawer({ children, checkoutPath, storeSlug }: CartDrawerProps) {
+  const { cartItems, cartTotal, cartCount } = useCartState();
+  const { updateQuantity, removeFromCart } = useCartActions();
   const navigate = useNavigate();
   const resolvedCheckout = checkoutPath || getCheckoutPath(storeSlug);
 
@@ -127,4 +129,6 @@ export default function CartDrawer({ children, checkoutPath, storeSlug }: CartDr
       </SheetContent>
     </Sheet>
   );
-}
+});
+
+export default CartDrawer;

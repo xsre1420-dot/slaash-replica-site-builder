@@ -39,26 +39,19 @@ type ProductUiHandler = () => void;
 type OrderChangeHandler = () => void;
 type OrderEventHandler = (event: OrderRealtimeEvent) => void;
 
-interface ProductEntry {
+interface MerchantRealtimeEntry {
   channel: RealtimeChannel | null;
-  uiHandlers: Set<ProductUiHandler>;
-  uiDebounceTimer: ReturnType<typeof setTimeout> | null;
+  productUiHandlers: Set<ProductUiHandler>;
+  orderHandlers: Set<{ onChange?: OrderChangeHandler; onEvent?: OrderEventHandler }>;
+  productUiDebounceTimer: ReturnType<typeof setTimeout> | null;
+  orderDebounceTimer: ReturnType<typeof setTimeout> | null;
   pendingUiNotify: boolean;
-  reconnectTimer: ReturnType<typeof setTimeout> | null;
-  reconnectAttempt: number;
-}
-
-interface OrderEntry {
-  channel: RealtimeChannel | null;
-  handlers: Set<{ onChange?: OrderChangeHandler; onEvent?: OrderEventHandler }>;
-  debounceTimer: ReturnType<typeof setTimeout> | null;
   pendingRefetch: boolean;
   reconnectTimer: ReturnType<typeof setTimeout> | null;
   reconnectAttempt: number;
 }
 
-const productEntries = new Map<string, ProductEntry>();
-const orderEntries = new Map<string, OrderEntry>();
+const merchantEntries = new Map<string, MerchantRealtimeEntry>();
 
 /** In-process counters for ops / health dashboards (resets on page reload). */
 const hubMetrics = {
@@ -83,13 +76,8 @@ let visibilityHookInstalled = false;
 function startRealtimeHeartbeat() {
   if (heartbeatTimer || typeof window === 'undefined') return;
   heartbeatTimer = setInterval(() => {
-    for (const entry of productEntries.values()) {
-      if (entry.channel && entry.uiHandlers.size > 0) {
-        void entry.channel.send({ type: 'broadcast', event: 'heartbeat', payload: { t: Date.now() } });
-      }
-    }
-    for (const entry of orderEntries.values()) {
-      if (entry.channel && entry.handlers.size > 0) {
+    for (const entry of merchantEntries.values()) {
+      if (entry.channel && (entry.productUiHandlers.size > 0 || entry.orderHandlers.size > 0)) {
         void entry.channel.send({ type: 'broadcast', event: 'heartbeat', payload: { t: Date.now() } });
       }
     }
@@ -110,16 +98,15 @@ function installVisibilityHook() {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) return;
 
-    for (const [userId, entry] of productEntries) {
-      if (!entry.pendingUiNotify) continue;
-      entry.pendingUiNotify = false;
-      flushProductUiHandlers(userId, entry);
-    }
-
-    for (const [userId, entry] of orderEntries) {
-      if (!entry.pendingRefetch) continue;
-      entry.pendingRefetch = false;
-      scheduleOrderRefetch(userId, entry, true);
+    for (const [userId, entry] of merchantEntries) {
+      if (entry.pendingUiNotify) {
+        entry.pendingUiNotify = false;
+        flushProductUiHandlers(userId, entry);
+      }
+      if (entry.pendingRefetch) {
+        entry.pendingRefetch = false;
+        scheduleOrderRefetch(userId, entry, true);
+      }
     }
   });
 }
@@ -135,10 +122,8 @@ function watchChannelStatus(
 ): void {
   channel.subscribe((status) => {
     if (status === 'SUBSCRIBED') {
-      const productEntry = productEntries.get(userId);
-      if (productEntry?.channel === channel) productEntry.reconnectAttempt = 0;
-      const orderEntry = orderEntries.get(userId);
-      if (orderEntry?.channel === channel) orderEntry.reconnectAttempt = 0;
+      const entry = merchantEntries.get(userId);
+      if (entry?.channel === channel) entry.reconnectAttempt = 0;
       return;
     }
 
@@ -153,10 +138,8 @@ function scheduleChannelReconnect(
   channel: RealtimeChannel,
   resubscribe: () => void
 ): void {
-  const productEntry = productEntries.get(userId);
-  const orderEntry = orderEntries.get(userId);
-  const entry = productEntry?.channel === channel ? productEntry : orderEntry?.channel === channel ? orderEntry : null;
-  if (!entry) return;
+  const entry = merchantEntries.get(userId);
+  if (!entry || entry.channel !== channel) return;
   if (entry.reconnectTimer) return;
   if (entry.reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
     recordHealthEvent('realtime', false, { message: `max reconnect attempts for ${userId}` });
@@ -175,20 +158,20 @@ function scheduleChannelReconnect(
   }, delay);
 }
 
-function flushProductUiHandlers(userId: string, entry: ProductEntry) {
+function flushProductUiHandlers(userId: string, entry: MerchantRealtimeEntry) {
   hubMetrics.productUiFlushes += 1;
-  for (const handler of entry.uiHandlers) handler();
+  for (const handler of entry.productUiHandlers) handler();
 }
 
-function scheduleProductUiNotify(userId: string, entry: ProductEntry) {
+function scheduleProductUiNotify(userId: string, entry: MerchantRealtimeEntry) {
   if (typeof document !== 'undefined' && document.hidden) {
     entry.pendingUiNotify = true;
     return;
   }
 
-  if (entry.uiDebounceTimer) clearTimeout(entry.uiDebounceTimer);
-  entry.uiDebounceTimer = setTimeout(() => {
-    entry.uiDebounceTimer = null;
+  if (entry.productUiDebounceTimer) clearTimeout(entry.productUiDebounceTimer);
+  entry.productUiDebounceTimer = setTimeout(() => {
+    entry.productUiDebounceTimer = null;
     flushProductUiHandlers(userId, entry);
   }, PRODUCT_UI_DEBOUNCE_MS);
 }
@@ -199,7 +182,7 @@ function maybeInvalidateStorefront(userId: string) {
 }
 
 function applyProductPayload(userId: string, payload: ProductRealtimePayload) {
-  const entry = productEntries.get(userId);
+  const entry = merchantEntries.get(userId);
   if (!entry) return;
 
   hubMetrics.productEventsReceived += 1;
@@ -244,28 +227,69 @@ function applyProductPayload(userId: string, payload: ProductRealtimePayload) {
   }
 }
 
-function ensureProductChannel(userId: string): ProductEntry {
+function ensureMerchantChannel(userId: string): MerchantRealtimeEntry {
   installVisibilityHook();
   startRealtimeHeartbeat();
 
-  let entry = productEntries.get(userId);
+  let entry = merchantEntries.get(userId);
   if (entry?.channel) return entry;
 
   if (!entry) {
     entry = {
       channel: null,
-      uiHandlers: new Set(),
-      uiDebounceTimer: null,
+      productUiHandlers: new Set(),
+      orderHandlers: new Set(),
+      productUiDebounceTimer: null,
+      orderDebounceTimer: null,
       pendingUiNotify: false,
+      pendingRefetch: false,
       reconnectTimer: null,
       reconnectAttempt: 0,
     };
-    productEntries.set(userId, entry);
+    merchantEntries.set(userId, entry);
   }
 
-  const resubscribe = () => ensureProductChannel(userId);
+  const resubscribe = () => ensureMerchantChannel(userId);
+
+  const handleOrderPayload = (payload: {
+    eventType: string;
+    new: Record<string, unknown>;
+    old: Record<string, unknown>;
+  }) => {
+    hubMetrics.orderEventsReceived += 1;
+    const current = merchantEntries.get(userId);
+    if (!current) return;
+
+    const orderId = String((payload.new as { id?: string })?.id ?? '');
+    if (!orderId) return;
+
+    if (payload.eventType === 'UPDATE') {
+      const changed = getChangedFieldKeys(payload.new, payload.old);
+      if (isNoiseOnlyChange(changed, ORDER_NOISE_FIELDS)) {
+        hubMetrics.orderEventsFiltered += 1;
+        return;
+      }
+
+      const row = payload.new as { status?: string; payment_status?: string };
+      for (const h of current.orderHandlers) {
+        h.onEvent?.({
+          type: 'update',
+          orderId,
+          status: row?.status,
+          paymentStatus: row?.payment_status,
+        });
+      }
+    } else if (payload.eventType === 'INSERT') {
+      for (const h of current.orderHandlers) {
+        h.onEvent?.({ type: 'insert', orderId });
+      }
+    }
+
+    scheduleOrderRefetch(userId, current);
+  };
+
   const channel = supabase
-    .channel(`products-realtime-${userId}`)
+    .channel(`merchant-realtime-${userId}`)
     .on(
       'postgres_changes',
       {
@@ -281,73 +305,7 @@ function ensureProductChannel(userId: string): ProductEntry {
           old: payload.old as Record<string, unknown> | undefined,
         });
       }
-    );
-
-  entry.channel = channel;
-  watchChannelStatus(userId, channel, resubscribe);
-  return entry;
-}
-
-function ensureOrderChannel(userId: string): OrderEntry {
-  installVisibilityHook();
-  startRealtimeHeartbeat();
-
-  let entry = orderEntries.get(userId);
-  if (entry?.channel) return entry;
-
-  if (!entry) {
-    entry = {
-      channel: null,
-      handlers: new Set(),
-      debounceTimer: null,
-      pendingRefetch: false,
-      reconnectTimer: null,
-      reconnectAttempt: 0,
-    };
-    orderEntries.set(userId, entry);
-  }
-
-  const resubscribe = () => ensureOrderChannel(userId);
-
-  const handleOrderPayload = (payload: {
-    eventType: string;
-    new: Record<string, unknown>;
-    old: Record<string, unknown>;
-  }) => {
-    hubMetrics.orderEventsReceived += 1;
-    const current = orderEntries.get(userId);
-    if (!current) return;
-
-    const orderId = String((payload.new as { id?: string })?.id ?? '');
-    if (!orderId) return;
-
-    if (payload.eventType === 'UPDATE') {
-      const changed = getChangedFieldKeys(payload.new, payload.old);
-      if (isNoiseOnlyChange(changed, ORDER_NOISE_FIELDS)) {
-        hubMetrics.orderEventsFiltered += 1;
-        return;
-      }
-
-      const row = payload.new as { status?: string; payment_status?: string };
-      for (const h of current.handlers) {
-        h.onEvent?.({
-          type: 'update',
-          orderId,
-          status: row?.status,
-          paymentStatus: row?.payment_status,
-        });
-      }
-    } else if (payload.eventType === 'INSERT') {
-      for (const h of current.handlers) {
-        h.onEvent?.({ type: 'insert', orderId });
-      }
-    }
-
-    scheduleOrderRefetch(userId, current);
-  };
-
-  const channel = supabase
-    .channel(`orders-realtime-${userId}`)
+    )
     .on(
       'postgres_changes',
       {
@@ -386,39 +344,47 @@ function ensureOrderChannel(userId: string): OrderEntry {
   return entry;
 }
 
-function scheduleOrderRefetch(userId: string, entry: OrderEntry, immediate = false) {
+function scheduleOrderRefetch(userId: string, entry: MerchantRealtimeEntry, immediate = false) {
   if (!immediate && typeof document !== 'undefined' && document.hidden) {
     entry.pendingRefetch = true;
     return;
   }
 
-  if (entry.debounceTimer) clearTimeout(entry.debounceTimer);
-  entry.debounceTimer = setTimeout(() => {
-    entry.debounceTimer = null;
+  if (entry.orderDebounceTimer) clearTimeout(entry.orderDebounceTimer);
+  entry.orderDebounceTimer = setTimeout(() => {
+    entry.orderDebounceTimer = null;
     entry.pendingRefetch = false;
     hubMetrics.orderRefetchFlushes += 1;
     flushOrderCache(userId);
-    for (const h of entry.handlers) {
+    for (const h of entry.orderHandlers) {
       h.onChange?.();
     }
   }, immediate ? 0 : ORDER_DEBOUNCE_MS);
 }
 
-/** UI-only subscription; product cache is patched once inside the hub. */
+function teardownEntryIfIdle(userId: string, entry: MerchantRealtimeEntry) {
+  if (entry.productUiHandlers.size > 0 || entry.orderHandlers.size > 0) return;
+  if (entry.productUiDebounceTimer) clearTimeout(entry.productUiDebounceTimer);
+  if (entry.orderDebounceTimer) clearTimeout(entry.orderDebounceTimer);
+  if (entry.reconnectTimer) clearTimeout(entry.reconnectTimer);
+  entry.pendingUiNotify = false;
+  entry.pendingRefetch = false;
+  if (entry.channel) void supabase.removeChannel(entry.channel);
+  merchantEntries.delete(userId);
+  if (merchantEntries.size === 0) {
+    stopRealtimeHeartbeat();
+  }
+}
+
 export function subscribeMerchantProducts(userId: string, onUiUpdate: ProductUiHandler): () => void {
-  const entry = ensureProductChannel(userId);
-  entry.uiHandlers.add(onUiUpdate);
+  const entry = ensureMerchantChannel(userId);
+  entry.productUiHandlers.add(onUiUpdate);
 
   return () => {
-    const current = productEntries.get(userId);
+    const current = merchantEntries.get(userId);
     if (!current) return;
-    current.uiHandlers.delete(onUiUpdate);
-    if (current.uiHandlers.size === 0) {
-      if (current.uiDebounceTimer) clearTimeout(current.uiDebounceTimer);
-      if (current.reconnectTimer) clearTimeout(current.reconnectTimer);
-      if (current.channel) void supabase.removeChannel(current.channel);
-      productEntries.delete(userId);
-    }
+    current.productUiHandlers.delete(onUiUpdate);
+    teardownEntryIfIdle(userId, current);
   };
 }
 
@@ -427,63 +393,42 @@ export function subscribeMerchantOrders(
   onChange?: OrderChangeHandler,
   onEvent?: OrderEventHandler
 ): () => void {
-  const entry = ensureOrderChannel(userId);
+  const entry = ensureMerchantChannel(userId);
   const listener = { onChange, onEvent };
-  entry.handlers.add(listener);
+  entry.orderHandlers.add(listener);
 
   return () => {
-    const current = orderEntries.get(userId);
+    const current = merchantEntries.get(userId);
     if (!current) return;
-    current.handlers.delete(listener);
-    if (current.handlers.size === 0) {
-      if (current.debounceTimer) clearTimeout(current.debounceTimer);
-      if (current.reconnectTimer) clearTimeout(current.reconnectTimer);
-      if (current.channel) void supabase.removeChannel(current.channel);
-      orderEntries.delete(userId);
-    }
+    current.orderHandlers.delete(listener);
+    teardownEntryIfIdle(userId, current);
   };
 }
 
-/** Force reconnect product + order channels (merchant manual recovery). */
+/** Force reconnect unified merchant channel (manual recovery). */
 export function forceReconnectMerchantRealtime(userId: string): void {
-  const productEntry = productEntries.get(userId);
-  if (productEntry) {
-    if (productEntry.uiDebounceTimer) clearTimeout(productEntry.uiDebounceTimer);
-    if (productEntry.reconnectTimer) clearTimeout(productEntry.reconnectTimer);
-    if (productEntry.channel) void supabase.removeChannel(productEntry.channel);
-    productEntry.channel = null;
-    productEntry.reconnectAttempt = 0;
-    productEntry.pendingUiNotify = false;
-    ensureProductChannel(userId);
-  }
+  const entry = merchantEntries.get(userId);
+  if (!entry) return;
 
-  const orderEntry = orderEntries.get(userId);
-  if (orderEntry) {
-    if (orderEntry.debounceTimer) clearTimeout(orderEntry.debounceTimer);
-    if (orderEntry.reconnectTimer) clearTimeout(orderEntry.reconnectTimer);
-    if (orderEntry.channel) void supabase.removeChannel(orderEntry.channel);
-    orderEntry.channel = null;
-    orderEntry.reconnectAttempt = 0;
-    orderEntry.pendingRefetch = false;
-    ensureOrderChannel(userId);
-  }
+  if (entry.productUiDebounceTimer) clearTimeout(entry.productUiDebounceTimer);
+  if (entry.orderDebounceTimer) clearTimeout(entry.orderDebounceTimer);
+  if (entry.reconnectTimer) clearTimeout(entry.reconnectTimer);
+  if (entry.channel) void supabase.removeChannel(entry.channel);
+  entry.channel = null;
+  entry.reconnectAttempt = 0;
+  entry.pendingUiNotify = false;
+  entry.pendingRefetch = false;
+  ensureMerchantChannel(userId);
 }
 
-/** Drop all merchant channels — call before replacing the Supabase client. */
 export function teardownMerchantRealtimeHub(): void {
-  for (const [, entry] of productEntries) {
-    if (entry.uiDebounceTimer) clearTimeout(entry.uiDebounceTimer);
+  for (const [, entry] of merchantEntries) {
+    if (entry.productUiDebounceTimer) clearTimeout(entry.productUiDebounceTimer);
+    if (entry.orderDebounceTimer) clearTimeout(entry.orderDebounceTimer);
     if (entry.reconnectTimer) clearTimeout(entry.reconnectTimer);
     if (entry.channel) void supabase.removeChannel(entry.channel);
   }
-  productEntries.clear();
-
-  for (const [, entry] of orderEntries) {
-    if (entry.debounceTimer) clearTimeout(entry.debounceTimer);
-    if (entry.reconnectTimer) clearTimeout(entry.reconnectTimer);
-    if (entry.channel) void supabase.removeChannel(entry.channel);
-  }
-  orderEntries.clear();
+  merchantEntries.clear();
   stopRealtimeHeartbeat();
 }
 
@@ -542,20 +487,20 @@ export function getMerchantRealtimeHubStatus(): MerchantRealtimeHubStatus {
   let productHandlerCount = 0;
   let orderHandlerCount = 0;
 
-  for (const entry of productEntries.values()) {
-    productHandlerCount += entry.uiHandlers.size;
-    if (entry.reconnectTimer) pendingReconnects += 1;
-    if (entry.reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) maxAttemptsExceeded += 1;
-  }
-  for (const entry of orderEntries.values()) {
-    orderHandlerCount += entry.handlers.size;
+  for (const entry of merchantEntries.values()) {
+    productHandlerCount += entry.productUiHandlers.size;
+    orderHandlerCount += entry.orderHandlers.size;
     if (entry.reconnectTimer) pendingReconnects += 1;
     if (entry.reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) maxAttemptsExceeded += 1;
   }
 
+  const channelsWithHandlers = [...merchantEntries.values()].filter(
+    (e) => e.productUiHandlers.size > 0 || e.orderHandlers.size > 0
+  ).length;
+
   return {
-    activeProductChannels: productEntries.size,
-    activeOrderChannels: orderEntries.size,
+    activeProductChannels: channelsWithHandlers,
+    activeOrderChannels: channelsWithHandlers,
     productHandlerCount,
     orderHandlerCount,
     pendingReconnects,

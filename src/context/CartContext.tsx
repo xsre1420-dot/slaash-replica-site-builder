@@ -1,24 +1,43 @@
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+  ReactNode,
+} from 'react';
+import { CartItem, Product } from '@/types';
+import { getAvailableQty, getServerUnitPrice } from '@/utils/inventoryUtils';
+import { toast } from 'sonner';
 
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from "react";
-import { CartItem, Product } from "@/types";
-import { getAvailableQty, getServerUnitPrice } from "@/utils/inventoryUtils";
-import { toast } from "sonner";
-
-interface CartContextType {
+export interface CartState {
   cartItems: CartItem[];
+  cartTotal: number;
+  cartCount: number;
   storeOwnerId: string | null;
+}
+
+export interface CartActions {
   setStoreOwner: (ownerId: string) => void;
   addToCart: (product: Product, selectedSize?: string, selectedColor?: string, quantity?: number) => void;
   removeFromCart: (productId: string, selectedSize?: string, selectedColor?: string) => void;
-  updateQuantity: (productId: string, quantity: number, selectedSize?: string, selectedColor?: string) => void;
+  updateQuantity: (
+    productId: string,
+    quantity: number,
+    selectedSize?: string,
+    selectedColor?: string
+  ) => void;
   replaceCartItems: (items: CartItem[]) => void;
   clearCart: () => void;
-  cartTotal: number;
-  cartCount: number;
   getMaxQuantity: (product: Product, selectedSize?: string, selectedColor?: string) => number;
 }
 
-const CartContext = createContext<CartContextType | undefined>(undefined);
+type CartContextType = CartState & CartActions;
+
+const CartStateContext = createContext<CartState | undefined>(undefined);
+const CartActionsContext = createContext<CartActions | undefined>(undefined);
 
 const cartStorageKey = (ownerId: string) => `cart:${ownerId}`;
 const CART_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -113,7 +132,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setCartItems((prevItems) => {
       const available = getAvailableQty(product, selectedSize, selectedColor);
       if (available <= 0) {
-        toast.error("المنتج غير متوفر في المخزون");
+        toast.error('المنتج غير متوفر في المخزون');
         return prevItems;
       }
 
@@ -159,46 +178,49 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     );
   }, []);
 
-  const updateQuantity = useCallback((productId: string, quantity: number, selectedSize?: string, selectedColor?: string) => {
-    if (quantity <= 0) {
-      setCartItems((prevItems) =>
-        prevItems.filter(
-          (item) =>
-            !(
-              item.product.id === productId &&
-              item.selectedSize === selectedSize &&
-              item.selectedColor === selectedColor
-            )
-        )
-      );
-      return;
-    }
+  const updateQuantity = useCallback(
+    (productId: string, quantity: number, selectedSize?: string, selectedColor?: string) => {
+      if (quantity <= 0) {
+        setCartItems((prevItems) =>
+          prevItems.filter(
+            (item) =>
+              !(
+                item.product.id === productId &&
+                item.selectedSize === selectedSize &&
+                item.selectedColor === selectedColor
+              )
+          )
+        );
+        return;
+      }
 
-    setCartItems((prevItems) => {
-      const item = prevItems.find(
-        (i) =>
+      setCartItems((prevItems) => {
+        const item = prevItems.find(
+          (i) =>
+            i.product.id === productId &&
+            i.selectedSize === selectedSize &&
+            i.selectedColor === selectedColor
+        );
+        if (!item) return prevItems;
+
+        const available = getAvailableQty(item.product, selectedSize, selectedColor);
+        const capped = Math.min(quantity, available);
+
+        if (capped < quantity) {
+          toast.error(`الكمية المتاحة ${available} فقط`);
+        }
+
+        return prevItems.map((i) =>
           i.product.id === productId &&
           i.selectedSize === selectedSize &&
           i.selectedColor === selectedColor
-      );
-      if (!item) return prevItems;
-
-      const available = getAvailableQty(item.product, selectedSize, selectedColor);
-      const capped = Math.min(quantity, available);
-
-      if (capped < quantity) {
-        toast.error(`الكمية المتاحة ${available} فقط`);
-      }
-
-      return prevItems.map((i) =>
-        i.product.id === productId &&
-        i.selectedSize === selectedSize &&
-        i.selectedColor === selectedColor
-          ? { ...i, quantity: capped }
-          : i
-      );
-    });
-  }, []);
+            ? { ...i, quantity: capped }
+            : i
+        );
+      });
+    },
+    []
+  );
 
   const replaceCartItems = useCallback((items: CartItem[]) => {
     setCartItems(items);
@@ -229,30 +251,58 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     [cartItems]
   );
 
-  const value = useMemo(
+  const state = useMemo<CartState>(
+    () => ({ cartItems, cartTotal, cartCount, storeOwnerId }),
+    [cartItems, cartTotal, cartCount, storeOwnerId]
+  );
+
+  const actions = useMemo<CartActions>(
     () => ({
-      cartItems,
-      storeOwnerId,
       setStoreOwner,
       addToCart,
       removeFromCart,
       updateQuantity,
       replaceCartItems,
       clearCart,
-      cartTotal,
-      cartCount,
       getMaxQuantity,
     }),
-    [cartItems, storeOwnerId, setStoreOwner, addToCart, removeFromCart, updateQuantity, replaceCartItems, clearCart, cartTotal, cartCount, getMaxQuantity]
+    [
+      setStoreOwner,
+      addToCart,
+      removeFromCart,
+      updateQuantity,
+      replaceCartItems,
+      clearCart,
+      getMaxQuantity,
+    ]
   );
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  return (
+    <CartActionsContext.Provider value={actions}>
+      <CartStateContext.Provider value={state}>{children}</CartStateContext.Provider>
+    </CartActionsContext.Provider>
+  );
 };
 
-export const useCart = () => {
-  const context = useContext(CartContext);
-  if (context === undefined) {
-    throw new Error("useCart must be used within a CartProvider");
+export const useCartState = (): CartState => {
+  const context = useContext(CartStateContext);
+  if (!context) {
+    throw new Error('useCartState must be used within a CartProvider');
   }
   return context;
+};
+
+export const useCartActions = (): CartActions => {
+  const context = useContext(CartActionsContext);
+  if (!context) {
+    throw new Error('useCartActions must be used within a CartProvider');
+  }
+  return context;
+};
+
+/** Full cart API — prefer useCartState / useCartActions to limit re-renders. */
+export const useCart = (): CartContextType => {
+  const state = useCartState();
+  const actions = useCartActions();
+  return useMemo(() => ({ ...state, ...actions }), [state, actions]);
 };

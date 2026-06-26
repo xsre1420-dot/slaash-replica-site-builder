@@ -32,6 +32,7 @@ import {
 } from '@/services/dashboardStatsService';
 import { fetchOrderStatsRows } from '@/services/orderService';
 import type { Order } from '@/types';
+import { useIsMounted } from '@/hooks/useIsMounted';
 
 export type DashboardActionItem = {
   id: AttentionKey;
@@ -62,6 +63,7 @@ const fetchRpcPeriod = (
 
 export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
   const { user } = useAuth();
+  const mountedRef = useIsMounted();
   const [orders, setOrders] = useState<Order[]>([]);
   const [pendingFulfillment, setPendingFulfillment] = useState(0);
 
@@ -81,7 +83,13 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
       setHasSlug(null);
       return;
     }
-    void getStorePublicSlug(user.id).then((slug) => setHasSlug(!!slug));
+    let cancelled = false;
+    void getStorePublicSlug(user.id).then((slug) => {
+      if (!cancelled) setHasSlug(!!slug);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id]);
 
   useEffect(() => {
@@ -89,7 +97,13 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
       setPendingReviewsCount(0);
       return;
     }
-    void countPendingReviewsForOwner(user.id).then(setPendingReviewsCount);
+    let cancelled = false;
+    void countPendingReviewsForOwner(user.id).then((count) => {
+      if (!cancelled) setPendingReviewsCount(count);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id, refreshKey]);
 
   const loadPeriods = useCallback(async () => {
@@ -109,6 +123,7 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
     setKpiLoading(true);
 
     const batch = await fetchDashboardStatisticsBatch(user.id);
+    if (!mountedRef.current) return;
 
     if (
       batch?.today != null &&
@@ -140,6 +155,7 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
       fetchRpcPeriod(user.id, weekBounds.start, weekBounds.end),
       fetchRpcPeriod(user.id, prevWeekBounds.start, prevWeekBounds.end),
     ]);
+    if (!mountedRef.current) return;
 
     const rpcComplete =
       todayRpc != null &&
@@ -160,6 +176,7 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
     }
 
     const fallbackOrders = await fetchOrderStatsRows(user.id);
+    if (!mountedRef.current) return;
     setOrders(fallbackOrders);
 
     setPeriods({
@@ -170,10 +187,19 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
         prevWeekRpc ?? computePeriodMetricsFromOrders(fallbackOrders, { previousWeek: true }),
     });
     setKpiLoading(false);
-  }, [user?.id]);
+  }, [user?.id, mountedRef]);
 
   useEffect(() => {
-    void loadPeriods();
+    let cancelled = false;
+
+    void (async () => {
+      await loadPeriods();
+      if (cancelled) return;
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [loadPeriods, refreshKey]);
 
   const products = useMemo(

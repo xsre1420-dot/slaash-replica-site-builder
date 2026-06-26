@@ -89,12 +89,21 @@ if (serviceHeaders) {
 
   const maintenance = await rpc(
     'platform_run_internals_maintenance',
-    { p_prune_rate_limits: true, p_prune_analytics: false, p_analyze: true },
+    { p_prune_rate_limits: true, p_prune_analytics: false, p_prune_outboxes: false, p_analyze: true },
     serviceHeaders
   );
   tests.push({
     name: 'platform_run_internals_maintenance runs ANALYZE + prune',
     pass: maintenance.json?.success === true && Array.isArray(maintenance.json?.analyzed_tables),
+  });
+
+  tests.push({
+    name: 'phase 1.5 internals audit includes version and xid age',
+    pass:
+      audit.json?.phase === '1.5' &&
+      audit.json?.postgresql_version != null &&
+      audit.json?.max_xid_age != null &&
+      audit.json?.database_size != null,
   });
 
   const benchmark = await rpc('platform_benchmark_hot_queries', { p_warm_cache: false }, serviceHeaders);
@@ -119,7 +128,7 @@ if (serviceHeaders) {
 }
 
 const passed = tests.filter((t) => t.pass).length;
-console.log('\n=== PostgreSQL Internals Tests (v69) ===\n');
+console.log('\n=== PostgreSQL Internals Tests (Phase 1.5) ===\n');
 for (const t of tests) {
   console.log(`${t.pass ? '✓' : '✗'} ${t.name}`);
 }

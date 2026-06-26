@@ -80,10 +80,14 @@ const ProductData = ({ productId, initialProduct, onProductLoaded }: ProductData
 
   useEffect(() => {
     const controller = new AbortController();
-    onLoadedRef.current(null, "loading");
+    if (initialProduct?.id === productId) {
+      onLoadedRef.current(initialProduct, "success");
+    } else {
+      onLoadedRef.current(null, "loading");
+    }
     void loadProduct(controller.signal);
     return () => controller.abort();
-  }, [loadProduct]);
+  }, [loadProduct, initialProduct, productId]);
 
   return null;
 };

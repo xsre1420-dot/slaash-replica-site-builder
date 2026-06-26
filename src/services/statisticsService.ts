@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { callSupabaseRpc } from '@/integrations/supabase/rpc';
 import { DatabaseData } from '@/types/statistics';
 import { cache, CacheKeys, CacheTTL, clearInflight, dedup } from '@/lib/cache';
 import { assertMerchantOwner } from '@/lib/tenantGuard';
@@ -45,15 +46,18 @@ const fetchStatisticsPageBundleRpc = async (
   previousEnd: string
 ): Promise<{ current?: Record<string, unknown>; previous?: Record<string, unknown> } | undefined> => {
   try {
-    const { data, error } = await (supabase as any).rpc('get_statistics_page_bundle', {
-      p_owner_id: ownerId,
-      p_current_start: periodStart,
-      p_current_end: periodEnd,
-      p_previous_start: previousStart,
-      p_previous_end: previousEnd,
-    });
+    const { data, error } = await callSupabaseRpc<Record<string, unknown>>(
+      'get_statistics_page_bundle',
+      {
+        p_owner_id: ownerId,
+        p_current_start: periodStart,
+        p_current_end: periodEnd,
+        p_previous_start: previousStart,
+        p_previous_end: previousEnd,
+      }
+    );
     if (!error && data && typeof data === 'object') {
-      const payload = data as Record<string, unknown>;
+      const payload = data;
       return {
         current: (payload.current as Record<string, unknown>) ?? undefined,
         previous: (payload.previous as Record<string, unknown>) ?? undefined,

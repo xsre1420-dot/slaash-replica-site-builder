@@ -1,20 +1,19 @@
-import { X, ShoppingCart, Plus, Search, Heart, Star, SlidersHorizontal, ArrowUpDown, Grid3X3, List, Mic, MicOff, RefreshCw } from "lucide-react";
+import { Search, ArrowUpDown, Grid3X3, List, Mic, MicOff, RefreshCw } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { getCategories, getCategoriesSync } from "@/services/productService";
 import { Product, Category } from "@/types";
-import { useCart } from "@/context/CartContext";
+import { useCartActions } from "@/context/CartContext";
 import MarketingScripts from "@/components/MarketingScripts";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useStoreVisitTracking } from "@/hooks/useStoreVisitTracking";
-import CartDrawer from "@/components/CartDrawer";
 import { useTenantStore } from "@/context/TenantStoreContext";
 import { useStoreProductsPage } from "@/hooks/useStoreProductsPage";
 import { useMerchantProductsPage } from "@/hooks/useMerchantProductsPage";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import WhatsAppButton from "@/components/WhatsAppButton";
-import ProductCard from "@/components/store/ProductCard";
-import ProductSkeleton from "@/components/store/ProductSkeleton";
+import StoreProductGrid from "@/components/store/StoreProductGrid";
+import { StoreCartHeaderButton, StoreFixedCheckoutBar } from "@/components/store/StoreCartChrome";
 import FavoritesDrawer from "@/components/store/FavoritesDrawer";
 import StoreFilterDrawer from "@/components/store/StoreFilterDrawer";
 import StoreThemeProvider from "@/components/StoreThemeProvider";
@@ -25,7 +24,7 @@ import { STORE_PRODUCTS_PAGE_SIZE } from "@/constants/pagination";
 import { resolveMediaDeliveryUrl } from "@/utils/cdnMediaUtils";
 import StorefrontTrustBar from "@/components/storefront/StorefrontTrustBar";
 import StorefrontFooter from "@/components/storefront/StorefrontFooter";
-import { getCheckoutPath, getProductPath } from "@/lib/storefrontPaths";
+import { getProductPath } from "@/lib/storefrontPaths";
 import { persistCheckoutStoreSlug } from "@/lib/checkoutStoreContext";
 import { BadgeCheck } from "lucide-react";
 
@@ -43,7 +42,6 @@ const Store = () => {
   useStoreVisitTracking(isTenantMode ? storeSlug : undefined);
 
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -80,13 +78,14 @@ const Store = () => {
   const [filterPriceRange, setFilterPriceRange] = useState<[number, number]>([0, 0]);
   const [filterSizes, setFilterSizes] = useState<string[]>([]);
 
-  const { addToCart, cartItems, cartCount, updateQuantity, cartTotal, setStoreOwner } = useCart();
+  const { addToCart, setStoreOwner } = useCartActions();
   const { trackAddToCart } = useMetaPixel();
   const { favorites, toggleFavorite, isFavorite, count: favCount } = useFavorites(storeSlug);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const bannerDotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pullStartY = useRef(0);
   const categoriesRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef(0);
@@ -99,23 +98,17 @@ const Store = () => {
     }
   }, [isTenantMode, displayOwnerId, storeSlug, setStoreOwner]);
 
+  const allProducts = useMemo(
+    () => (isTenantMode ? tenantProducts.products : ownerCatalog.products),
+    [isTenantMode, tenantProducts.products, ownerCatalog.products]
+  );
+
+  const catalogLoading = isTenantMode ? tenantProducts.loading : ownerCatalog.loading;
+
   useEffect(() => {
-    if (isTenantMode) {
-      setAllProducts(tenantProducts.products);
-      setIsLoading(tenantProducts.loading);
-    } else {
-      setAllProducts(ownerCatalog.products);
-      setIsLoading(ownerCatalog.loading);
-    }
+    setIsLoading(catalogLoading);
     setVisibleCount(STORE_PRODUCTS_PAGE_SIZE);
-  }, [
-    selectedCategory,
-    isTenantMode,
-    tenantProducts.products,
-    tenantProducts.loading,
-    ownerCatalog.products,
-    ownerCatalog.loading,
-  ]);
+  }, [selectedCategory, catalogLoading]);
 
   const loadData = useCallback(async (force = false) => {
     if (isTenantMode) {
@@ -159,6 +152,7 @@ const Store = () => {
     return () => {
       clearInterval(interval);
       if (transitionTimer) clearTimeout(transitionTimer);
+      if (bannerDotTimerRef.current) clearTimeout(bannerDotTimerRef.current);
     };
   }, [bannerImages.length]);
 
@@ -219,8 +213,6 @@ const Store = () => {
     return () => observer.disconnect();
   }, [displayProducts.length, visibleCount, isTenantMode, tenantProducts.hasMore, tenantProducts.loadMore, ownerCatalog.hasMore, ownerCatalog.loadMore]);
 
-  const visibleProducts = displayProducts.slice(0, visibleCount);
-
   // --- Pull to refresh ---
   const handleTouchStart = (e: React.TouchEvent) => { pullStartY.current = e.touches[0].clientY; };
   const handleTouchEnd = async (e: React.TouchEvent) => {
@@ -243,15 +235,6 @@ const Store = () => {
     }
   };
 
-  // --- Cart helpers ---
-  const cartQuantityById = useMemo(() => {
-    const map = new Map<string, number>();
-    cartItems.forEach((i) => {
-      map.set(i.product.id, (map.get(i.product.id) ?? 0) + i.quantity);
-    });
-    return map;
-  }, [cartItems]);
-
   const handleViewProduct = useCallback((productId: string) => {
     const previewProduct =
       displayProducts.find((p) => p.id === productId) ??
@@ -260,20 +243,6 @@ const Store = () => {
       state: previewProduct ? { previewProduct } : undefined,
     });
   }, [isTenantMode, storeSlug, navigate, displayProducts, allProducts]);
-
-  const handleUpdateQuantity = useCallback((productId: string, qty: number) => {
-    const lines = cartItems.filter((i) => i.product.id === productId);
-    const simpleLine = lines.find((i) => !i.selectedSize && !i.selectedColor);
-    if (!simpleLine) {
-      handleViewProduct(productId);
-      toast({
-        title: "افتح صفحة المنتج",
-        description: "لتعديل الكمية أو الخيارات (مقاس/لون)",
-      });
-      return;
-    }
-    updateQuantity(productId, qty, simpleLine.selectedSize, simpleLine.selectedColor);
-  }, [cartItems, updateQuantity, handleViewProduct, toast]);
 
   const handleAddToCart = useCallback((product: Product) => {
     const needsVariants = (product.sizes?.length ?? 0) > 0 || (product.colors?.length ?? 0) > 0;
@@ -296,15 +265,14 @@ const Store = () => {
     });
   }, [isTenantMode, tenant.storeInfo?.ownerId, setStoreOwner, addToCart, trackAddToCart, toast, handleViewProduct]);
 
-  // --- Share ---
-  const handleShare = async (product: Product) => {
+  const handleShare = useCallback(async (product: Product) => {
     const productUrl = isTenantMode ? `${window.location.origin}/store/${storeSlug}/product/${product.id}` : `${window.location.origin}/product-details/${product.id}`;
     const shareData = { title: product.name, text: `${product.name} - ${product.price.toLocaleString()} د.ع`, url: productUrl };
     try {
       if (navigator.share) await navigator.share(shareData);
       else { await navigator.clipboard.writeText(shareData.url); toast({ title: "تم النسخ", description: "تم نسخ رابط المنتج" }); }
     } catch {}
-  };
+  }, [isTenantMode, storeSlug, toast]);
 
   // --- Voice search ---
   const toggleVoiceSearch = () => {
@@ -333,12 +301,30 @@ const Store = () => {
   // Active filter count
   const activeFilterCount = (filterPriceRange[0] > 0 || (filterPriceRange[1] > 0 && filterPriceRange[1] < maxPrice) ? 1 : 0) + (filterSizes.length > 0 ? 1 : 0);
 
-  const themeColors = {
-    backgroundColor: storeSettings.menuBackgroundColor,
-    textColor: storeSettings.menuTextColor,
-    accentColor: storeSettings.menuAccentColor,
-    font: (storeSettings as any).storeFont || 'Tajawal',
-  };
+  const themeColors = useMemo(
+    () => ({
+      backgroundColor: storeSettings.menuBackgroundColor,
+      textColor: storeSettings.menuTextColor,
+      accentColor: storeSettings.menuAccentColor,
+      font: (storeSettings as any).storeFont || 'Tajawal',
+    }),
+    [
+      storeSettings.menuBackgroundColor,
+      storeSettings.menuTextColor,
+      storeSettings.menuAccentColor,
+      (storeSettings as any).storeFont,
+    ]
+  );
+
+  const handleFilterApply = useCallback((range: [number, number], sizes: string[]) => {
+    setFilterPriceRange(range);
+    setFilterSizes(sizes);
+  }, []);
+
+  const handleFilterReset = useCallback(() => {
+    setFilterPriceRange([0, maxPrice]);
+    setFilterSizes([]);
+  }, [maxPrice]);
 
   return (
     <>
@@ -367,16 +353,7 @@ const Store = () => {
         <div className="px-4 py-3 max-w-3xl mx-auto">
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center gap-1">
-              <CartDrawer storeSlug={isTenantMode ? storeSlug : undefined}>
-                <button className="relative p-2 rounded-full hover:bg-muted transition-colors">
-                  <ShoppingCart className="w-5 h-5 text-foreground" />
-                  {cartCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold animate-scale-in">
-                      {cartCount}
-                    </span>
-                  )}
-                </button>
-              </CartDrawer>
+              <StoreCartHeaderButton storeSlug={isTenantMode ? storeSlug : undefined} />
               <FavoritesDrawer
                 favorites={favoriteProducts}
                 count={favCount}
@@ -442,7 +419,15 @@ const Store = () => {
                   {bannerImages.map((_, i) => (
                     <button
                       key={i}
-                      onClick={() => { setIsTransitioning(true); setTimeout(() => { setCurrentImageIndex(i); setIsTransitioning(false); }, 200); }}
+                      onClick={() => {
+                        if (bannerDotTimerRef.current) clearTimeout(bannerDotTimerRef.current);
+                        setIsTransitioning(true);
+                        bannerDotTimerRef.current = setTimeout(() => {
+                          bannerDotTimerRef.current = null;
+                          setCurrentImageIndex(i);
+                          setIsTransitioning(false);
+                        }, 200);
+                      }}
                       className={`transition-all rounded-full ${currentImageIndex === i ? "bg-primary w-6 h-2" : "bg-background/70 w-2 h-2 hover:bg-background"}`}
                     />
                   ))}
@@ -493,8 +478,8 @@ const Store = () => {
               currentRange={filterPriceRange}
               availableSizes={availableSizes}
               selectedSizes={filterSizes}
-              onApply={(range, sizes) => { setFilterPriceRange(range); setFilterSizes(sizes); }}
-              onReset={() => { setFilterPriceRange([0, maxPrice]); setFilterSizes([]); }}
+              onApply={handleFilterApply}
+              onReset={handleFilterReset}
               activeFilterCount={activeFilterCount}
             />
           </div>
@@ -523,50 +508,21 @@ const Store = () => {
           </p>
         )}
 
-        {isLoading ? (
-          <div className={viewMode === "grid" ? "grid grid-cols-2 sm:grid-cols-3 gap-3" : "space-y-3"}>
-            {Array.from({ length: 6 }).map((_, i) => (
-              <ProductSkeleton key={i} viewMode={viewMode} />
-            ))}
-          </div>
-        ) : visibleProducts.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="w-20 h-20 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center text-3xl">
-              🛍️
-            </div>
-            <h3 className="text-lg font-bold mb-1 text-foreground">
-              {searchQuery ? "لا توجد نتائج" : "لا توجد منتجات"}
-            </h3>
-            <p className="text-muted-foreground text-sm">
-              {searchQuery ? "جرب كلمات بحث مختلفة" : "تصفح الأقسام الأخرى"}
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className={viewMode === "grid" ? "grid grid-cols-2 sm:grid-cols-3 gap-3" : "space-y-3"}>
-              {visibleProducts.map((product, i) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  viewMode={viewMode}
-                  isFavorite={isFavorite(product.id)}
-                  cartQuantity={cartQuantityById.get(product.id) ?? 0}
-                  onToggleFavorite={toggleFavorite}
-                  onAddToCart={handleAddToCart}
-                  onUpdateQuantity={handleUpdateQuantity}
-                  onView={handleViewProduct}
-                  onShare={handleShare}
-                  index={i}
-                />
-              ))}
-            </div>
-            {visibleCount < displayProducts.length && (
-              <div ref={sentinelRef} className="flex justify-center py-6">
-                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              </div>
-            )}
-          </>
-        )}
+        <StoreProductGrid
+          products={displayProducts}
+          viewMode={viewMode}
+          isLoading={isLoading}
+          searchQuery={searchQuery}
+          visibleCount={visibleCount}
+          totalCount={displayProducts.length}
+          isTenantMode={isTenantMode}
+          storeSlug={storeSlug}
+          isFavorite={isFavorite}
+          onToggleFavorite={toggleFavorite}
+          onAddToCart={handleAddToCart}
+          onShare={handleShare}
+          sentinelRef={sentinelRef}
+        />
       </div>
 
       <StorefrontFooter
@@ -580,29 +536,7 @@ const Store = () => {
 
       <WhatsAppButton phoneNumber={(storeSettings as any).whatsappNumber || tenant.storeInfo?.whatsappNumber || ""} />
 
-      {/* Fixed Cart Bar */}
-      {cartCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background/95 to-transparent safe-area-bottom">
-          <button onClick={() => navigate(getCheckoutPath(isTenantMode ? storeSlug : null))} className="w-full max-w-3xl mx-auto block">
-            <div className="bg-primary rounded-2xl transition-colors">
-              <div className="flex items-center justify-between px-5 py-3.5">
-                <div className="flex items-center gap-3">
-                  <div className="relative w-9 h-9 rounded-full bg-primary-foreground/15 flex items-center justify-center">
-                    <ShoppingCart className="w-4 h-4 text-primary-foreground" />
-                    <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold ring-2 ring-primary">
-                      {cartCount}
-                    </span>
-                  </div>
-                  <span className="text-sm font-bold text-primary-foreground">
-                    {cartTotal.toLocaleString()} د.ع
-                  </span>
-                </div>
-                <span className="text-sm font-bold text-primary-foreground">إتمام الطلب ←</span>
-              </div>
-            </div>
-          </button>
-        </div>
-      )}
+      <StoreFixedCheckoutBar isTenantMode={isTenantMode} storeSlug={storeSlug} />
     </div>
     </StoreThemeProvider>
     </>

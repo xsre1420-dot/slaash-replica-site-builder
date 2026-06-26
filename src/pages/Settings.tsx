@@ -58,7 +58,10 @@ const Settings = () => {
   useEffect(() => {
     if (!user?.id) return;
 
+    let cancelled = false;
+
     void fetchMerchantComplianceSettings(user.id).then((compliance) => {
+      if (cancelled) return;
       if (!compliance) {
         isDbLoaded.current = true;
         setSettings((prev) => {
@@ -87,6 +90,10 @@ const Settings = () => {
       });
       isDbLoaded.current = true;
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id]);
 
   useEffect(() => {

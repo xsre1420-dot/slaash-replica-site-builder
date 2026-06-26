@@ -2,7 +2,9 @@ import type { Product } from '@/types';
 
 export interface StorefrontBundleCache {
   store?: Record<string, unknown>;
+  hero?: Record<string, unknown> | null;
   categories?: Record<string, unknown>[];
+  featured?: Product[];
   products?: Product[];
   nextCursor?: string | null;
   hasMore?: boolean;

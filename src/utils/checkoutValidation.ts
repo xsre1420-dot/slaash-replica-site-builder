@@ -5,6 +5,7 @@ import { AppliedCoupon, validateCoupon } from '@/services/couponService';
 import { mapDbProduct } from '@/mappers/productMapper';
 import {
   fetchCheckoutProductsByIds,
+  fetchCheckoutPreflightBundle,
   fetchOwnerActiveProductsByIds,
   resolveStoreSlugByOwnerId,
 } from '@/services/storefrontProductService';
@@ -119,6 +120,40 @@ export async function fetchFreshProducts(
   }
 
   return map;
+}
+
+export interface CheckoutPreflightOptions {
+  governorate?: string;
+  couponCode?: string;
+  subtotal?: number;
+}
+
+/** Hot path: one RPC for products + delivery + coupon when storefront slug is known. */
+export async function fetchCheckoutPreflight(
+  slug: string,
+  productIds: string[],
+  options: CheckoutPreflightOptions = {}
+): Promise<{
+  products: Map<string, Product>;
+  deliveryFee: number | null;
+  coupon: AppliedCoupon | null;
+} | null> {
+  const bundle = await fetchCheckoutPreflightBundle(slug, productIds, options);
+  if (!bundle) return null;
+
+  let coupon: AppliedCoupon | null = null;
+  if (bundle.coupon) {
+    coupon = {
+      code: bundle.coupon.code,
+      discountAmount: bundle.coupon.discountAmount,
+    };
+  }
+
+  return {
+    products: bundle.products,
+    deliveryFee: bundle.deliveryFee,
+    coupon,
+  };
 }
 
 /** Mirrors server checkout stock rules (migration 20260616000001+). */

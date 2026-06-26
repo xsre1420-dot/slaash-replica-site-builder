@@ -61,6 +61,7 @@ import {
 import { getMonthlyOrderLabel } from '@/data/leadFormOptions';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useVisibilityAwareInterval } from '@/hooks/useVisibilityAwareInterval';
 
 const PAGE_SIZE = 20;
 
@@ -151,13 +152,10 @@ const AdminLeads = () => {
     setPage(0);
   }, [search, status, quickFilter]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      void loadStats();
-      void load();
-    }, 60_000);
-    return () => clearInterval(interval);
-  }, [load, loadStats]);
+  useVisibilityAwareInterval(() => {
+    void loadStats();
+    void load();
+  }, 60_000);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 

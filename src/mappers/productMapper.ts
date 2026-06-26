@@ -19,6 +19,7 @@ export const mapDbProduct = (
   row: Record<string, unknown>,
   options: { applyDiscount?: boolean } = {}
 ): Product => {
+  const imageSource = row.thumbnail ?? row.image_url ?? row.image;
   const product: Product = {
     id: String(row.id),
     name: String(row.name),
@@ -26,7 +27,7 @@ export const mapDbProduct = (
     category: String(row.category || ''),
     price: Number(row.price),
     cost: row.cost != null ? Number(row.cost) : undefined,
-    image: String(row.image_url || row.image || ''),
+    image: String(imageSource || ''),
     additionalImages: (row.additional_images as string[]) || undefined,
     stockQuantity: row.stock_quantity != null ? Number(row.stock_quantity) : undefined,
     sizes: Array.isArray(row.sizes) ? (row.sizes as string[]) : undefined,
@@ -41,7 +42,7 @@ export const mapDbProduct = (
     shortDescription: (row.short_description as string) || undefined,
     seoTitle: (row.seo_title as string) || undefined,
     seoDescription: (row.seo_description as string) || undefined,
-    productSlug: (row.product_slug as string) || undefined,
+    productSlug: (row.slug as string) || (row.product_slug as string) || undefined,
     tags: parseJsonField<string[]>(row.tags),
     lowStockThreshold: row.low_stock_threshold != null
       ? Number(row.low_stock_threshold)
@@ -50,6 +51,8 @@ export const mapDbProduct = (
         : undefined,
     isActive: row.is_active != null ? Boolean(row.is_active) : true,
     archivedAt: (row.archived_at as string) || undefined,
+    rating: row.rating != null ? Number(row.rating) : undefined,
+    hasOptions: row.has_options === true ? true : undefined,
   };
 
   const normalized = normalizeProductStock(product);
@@ -68,9 +71,33 @@ export const safeMapDbProduct = (
   }
 };
 
-/** Storefront listing — always applies active discounts. */
-export const mapStorefrontProduct = (row: Record<string, unknown>): Product =>
-  mapDbProduct(row, { applyDiscount: true });
+/** Storefront listing — applies active discounts; honors pre-computed sale_price from slim RPC. */
+export const mapStorefrontProduct = (row: Record<string, unknown>): Product => {
+  if (row.stock_status) {
+    const status = String(row.stock_status);
+    if (status === 'unlimited') {
+      row = { ...row, stock_quantity: null };
+    } else if (row.qty != null) {
+      row = { ...row, stock_quantity: row.qty };
+    } else if (status === 'out') {
+      row = { ...row, stock_quantity: 0 };
+    }
+  }
+
+  if (row.sale_price != null && row.price != null) {
+    const sale = Number(row.sale_price);
+    const list = Number(row.price);
+    if (Number.isFinite(sale) && Number.isFinite(list) && sale !== list) {
+      const discounted = mapDbProduct(
+        { ...row, original_price: list, price: sale },
+        { applyDiscount: false }
+      );
+      return applyActiveDiscount(discounted);
+    }
+  }
+
+  return mapDbProduct(row, { applyDiscount: true });
+};
 
 export const safeMapStorefrontProduct = (row: unknown): Product | null => {
   if (row == null) return null;

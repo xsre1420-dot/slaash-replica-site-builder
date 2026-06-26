@@ -33,31 +33,48 @@ const slug = args.slug && args.slug !== 'true' ? args.slug : null;
 const tests = [];
 const read = (rel) => (existsSync(join(process.cwd(), rel)) ? readFileSync(join(process.cwd(), rel), 'utf8') : '');
 
-const migration = read('supabase/migrations/20260625000057_storefront_payload_optimization.sql');
+const migrationV76 = read('supabase/migrations/20260626000005_payload_optimization_phase_1_6.sql');
+const migrationV57 = read('supabase/migrations/20260625000057_storefront_payload_optimization.sql');
 
 tests.push({
-  name: 'v57 migration: storefront_product_grid_json',
-  pass: migration.includes('storefront_product_grid_json'),
+  name: 'v76 migration: storefront_product_list_json',
+  pass: migrationV76.includes('storefront_product_list_json'),
 });
 tests.push({
-  name: 'v57 migration: slim store shell (no policies in bundle)',
-  pass: migration.includes('storefront_store_shell_json') && migration.includes('get_store_policies'),
+  name: 'v76 migration: bundle hero + featured',
+  pass: migrationV76.includes('storefront_store_hero_json') && migrationV76.includes("'featured'"),
+});
+tests.push({
+  name: 'v76 migration: slim bootstrap (product_count not products array)',
+  pass: migrationV76.includes("'product_count'") && !migrationV76.includes("'products', COALESCE(("),
+});
+tests.push({
+  name: 'v76 migration: dashboard split RPCs',
+  pass: migrationV76.includes('get_dashboard_kpis_light') && migrationV76.includes('get_dashboard_workflow_counts'),
+});
+tests.push({
+  name: 'v76 migration: platform_payload_benchmark',
+  pass: migrationV76.includes('platform_payload_benchmark'),
 });
 tests.push({
   name: 'v57 migration: bundle uses grid JSON not full JSON',
-  pass: migration.includes('storefront_product_grid_json(p) AS pj'),
+  pass: migrationV57.includes('storefront_product_grid_json(p) AS pj'),
 });
 tests.push({
-  name: 'client lazy policy fetch',
-  pass:
-    read('src/services/storefrontProductService.ts').includes('fetchStorePolicies') &&
-    read('src/lib/tenantStoreRegistry.ts').includes('schedulePolicyHydration'),
+  name: 'client slim product mapper',
+  pass: read('src/mappers/productMapper.ts').includes('stock_status') && read('src/mappers/productMapper.ts').includes('thumbnail'),
 });
 tests.push({
-  name: 'payload audit reports present',
-  pass:
-    existsSync(join(process.cwd(), 'supabase/STOREFRONT_PAYLOAD_AUDIT_REPORT.md')) &&
-    existsSync(join(process.cwd(), 'supabase/STOREFRONT_RPC_COST_REPORT.md')),
+  name: 'client bootstrap no product array cache',
+  pass: read('src/services/storeService.ts').includes('product_count') && !read('src/services/storeService.ts').includes('data.products'),
+});
+tests.push({
+  name: 'coupon list explicit select',
+  pass: read('src/services/couponService.ts').includes('COUPON_LIST_SELECT'),
+});
+tests.push({
+  name: 'payload benchmark script present',
+  pass: existsSync(join(process.cwd(), 'scripts/payload-benchmark.mjs')),
 });
 
 const kb = (bytes) => (bytes / 1024).toFixed(2);
@@ -79,10 +96,22 @@ async function rpc(fn, body) {
 
 let liveMetrics = null;
 
-if (baseUrl && anonKey && slug) {
+if (baseUrl && anonKey) {
   try {
+    let activeSlug = slug;
+    if (!activeSlug) {
+      const slugsRes = await rpc('list_public_store_slugs', { p_limit: 10 });
+      if (slugsRes.ok) {
+        const slugs = JSON.parse(slugsRes.text);
+        activeSlug = slugs?.find((s) => s?.store_slug)?.store_slug ?? null;
+      }
+    }
+
+    if (!activeSlug) {
+      console.log('(Skipping live RPC — no slug; pass --slug=YOUR_SLUG)\n');
+    } else {
     const bundle = await rpc('get_storefront_page_bundle', {
-      p_slug: slug,
+      p_slug: activeSlug,
       p_limit: 24,
       p_cursor: '',
       p_category: '',
@@ -98,7 +127,7 @@ if (baseUrl && anonKey && slug) {
       const avgProduct = products.length ? productsBytes / products.length : 0;
 
       liveMetrics = {
-        slug,
+        slug: activeSlug,
         totalKb: kb(totalBytes),
         storeKb: kb(storeBytes),
         categoriesKb: kb(categoriesBytes),
@@ -106,35 +135,46 @@ if (baseUrl && anonKey && slug) {
         productCount: products.length,
         avgProductBytes: Math.round(avgProduct),
         elapsedMs: bundle.elapsed.toFixed(0),
-        hasAdditionalImages: products.some((p) => p?.additional_images?.length > 0),
-        hasFullDescription: products.some((p) => (p?.description || '').length > 120),
-        gridOptimized: !products.some((p) => p?.additional_images?.length > 0),
+        hasDescription: products.some((p) => (p?.description || '').length > 0),
+        hasVariants: products.some((p) => p?.variants?.length > 0 || p?.sizes?.length > 0),
+        hasSlimFields: products.some((p) => p?.thumbnail != null || p?.stock_status != null),
+        hasHero: data.hero != null,
+        hasFeatured: Array.isArray(data.featured) && data.featured.length > 0,
       };
 
       tests.push({
-        name: `live bundle total < 35 KB (24 products)`,
-        pass: totalBytes < 35 * 1024,
+        name: 'live bundle total < 30 KB (24 products)',
+        pass: totalBytes < 30 * 1024,
       });
       tests.push({
-        name: 'live bundle: no additional_images in grid',
-        pass: !liveMetrics.hasAdditionalImages,
+        name: 'live bundle: no description in grid',
+        pass: !liveMetrics.hasDescription,
       });
       tests.push({
-        name: 'live bundle: avg product < 900 bytes',
-        pass: avgProduct < 900,
+        name: 'live bundle: no variants/sizes in grid',
+        pass: !liveMetrics.hasVariants,
+      });
+      tests.push({
+        name: 'live bundle: avg product < 550 bytes',
+        pass: avgProduct < 550,
+      });
+      tests.push({
+        name: 'live bundle: slim list fields present',
+        pass: liveMetrics.hasSlimFields,
       });
     } else {
       tests.push({ name: 'live bundle RPC reachable', pass: false });
+    }
     }
   } catch {
     tests.push({ name: 'live bundle RPC reachable', pass: false });
   }
 } else {
-  console.log('(Skipping live RPC size probes — set .env and --slug=YOUR_SLUG)\n');
+  console.log('(Skipping live RPC size probes — set .env)\n');
 }
 
 const passed = tests.filter((t) => t.pass).length;
-console.log('\nStorefront payload audit validation\n');
+console.log('\nPayload optimization validation (Phase 1.6)\n');
 for (const t of tests) {
   console.log(`${t.pass ? '✓' : '✗'} ${t.name}`);
 }
@@ -147,7 +187,8 @@ if (liveMetrics) {
   console.log(`Products (${liveMetrics.productCount}):     ${liveMetrics.productsKb} KB`);
   console.log(`Avg/product:    ${liveMetrics.avgProductBytes} B`);
   console.log(`RPC time:       ${liveMetrics.elapsedMs} ms`);
-  console.log(`Grid optimized: ${liveMetrics.gridOptimized ? 'yes' : 'no (deploy v57)'}`);
+  console.log(`Slim fields:    ${liveMetrics.hasSlimFields ? 'yes' : 'no'}`);
+  console.log(`Hero/featured:  ${liveMetrics.hasHero ? 'hero' : '-'} / ${liveMetrics.hasFeatured ? 'featured' : '-'}`);
 }
 console.log(`\n${passed}/${tests.length} passed\n`);
 process.exit(passed === tests.length ? 0 : 1);

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -12,7 +13,7 @@ interface StatCardProps {
   active?: boolean;
 }
 
-const StatCard = ({
+const StatCard = memo(function StatCard({
   label,
   value,
   icon: Icon,
@@ -21,7 +22,7 @@ const StatCard = ({
   valueClassName,
   onClick,
   active,
-}: StatCardProps) => {
+}: StatCardProps) {
   const Comp = onClick ? 'button' : 'div';
   const valueStr = String(value);
 
@@ -65,6 +66,6 @@ const StatCard = ({
       </div>
     </Comp>
   );
-};
+});
 
 export default StatCard;

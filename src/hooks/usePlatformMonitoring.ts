@@ -3,6 +3,8 @@ import {
   fetchPlatformMonitoringSnapshot,
   type PlatformMonitoringSnapshot,
 } from '@/services/platformMonitoringService';
+import { useVisibilityAwareInterval } from '@/hooks/useVisibilityAwareInterval';
+import { useIsMounted } from '@/hooks/useIsMounted';
 
 const REFRESH_MS = 30_000;
 
@@ -10,6 +12,7 @@ export const usePlatformMonitoring = (enabled = true) => {
   const [snapshot, setSnapshot] = useState<PlatformMonitoringSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const mountedRef = useIsMounted();
 
   const refresh = useCallback(async (forceDb = true) => {
     if (!enabled) return null;
@@ -17,16 +20,16 @@ export const usePlatformMonitoring = (enabled = true) => {
     setError(null);
     try {
       const data = await fetchPlatformMonitoringSnapshot(forceDb);
-      setSnapshot(data);
+      if (mountedRef.current) setSnapshot(data);
       return data;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'فشل تحميل حالة المنصة';
-      setError(message);
+      if (mountedRef.current) setError(message);
       return null;
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
-  }, [enabled]);
+  }, [enabled, mountedRef]);
 
   useEffect(() => {
     if (!enabled) {
@@ -34,9 +37,11 @@ export const usePlatformMonitoring = (enabled = true) => {
       return;
     }
     void refresh(false);
-    const id = setInterval(() => void refresh(false), REFRESH_MS);
-    return () => clearInterval(id);
   }, [enabled, refresh]);
+
+  useVisibilityAwareInterval(() => {
+    void refresh(false);
+  }, REFRESH_MS, enabled);
 
   return { snapshot, loading, error, refresh };
 };

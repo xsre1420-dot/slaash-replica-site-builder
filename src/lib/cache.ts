@@ -68,6 +68,20 @@ class CacheStore {
     this.store.clear();
   }
 
+  /** Remove entries past TTL + stale window to prevent unbounded growth on long sessions. */
+  pruneExpired(): number {
+    const now = Date.now();
+    let removed = 0;
+    for (const [key, entry] of this.store) {
+      const age = now - entry.createdAt;
+      if (age >= entry.ttl + entry.staleWhileRevalidate) {
+        this.store.delete(key);
+        removed += 1;
+      }
+    }
+    return removed;
+  }
+
   has(key: string): boolean {
     const entry = this.store.get(key);
     if (!entry) return false;
@@ -98,6 +112,10 @@ export function clearInflight(key: string): void {
   inflight.delete(key);
 }
 
+export function clearInflightAll(): void {
+  inflight.clear();
+}
+
 export const CacheKeys = {
   products: (ownerId: string) => `products:${ownerId}`,
   productsByStore: (storeId: string) => `products:store:${storeId}`,
@@ -113,6 +131,8 @@ export const CacheKeys = {
   ordersRecent: (ownerId: string) => `orders:${ownerId}:recent`,
   ordersStatsSummary: (ownerId: string) => `orders:stats:${ownerId}`,
   dashboardBatch: (ownerId: string) => `dashboard-batch:${ownerId}`,
+  dashboardKpisLight: (ownerId: string) => `dashboard-kpis:${ownerId}`,
+  dashboardWorkflowCounts: (ownerId: string) => `dashboard-workflow:${ownerId}`,
   statistics: (ownerId: string, range: string) => `stats:${ownerId}:${range}`,
   tenantMeta: (slug: string) => `tenant-meta:${slug}`,
   tenantProducts: (slug: string, pageKey: string) => `tenant-products:${slug}:${pageKey}`,
@@ -137,11 +157,19 @@ export const CacheTTL = {
   STOREFRONT_STALE: 60_000,
 } as const;
 
-/** Invalidate order + stats caches only (preserve product catalog). */
-export function flushOrderCache(ownerId: string): void {
+/** Invalidate order list caches only — preserves dashboard batch / analytics KPIs. */
+export function flushOrderListCache(ownerId: string): void {
   cache.flushByPrefix(`orders:${ownerId}:`);
   cache.del(CacheKeys.ordersStatsSummary(ownerId));
+  cache.del(CacheKeys.ordersRecent(ownerId));
+}
+
+/** Invalidate order + stats caches only (preserve product catalog). */
+export function flushOrderCache(ownerId: string): void {
+  flushOrderListCache(ownerId);
   cache.del(CacheKeys.dashboardBatch(ownerId));
+  cache.del(CacheKeys.dashboardKpisLight(ownerId));
+  cache.del(CacheKeys.dashboardWorkflowCounts(ownerId));
   cache.flushByPrefix(`stats:${ownerId}:`);
 }
 
@@ -161,4 +189,16 @@ export function flushSlugResolutionCache(ownerId: string, slug?: string | null):
   if (slug?.trim()) {
     cache.del(CacheKeys.slugOwner(slug.trim().toLowerCase()));
   }
+}
+
+let cachePruneHookInstalled = false;
+
+/** Prune expired in-memory cache entries when the tab becomes visible (long-session hygiene). */
+export function installCachePruneLifecycle(): void {
+  if (cachePruneHookInstalled || typeof document === 'undefined') return;
+  cachePruneHookInstalled = true;
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) cache.pruneExpired();
+  });
 }

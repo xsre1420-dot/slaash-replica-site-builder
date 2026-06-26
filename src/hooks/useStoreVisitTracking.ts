@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { scheduleIdle } from '@/utils/scheduleIdle';
 import { trackStoreVisitBySlug } from '@/services/analyticsTrackingService';
+import { raceWithTimeout } from '@/lib/memory/asyncGuards';
 
 const dedupeKey = (slug: string, path: string) => `visit-tracked:${slug}:${path}`;
 const slugDedupeKey = (slug: string) => `visit-tracked-slug:${slug}`;
@@ -39,8 +40,11 @@ export function useStoreVisitTracking(storeSlug?: string) {
 
     if (inflightRef.current === key) return;
 
-    const cancel = scheduleIdle(() => {
-      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+    let cancelled = false;
+    let timeoutClear: (() => void) | null = null;
+
+    const cancelIdle = scheduleIdle(() => {
+      if (cancelled || (typeof document !== 'undefined' && document.visibilityState === 'hidden')) return;
       inflightRef.current = key;
 
       const visitPromise = trackStoreVisitBySlug(
@@ -49,12 +53,12 @@ export function useStoreVisitTracking(storeSlug?: string) {
         typeof navigator !== 'undefined' ? navigator.userAgent : null
       );
 
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        window.setTimeout(() => reject(new Error('visit_timeout')), VISIT_RPC_TIMEOUT_MS);
-      });
+      const timed = raceWithTimeout(visitPromise, VISIT_RPC_TIMEOUT_MS);
+      timeoutClear = timed.clear;
 
-      void Promise.race([visitPromise, timeoutPromise])
+      void timed.race
         .then((data) => {
+          if (cancelled) return;
           if (data?.success) {
             try {
               const now = String(Date.now());
@@ -69,10 +73,16 @@ export function useStoreVisitTracking(storeSlug?: string) {
           /* visit tracking is best-effort — never block storefront */
         })
         .finally(() => {
-          if (inflightRef.current === key) inflightRef.current = null;
+          timeoutClear?.();
+          if (!cancelled && inflightRef.current === key) inflightRef.current = null;
         });
     });
 
-    return cancel;
+    return () => {
+      cancelled = true;
+      timeoutClear?.();
+      cancelIdle();
+      if (inflightRef.current === key) inflightRef.current = null;
+    };
   }, [storeSlug, location.pathname, location.search]);
 }

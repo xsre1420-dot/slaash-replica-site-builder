@@ -97,6 +97,15 @@ if (serviceHeaders) {
       audit.json?.order_side_effects_outbox === true &&
       audit.json?.order_creation_log_trigger === false,
   });
+  tests.push({
+    name: 'phase 1.2 RPC-gated merchant write paths deployed',
+    pass:
+      audit.json?.update_merchant_order_status_rpc === true &&
+      audit.json?.patch_merchant_product_rpc === true &&
+      audit.json?.patch_merchant_store_settings_rpc === true &&
+      audit.json?.upsert_merchant_marketing_settings_rpc === true &&
+      (audit.json?.noop_updated_at_triggers ?? 0) >= 4,
+  });
 } else {
   tests.push({
     name: 'platform_write_path_audit (skipped — no service role key)',

@@ -97,8 +97,16 @@ export function useMerchantProductsPage(
 
   useEffect(() => {
     if (!isReady || !user?.id || !enabled) return;
+    const warm = getProductsSync();
+    const hasWarmCache =
+      warm.length > 0 && !search?.trim() && (!category || category === 'all');
+    if (hasWarmCache) {
+      setProducts(warm);
+      setLoading(false);
+      return;
+    }
     void fetchPage(0, false);
-  }, [isReady, hydrationVersion, user?.id, fetchPage, enabled]);
+  }, [isReady, hydrationVersion, user?.id, fetchPage, enabled, search, category]);
 
   const syncFromCache = useCallback(() => {
     const synced = getProductsSync();

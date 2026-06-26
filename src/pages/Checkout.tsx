@@ -1,16 +1,15 @@
 import { Link } from "react-router-dom";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import { ShoppingBag, Loader2 } from "lucide-react";
-import { useCart } from "@/context/CartContext";
+import { useCartActions } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
 import ScrollReveal from "@/components/product-details/ScrollReveal";
 import CheckoutHeader from "@/components/checkout/CheckoutHeader";
 import ProgressSteps from "@/components/checkout/ProgressSteps";
-import CartItemCard from "@/components/checkout/CartItemCard";
+import CheckoutCartSection from "@/components/checkout/CheckoutCartSection";
 import DeliveryForm from "@/components/checkout/DeliveryForm";
 import GuaranteesBar from "@/components/checkout/GuaranteesBar";
 import OrderSuccessModal from "@/components/checkout/OrderSuccessModal";
-import CouponInput from "@/components/checkout/CouponInput";
 import PaymentMethodSelector from "@/components/checkout/PaymentMethodSelector";
 import { useCheckoutFlow } from "@/hooks/useCheckoutFlow";
 import MarketingScripts from "@/components/MarketingScripts";
@@ -20,7 +19,7 @@ import StorefrontTrustBar from "@/components/storefront/StorefrontTrustBar";
 import { useStoreDisplay } from "@/hooks/useStoreDisplay";
 
 const Checkout = () => {
-  const { removeFromCart, updateQuantity, getMaxQuantity } = useCart();
+  const { removeFromCart, updateQuantity, getMaxQuantity } = useCartActions();
   const formRef = useRef<HTMLDivElement>(null);
   const prevStepRef = useRef(0);
 
@@ -56,12 +55,20 @@ const Checkout = () => {
   } = useCheckoutFlow();
 
   const display = useStoreDisplay(storeSlug);
-  const themeColors = {
-    backgroundColor: display.storeSettings.menuBackgroundColor,
-    textColor: display.storeSettings.menuTextColor,
-    accentColor: display.storeSettings.menuAccentColor,
-    font: display.storeSettings.storeFont,
-  };
+  const themeColors = useMemo(
+    () => ({
+      backgroundColor: display.storeSettings.menuBackgroundColor,
+      textColor: display.storeSettings.menuTextColor,
+      accentColor: display.storeSettings.menuAccentColor,
+      font: display.storeSettings.storeFont,
+    }),
+    [
+      display.storeSettings.menuBackgroundColor,
+      display.storeSettings.menuTextColor,
+      display.storeSettings.menuAccentColor,
+      display.storeSettings.storeFont,
+    ]
+  );
 
   useStoreVisitTracking(isTenantMode ? storeSlug : undefined);
 
@@ -126,55 +133,22 @@ const Checkout = () => {
             aria-busy={isCheckoutLocked}
           >
 
-            <ScrollReveal delay={100}>
-              <section className="bg-card rounded-xl border border-border/50 p-3.5 sm:p-4">
-                <h2 className="text-base font-semibold mb-2.5 text-right text-foreground">
-                  طلبك ({cartCount})
-                </h2>
-                <div className="space-y-2">
-                  {cartItems.map((item, index) => (
-                    <CartItemCard
-                      key={`${item.product.id}-${item.selectedSize || ""}-${item.selectedColor || ""}-${index}`}
-                      item={item}
-                      index={index}
-                      maxQuantity={getMaxQuantity(item.product, item.selectedSize, item.selectedColor)}
-                      onRemove={removeFromCart}
-                      onUpdateQuantity={updateQuantity}
-                    />
-                  ))}
-                </div>
-                <div className="flex justify-between items-center mt-3 pt-2.5 border-t border-border/50">
-                  <span className="font-semibold text-base text-foreground">{cartTotal.toLocaleString()} د.ع</span>
-                  <span className="text-sm font-medium text-muted-foreground">المجموع</span>
-                </div>
-
-                {ownerId && (
-                  <div className="mt-3 pt-2.5 border-t border-border/50">
-                    <p className="text-xs font-medium text-muted-foreground mb-2 text-right">كود الخصم</p>
-                    <CouponInput
-                      ownerId={ownerId}
-                      storeSlug={isTenantMode ? storeSlug : undefined}
-                      subtotal={cartTotal}
-                      appliedCoupon={appliedCoupon}
-                      onApply={setAppliedCoupon}
-                    />
-                  </div>
-                )}
-
-                {discountAmount > 0 && (
-                  <div className="flex justify-between mt-2 text-xs text-primary">
-                    <span>-{discountAmount.toLocaleString()} د.ع</span>
-                    <span>الخصم ({appliedCoupon?.code})</span>
-                  </div>
-                )}
-
-                {deliveryPrices.length > 0 && !selectedGovernorate && (
-                  <p className="text-[11px] text-muted-foreground mt-2.5 text-right leading-relaxed">
-                    اختر المحافظة لعرض رسوم التوصيل والمجموع النهائي
-                  </p>
-                )}
-              </section>
-            </ScrollReveal>
+            <CheckoutCartSection
+              cartItems={cartItems}
+              cartCount={cartCount}
+              cartTotal={cartTotal}
+              ownerId={ownerId}
+              storeSlug={storeSlug}
+              isTenantMode={isTenantMode}
+              appliedCoupon={appliedCoupon}
+              discountAmount={discountAmount}
+              deliveryPrices={deliveryPrices}
+              selectedGovernorate={selectedGovernorate}
+              getMaxQuantity={getMaxQuantity}
+              onRemove={removeFromCart}
+              onUpdateQuantity={updateQuantity}
+              onApplyCoupon={setAppliedCoupon}
+            />
 
             <ScrollReveal delay={150}>
               <section className="bg-card rounded-xl border border-border/50 p-3.5 sm:p-4">

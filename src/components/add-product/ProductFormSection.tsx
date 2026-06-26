@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { memo, ReactNode } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -13,7 +13,7 @@ interface ProductFormSectionProps {
   children: ReactNode;
 }
 
-const ProductFormSection = ({
+const ProductFormSection = memo(function ProductFormSection({
   id,
   icon,
   title,
@@ -21,7 +21,7 @@ const ProductFormSection = ({
   optional = false,
   defaultOpen = true,
   children,
-}: ProductFormSectionProps) => {
+}: ProductFormSectionProps) {
   const body = (
     <div className="space-y-4">{children}</div>
   );
@@ -63,6 +63,6 @@ const ProductFormSection = ({
       </section>
     </Collapsible>
   );
-};
+});
 
 export default ProductFormSection;

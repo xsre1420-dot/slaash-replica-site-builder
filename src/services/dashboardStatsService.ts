@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { callSupabaseRpc } from '@/integrations/supabase/rpc';
 import { cache, CacheKeys, CacheTTL, dedup } from '@/lib/cache';
 import {
   parseRpcPeriodMetrics,
@@ -43,6 +43,50 @@ const parsePeriod = (value: unknown): PeriodMetrics | null => {
 
 export const invalidateDashboardBatchCache = (ownerId: string): void => {
   cache.del(CacheKeys.dashboardBatch(ownerId));
+  cache.del(CacheKeys.dashboardKpisLight(ownerId));
+  cache.del(CacheKeys.dashboardWorkflowCounts(ownerId));
+};
+
+/** Lightweight dashboard KPIs — today/week + catalog counts only. */
+export const fetchDashboardKpisLight = async (
+  ownerId: string
+): Promise<Record<string, unknown> | null> => {
+  const cacheKey = CacheKeys.dashboardKpisLight(ownerId);
+  const cached = cache.get<Record<string, unknown>>(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const { data, error } = await callSupabaseRpc<Record<string, unknown>>(
+      'get_dashboard_kpis_light',
+      { p_owner_id: ownerId }
+    );
+    if (error || !data) return null;
+    cache.set(cacheKey, data, CacheTTL.ANALYTICS, CacheTTL.ANALYTICS_STALE);
+    return data;
+  } catch {
+    return null;
+  }
+};
+
+/** Workflow tab counts only — for orders UI without full statistics batch. */
+export const fetchDashboardWorkflowCounts = async (
+  ownerId: string
+): Promise<WorkflowTabCounts | null> => {
+  const cacheKey = CacheKeys.dashboardWorkflowCounts(ownerId);
+  const cached = cache.get<WorkflowTabCounts>(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const { data, error } = await callSupabaseRpc<WorkflowTabCounts>(
+      'get_dashboard_workflow_counts',
+      { p_owner_id: ownerId }
+    );
+    if (error || !data) return null;
+    cache.set(cacheKey, data, CacheTTL.ANALYTICS, CacheTTL.ANALYTICS_STALE);
+    return data;
+  } catch {
+    return null;
+  }
 };
 
 export const fetchDashboardStatisticsBatch = async (
@@ -54,15 +98,16 @@ export const fetchDashboardStatisticsBatch = async (
 
   return dedup(cacheKey, async () => {
     try {
-      const { data, error } = await (supabase as any).rpc('get_dashboard_statistics_batch', {
-        p_owner_id: ownerId,
-      });
+      const { data, error } = await callSupabaseRpc<Record<string, unknown>>(
+        'get_dashboard_statistics_batch',
+        { p_owner_id: ownerId }
+      );
 
       if (error || !data) {
         return null;
       }
 
-      const payload = data as Record<string, unknown>;
+      const payload = data;
       const result: DashboardBatchPayload = {
         today: parsePeriod(payload.today),
         yesterday: parsePeriod(payload.yesterday),
@@ -89,13 +134,13 @@ export const fetchStoreStatisticsPeriod = async (
   end: string
 ): Promise<PeriodMetrics | null> => {
   try {
-    const { data, error } = await (supabase as any).rpc('get_store_statistics', {
+    const { data, error } = await callSupabaseRpc<Record<string, unknown>>('get_store_statistics', {
       p_owner_id: ownerId,
       p_start: start,
       p_end: end,
     });
     if (error || !data) return null;
-    return parseRpcPeriodMetrics(data as Record<string, unknown>);
+    return parseRpcPeriodMetrics(data);
   } catch {
     return null;
   }

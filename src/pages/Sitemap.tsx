@@ -42,12 +42,23 @@ ${urls}
 /** React page that serves sitemap as downloadable XML */
 const Sitemap = () => {
   useEffect(() => {
+    let cancelled = false;
     const base = window.location.origin;
-    generateSitemapXml(base).then((xml) => {
+
+    void generateSitemapXml(base).then((xml) => {
+      if (cancelled) return;
       const blob = new Blob([xml], { type: 'application/xml' });
       const url = URL.createObjectURL(blob);
-      window.location.replace(url);
+      try {
+        window.location.replace(url);
+      } finally {
+        window.setTimeout(() => URL.revokeObjectURL(url), 0);
+      }
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return null;

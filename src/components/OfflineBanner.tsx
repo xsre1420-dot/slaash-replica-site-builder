@@ -1,21 +1,34 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 const OfflineBanner = () => {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [syncing, setSyncing] = useState(false);
+  const syncingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    const clearSyncingTimer = () => {
+      if (syncingTimerRef.current) {
+        clearTimeout(syncingTimerRef.current);
+        syncingTimerRef.current = null;
+      }
+    };
+
     const handleOnline = () => {
       setIsOffline(false);
       setSyncing(true);
-      window.setTimeout(() => setSyncing(false), 2500);
+      clearSyncingTimer();
+      syncingTimerRef.current = setTimeout(() => {
+        syncingTimerRef.current = null;
+        setSyncing(false);
+      }, 2500);
     };
 
     const handleOffline = () => setIsOffline(true);
 
     const handleSynced = (event: Event) => {
+      clearSyncingTimer();
       const detail = (event as CustomEvent<{ flushed: number; remaining: number }>).detail;
       setSyncing(false);
       if (detail.flushed > 0) {
@@ -30,6 +43,7 @@ const OfflineBanner = () => {
     window.addEventListener('offline-queue-flushed', handleSynced);
 
     return () => {
+      clearSyncingTimer();
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('offline-queue-flushed', handleSynced);

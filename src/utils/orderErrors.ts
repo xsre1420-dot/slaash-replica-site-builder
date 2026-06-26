@@ -63,6 +63,10 @@ export const mapOrderError = (message: string): string => {
     return 'لا يمكن تغيير حالة الطلب بهذه الطريقة.';
   }
 
+  if (lower.includes('lock_contention') || lower.includes('lock_not_available')) {
+    return 'النظام مشغول حالياً — حاول مرة أخرى خلال ثوانٍ.';
+  }
+
   if (lower.includes('customer_info_required')) {
     return 'يرجى إدخال الاسم ورقم الهاتف والعنوان بشكل صحيح.';
   }

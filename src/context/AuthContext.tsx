@@ -33,6 +33,8 @@ import {
 import { redeemAccessCode } from '@/services/leadAdminService';
 import { ACCESS_CODE_ERROR_MESSAGES } from '@/types/accessCodes';
 import { teardownMerchantRealtimeHub } from '@/lib/merchantRealtimeHub';
+import { TimeoutRegistry } from '@/lib/memory/asyncGuards';
+import { cache, clearInflightAll } from '@/lib/cache';
 
 interface User {
   id: string;
@@ -83,6 +85,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const lastUserIdRef = useRef<string | null>(null);
+  const authTimersRef = useRef(new TimeoutRegistry());
+  const mountedRef = useRef(true);
 
   const setUserAndOwner = (u: User | null) => {
     const prevId = lastUserIdRef.current;
@@ -101,6 +105,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const loadProfile = async (userId: string, fallbackMeta?: Record<string, unknown>, email?: string) => {
     try {
       const profile = await fetchUserProfile(userId);
+
+      if (!mountedRef.current) return;
 
       if (profile) {
         setUserAndOwner({
@@ -131,9 +137,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   useEffect(() => {
+    mountedRef.current = true;
+
     const { data: { subscription } } = subscribeAuthStateChange((event, session) => {
       // Defer Supabase calls/state updates to avoid auth deadlocks (Supabase recommendation)
-      setTimeout(() => {
+      authTimersRef.current.schedule(() => {
+        if (!mountedRef.current) return;
         if (session?.user) {
           const meta = session.user.user_metadata ?? {};
           setUserAndOwner({
@@ -153,6 +162,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     getAuthSession()
       .then(({ session }) => {
+        if (!mountedRef.current) return;
         if (session?.user) {
           const meta = session.user.user_metadata ?? {};
           setUserAndOwner({
@@ -161,19 +171,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             store_name: meta.store_name as string | undefined,
             email: session.user.email,
           });
-          setTimeout(() => loadProfile(session.user.id, meta, session.user.email), 0);
+          authTimersRef.current.schedule(
+            () => {
+              if (mountedRef.current) void loadProfile(session.user.id, meta, session.user.email);
+            },
+            0
+          );
         } else {
           setUserAndOwner(null);
         }
       })
       .catch((error) => {
+        if (!mountedRef.current) return;
         console.error('Error initializing auth:', error);
       })
       .finally(() => {
-        setLoading(false);
+        if (mountedRef.current) setLoading(false);
       });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mountedRef.current = false;
+      authTimersRef.current.clearAll();
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string, rememberMe = true) => {
@@ -324,8 +344,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     const prevId = lastUserIdRef.current;
+    authTimersRef.current.clearAll();
     invalidateOwnerCache(prevId);
     teardownMerchantRealtimeHub();
+    clearInflightAll();
+    cache.pruneExpired();
     await authSignOut();
     setUserAndOwner(null);
   };

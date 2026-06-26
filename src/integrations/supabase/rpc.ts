@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { resolveRpcEndpoint } from '@/lib/disasterRecovery/readRouting';
+import { env } from '@/lib/env';
 import { withCircuitBreaker } from '@/lib/resilience/circuitBreaker';
 
 export type RpcResult<T> = {
@@ -36,10 +37,11 @@ export async function callSupabaseRpc<T>(
         method: 'POST',
         signal: controller.signal,
         headers: {
+          ...(endpoint.headers ?? {}),
+          ...(env.VITE_SUPABASE_POOLER_URL?.trim() ? { 'x-connection-mode': 'pooler' } : {}),
           apikey: endpoint.key,
           Authorization: `Bearer ${endpoint.key}`,
           'Content-Type': 'application/json',
-          ...(endpoint.headers ?? {}),
         },
         body: JSON.stringify(args),
       });

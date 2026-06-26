@@ -24,9 +24,9 @@ export const MERCHANT_PRODUCTS_GRID_SELECT =
 export const MERCHANT_PRODUCTS_INVENTORY_SELECT =
   'id, name, category, price, image_url, stock_quantity, sizes, colors, variants, is_active, archived_at, min_stock_level, created_at, updated_at';
 
-/** Storefront list / preview — card-shaped columns (no cost, no additional_images) */
+/** Storefront list / preview — card-shaped columns (no description, variants, or gallery extras) */
 export const STOREFRONT_ACTIVE_LIST_SELECT =
-  'id, name, description, category, price, original_price, image_url, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, is_active, archived_at, created_at';
+  'id, name, category, price, original_price, image_url, stock_quantity, discount_type, discount_value, discount_start_date, discount_end_date, is_active, archived_at, product_slug, created_at';
 
 /** Storefront product detail fallback — full gallery, no cost */
 export const STOREFRONT_DETAIL_SELECT =

@@ -37,7 +37,8 @@ export interface Product {
   archivedAt?: string;
   freeShipping?: boolean;
   additionalProducts?: string[];
-  // Rating and review features
+  /** Slim list RPC: product has size/color options without shipping full variant JSON */
+  hasOptions?: boolean;
   rating?: number;
   reviewCount?: number;
   originalPrice?: number;

@@ -33,21 +33,39 @@ Deno.serve(async (req) => {
 
     const results: Record<string, unknown> = { ran_at: new Date().toISOString() };
 
-    const { data: sideEffects } = await supabase.rpc('process_order_side_effects_batch', { p_limit: limit });
-    results.side_effects = sideEffects;
+    const { data, error } = await supabase.rpc('process_background_worker_bundle', {
+      p_limit: limit,
+      p_stale_webhook_minutes: 15,
+    });
+    results.bundle = data;
 
-    const { data: analytics } = await supabase.rpc('process_analytics_event_buffer', { p_limit: Math.min(limit * 4, 500) });
-    results.analytics = analytics;
+    if (error || data?.success === false) {
+      logStructured('warn', 'background-queue.bundle_fallback', { error: error?.message ?? data?.error });
+      const { data: sideEffects } = await supabase.rpc('process_order_side_effects_batch', { p_limit: limit });
+      results.side_effects = sideEffects;
 
-    const { data: recovered } = await supabase.rpc('recover_stale_webhook_processing', { p_stale_minutes: 15 });
-    results.webhook_recovery = recovered;
+      const { data: analytics } = await supabase.rpc('process_analytics_event_buffer', {
+        p_limit: Math.min(limit * 4, 500),
+      });
+      results.analytics = analytics;
 
-    const { data: lifecycle } = await supabase.rpc('platform_run_data_lifecycle');
-    results.lifecycle = lifecycle;
+      const { data: recovered } = await supabase.rpc('recover_stale_webhook_processing', {
+        p_stale_minutes: 15,
+      });
+      results.webhook_recovery = recovered;
+
+      const { data: lifecycle } = await supabase.rpc('platform_run_data_lifecycle');
+      results.lifecycle = lifecycle;
+    } else {
+      results.side_effects = data?.side_effects;
+      results.analytics = data?.analytics;
+      results.webhook_recovery = data?.webhook_recovery;
+      results.lifecycle = data?.lifecycle;
+    }
 
     logStructured('info', 'background-queue.completed', {
-      sideEffects: sideEffects,
-      analyticsProcessed: analytics,
+      bundle: results.bundle ?? results.side_effects,
+      analyticsProcessed: results.analytics,
     });
 
     return new Response(JSON.stringify({ success: true, ...results }), {

@@ -25,6 +25,7 @@ import { getStoredMarketingAttribution, clearMarketingAttribution } from "@/lib/
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import {
   fetchFreshProducts,
+  fetchCheckoutPreflight,
   validateAndRefreshCart,
   refreshCartFromServer,
   revalidateCoupon,
@@ -212,7 +213,17 @@ export const useCheckoutFlow = () => {
   const checkoutTrackedRef = useRef(false);
   const submitLockRef = useRef(false);
   const submitSucceededRef = useRef(false);
+  const finalizeNavigateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cartFingerprint = buildCartFingerprint(cartItems);
+
+  useEffect(() => {
+    return () => {
+      if (finalizeNavigateTimerRef.current) {
+        clearTimeout(finalizeNavigateTimerRef.current);
+        finalizeNavigateTimerRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!ownerId) return;
@@ -376,7 +387,9 @@ export const useCheckoutFlow = () => {
           : 'تم استلام طلبك بنجاح! سنتواصل معك قريباً.'
       );
 
-      setTimeout(() => {
+      if (finalizeNavigateTimerRef.current) clearTimeout(finalizeNavigateTimerRef.current);
+      finalizeNavigateTimerRef.current = setTimeout(() => {
+        finalizeNavigateTimerRef.current = null;
         setOrderCompleted(false);
         navigate(storeHomePath);
       }, 3000);
@@ -440,13 +453,31 @@ export const useCheckoutFlow = () => {
     try {
       const productIds = cartItems.map((i) => i.product.id);
       let freshMap: Map<string, import('@/types').Product>;
+      let prefetchedDeliveryFee: number | null = null;
       try {
-        freshMap = await fetchFreshProducts(
-          ownerId,
-          productIds,
-          checkoutStoreSlug ?? undefined,
-          { strict: true }
-        );
+        if (checkoutStoreSlug) {
+          const preflight = await fetchCheckoutPreflight(checkoutStoreSlug, productIds, {
+            governorate: selectedGovernorate || undefined,
+          });
+          if (preflight && preflight.products.size > 0) {
+            freshMap = preflight.products;
+            prefetchedDeliveryFee = preflight.deliveryFee;
+          } else {
+            freshMap = await fetchFreshProducts(
+              ownerId,
+              productIds,
+              checkoutStoreSlug ?? undefined,
+              { strict: true }
+            );
+          }
+        } else {
+          freshMap = await fetchFreshProducts(
+            ownerId,
+            productIds,
+            checkoutStoreSlug ?? undefined,
+            { strict: true }
+          );
+        }
       } catch {
         toast.error("تعذر التحقق من المنتجات. تحقق من الاتصال وحاول مرة أخرى.");
         return;
@@ -508,17 +539,21 @@ export const useCheckoutFlow = () => {
       const finalDiscount = couponToApply?.discountAmount || 0;
       let feeForOrder = 0;
       if (selectedGovernorate) {
-        try {
-          const fetched =
-            checkoutStoreSlug
-              ? await fetchDeliveryFeeBySlug(checkoutStoreSlug, selectedGovernorate)
-              : await fetchDeliveryFee(ownerId, selectedGovernorate);
-          feeForOrder =
-            fetched != null
-              ? fetched
-              : calculateDeliveryFeeFromPrices(deliveryPrices, selectedGovernorate);
-        } catch {
-          feeForOrder = calculateDeliveryFeeFromPrices(deliveryPrices, selectedGovernorate);
+        if (prefetchedDeliveryFee != null && checkoutStoreSlug) {
+          feeForOrder = prefetchedDeliveryFee;
+        } else {
+          try {
+            const fetched =
+              checkoutStoreSlug
+                ? await fetchDeliveryFeeBySlug(checkoutStoreSlug, selectedGovernorate)
+                : await fetchDeliveryFee(ownerId, selectedGovernorate);
+            feeForOrder =
+              fetched != null
+                ? fetched
+                : calculateDeliveryFeeFromPrices(deliveryPrices, selectedGovernorate);
+          } catch {
+            feeForOrder = calculateDeliveryFeeFromPrices(deliveryPrices, selectedGovernorate);
+          }
         }
       }
       const computedTotal = computeOrderTotal(validation.subtotal, feeForOrder, finalDiscount);

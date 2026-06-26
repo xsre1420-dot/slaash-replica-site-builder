@@ -10,6 +10,8 @@ import {
   resolveSupabaseConfig,
 } from '@/lib/disasterRecovery';
 import { logger, metrics } from '@/lib/observability';
+import { useVisibilityAwareInterval } from '@/hooks/useVisibilityAwareInterval';
+import { useIsMounted } from '@/hooks/useIsMounted';
 
 export const useRecoveryMonitor = () => {
   const [mode, setMode] = useState<RecoveryMode>(() =>
@@ -17,6 +19,7 @@ export const useRecoveryMonitor = () => {
   );
   const failuresRef = useRef(0);
   const checkingRef = useRef(false);
+  const mountedRef = useIsMounted();
 
   const runHealthCheck = useCallback(async () => {
     if (checkingRef.current) return;
@@ -25,6 +28,8 @@ export const useRecoveryMonitor = () => {
     try {
       const cfg = resolveSupabaseConfig();
       const healthy = await checkEndpointHealth(cfg.url);
+
+      if (!mountedRef.current) return;
 
       try {
         sessionStorage.setItem(DR_STORAGE_KEYS.LAST_HEALTH_CHECK, new Date().toISOString());
@@ -75,13 +80,15 @@ export const useRecoveryMonitor = () => {
     } finally {
       checkingRef.current = false;
     }
-  }, []);
+  }, [mountedRef]);
 
   useEffect(() => {
-    runHealthCheck();
-    const id = setInterval(runHealthCheck, DR_THRESHOLDS.HEALTH_CHECK_INTERVAL_MS);
-    return () => clearInterval(id);
+    void runHealthCheck();
   }, [runHealthCheck]);
+
+  useVisibilityAwareInterval(() => {
+    void runHealthCheck();
+  }, DR_THRESHOLDS.HEALTH_CHECK_INTERVAL_MS);
 
   return { mode, runHealthCheck };
 };

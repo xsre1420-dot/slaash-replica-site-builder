@@ -27,6 +27,10 @@ const MarketingScripts = ({ storeSlug, storeOwnerId, disabled }: MarketingScript
           ownerId: storeOwnerId || undefined,
         }),
     });
+
+    return () => {
+      resetMarketingTrackingInit();
+    };
   }, [storeSlug, storeOwnerId, disabled]);
 
   return null;
