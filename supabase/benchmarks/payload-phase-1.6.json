@@ -1,0 +1,39 @@
+{
+  "phase": "1.6",
+  "slug": "bidaya-demo",
+  "measuredAt": "2026-06-26T19:29:25.633Z",
+  "storefront": {
+    "totalBytes": 8005,
+    "totalKb": 7.82,
+    "storeKb": 0.37,
+    "heroKb": 0,
+    "featuredKb": 1.71,
+    "categoriesKb": 0,
+    "productsKb": 5.13,
+    "productCount": 24,
+    "avgProductBytes": 219,
+    "hasDescription": false,
+    "hasVariantsInGrid": false,
+    "hasSlimFields": true,
+    "estimatedBeforeKb": 20.12,
+    "reductionPct": 61.1,
+    "estimatedBandwidthSavingsPer1kViewsGb": "0.012",
+    "estimatedResponseTimeImprovementMs": 9,
+    "estimatedConcurrentUserUpliftPct": 21
+  },
+  "bootstrapEstimate": {
+    "beforeKb": 28,
+    "afterKb": 3.5,
+    "reductionPct": 87.5
+  },
+  "platformRpc": {
+    "slug": "bidaya-demo",
+    "notes": "Merchant dashboard/order sizes require authenticated owner context",
+    "measured_at": "2026-06-26T19:29:25.361697+00:00",
+    "storefront_bundle_bytes": 8005,
+    "storefront_product_count": 24,
+    "storefront_avg_product_bytes": 234,
+    "storefront_products_page_bytes": 5664
+  },
+  "enterprisePayloadScore": 100
+}

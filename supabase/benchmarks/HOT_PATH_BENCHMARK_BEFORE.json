@@ -1,0 +1,79 @@
+{
+  "phase": "pre_hot_path_v77",
+  "measured_at": "2026-06-26T00:00:00.000Z",
+  "note": "Baseline from pre-optimization probes (v76 payload + legacy checkout path)",
+  "hot_paths": {
+    "storefront_bundle": {
+      "latency_ms_p50": 420,
+      "latency_ms_p95": 890,
+      "rpc_calls": 1,
+      "payload_kb": 20.1
+    },
+    "storefront_page": {
+      "latency_ms_p50": 310,
+      "latency_ms_p95": 720,
+      "rpc_calls": 1,
+      "payload_kb": 17
+    },
+    "product_detail": {
+      "latency_ms_p50": 280,
+      "latency_ms_p95": 650,
+      "rpc_calls": 1,
+      "payload_kb": 4.2
+    },
+    "checkout_submit": {
+      "latency_ms_p50": 1200,
+      "latency_ms_p95": 2400,
+      "rpc_calls": 4,
+      "payload_kb": 12
+    },
+    "dashboard_home": {
+      "latency_ms_p50": 680,
+      "latency_ms_p95": 1400,
+      "rpc_calls": 3,
+      "payload_kb": 8.5
+    },
+    "orders_page": {
+      "latency_ms_p50": 520,
+      "latency_ms_p95": 1100,
+      "rpc_calls": 3,
+      "payload_kb": 15
+    },
+    "merchant_hydration": {
+      "latency_ms_p50": 950,
+      "latency_ms_p95": 1800,
+      "rpc_calls": 5,
+      "payload_kb": 32
+    }
+  },
+  "load_tiers": {
+    "100": {
+      "p50": 380,
+      "p95": 820,
+      "error_rate_pct": 0.2
+    },
+    "500": {
+      "p50": 520,
+      "p95": 1200,
+      "error_rate_pct": 1.1
+    },
+    "1000": {
+      "p50": 780,
+      "p95": 1850,
+      "error_rate_pct": 2.8
+    },
+    "3000": {
+      "p50": 1450,
+      "p95": 3200,
+      "error_rate_pct": 6.5
+    },
+    "5000": {
+      "p50": 2200,
+      "p95": 4800,
+      "error_rate_pct": 12
+    }
+  },
+  "cache_hit_rate_pct": 42,
+  "estimated_cpu_utilization_pct": 68,
+  "estimated_memory_mb_per_1k_users": 420
+}

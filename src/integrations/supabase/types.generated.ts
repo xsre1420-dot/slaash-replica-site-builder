@@ -4350,6 +4350,10 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_merchant_lock_defaults: {
+        Args: { p_lock_timeout_ms?: number; p_statement_timeout_ms?: number }
+        Returns: undefined
+      }
       approve_product_review: { Args: { p_review_id: string }; Returns: Json }
       archive_inventory_movements_batch: {
         Args: { p_batch_size?: number; p_older_than_days?: number }
@@ -4387,6 +4391,10 @@ export type Database = {
       check_rpc_rate_limit: {
         Args: { p_key: string; p_max?: number; p_window_seconds?: number }
         Returns: boolean
+      }
+      checkout_product_json: {
+        Args: { p: Database["public"]["Tables"]["products"]["Row"] }
+        Returns: Json
       }
       checkout_resolve_duplicate_order: {
         Args: {
@@ -4480,12 +4488,27 @@ export type Database = {
         Returns: Json
       }
       get_background_jobs_status: { Args: never; Returns: Json }
+      get_checkout_preflight_bundle: {
+        Args: {
+          p_coupon_code?: string
+          p_governorate?: string
+          p_product_ids: string[]
+          p_slug: string
+          p_subtotal?: number
+        }
+        Returns: Json
+      }
       get_checkout_products_by_ids: {
         Args: { p_product_ids: string[]; p_slug: string }
         Returns: Json
       }
       get_current_restaurant_owner_id: { Args: never; Returns: string }
+      get_dashboard_kpis_light: { Args: { p_owner_id: string }; Returns: Json }
       get_dashboard_statistics_batch: {
+        Args: { p_owner_id: string }
+        Returns: Json
+      }
+      get_dashboard_workflow_counts: {
         Args: { p_owner_id: string }
         Returns: Json
       }
@@ -4622,6 +4645,10 @@ export type Database = {
         Args: { p_slug: string }
         Returns: number
       }
+      get_storefront_featured_products: {
+        Args: { p_limit?: number; p_owner_id: string }
+        Returns: Json
+      }
       get_storefront_footer_products: {
         Args: { p_slug: string }
         Returns: Json
@@ -4670,30 +4697,52 @@ export type Database = {
         Args: { p_owner_id: string; p_visitor_ip: string }
         Returns: boolean
       }
-      list_merchant_orders: {
-        Args: {
-          p_cursor?: string
-          p_date_from?: string
-          p_date_to?: string
-          p_delivery_status?: string
-          p_max_value?: number
-          p_min_value?: number
-          p_order_status?: string
-          p_owner_id: string
-          p_page?: number
-          p_page_size?: number
-          p_payment_status?: string
-          p_search?: string
-          p_workflow_tab?: string
-        }
-        Returns: Json
-      }
+      list_merchant_orders:
+        | {
+            Args: {
+              p_date_from?: string
+              p_date_to?: string
+              p_delivery_status?: string
+              p_max_value?: number
+              p_min_value?: number
+              p_order_status?: string
+              p_owner_id: string
+              p_page?: number
+              p_page_size?: number
+              p_payment_status?: string
+              p_search?: string
+              p_workflow_tab?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_cursor?: string
+              p_date_from?: string
+              p_date_to?: string
+              p_delivery_status?: string
+              p_max_value?: number
+              p_min_value?: number
+              p_order_status?: string
+              p_owner_id: string
+              p_page?: number
+              p_page_size?: number
+              p_payment_status?: string
+              p_search?: string
+              p_workflow_tab?: string
+            }
+            Returns: Json
+          }
       list_public_store_slugs: {
         Args: { p_limit?: number; p_offset?: number }
         Returns: {
           store_slug: string
           updated_at: string
         }[]
+      }
+      lock_owner_products_ordered: {
+        Args: { p_items: Json; p_owner_id: string }
+        Returns: number
       }
       log_sensitive_access: {
         Args: { operation: string; record_id: string; table_name: string }
@@ -4767,10 +4816,23 @@ export type Database = {
         }
         Returns: string
       }
+      patch_merchant_product: {
+        Args: { p_owner_id: string; p_patch: Json; p_product_id: string }
+        Returns: Json
+      }
+      patch_merchant_store_settings: {
+        Args: { p_owner_id: string; p_patch: Json }
+        Returns: Json
+      }
       platform_benchmark_hot_queries: {
         Args: { p_owner_id?: string; p_slug?: string; p_warm_cache?: boolean }
         Returns: Json
       }
+      platform_connection_benchmark: {
+        Args: { p_slug?: string }
+        Returns: Json
+      }
+      platform_connection_pool_recommendations: { Args: never; Returns: Json }
       platform_data_lifecycle_audit: { Args: never; Returns: Json }
       platform_database_resource_audit: { Args: never; Returns: Json }
       platform_distributed_scaling_audit: { Args: never; Returns: Json }
@@ -4788,14 +4850,23 @@ export type Database = {
       }
       platform_fk_index_audit: { Args: never; Returns: Json }
       platform_health_check: { Args: never; Returns: Json }
+      platform_hot_path_benchmark: {
+        Args: { p_product_id?: string; p_slug?: string }
+        Returns: Json
+      }
       platform_internals_audit: { Args: never; Returns: Json }
       platform_lifecycle_audit: { Args: never; Returns: Json }
+      platform_lock_audit: { Args: never; Returns: Json }
+      platform_lock_benchmark: { Args: { p_owner_id?: string }; Returns: Json }
+      platform_payload_benchmark: { Args: { p_slug?: string }; Returns: Json }
       platform_postgresql_internals_audit: { Args: never; Returns: Json }
+      platform_postgresql_internals_benchmark: { Args: never; Returns: Json }
       platform_run_data_lifecycle: { Args: never; Returns: Json }
       platform_run_internals_maintenance: {
         Args: {
           p_analyze?: boolean
           p_prune_analytics?: boolean
+          p_prune_outboxes?: boolean
           p_prune_rate_limits?: boolean
         }
         Returns: Json
@@ -4807,8 +4878,16 @@ export type Database = {
         Returns: Json
       }
       platform_write_path_audit: { Args: never; Returns: Json }
+      platform_write_path_benchmark: {
+        Args: { p_owner_id?: string }
+        Returns: Json
+      }
       process_analytics_event_buffer: {
         Args: { p_limit?: number }
+        Returns: Json
+      }
+      process_background_worker_bundle: {
+        Args: { p_limit?: number; p_stale_webhook_minutes?: number }
         Returns: Json
       }
       process_order_side_effects_batch: {
@@ -4940,6 +5019,14 @@ export type Database = {
         Returns: Json
       }
       storefront_compact_variants: { Args: { p_variants: Json }; Returns: Json }
+      storefront_discount_active: {
+        Args: { p: Database["public"]["Tables"]["products"]["Row"] }
+        Returns: boolean
+      }
+      storefront_effective_unit_price: {
+        Args: { p: Database["public"]["Tables"]["products"]["Row"] }
+        Returns: number
+      }
       storefront_product_card_json: {
         Args: { p: Database["public"]["Tables"]["products"]["Row"] }
         Returns: Json
@@ -4948,8 +5035,28 @@ export type Database = {
         Args: { p: Database["public"]["Tables"]["products"]["Row"] }
         Returns: Json
       }
+      storefront_product_has_options: {
+        Args: { p: Database["public"]["Tables"]["products"]["Row"] }
+        Returns: boolean
+      }
       storefront_product_json: {
         Args: { p: Database["public"]["Tables"]["products"]["Row"] }
+        Returns: Json
+      }
+      storefront_product_list_json: {
+        Args: { p: Database["public"]["Tables"]["products"]["Row"] }
+        Returns: Json
+      }
+      storefront_product_list_qty: {
+        Args: { p: Database["public"]["Tables"]["products"]["Row"] }
+        Returns: number
+      }
+      storefront_product_stock_status: {
+        Args: { p: Database["public"]["Tables"]["products"]["Row"] }
+        Returns: string
+      }
+      storefront_store_hero_json: {
+        Args: { p_owner_id: string }
         Returns: Json
       }
       storefront_store_shell_json: {
@@ -4994,6 +5101,10 @@ export type Database = {
         }
         Returns: Json
       }
+      update_merchant_order_status: {
+        Args: { p_order_id: string; p_owner_id: string; p_status: string }
+        Returns: Json
+      }
       update_shipment_status: {
         Args: {
           p_carrier?: string
@@ -5003,6 +5114,10 @@ export type Database = {
           p_status: string
           p_tracking_number?: string
         }
+        Returns: Json
+      }
+      upsert_merchant_marketing_settings: {
+        Args: { p_owner_id: string; p_patch: Json }
         Returns: Json
       }
       upsert_store_daily_order_stats: {
