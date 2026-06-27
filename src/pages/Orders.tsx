@@ -1,268 +1,474 @@
-
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Eye, CheckCircle, XCircle, Clock, ArrowLeft, Package, TrendingUp, ShoppingBag } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useOrders } from "@/components/orders/useOrders";
-import { format } from "date-fns";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { toast } from "sonner";
+  Package,
+  Clock,
+  TrendingUp,
+  ShoppingBag,
+  Bell,
+  Loader2,
+  Download,
+  CalendarDays,
+  CalendarRange,
+} from 'lucide-react';
+import DashboardLayout from '@/components/layout/DashboardLayout';
+import PageHeader from '@/components/layout/PageHeader';
+import StatCard from '@/components/ui/StatCard';
+import EmptyState from '@/components/ui/EmptyState';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { useOrders } from '@/hooks/useOrders';
+import { useAuth } from '@/context/AuthContext';
+import { useRealtimeOrders, OrderRealtimeEvent } from '@/hooks/useRealtimeOrders';
+import OrdersToolbar, { DEFAULT_ORDER_FILTERS } from '@/components/orders/OrdersToolbar';
+import OrdersWorkflowTabs from '@/components/orders/OrdersWorkflowTabs';
+import OrdersDataTable from '@/components/orders/OrdersDataTable';
+import OrdersBulkBar from '@/components/orders/OrdersBulkBar';
+import OrdersPagination from '@/components/orders/OrdersPagination';
+import OrderNotificationsCenter from '@/components/orders/OrderNotificationsCenter';
+import {
+  OrderListFilters,
+  formatOrderNumber,
+} from '@/utils/orderWorkflowUtils';
+import { exportOrdersToCsv } from '@/utils/orderExportUtils';
+import { useOrderDashboardStats } from '@/hooks/useOrderDashboardStats';
+import { isLocalOrderMutationEcho } from '@/lib/localMutationGuard';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { ORDERS_PER_PAGE } from '@/services/orderService';
+import { toast } from 'sonner';
+import { copyStorePublicUrl } from '@/lib/storeUrl';
+import { useScrollPersistence } from '@/hooks/useScrollPersistence';
+import AttentionStrip from '@/components/ui/AttentionStrip';
+import { ATTENTION_PARAM } from '@/lib/attentionHighlight';
+import { canTransitionOrderStatus } from '@/utils/orderStatusUtils';
+import { runWithConcurrency } from '@/utils/runWithConcurrency';
 
 const Orders = () => {
-  const { filteredOrders, searchQuery, setSearchQuery, updateOrderStatus, loading, hasMore, loadMore } = useOrders();
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const attentionApplied = useRef(false);
 
-  const handleStatusChange = (orderId: string, newStatus: "pending" | "completed" | "cancelled") => {
-    updateOrderStatus(orderId, newStatus);
-    const statusMessages = {
-      completed: "تم تحديث حالة الطلب إلى مكتمل",
-      pending: "تم تحديث حالة الطلب إلى قيد الانتظار",
-      cancelled: "تم تحديث حالة الطلب إلى ملغي"
-    };
-    toast.success(statusMessages[newStatus], { duration: 2000 });
-  };
+  const [filters, setFilters] = useState<OrderListFilters>(DEFAULT_ORDER_FILTERS);
+  const debouncedSearch = useDebouncedValue(filters.search, 350);
+  const listFilters = useMemo(
+    () => ({ ...filters, search: debouncedSearch }),
+    [filters, debouncedSearch]
+  );
 
-  const displayedOrders = useMemo(() => {
-    let filtered = filteredOrders;
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(order => order.status === statusFilter);
-    }
-    if (dateFilter !== "all") {
-      const today = new Date();
-      const yesterday = new Date(today.getTime() - 86400000);
-      switch (dateFilter) {
-        case "today":
-          filtered = filtered.filter(order => format(new Date(order.date), "yyyy-MM-dd") === format(today, "yyyy-MM-dd"));
-          break;
-        case "yesterday":
-          filtered = filtered.filter(order => format(new Date(order.date), "yyyy-MM-dd") === format(yesterday, "yyyy-MM-dd"));
-          break;
-        case "week":
-          const weekAgo = new Date(today.getTime() - 7 * 86400000);
-          filtered = filtered.filter(order => new Date(order.date) >= weekAgo);
-          break;
-        case "month":
-          filtered = filtered.filter(order => format(new Date(order.date), "yyyy-MM") === format(today, "yyyy-MM"));
-          break;
+  const {
+    orders,
+    updateOrderStatus,
+    loading,
+    page,
+    total,
+    totalPages,
+    tabCounts,
+    goToPage,
+    refetch,
+    isNewOrder,
+    markOrderKnown,
+  } = useOrders(listFilters);
+
+  const {
+    notifications,
+    unreadCount,
+    pushNotification,
+    markAllRead,
+    clearAll,
+    openOrder,
+  } = useOrderNotifications(user?.id);
+
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkProcessing, setBulkProcessing] = useState(false);
+
+  useScrollPersistence('orders');
+
+  const { stats, reloadStats } = useOrderDashboardStats();
+
+  useEffect(() => {
+    if (searchParams.get(ATTENTION_PARAM) !== 'pending-orders' || attentionApplied.current) return;
+    attentionApplied.current = true;
+    setFilters((prev) => ({
+      ...prev,
+      workflowTab: stats.newOrders > 0 ? 'new' : 'processing',
+    }));
+  }, [searchParams, stats.newOrders]);
+
+  const handleRealtimeEvent = useCallback(
+    (event: OrderRealtimeEvent) => {
+      if ('orderId' in event && isLocalOrderMutationEcho(event.orderId)) {
+        return;
       }
-    }
-    return filtered;
-  }, [filteredOrders, statusFilter, dateFilter]);
 
-  const stats = useMemo(() => {
-    const total = filteredOrders.length;
-    const pending = filteredOrders.filter(o => o.status === "pending").length;
-    const completed = filteredOrders.filter(o => o.status === "completed").length;
-    const totalRevenue = filteredOrders.filter(o => o.status === "completed").reduce((sum, o) => sum + o.total, 0);
-    return { total, pending, completed, totalRevenue };
-  }, [filteredOrders]);
+      const notification = eventToNotification(event);
+      if (notification) pushNotification(notification);
 
-  const statusConfig = {
-    completed: { label: "مكتمل", icon: CheckCircle, className: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
-    pending: { label: "قيد الانتظار", icon: Clock, className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" },
-    cancelled: { label: "ملغي", icon: XCircle, className: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" }
+      if (event.type === 'insert' && isNewOrder(event.orderId)) {
+        markOrderKnown(event.orderId);
+        toast.success('طلب جديد!', {
+          description: `تم استلام ${formatOrderNumber(event.orderId)}`,
+          duration: 8000,
+          action: {
+            label: 'عرض',
+            onClick: () => navigate(`/orders/${event.orderId}`),
+          },
+        });
+      } else if (event.type === 'update') {
+        if (event.status === 'completed') {
+          toast.success('تم إكمال طلب', {
+            description: formatOrderNumber(event.orderId),
+            duration: 4000,
+          });
+        } else if (event.status === 'cancelled') {
+          toast.warning('تم إلغاء طلب', {
+            description: formatOrderNumber(event.orderId),
+            duration: 5000,
+            action: {
+              label: 'عرض',
+              onClick: () => navigate(`/orders/${event.orderId}`),
+            },
+          });
+        } else if (event.paymentStatus === 'paid' || event.paymentStatus === 'collected') {
+          toast.success('تم استلام الدفع', {
+            description: formatOrderNumber(event.orderId),
+            duration: 5000,
+          });
+        } else if (
+          event.paymentStatus === 'refunded' ||
+          event.paymentStatus === 'partially_refunded'
+        ) {
+          toast.info('تحديث الدفع', {
+            description: `${formatOrderNumber(event.orderId)} — ${event.paymentStatus === 'refunded' ? 'مسترد' : 'مسترد جزئياً'}`,
+            duration: 5000,
+          });
+        } else if (event.paymentStatus === 'failed') {
+          toast.error('فشل الدفع', {
+            description: formatOrderNumber(event.orderId),
+            duration: 6000,
+          });
+        }
+      }
+    },
+    [isNewOrder, markOrderKnown, navigate, pushNotification]
+  );
+
+  useRealtimeOrders(
+    () => {
+      refetch();
+      void reloadStats();
+    },
+    handleRealtimeEvent
+  );
+
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      const next = new Set([...prev].filter((id) => orders.some((o) => o.id === id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [orders]);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [listFilters]);
+
+  const updateFilters = (patch: Partial<OrderListFilters>) => {
+    setFilters((prev) => ({ ...prev, ...patch }));
   };
+
+  const clearFilters = () => setFilters(DEFAULT_ORDER_FILTERS);
+
+  const handleStatusChange = async (orderId: string, newStatus: 'pending' | 'completed' | 'cancelled') => {
+    const success = await updateOrderStatus(orderId, newStatus);
+    if (success) {
+      const messages = {
+        completed: 'تم تأكيد الطلب',
+        pending: 'تم إرجاع الطلب إلى قيد الانتظار',
+        cancelled: 'تم إلغاء الطلب',
+      };
+      toast.success(messages[newStatus]);
+    }
+  };
+
+  const handleCopyStoreLink = async () => {
+    if (!user?.id) return;
+    try {
+      const url = await copyStorePublicUrl(user.id);
+      if (!url) {
+        toast.error('حدّد رابط المتجر (slug) من الإعدادات أولاً');
+        return;
+      }
+      toast.success('تم نسخ رابط المتجر');
+    } catch {
+      toast.error('فشل في نسخ الرابط');
+    }
+  };
+
+  const handleExport = () => {
+    const toExport = selectedIds.size > 0
+      ? orders.filter((o) => selectedIds.has(o.id))
+      : orders;
+    if (toExport.length === 0) {
+      toast.error('لا توجد طلبات للتصدير');
+      return;
+    }
+    exportOrdersToCsv(toExport, `orders-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success(`تم تصدير ${toExport.length} طلب`);
+  };
+
+  const toggleSelect = (orderId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(orderId)) next.delete(orderId);
+      else next.add(orderId);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === orders.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(orders.map((o) => o.id)));
+    }
+  };
+
+  const runBulkStatus = async (status: 'completed' | 'cancelled') => {
+    const targets = orders.filter(
+      (o) => selectedIds.has(o.id) && canTransitionOrderStatus(o.status, status)
+    );
+    if (targets.length === 0) {
+      toast.error('لا توجد طلبات قابلة للتحديث');
+      return;
+    }
+    if (status === 'cancelled' && !confirm(`إلغاء ${targets.length} طلب؟`)) return;
+
+    setBulkProcessing(true);
+    const ok = await runWithConcurrency(targets, 5, (order) =>
+      updateOrderStatus(order.id, status)
+    );
+    setBulkProcessing(false);
+    setSelectedIds(new Set());
+    toast.success(`تم تحديث ${ok} من ${targets.length} طلب`);
+  };
+
+  const hasActiveFilters =
+    filters.search ||
+    filters.workflowTab !== 'all' ||
+    filters.orderStatus !== 'all' ||
+    filters.paymentStatus !== 'all' ||
+    filters.deliveryStatus !== 'all' ||
+    filters.datePreset !== 'all' ||
+    filters.minValue != null ||
+    filters.maxValue != null;
+
+  const headerActions = (
+    <div className="flex items-center gap-2 flex-wrap justify-end">
+      <OrderNotificationsCenter
+        notifications={notifications}
+        unreadCount={unreadCount}
+        onOpen={openOrder}
+        onMarkAllRead={markAllRead}
+        onClear={clearAll}
+      />
+      {stats.newOrders > 0 && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="rounded-xl gap-2 border-warning/40 text-warning min-h-[40px]"
+          onClick={() => updateFilters({ workflowTab: 'new' })}
+        >
+          <Bell className="w-4 h-4" />
+          {stats.newOrders} جديد
+        </Button>
+      )}
+      <Button
+        variant="outline"
+        size="sm"
+        className="rounded-xl gap-2 min-h-[40px]"
+        onClick={handleExport}
+        disabled={orders.length === 0}
+      >
+        <Download className="w-4 h-4" />
+        <span className="hidden sm:inline">تصدير</span>
+      </Button>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-background font-arabic">
-      <div className="bg-card shadow-sm border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex justify-between items-center">
-            <Link to="/builder">
-              <Button variant="ghost" className="p-2 hover:bg-muted rounded-xl">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            </Link>
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground">إدارة الطلبات</h1>
-            <div className="w-10" />
+    <DashboardLayout>
+      <PageHeader
+        title="إدارة الطلبات"
+        description="تابع الطلبات، حدّث الحالات، وعالج الشحن والدفع بسرعة"
+        hideBack
+        breadcrumbs={[
+          { label: 'لوحة التحكم', href: '/builder' },
+          { label: 'الطلبات' },
+        ]}
+        actions={headerActions}
+      />
+
+      <div className="ds-page space-y-5 sm:space-y-6 pb-24 sm:pb-6 min-w-0">
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+          <StatCard
+            label="إجمالي الطلبات"
+            value={stats.total}
+            icon={Package}
+            onClick={() => updateFilters({ workflowTab: 'all', datePreset: 'all' })}
+            active={filters.workflowTab === 'all' && filters.datePreset === 'all'}
+          />
+          <StatCard
+            label="طلبات جديدة"
+            value={stats.newOrders}
+            icon={Clock}
+            iconClassName="bg-warning/10 ring-warning/15 [&_svg]:text-warning"
+            onClick={() => updateFilters({ workflowTab: 'new' })}
+            active={filters.workflowTab === 'new'}
+          />
+          <StatCard
+            label="بانتظار التنفيذ"
+            value={stats.pendingFulfillment}
+            icon={ShoppingBag}
+            iconClassName="bg-primary/10 ring-primary/15 [&_svg]:text-primary"
+            onClick={() => updateFilters({ workflowTab: 'processing' })}
+            active={filters.workflowTab === 'processing'}
+          />
+          <StatCard
+            label="إيرادات مكتملة"
+            value={`${stats.revenue.toLocaleString()} د.ع`}
+            icon={TrendingUp}
+            iconClassName="bg-success/10 ring-success/15 [&_svg]:text-success"
+            onClick={() => updateFilters({ workflowTab: 'delivered' })}
+            active={filters.workflowTab === 'delivered'}
+          />
+        </section>
+
+        <section className="grid grid-cols-3 gap-2 sm:gap-3">
+          <StatCard
+            label="طلبات اليوم"
+            value={stats.todayOrders}
+            icon={CalendarDays}
+            iconClassName="bg-blue-500/10 ring-blue-500/15 [&_svg]:text-blue-600"
+            onClick={() => updateFilters({ datePreset: 'today', workflowTab: 'all' })}
+            active={filters.datePreset === 'today'}
+            className="p-3 sm:p-5"
+          />
+          <StatCard
+            label="هذا الأسبوع"
+            value={stats.weekOrders}
+            icon={CalendarRange}
+            iconClassName="bg-violet-500/10 ring-violet-500/15 [&_svg]:text-violet-600"
+            onClick={() => updateFilters({ datePreset: 'week', workflowTab: 'all' })}
+            active={filters.datePreset === 'week'}
+            className="p-3 sm:p-5"
+          />
+          <StatCard
+            label="هذا الشهر"
+            value={stats.monthOrders}
+            icon={CalendarDays}
+            iconClassName="bg-indigo-500/10 ring-indigo-500/15 [&_svg]:text-indigo-600"
+            onClick={() => updateFilters({ datePreset: 'month', workflowTab: 'all' })}
+            active={filters.datePreset === 'month'}
+            className="p-3 sm:p-5"
+          />
+        </section>
+
+        {stats.pendingFulfillment > 0 && (
+          <AttentionStrip
+            attentionKey="pending-orders"
+            icon={Clock}
+            message={`${stats.pendingFulfillment} ${
+              stats.pendingFulfillment === 1 ? 'طلب' : 'طلبات'
+            } تحتاج المعالجة — راجع الطلبات وحدّث حالتها`}
+          />
+        )}
+
+        <section className="space-y-3 min-w-0">
+          <OrdersWorkflowTabs
+            tabCounts={tabCounts}
+            activeTab={filters.workflowTab}
+            onTabChange={(tab) => updateFilters({ workflowTab: tab })}
+          />
+
+          <OrdersToolbar
+            filters={filters}
+            onChange={updateFilters}
+            onClear={clearFilters}
+            showAdvanced={showAdvanced}
+            onToggleAdvanced={() => setShowAdvanced((v) => !v)}
+          />
+        </section>
+
+        {loading && orders.length === 0 ? (
+          <div className="space-y-3">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-20 rounded-2xl" />
+            ))}
           </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          <Card className="border border-border rounded-2xl shadow-sm">
-            <CardContent className="p-4 text-center">
-              <Package className="w-5 h-5 mx-auto mb-2 text-muted-foreground" />
-              <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-              <p className="text-xs text-muted-foreground">إجمالي الطلبات</p>
-            </CardContent>
-          </Card>
-          <Card className="border border-border rounded-2xl shadow-sm">
-            <CardContent className="p-4 text-center">
-              <Clock className="w-5 h-5 mx-auto mb-2 text-yellow-500" />
-              <p className="text-2xl font-bold text-foreground">{stats.pending}</p>
-              <p className="text-xs text-muted-foreground">قيد الانتظار</p>
-            </CardContent>
-          </Card>
-          <Card className="border border-border rounded-2xl shadow-sm">
-            <CardContent className="p-4 text-center">
-              <CheckCircle className="w-5 h-5 mx-auto mb-2 text-green-500" />
-              <p className="text-2xl font-bold text-foreground">{stats.completed}</p>
-              <p className="text-xs text-muted-foreground">مكتمل</p>
-            </CardContent>
-          </Card>
-          <Card className="border border-border rounded-2xl shadow-sm">
-            <CardContent className="p-4 text-center">
-              <TrendingUp className="w-5 h-5 mx-auto mb-2 text-foreground" />
-              <p className="text-lg sm:text-2xl font-bold text-foreground truncate">{stats.totalRevenue.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground">الإيرادات (د.ع)</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters */}
-        <Card className="border border-border rounded-2xl shadow-sm">
-          <CardContent className="p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="relative">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input placeholder="البحث عن طلب أو عميل..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pr-10 rounded-xl border-border text-foreground" />
-              </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="rounded-xl border-border text-foreground"><SelectValue placeholder="حالة الطلب" /></SelectTrigger>
-                <SelectContent className="rounded-xl bg-popover border-border">
-                  <SelectItem value="all">جميع الحالات</SelectItem>
-                  <SelectItem value="pending">قيد الانتظار</SelectItem>
-                  <SelectItem value="completed">مكتمل</SelectItem>
-                  <SelectItem value="cancelled">ملغي</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={dateFilter} onValueChange={setDateFilter}>
-                <SelectTrigger className="rounded-xl border-border text-foreground"><SelectValue placeholder="التاريخ" /></SelectTrigger>
-                <SelectContent className="rounded-xl bg-popover border-border">
-                  <SelectItem value="all">جميع التواريخ</SelectItem>
-                  <SelectItem value="today">اليوم</SelectItem>
-                  <SelectItem value="yesterday">أمس</SelectItem>
-                  <SelectItem value="week">هذا الأسبوع</SelectItem>
-                  <SelectItem value="month">هذا الشهر</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button variant="outline" className="rounded-xl border-border text-foreground" onClick={() => { setStatusFilter("all"); setDateFilter("all"); setSearchQuery(""); }}>
-                مسح الفلاتر
+        ) : orders.length > 0 ? (
+          <section className="space-y-3 min-w-0">
+            <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground px-1 gap-2">
+              <span>{total} طلب</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs rounded-lg"
+                onClick={toggleSelectAll}
+              >
+                {selectedIds.size === orders.length ? 'إلغاء التحديد' : 'تحديد الكل'}
               </Button>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Orders */}
-        {displayedOrders.length > 0 ? (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {displayedOrders.map((order) => {
-                const config = statusConfig[order.status as keyof typeof statusConfig];
-                const StatusIcon = config.icon;
-                return (
-                  <Card key={order.id} className="border border-border rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
-                    <CardHeader className="pb-3 px-5 pt-5">
-                      <div className="flex justify-between items-start gap-2">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Badge className={`${config.className} border-0 cursor-pointer transition-colors shrink-0`}>
-                              <StatusIcon className="w-3 h-3 ml-1" />
-                              {config.label}
-                            </Badge>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="bg-popover border-border rounded-xl">
-                            <DropdownMenuItem onClick={() => handleStatusChange(order.id, "completed")} className="cursor-pointer">
-                              <CheckCircle className="h-4 w-4 ml-2 text-green-600" />
-                              مكتمل
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStatusChange(order.id, "pending")} className="cursor-pointer">
-                              <Clock className="h-4 w-4 ml-2 text-yellow-600" />
-                              قيد الانتظار
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStatusChange(order.id, "cancelled")} className="cursor-pointer">
-                              <XCircle className="h-4 w-4 ml-2 text-red-600" />
-                              ملغي
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        <div className="text-right min-w-0">
-                          <CardTitle className="text-base truncate text-foreground">{order.customerInfo.name}</CardTitle>
-                          <CardDescription className="text-xs text-muted-foreground mt-0.5 truncate">{order.id}</CardDescription>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="px-5 pb-5">
-                      <div className="space-y-3">
-                        <div className="text-right">
-                          <div className="flex flex-wrap gap-1 justify-end">
-                            {order.items.slice(0, 3).map((item, index) => (
-                              <span key={index} className="inline-block bg-muted text-muted-foreground px-2.5 py-0.5 rounded-full text-xs">
-                                {item.product.name} ({item.quantity})
-                              </span>
-                            ))}
-                            {order.items.length > 3 && (
-                              <span className="inline-block bg-muted text-muted-foreground px-2.5 py-0.5 rounded-full text-xs">+{order.items.length - 3} أخرى</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex justify-between items-center pt-3 border-t border-border">
-                          <div className="text-left">
-                            <p className="text-xs text-muted-foreground">{format(new Date(order.date), "yyyy-MM-dd")}</p>
-                            <p className="text-xs text-muted-foreground">{format(new Date(order.date), "hh:mm a")}</p>
-                          </div>
-                          <p className="text-lg font-bold text-foreground">
-                            {order.total.toLocaleString()} <span className="text-xs text-muted-foreground">د.ع</span>
-                          </p>
-                        </div>
-                        <Link to={`/orders/${order.id}`} className="block">
-                          <Button variant="outline" className="w-full rounded-xl border-border text-foreground hover:bg-muted">
-                            <Eye className="w-4 h-4 ml-2" />
-                            عرض التفاصيل
-                          </Button>
-                        </Link>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-            {hasMore && (
-              <div className="flex justify-center mt-6">
-                <Button variant="outline" onClick={loadMore} disabled={loading} className="rounded-xl border-border text-foreground">
-                  {loading ? "جارٍ التحميل..." : "تحميل المزيد"}
-                </Button>
+            <OrdersDataTable
+              orders={orders}
+              onUpdateStatus={handleStatusChange}
+              selectedIds={selectedIds}
+              onToggleSelect={toggleSelect}
+              onToggleSelectAll={toggleSelectAll}
+              allSelected={selectedIds.size === orders.length && orders.length > 0}
+            />
+
+            <OrdersBulkBar
+              selectedCount={selectedIds.size}
+              totalVisible={orders.length}
+              onSelectAll={toggleSelectAll}
+              onClearSelection={() => setSelectedIds(new Set())}
+              onBulkComplete={() => void runBulkStatus('completed')}
+              onBulkCancel={() => void runBulkStatus('cancelled')}
+              processing={bulkProcessing}
+            />
+
+            <OrdersPagination
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              pageSize={ORDERS_PER_PAGE}
+              loading={loading}
+              onPageChange={goToPage}
+            />
+
+            {loading && (
+              <div className="flex justify-center py-2">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
               </div>
             )}
-          </>
+          </section>
         ) : (
-          <Card className="border border-border rounded-2xl shadow-sm">
-            <CardContent className="text-center py-16">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                <ShoppingBag className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">لا توجد طلبات بعد</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                {searchQuery || statusFilter !== "all" || dateFilter !== "all"
-                  ? "لم يتم العثور على طلبات تطابق معايير البحث"
-                  : "شارك رابط متجرك مع عملائك للحصول على أول طلب"}
-              </p>
-              {!searchQuery && statusFilter === "all" && dateFilter === "all" && (
-                <Link to="/builder">
-                  <Button className="rounded-xl">
-                    <ShoppingBag className="w-4 h-4 ml-2" />
-                    العودة للوحة التحكم
-                  </Button>
-                </Link>
-              )}
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={ShoppingBag}
+            title={hasActiveFilters ? 'لا توجد نتائج' : 'لا توجد طلبات بعد'}
+            description={
+              hasActiveFilters
+                ? 'جرّب تغيير الفلاتر أو مسحها للعثور على طلبات'
+                : 'شارك رابط متجرك مع عملائك للحصول على أول طلب'
+            }
+            actionLabel={hasActiveFilters ? 'مسح الفلاتر' : 'نسخ رابط المتجر'}
+            onAction={hasActiveFilters ? clearFilters : handleCopyStoreLink}
+          />
         )}
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Plus, Tag, Trash2, Edit, CalendarIcon, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,28 +11,22 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchDiscountProducts,
+  updateProductDiscount,
+  type DiscountProductRow,
+} from "@/services/marketingService";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  image_url: string;
-  category: string;
-  discount_type?: 'none' | 'percentage' | 'amount';
-  discount_value?: number;
-  discount_start_date?: string;
-  discount_end_date?: string;
-  original_price?: number;
-}
+type Product = DiscountProductRow;
 
 export default function ProductDiscountsTab() {
   const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [discountForm, setDiscountForm] = useState({
     discount_type: 'none' as 'none' | 'percentage' | 'amount',
@@ -43,16 +37,12 @@ export default function ProductDiscountsTab() {
 
   const loadProducts = useCallback(async () => {
     if (!user) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any)
-      .from('products')
-      .select('id, name, price, image_url, category, discount_type, discount_value, discount_start_date, discount_end_date, original_price')
-      .eq('owner_id', user.id)
-      .order('name', { ascending: true });
-    if (!error) setProducts((data || []) as Product[]);
+    setInitialLoading(true);
+    setProducts(await fetchDiscountProducts(user.id));
+    setInitialLoading(false);
   }, [user]);
 
-  useState(() => { loadProducts(); });
+  useEffect(() => { loadProducts(); }, [loadProducts]);
 
   const discountedProducts = useMemo(() =>
     products.filter(p => p.discount_type && p.discount_type !== 'none'), [products]);
@@ -99,20 +89,22 @@ export default function ProductDiscountsTab() {
     if (discountForm.discount_type !== 'none' && !selectedProduct.original_price) updateData.original_price = originalPrice;
     if (discountForm.discount_type === 'none' && selectedProduct.original_price) updateData.original_price = null;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).from('products').update(updateData).eq('id', selectedProduct.id);
-    if (error) toast.error("فشل في تحديث الخصم");
+    const result = await updateProductDiscount(user.id, selectedProduct.id, updateData);
+    if (!result.success) toast.error("فشل في تحديث الخصم");
     else { toast.success(discountForm.discount_type === 'none' ? "تم إزالة الخصم" : "تم حفظ الخصم"); loadProducts(); setIsDialogOpen(false); setSelectedProduct(null); }
     setLoading(false);
   };
 
   const removeDiscount = async (product: Product) => {
+    if (!user) return;
     setLoading(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).from('products').update({
-      discount_type: 'none', discount_value: 0, price: product.original_price || product.price, original_price: null,
-    }).eq('id', product.id);
-    if (!error) { toast.success("تم إزالة الخصم"); loadProducts(); }
+    const result = await updateProductDiscount(user.id, product.id, {
+      discount_type: 'none',
+      discount_value: 0,
+      price: product.original_price || product.price,
+      original_price: null,
+    });
+    if (result.success) { toast.success("تم إزالة الخصم"); loadProducts(); }
     setLoading(false);
   };
 
@@ -142,7 +134,13 @@ export default function ProductDiscountsTab() {
       {/* Discounted Products */}
       <Card className="border-border/20 rounded-2xl bg-card/80 backdrop-blur-sm">
         <CardContent className="p-0">
-          {discountedProducts.length === 0 ? (
+          {initialLoading ? (
+            <div className="p-6 space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-20 bg-muted/50 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : discountedProducts.length === 0 ? (
             <div className="text-center py-12">
               <Tag className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
               <p className="text-sm text-muted-foreground mb-4">لا توجد خصومات على المنتجات</p>
@@ -156,10 +154,10 @@ export default function ProductDiscountsTab() {
                 <div key={product.id} className="p-4 hover:bg-muted/30 transition-colors animate-fade-in" style={{ animationDelay: `${i * 40}ms` }}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => removeDiscount(product)} className="text-destructive hover:bg-destructive/10 rounded-xl h-8 w-8">
+                      <Button variant="ghost" size="icon" onClick={() => removeDiscount(product)} aria-label={`إزالة خصم ${product.name}`} className="text-destructive hover:bg-destructive/10 rounded-xl min-h-[44px] min-w-[44px]">
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => openDialog(product)} className="rounded-xl h-8 w-8">
+                      <Button variant="ghost" size="icon" onClick={() => openDialog(product)} aria-label={`تعديل خصم ${product.name}`} className="rounded-xl min-h-[44px] min-w-[44px]">
                         <Edit className="w-3.5 h-3.5" />
                       </Button>
                     </div>

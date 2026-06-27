@@ -1,18 +1,46 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
+import { getAnonSupabase } from '../_shared/supabaseClient.ts';
+import { isProduction } from '../_shared/env.ts';
+import { logStructured, withEdgeSpan } from '../_shared/observability.ts';
+import {
+  buildPayloadKey,
+  edgeCacheControlHeader,
+  edgeCacheStats,
+  getCachedVersion,
+  getMemoryCached,
+  purgeSlugFromMemory,
+  setCachedVersion,
+  setMemoryCache,
+} from '../_shared/edgeCache.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Cache-Control': 'public, max-age=30, stale-while-revalidate=60',
-};
+const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') || '').split(',').map(s => s.trim()).filter(Boolean);
 
-// Rate limiting
+function getCorsHeaders(origin: string | null): Record<string, string> | null {
+  const base = {
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Cache-Control': edgeCacheControlHeader(),
+  };
+
+  if (isProduction()) {
+    if (ALLOWED_ORIGINS.length === 0) {
+      console.error('[security] ALLOWED_ORIGINS must be set in production');
+      return null;
+    }
+    if (!origin || !ALLOWED_ORIGINS.includes(origin)) {
+      return null;
+    }
+    return { ...base, 'Access-Control-Allow-Origin': origin };
+  }
+
+  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : (ALLOWED_ORIGINS[0] || '*');
+  return { ...base, 'Access-Control-Allow-Origin': allowedOrigin };
+}
+
 const requestCounts = new Map<string, { count: number; resetTime: number }>();
-const RATE_LIMIT_WINDOW = 60000;
-const RATE_LIMIT_MAX_REQUESTS = 30;
+const RATE_LIMIT_WINDOW = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 300;
 
 function getRealIP(req: Request): string {
-  return req.headers.get('x-forwarded-for')?.split(',')[0] || 
+  return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
          req.headers.get('x-real-ip') || 'unknown';
 }
 
@@ -28,170 +56,221 @@ function isRateLimited(ip: string): boolean {
   return false;
 }
 
-// Cleanup stale entries
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, record] of requestCounts.entries()) {
-    if (now > record.resetTime) requestCounts.delete(ip);
-  }
-}, 300000);
-
-function validateUUID(uuid: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(uuid);
-}
-
 function validateSlug(slug: string): boolean {
   return /^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/.test(slug);
 }
 
-// Response cache
-const responseCache = new Map<string, { data: string; timestamp: number }>();
-const RESPONSE_CACHE_TTL = 30000;
+function rpcParams(slug: string, limit: number, cursor: string | null, category: string | null, search: string | null) {
+  return {
+    p_slug: slug,
+    p_limit: limit,
+    p_cursor: cursor || '',
+    p_category: category || '',
+    p_search: search || '',
+  };
+}
+
+function tryMemoryCache(
+  slug: string,
+  kind: string,
+  cursor: string,
+  category: string,
+  search: string,
+  limit: number
+): string | null {
+  const cachedVersion = getCachedVersion(slug);
+  if (cachedVersion == null) return null;
+  const cacheKey = buildPayloadKey(slug, cachedVersion, kind, cursor, category, search, limit);
+  return getMemoryCached(cacheKey, cachedVersion);
+}
+
+function jsonResponse(
+  body: string,
+  corsHeaders: Record<string, string>,
+  cacheStatus: 'HIT' | 'MISS' | 'PURGE',
+  version?: number
+): Response {
+  const headers: Record<string, string> = {
+    ...corsHeaders,
+    'Content-Type': 'application/json',
+    'X-Cache': cacheStatus,
+  };
+  if (version != null) {
+    headers['ETag'] = `"storefront-v${version}"`;
+  }
+  return new Response(body, { status: 200, headers });
+}
 
 Deno.serve(async (req) => {
+  return withEdgeSpan('get-store-products', async () => {
+  const origin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
   const clientIP = getRealIP(req);
+
+  if (!corsHeaders) {
+    logStructured('warn', 'get-store-products.origin_blocked', { origin, clientIP });
+    return new Response(JSON.stringify({ error: 'Origin not allowed' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   if (isRateLimited(clientIP)) {
-    return new Response(
-      JSON.stringify({ error: 'Too many requests' }),
-      { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': '60' } }
-    );
+    logStructured('warn', 'get-store-products.rate_limited', { clientIP });
+    return new Response(JSON.stringify({ error: 'Too many requests' }), {
+      status: 429,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': '60' },
+    });
   }
 
   if (req.method !== 'POST') {
-    return new Response(
-      JSON.stringify({ error: 'Method not allowed' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
   try {
-    let requestBody;
-    try {
-      requestBody = await req.json();
-    } catch {
-      return new Response(
-        JSON.stringify({ error: 'Invalid JSON' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const requestBody = await req.json();
+    const slug = String(requestBody.slug || '').trim().toLowerCase();
+    const cursor = requestBody.cursor ? String(requestBody.cursor) : '';
+    const category = requestBody.category ? String(requestBody.category) : '';
+    const search = requestBody.search ? String(requestBody.search) : '';
+    const limit = Math.min(Math.max(Number(requestBody.limit) || 24, 1), 48);
 
-    const { ownerId, slug } = requestBody;
-
-    // Validate: must provide either ownerId or slug
-    if (!ownerId && !slug) {
-      return new Response(
-        JSON.stringify({ error: 'ownerId or slug is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (ownerId && !validateUUID(ownerId)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid owner ID format' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (slug && !validateSlug(slug)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid slug format' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const cacheKey = ownerId || slug;
-    const cachedResponse = responseCache.get(cacheKey);
-    if (cachedResponse && Date.now() - cachedResponse.timestamp < RESPONSE_CACHE_TTL) {
-      return new Response(cachedResponse.data, {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'HIT' }
+    if (!slug || !validateSlug(slug)) {
+      return new Response(JSON.stringify({ error: 'Valid slug is required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = getAnonSupabase();
 
-    // Resolve owner_id from slug if needed
-    let resolvedOwnerId = ownerId;
-    let storeInfo = null;
+    if (requestBody.purge === true) {
+      const removed = purgeSlugFromMemory(slug);
+      logStructured('info', 'get-store-products.purge', { slug, removed, stats: edgeCacheStats() });
+      return new Response(JSON.stringify({ success: true, purged: removed }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'PURGE' },
+      });
+    }
 
-    if (slug && !ownerId) {
-      const { data: storeData } = await supabase
-        .from('store_settings')
-        .select('owner_id, store_name, store_logo, store_slug, menu_background_color, menu_text_color, menu_accent_color, banner_images, primary_banner_index')
-        .ilike('store_slug', slug)
-        .single();
+    const wantBundle = requestBody.bundle === true;
+    const wantMetaOnly = requestBody.metaOnly === true;
+    const wantProductsOnly = requestBody.page === true && !wantBundle && !wantMetaOnly;
+    const kind = wantBundle ? 'bundle' : wantProductsOnly ? 'page' : 'meta';
 
-      if (!storeData) {
-        return new Response(
-          JSON.stringify({ error: 'Store not found' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+    const memoryHit = tryMemoryCache(slug, kind, cursor, category, search, limit);
+    if (memoryHit) {
+      const version = getCachedVersion(slug)!;
+      return jsonResponse(memoryHit, corsHeaders, 'HIT', version);
+    }
+
+    const { data: dbAllowed, error: rateErr } = await supabase.rpc('check_rpc_rate_limit', {
+      p_key: `edge-store:${slug}:${clientIP}`,
+      p_max: 120,
+      p_window_seconds: 60,
+    });
+    if (rateErr || dbAllowed === false) {
+      logStructured('warn', 'get-store-products.db_rate_limited', { clientIP, slug });
+      return new Response(JSON.stringify({ error: 'Too many requests' }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': '60' },
+      });
+    }
+
+    if (wantBundle) {
+      const { data: bundle, error: bundleErr } = await supabase.rpc('get_storefront_page_bundle', {
+        p_slug: slug,
+        p_limit: limit,
+        p_cursor: cursor,
+        p_category: category,
+        p_search: search,
+      });
+
+      if (bundleErr || !bundle?.store) {
+        return new Response(JSON.stringify({ error: 'Store not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
-      resolvedOwnerId = storeData.owner_id;
-      storeInfo = storeData;
+      const version = Number(bundle.cache_version ?? 1);
+      setCachedVersion(slug, version);
+      const payload = JSON.stringify({
+        storeInfo: bundle.store,
+        categories: bundle.categories || [],
+        products: bundle.products || [],
+        next_cursor: bundle.next_cursor || null,
+        has_more: bundle.has_more || false,
+        cache_version: version,
+        success: true,
+      });
+      const versionedKey = buildPayloadKey(slug, version, kind, cursor, category, search, limit);
+      setMemoryCache(versionedKey, payload, version);
+      return jsonResponse(payload, corsHeaders, 'MISS', version);
     }
 
-    // Parallel fetch products, categories, and settings (if not already fetched)
-    const queries: Promise<any>[] = [
-      supabase.from('products')
-        .select('id, name, description, category, price, image_url, additional_images')
-        .eq('owner_id', resolvedOwnerId)
-        .eq('is_active', true),
-      supabase.from('categories')
-        .select('id, name, display_order')
-        .eq('owner_id', resolvedOwnerId)
-        .order('display_order'),
-    ];
+    if (wantMetaOnly) {
+      const { data: meta, error: metaErr } = await supabase.rpc('get_store_meta', { p_slug: slug });
+      if (metaErr || !meta?.store) {
+        return new Response(JSON.stringify({ error: 'Store not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
 
-    if (!storeInfo) {
-      queries.push(
-        supabase.from('store_settings')
-          .select('store_name, store_logo, store_slug, menu_background_color, menu_text_color, menu_accent_color, banner_images, primary_banner_index')
-          .eq('owner_id', resolvedOwnerId)
-          .single()
-      );
+      const version = Number(meta.cache_version ?? 1);
+      setCachedVersion(slug, version);
+      const payload = JSON.stringify({
+        storeInfo: meta.store,
+        categories: meta.categories || [],
+        cache_version: version,
+        success: true,
+      });
+      const versionedKey = buildPayloadKey(slug, version, kind, cursor, category, search, limit);
+      setMemoryCache(versionedKey, payload, version);
+      return jsonResponse(payload, corsHeaders, 'MISS', version);
     }
 
-    const results = await Promise.all(queries);
-    const [productsRes, categoriesRes] = results;
-    if (!storeInfo && results[2]) {
-      storeInfo = results[2].error ? null : results[2].data;
-    }
-
-    if (productsRes.error) {
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch products' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const responseBody = JSON.stringify({
-      products: productsRes.data,
-      categories: categoriesRes.data || [],
-      storeInfo,
-      success: true
-    });
-
-    responseCache.set(cacheKey, { data: responseBody, timestamp: Date.now() });
-
-    return new Response(responseBody, {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' }
-    });
-
-  } catch (error) {
-    console.error(`Error from IP ${clientIP}:`, error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    const { data: page, error: pageErr } = await supabase.rpc(
+      'get_store_products_page',
+      rpcParams(slug, limit, cursor, category, search)
     );
+
+    if (pageErr) {
+      return new Response(JSON.stringify({ error: 'Failed to load products' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const version = Number(page?.cache_version ?? 1);
+    setCachedVersion(slug, version);
+    const payload = JSON.stringify({
+      products: page?.products || [],
+      next_cursor: page?.next_cursor || null,
+      has_more: page?.has_more || false,
+      cache_version: version,
+      success: true,
+    });
+    const versionedKey = buildPayloadKey(slug, version, kind, cursor, category, search, limit);
+    setMemoryCache(versionedKey, payload, version);
+    return jsonResponse(payload, corsHeaders, 'MISS', version);
+  } catch (error) {
+    logStructured('error', 'get-store-products.error', {
+      clientIP,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
+  }, { function: 'get-store-products' });
 });

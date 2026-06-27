@@ -25,5 +25,22 @@ export default tseslint.config(
       ],
       "@typescript-eslint/no-unused-vars": "off",
     },
+  },
+  {
+    files: ["src/components/**/*.{ts,tsx}", "src/pages/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "warn",
+        {
+          paths: [
+            {
+              name: "@/integrations/supabase/client",
+              message:
+                "Route database access through src/services/*. Use hooks that wrap services.",
+            },
+          ],
+        },
+      ],
+    },
   }
 );

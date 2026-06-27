@@ -1,7 +1,8 @@
+import { memo, useMemo } from "react";
 import { Heart, Plus, Minus, Star, Share2, Flame, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Product } from "@/types";
-import { memo, useMemo } from "react";
+import { getAvailableQty, hasVariantOptions } from "@/utils/inventoryUtils";
 import OptimizedImage from "@/components/OptimizedImage";
 
 interface ProductCardProps {
@@ -29,12 +30,15 @@ const ProductCard = memo(({
   onShare,
   index,
 }: ProductCardProps) => {
-  const { isNew, isLowStock, isOutOfStock, hasDiscount } = useMemo(() => ({
+  const availableQty = useMemo(() => getAvailableQty(product), [product]);
+
+  const { isNew, isLowStock, isOutOfStock, hasDiscount, hasVariants } = useMemo(() => ({
     isNew: (product as any).created_at ? (Date.now() - new Date((product as any).created_at).getTime()) < 7 * 86400000 : false,
-    isLowStock: product.stockQuantity !== undefined && product.stockQuantity > 0 && product.stockQuantity <= 3,
-    isOutOfStock: product.stockQuantity !== undefined && product.stockQuantity === 0,
+    isLowStock: availableQty > 0 && availableQty <= 3,
+    isOutOfStock: availableQty <= 0,
     hasDiscount: product.discountType && product.discountType !== 'none',
-  }), [product.stockQuantity, product.discountType, (product as any).created_at]);
+    hasVariants: hasVariantOptions(product),
+  }), [product, availableQty]);
 
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -57,12 +61,12 @@ const ProductCard = memo(({
   if (viewMode === "list") {
     return (
       <div
-        className="group bg-card rounded-2xl overflow-hidden border border-border/60 hover:border-primary/30 hover:shadow-[0_8px_30px_-8px_hsl(var(--primary)/0.18)] transition-all duration-300 cursor-pointer animate-fade-in flex gap-3 p-3"
+        className="group bg-card rounded-2xl overflow-hidden border border-border/60 hover:border-primary/30 transition-all duration-300 cursor-pointer animate-fade-in flex gap-3 p-3"
         style={{ animationDelay: `${index * 30}ms` }}
         onClick={() => onView(product.id)}
       >
         <div className="relative w-28 h-28 rounded-xl overflow-hidden flex-shrink-0 bg-muted/40">
-          <OptimizedImage src={product.image} alt={product.name} className="w-full h-full group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+          <OptimizedImage src={product.image} alt={product.name} variant="thumbnail" className="w-full h-full group-hover:scale-105 transition-transform duration-500" loading="lazy" />
           <div className="absolute top-1.5 right-1.5 flex flex-col gap-1">
             {hasDiscount && (
               <span className="bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded-md text-[9px] font-bold shadow-sm">
@@ -70,16 +74,17 @@ const ProductCard = memo(({
               </span>
             )}
             {isNew && (
-              <span className="bg-primary text-primary-foreground px-1.5 py-0.5 rounded-md text-[9px] font-bold flex items-center gap-0.5 shadow-sm">
+              <span className="bg-primary text-primary-foreground px-1.5 py-0.5 rounded-md text-[9px] font-bold flex items-center gap-0.5">
                 <Sparkles className="w-2.5 h-2.5" /> جديد
               </span>
             )}
           </div>
           <button
-            className={`absolute top-1.5 left-1.5 w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-md transition-all ${
+            className={`absolute top-1.5 left-1.5 min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center backdrop-blur-md transition-all ${
               isFavorite ? 'bg-destructive text-destructive-foreground scale-110' : 'bg-card/80 text-muted-foreground hover:text-destructive'
             }`}
             onClick={(e) => { e.stopPropagation(); onToggleFavorite(product.id); }}
+            aria-label={isFavorite ? "إزالة من المفضلة" : "إضافة للمفضلة"}
           >
             <Heart className={`w-3.5 h-3.5 ${isFavorite ? 'fill-current' : ''}`} />
           </button>
@@ -90,21 +95,29 @@ const ProductCard = memo(({
             <h3 className="font-semibold text-sm text-right line-clamp-1 text-foreground">{product.name}</h3>
             <p className="text-xs text-muted-foreground text-right line-clamp-1 mt-0.5">{product.description}</p>
             <div className="flex items-center justify-end gap-1 mt-1.5">
-              <span className="text-[10px] text-muted-foreground">{product.rating?.toFixed(1) || '4.5'}</span>
-              <Star className="w-3 h-3 text-amber-400 fill-current" />
+              {product.rating != null && product.rating > 0 && (
+                <>
+                  <span className="text-[10px] text-muted-foreground">{product.rating.toFixed(1)}</span>
+                  <Star className="w-3 h-3 text-amber-400 fill-current" />
+                </>
+              )}
             </div>
           </div>
           <div className="flex items-center justify-between mt-2">
             <div className="flex items-center gap-1.5">
-              <button onClick={handleShare} className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
+              <button onClick={handleShare} aria-label="مشاركة المنتج" className="min-h-[44px] min-w-[44px] rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
                 <Share2 className="w-3 h-3" />
               </button>
-              {cartQuantity > 0 ? (
+              {cartQuantity > 0 && !hasVariants ? (
                 <div className="flex items-center gap-1 bg-primary/10 rounded-xl px-1.5">
                   <button onClick={(e) => { e.stopPropagation(); onUpdateQuantity(product.id, cartQuantity + 1); }} className="p-1 text-primary"><Plus className="w-3.5 h-3.5" /></button>
                   <span className="text-xs font-bold text-primary w-5 text-center">{cartQuantity}</span>
                   <button onClick={(e) => { e.stopPropagation(); onUpdateQuantity(product.id, cartQuantity - 1); }} className="p-1 text-primary"><Minus className="w-3.5 h-3.5" /></button>
                 </div>
+              ) : cartQuantity > 0 && hasVariants ? (
+                <Button size="sm" variant="outline" className="h-7 text-[10px] rounded-xl" onClick={(e) => { e.stopPropagation(); onView(product.id); }}>
+                  في السلة ({cartQuantity})
+                </Button>
               ) : (
                 <Button size="sm" className="h-7 text-[10px] rounded-xl bg-primary text-primary-foreground hover:bg-primary/90" onClick={(e) => { e.stopPropagation(); onAddToCart(product); }} disabled={isOutOfStock}>
                   <Plus className="w-3 h-3 ml-0.5" />
@@ -122,7 +135,7 @@ const ProductCard = memo(({
   // Grid view — premium card
   return (
     <div
-      className="group relative bg-card rounded-2xl overflow-hidden border border-border/60 hover:border-primary/40 hover:shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.25)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer animate-fade-in"
+      className="group relative bg-card rounded-2xl overflow-hidden border border-border/60 hover:border-primary/30 transition-colors duration-200 cursor-pointer animate-fade-in"
       style={{ animationDelay: `${index * 30}ms` }}
       onClick={() => onView(product.id)}
     >
@@ -130,6 +143,7 @@ const ProductCard = memo(({
         <OptimizedImage
           src={product.image}
           alt={product.name}
+          variant="thumbnail"
           className="w-full h-full group-hover:scale-110 transition-transform duration-700"
           loading="lazy"
         />
@@ -144,13 +158,13 @@ const ProductCard = memo(({
             </span>
           )}
           {isNew && (
-            <span className="bg-primary text-primary-foreground px-2 py-0.5 rounded-lg shadow-md text-[10px] font-bold flex items-center gap-0.5">
+            <span className="bg-primary text-primary-foreground px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center gap-0.5">
               <Sparkles className="w-3 h-3" /> جديد
             </span>
           )}
           {isLowStock && (
             <span className="bg-warning text-warning-foreground px-2 py-0.5 rounded-lg shadow-md text-[10px] font-bold flex items-center gap-0.5">
-              <Flame className="w-3 h-3" /> آخر {product.stockQuantity}
+              <Flame className="w-3 h-3" /> آخر {availableQty}
             </span>
           )}
           {isOutOfStock && (
@@ -163,16 +177,18 @@ const ProductCard = memo(({
         {/* Favorite & Share */}
         <div className="absolute top-2 left-2 flex flex-col gap-1.5 z-10">
           <button
-            className={`w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md transition-all shadow-sm ${
+            className={`min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center backdrop-blur-md transition-all shadow-sm ${
               isFavorite ? 'bg-destructive text-destructive-foreground scale-110' : 'bg-card/85 text-muted-foreground hover:text-destructive hover:scale-110'
             }`}
             onClick={(e) => { e.stopPropagation(); onToggleFavorite(product.id); }}
+            aria-label={isFavorite ? "إزالة من المفضلة" : "إضافة للمفضلة"}
           >
             <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
           </button>
           <button
-            className="w-8 h-8 rounded-full bg-card/85 backdrop-blur-md text-muted-foreground hover:text-primary hover:scale-110 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 shadow-sm"
+            className="min-h-[44px] min-w-[44px] rounded-full bg-card/85 backdrop-blur-md text-muted-foreground hover:text-primary flex items-center justify-center transition-all shadow-sm sm:opacity-0 sm:group-hover:opacity-100 opacity-100"
             onClick={handleShare}
+            aria-label="مشاركة المنتج"
           >
             <Share2 className="w-3.5 h-3.5" />
           </button>
@@ -183,14 +199,18 @@ const ProductCard = memo(({
         <h3 className="font-semibold text-sm text-right line-clamp-1 text-foreground">{product.name}</h3>
 
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-0.5 bg-amber-50 dark:bg-amber-500/10 px-1.5 py-0.5 rounded-md">
-            <Star className="w-3 h-3 text-amber-500 fill-current" />
-            <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-400">{product.rating?.toFixed(1) || '4.5'}</span>
-          </div>
+          {product.rating != null && product.rating > 0 ? (
+            <div className="flex items-center gap-0.5 bg-amber-50 dark:bg-amber-500/10 px-1.5 py-0.5 rounded-md">
+              <Star className="w-3 h-3 text-amber-500 fill-current" />
+              <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-400">{product.rating.toFixed(1)}</span>
+            </div>
+          ) : (
+            <span />
+          )}
           <PriceBlock size="md" />
         </div>
 
-        {cartQuantity > 0 ? (
+        {cartQuantity > 0 && !hasVariants ? (
           <div className="flex items-center justify-between bg-primary/10 rounded-xl h-9 px-2">
             <button onClick={(e) => { e.stopPropagation(); onUpdateQuantity(product.id, cartQuantity + 1); }} className="p-1 text-primary hover:bg-primary/20 rounded-lg transition-colors">
               <Plus className="w-4 h-4" />
@@ -200,10 +220,19 @@ const ProductCard = memo(({
               <Minus className="w-4 h-4" />
             </button>
           </div>
+        ) : cartQuantity > 0 && hasVariants ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full h-9 text-xs rounded-xl"
+            onClick={(e) => { e.stopPropagation(); onView(product.id); }}
+          >
+            في السلة ({cartQuantity}) — عرض الخيارات
+          </Button>
         ) : (
           <Button
             size="sm"
-            className="w-full h-9 text-xs rounded-xl border-0 bg-primary hover:bg-primary/90 text-primary-foreground transition-all shadow-sm hover:shadow-md font-semibold"
+            className="w-full h-9 text-xs rounded-xl border-0 bg-primary hover:bg-primary/90 text-primary-foreground transition-all font-semibold"
             onClick={(e) => { e.stopPropagation(); onAddToCart(product); }}
             disabled={isOutOfStock}
           >

@@ -26,9 +26,19 @@ export interface Product {
   brand?: string;
   productClassification?: string;
   sku?: string;
+  shortDescription?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  productSlug?: string;
+  tags?: string[];
+  lowStockThreshold?: number;
+  isActive?: boolean;
+  /** Set when merchant archives a product — hidden from storefront but visible in admin */
+  archivedAt?: string;
   freeShipping?: boolean;
   additionalProducts?: string[];
-  // Rating and review features
+  /** Slim list RPC: product has size/color options without shipping full variant JSON */
+  hasOptions?: boolean;
   rating?: number;
   reviewCount?: number;
   originalPrice?: number;
@@ -47,6 +57,8 @@ export interface CartItem {
   selectedColor?: string;
 }
 
+export type { StoreSettings, StoreProfile } from './store';
+
 export interface Category {
   id: string;
   name: string;
@@ -61,6 +73,8 @@ export interface CustomerInfo {
   governorate?: string;
 }
 
+export type PaymentMethodId = 'cash_on_delivery' | 'credit_card' | 'digital_wallet';
+
 export interface Order {
   id: string;
   items: CartItem[];
@@ -68,4 +82,10 @@ export interface Order {
   total: number;
   date: string;
   status: 'pending' | 'completed' | 'cancelled';
+  couponCode?: string;
+  discountAmount?: number;
+  paymentMethod?: PaymentMethodId | string;
+  paymentStatus?: string;
+  deliveryFee?: number;
+  deliveryStatus?: string;
 }

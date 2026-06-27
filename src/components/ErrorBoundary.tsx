@@ -1,6 +1,7 @@
 import React, { Component, ReactNode } from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { reportError, getCorrelationContext } from '@/lib/observability';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -22,7 +23,12 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('ErrorBoundary caught:', error, errorInfo);
+    console.error('[ErrorBoundary]', error.message, errorInfo.componentStack);
+    reportError(error, {
+      source: 'ErrorBoundary',
+      componentStack: errorInfo.componentStack,
+      correlation: getCorrelationContext(),
+    });
   }
 
   handleRetry = () => {
@@ -54,10 +60,15 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                 تحديث الصفحة
               </Button>
             </div>
-            {import.meta.env.DEV && this.state.error && (
+            {this.state.error && (
               <details className="mt-6 text-left text-xs text-muted-foreground bg-muted rounded-xl p-4">
                 <summary className="cursor-pointer font-medium mb-2">تفاصيل الخطأ</summary>
                 <pre className="whitespace-pre-wrap break-words">{this.state.error.message}</pre>
+                {import.meta.env.DEV && this.state.error.stack && (
+                  <pre className="whitespace-pre-wrap break-words mt-2 opacity-70 text-[10px]">
+                    {this.state.error.stack}
+                  </pre>
+                )}
               </details>
             )}
           </div>

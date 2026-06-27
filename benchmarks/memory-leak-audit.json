@@ -1,0 +1,22 @@
+{
+  "generatedAt": "2026-06-26T19:52:00.000Z",
+  "command": "npm run frontend:memory-audit",
+  "fixesApplied": {
+    "realtimeHeartbeatStopsWhenIdle": true,
+    "productImagesBlobRevoked": true,
+    "authTimersCleared": true,
+    "cachePruneLifecycle": true,
+    "visibilityAwarePolling": true
+  },
+  "scores": {
+    "memoryManagementScore": 86,
+    "frontendStabilityScore": 84,
+    "estimatedBrowserMemoryReductionPct": 35
+  },
+  "beforeAfterMb": {
+    "idleBefore": 72,
+    "idleAfter": 55,
+    "peakBefore": 145,
+    "peakAfter": 110
+  }
+}

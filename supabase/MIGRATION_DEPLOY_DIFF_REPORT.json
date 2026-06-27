@@ -1,0 +1,212 @@
+{
+  "generatedAt": "2026-06-25T06:14:14.146Z",
+  "projectUrl": "https://mpifosptgoxvroblrrte.supabase.co",
+  "counts": {
+    "localMigrationFiles": 145,
+    "deployedOnRemote": 114,
+    "notDeployedOnRemote": 31,
+    "liveTablesInTypes": 37,
+    "liveFunctionsInTypes": 95
+  },
+  "lastDeployedMigration": "20260625000016",
+  "latestLocalMigration": "20260625000057",
+  "notDeployedMigrationIds": [
+    "20260625000017",
+    "20260625000018",
+    "20260625000019",
+    "20260625000020",
+    "20260625000021",
+    "20260625000022",
+    "20260625000023",
+    "20260625000024",
+    "20260625000025",
+    "20260625000026",
+    "20260625000027",
+    "20260625000028",
+    "20260625000029",
+    "20260625000030",
+    "20260625000041",
+    "20260625000042",
+    "20260625000043",
+    "20260625000044",
+    "20260625000045",
+    "20260625000046",
+    "20260625000047",
+    "20260625000048",
+    "20260625000049",
+    "20260625000050",
+    "20260625000051",
+    "20260625000052",
+    "20260625000053",
+    "20260625000054",
+    "20260625000055",
+    "20260625000056",
+    "20260625000057"
+  ],
+  "notDeployedFilenames": [
+    "20260625000017_tenant_isolation_security.sql",
+    "20260625000018_order_creation_reliability.sql",
+    "20260625000019_postgresql_performance_audit.sql",
+    "20260625000020_analytics_accuracy.sql",
+    "20260625000021_security_hardening.sql",
+    "20260625000022_scale_500_to_1000.sql",
+    "20260625000023_schema_code_sync.sql",
+    "20260625000024_product_lifecycle_sync.sql",
+    "20260625000025_order_reliability.sql",
+    "20260625000026_saas_scale_performance.sql",
+    "20260625000027_tenant_isolation_reapply.sql",
+    "20260625000028_analytics_optimization.sql",
+    "20260625000029_security_audit_fixes.sql",
+    "20260625000030_scale_performance_v40.sql",
+    "20260625000041_storefront_load_bottlenecks.sql",
+    "20260625000042_hot_table_optimizations.sql",
+    "20260625000043_write_amplification_reduction.sql",
+    "20260625000044_payload_optimization.sql",
+    "20260625000045_transaction_integrity.sql",
+    "20260625000046_transaction_integrity_v2.sql",
+    "20260625000047_checkout_variant_consolidation.sql",
+    "20260625000048_over_fetching_reduction.sql",
+    "20260625000049_index_query_optimization.sql",
+    "20260625000050_merchant_product_by_id.sql",
+    "20260625000051_analytics_event_buffer.sql",
+    "20260625000052_analytics_outbox_tenant_lock.sql",
+    "20260625000053_inventory_architecture_audit.sql",
+    "20260625000054_analytics_hot_path_hardening.sql",
+    "20260625000055_background_processing.sql",
+    "20260625000056_edge_cache_versioning.sql",
+    "20260625000057_storefront_payload_optimization.sql"
+  ],
+  "platformSchemaVersionOnLive": [],
+  "undeployedOnly": {
+    "tablesIntroduced": [
+      "analytics_event_outbox",
+      "store_visitor_daily_keys"
+    ],
+    "tablesMissingOnLive": [
+      "analytics_event_outbox",
+      "store_visitor_daily_keys"
+    ],
+    "tablesPresentOnLive": [],
+    "rpcsIntroduced": 57,
+    "rpcsMissingOnLive": [
+      "_dashboard_period_json",
+      "_resolve_store_owner_by_slug",
+      "audit_merchant_analytics_health",
+      "audit_merchant_inventory_integrity",
+      "bump_storefront_cache_version",
+      "checkout_resolve_duplicate_order",
+      "claim_order_webhook_outbox_batch",
+      "create_order_with_stock_deduction",
+      "finalize_order_webhook_delivery",
+      "get_analytics_pipeline_status",
+      "get_background_jobs_status",
+      "get_checkout_products_by_ids",
+      "get_dashboard_statistics_batch",
+      "get_merchant_product_by_id",
+      "get_order_by_idempotency_key",
+      "get_order_items_for_statistics",
+      "get_owner_bootstrap",
+      "get_owner_checkout_products_by_ids",
+      "get_owner_products_page",
+      "get_statistics_page_bundle",
+      "get_store_bundle",
+      "get_store_for_user",
+      "get_store_meta",
+      "get_store_policies",
+      "get_store_product_by_id",
+      "get_store_products_by_slug",
+      "get_store_products_page",
+      "get_store_statistics",
+      "get_storefront_cache_version",
+      "get_storefront_page_bundle",
+      "increment_product_stock",
+      "is_payment_method_allowed",
+      "is_username_available",
+      "is_valid_store_visit",
+      "list_merchant_orders",
+      "mark_meta_conversion_sent",
+      "process_analytics_event_buffer",
+      "prune_analytics_event_outbox",
+      "publish_owner_product",
+      "record_initial_stock_movements",
+      "record_product_initial_stock",
+      "recover_stale_webhook_processing",
+      "retry_order_webhook_events",
+      "storefront_compact_variants",
+      "storefront_product_card_json",
+      "storefront_product_grid_json",
+      "storefront_store_shell_json",
+      "tenant_row_owned",
+      "track_product_view_by_slug",
+      "track_store_visit_by_slug",
+      "trg_bump_storefront_cache_on_category",
+      "trg_bump_storefront_cache_on_product",
+      "trg_bump_storefront_cache_on_settings",
+      "trg_orders_daily_stats",
+      "trg_visits_daily_stats",
+      "verify_order_for_meta_conversion"
+    ],
+    "rpcsPresentOnLive": [
+      "platform_health_check"
+    ],
+    "columnsIntroduced": [
+      {
+        "table": "orders",
+        "column": "meta_conversion_sent_at",
+        "file": "20260625000021_security_hardening.sql"
+      },
+      {
+        "table": "orders",
+        "column": "notes",
+        "file": "20260625000023_schema_code_sync.sql"
+      },
+      {
+        "table": "store_settings",
+        "column": "order_webhook_url",
+        "file": "20260625000055_background_processing.sql"
+      },
+      {
+        "table": "order_webhook_outbox",
+        "column": "next_attempt_at",
+        "file": "20260625000055_background_processing.sql"
+      },
+      {
+        "table": "store_settings",
+        "column": "storefront_cache_version",
+        "file": "20260625000056_edge_cache_versioning.sql"
+      }
+    ],
+    "columnsMissing": [
+      {
+        "table": "store_settings",
+        "column": "order_webhook_url",
+        "file": "20260625000055_background_processing.sql",
+        "reason": "column_not_in_types"
+      },
+      {
+        "table": "order_webhook_outbox",
+        "column": "next_attempt_at",
+        "file": "20260625000055_background_processing.sql",
+        "reason": "column_not_in_types"
+      },
+      {
+        "table": "store_settings",
+        "column": "storefront_cache_version",
+        "file": "20260625000056_edge_cache_versioning.sql",
+        "reason": "column_not_in_types"
+      }
+    ],
+    "columnsPresent": [
+      {
+        "table": "orders",
+        "column": "meta_conversion_sent_at",
+        "file": "20260625000021_security_hardening.sql"
+      },
+      {
+        "table": "orders",
+        "column": "notes",
+        "file": "20260625000023_schema_code_sync.sql"
+      }
+    ]
+  }
+}

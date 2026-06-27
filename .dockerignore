@@ -1,0 +1,16 @@
+node_modules
+dist
+dist-ssr
+.git
+.github
+.env
+.env.*
+!.env.example
+*.log
+.vscode
+.idea
+.DS_Store
+coverage
+*.md
+.lovable
+agent-transcripts

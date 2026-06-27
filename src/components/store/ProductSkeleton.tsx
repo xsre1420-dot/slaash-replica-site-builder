@@ -1,4 +1,6 @@
-const ProductSkeleton = ({ viewMode = "grid" }: { viewMode?: "grid" | "list" }) => {
+import { memo } from "react";
+
+const ProductSkeleton = memo(function ProductSkeleton({ viewMode = "grid" }: { viewMode?: "grid" | "list" }) {
   if (viewMode === "list") {
     return (
       <div className="bg-card rounded-2xl overflow-hidden border border-border/50 animate-pulse flex gap-3 p-3">
@@ -24,6 +26,6 @@ const ProductSkeleton = ({ viewMode = "grid" }: { viewMode?: "grid" | "list" }) 
       </div>
     </div>
   );
-};
+});
 
 export default ProductSkeleton;

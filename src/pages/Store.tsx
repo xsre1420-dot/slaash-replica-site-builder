@@ -1,118 +1,159 @@
-import { X, ShoppingCart, Plus, Search, Heart, Star, SlidersHorizontal, ArrowUpDown, Grid3X3, List, Mic, MicOff, RefreshCw } from "lucide-react";
+import { Search, ArrowUpDown, Grid3X3, List, Mic, MicOff, RefreshCw } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { getProductsByCategory, getCategories, loadProducts } from "@/data/dummyData";
+import { getCategories, getCategoriesSync } from "@/services/productService";
 import { Product, Category } from "@/types";
-import { useCart } from "@/context/CartContext";
-import { useStore } from "@/context/StoreContext";
-import MetaPixel from "@/components/MetaPixel";
+import { useCartActions } from "@/context/CartContext";
+import MarketingScripts from "@/components/MarketingScripts";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
-import CartDrawer from "@/components/CartDrawer";
-import { useTenantStore } from "@/hooks/useTenantStore";
+import { useStoreVisitTracking } from "@/hooks/useStoreVisitTracking";
+import { useTenantStore } from "@/context/TenantStoreContext";
+import { useStoreProductsPage } from "@/hooks/useStoreProductsPage";
+import { useMerchantProductsPage } from "@/hooks/useMerchantProductsPage";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import WhatsAppButton from "@/components/WhatsAppButton";
-import ProductCard from "@/components/store/ProductCard";
-import ProductSkeleton from "@/components/store/ProductSkeleton";
+import StoreProductGrid from "@/components/store/StoreProductGrid";
+import { StoreCartHeaderButton, StoreFixedCheckoutBar } from "@/components/store/StoreCartChrome";
 import FavoritesDrawer from "@/components/store/FavoritesDrawer";
 import StoreFilterDrawer from "@/components/store/StoreFilterDrawer";
 import StoreThemeProvider from "@/components/StoreThemeProvider";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useToast } from "@/hooks/use-toast";
-
-const PRODUCTS_PER_PAGE = 12;
+import { useStoreDisplay } from "@/hooks/useStoreDisplay";
+import { STORE_PRODUCTS_PAGE_SIZE } from "@/constants/pagination";
+import { resolveMediaDeliveryUrl } from "@/utils/cdnMediaUtils";
+import StorefrontTrustBar from "@/components/storefront/StorefrontTrustBar";
+import StorefrontFooter from "@/components/storefront/StorefrontFooter";
+import { getProductPath } from "@/lib/storefrontPaths";
+import { persistCheckoutStoreSlug } from "@/lib/checkoutStoreContext";
+import { BadgeCheck } from "lucide-react";
 
 const Store = () => {
   const { username: storeSlug } = useParams();
-  const isTenantMode = !!storeSlug;
+  const {
+    isTenantMode,
+    storeName,
+    storeLogo,
+    storeSettings,
+    ownerId: displayOwnerId,
+    loading: displayLoading,
+  } = useStoreDisplay(storeSlug);
   const tenant = useTenantStore(storeSlug);
+  useStoreVisitTracking(isTenantMode ? storeSlug : undefined);
 
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebouncedValue(searchQuery, 300);
+
+  const tenantCategoryFilter = useMemo(() => {
+    if (selectedCategory === 'all') return undefined;
+    const cat = categories.find((c) => c.id === selectedCategory);
+    return cat?.name ?? undefined;
+  }, [selectedCategory, categories]);
+
+  const ownerCategoryFilter = useMemo(() => {
+    if (selectedCategory === 'all') return 'all';
+    const cat = categories.find((c) => c.id === selectedCategory);
+    return cat?.name ?? selectedCategory;
+  }, [selectedCategory, categories]);
+
+  const tenantProducts = useStoreProductsPage(storeSlug, {
+    category: tenantCategoryFilter,
+    search: debouncedSearch,
+    enabled: isTenantMode,
+  });
+
+  const ownerCatalog = useMerchantProductsPage(debouncedSearch, ownerCategoryFilter, {
+    enabled: !isTenantMode,
+  });
   const [sortBy, setSortBy] = useState<"default" | "price-asc" | "price-desc">("default");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isLoading, setIsLoading] = useState(true);
-  const [visibleCount, setVisibleCount] = useState(PRODUCTS_PER_PAGE);
+  const [visibleCount, setVisibleCount] = useState(STORE_PRODUCTS_PAGE_SIZE);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [filterPriceRange, setFilterPriceRange] = useState<[number, number]>([0, 0]);
   const [filterSizes, setFilterSizes] = useState<string[]>([]);
 
-  const { addToCart, cartItems, cartCount, updateQuantity, cartTotal } = useCart();
-  const ownStore = useStore();
-  const { trackAddToCart, trackViewContent } = useMetaPixel();
-  const { favorites, toggleFavorite, isFavorite, count: favCount } = useFavorites();
+  const { addToCart, setStoreOwner } = useCartActions();
+  const { trackAddToCart } = useMetaPixel();
+  const { favorites, toggleFavorite, isFavorite, count: favCount } = useFavorites(storeSlug);
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Derive display values from tenant or own store
-  const storeName = isTenantMode ? (tenant.storeInfo?.storeName || '') : ownStore.storeName;
-  const storeLogo = isTenantMode ? (tenant.storeInfo?.storeLogo || '') : ownStore.storeLogo;
-  const storeSettings = isTenantMode ? {
-    bannerImages: tenant.storeInfo?.bannerImages || [],
-    menuBackgroundColor: tenant.storeInfo?.menuBackgroundColor || '#ffffff',
-    menuTextColor: tenant.storeInfo?.menuTextColor || '#333333',
-    menuAccentColor: tenant.storeInfo?.menuAccentColor || '#6366f1',
-    storeFont: (tenant.storeInfo as any)?.storeFont || 'Tajawal',
-    primaryBannerIndex: tenant.storeInfo?.primaryBannerIndex || 0,
-    deliveryPrices: tenant.storeInfo?.deliveryPrices || [],
-    whatsappNumber: tenant.storeInfo?.whatsappNumber || '',
-  } : { ...ownStore.storeSettings, whatsappNumber: '' };
-
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const bannerDotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pullStartY = useRef(0);
   const categoriesRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef(0);
 
-  // --- Load data: tenant mode vs owner mode ---
+  // Derive display values from unified hook
+  useEffect(() => {
+    if (isTenantMode && displayOwnerId) {
+      setStoreOwner(displayOwnerId);
+      if (storeSlug) persistCheckoutStoreSlug(displayOwnerId, storeSlug);
+    }
+  }, [isTenantMode, displayOwnerId, storeSlug, setStoreOwner]);
+
+  const allProducts = useMemo(
+    () => (isTenantMode ? tenantProducts.products : ownerCatalog.products),
+    [isTenantMode, tenantProducts.products, ownerCatalog.products]
+  );
+
+  const catalogLoading = isTenantMode ? tenantProducts.loading : ownerCatalog.loading;
+
+  useEffect(() => {
+    setIsLoading(catalogLoading);
+    setVisibleCount(STORE_PRODUCTS_PAGE_SIZE);
+  }, [selectedCategory, catalogLoading]);
+
   const loadData = useCallback(async (force = false) => {
     if (isTenantMode) {
-      // Tenant mode — data comes from useTenantStore hook
-      if (force) tenant.refetch();
+      if (force) {
+        tenant.refetch();
+        tenantProducts.refetch();
+      }
       return;
     }
     setIsLoading(true);
     try {
-      const [cats, prods] = await Promise.all([getCategories(force), loadProducts(force)]);
-      setCategories([{ id: "all", name: "الكل", order: -1 }, ...cats]);
-      setAllProducts(selectedCategory === "all" ? prods : prods.filter(p => p.category === selectedCategory));
+      const categoriesData = await getCategories(force);
+      setCategories([{ id: "all", name: "الكل", order: -1 }, ...categoriesData]);
+      if (force) await ownerCatalog.reload();
     } catch {
-      setCategories([{ id: "all", name: "الكل", order: -1 }]);
+      setCategories([{ id: "all", name: "الكل", order: -1 }, ...getCategoriesSync()]);
     }
     setIsLoading(false);
-  }, [selectedCategory, isTenantMode]);
+  }, [isTenantMode, tenant, tenantProducts, ownerCatalog]);
 
-  // Sync tenant data into local state
   useEffect(() => {
-    if (isTenantMode) {
-      setIsLoading(tenant.loading);
-      if (!tenant.loading) {
-        setCategories([{ id: "all", name: "الكل", order: -1 }, ...tenant.categories]);
-        setAllProducts(selectedCategory === "all" ? tenant.products : tenant.products.filter(p => p.category === selectedCategory));
-      }
+    if (isTenantMode && !displayLoading) {
+      setCategories([{ id: "all", name: "الكل", order: -1 }, ...tenant.categories]);
     }
-  }, [isTenantMode, tenant.loading, tenant.products, tenant.categories, selectedCategory]);
+  }, [isTenantMode, displayLoading, tenant.categories]);
 
   useEffect(() => { if (!isTenantMode) loadData(); }, [loadData, isTenantMode]);
 
-  // Update products when category changes
-  useEffect(() => {
-    setAllProducts(getProductsByCategory(selectedCategory));
-    setVisibleCount(PRODUCTS_PER_PAGE);
-  }, [selectedCategory]);
-
-  // --- Banner ---
   const bannerImages = storeSettings.bannerImages || [];
   useEffect(() => {
-    if (bannerImages.length > 1) {
-      const interval = setInterval(() => {
-        setIsTransitioning(true);
-        setTimeout(() => { setCurrentImageIndex(prev => (prev + 1) % bannerImages.length); setIsTransitioning(false); }, 200);
-      }, 3500);
-      return () => clearInterval(interval);
-    }
+    if (bannerImages.length <= 1) return;
+    let transitionTimer: ReturnType<typeof setTimeout> | null = null;
+    const interval = setInterval(() => {
+      setIsTransitioning(true);
+      transitionTimer = setTimeout(() => {
+        setCurrentImageIndex((prev) => (prev + 1) % bannerImages.length);
+        setIsTransitioning(false);
+        transitionTimer = null;
+      }, 200);
+    }, 3500);
+    return () => {
+      clearInterval(interval);
+      if (transitionTimer) clearTimeout(transitionTimer);
+      if (bannerDotTimerRef.current) clearTimeout(bannerDotTimerRef.current);
+    };
   }, [bannerImages.length]);
 
   // --- Compute max price and available sizes ---
@@ -133,9 +174,8 @@ const Store = () => {
   // --- Filter, search, sort ---
   const displayProducts = useMemo(() => {
     let filtered = allProducts;
-    // Search
-    if (searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase();
+    if (!isTenantMode && searchQuery.trim()) {
+      const q = debouncedSearch.trim().toLowerCase();
       filtered = filtered.filter(p => p.name.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q));
     }
     // Price filter
@@ -150,22 +190,28 @@ const Store = () => {
     if (sortBy === "price-asc") filtered = [...filtered].sort((a, b) => a.price - b.price);
     if (sortBy === "price-desc") filtered = [...filtered].sort((a, b) => b.price - a.price);
     return filtered;
-  }, [allProducts, searchQuery, sortBy, filterPriceRange, filterSizes, maxPrice]);
+  }, [allProducts, debouncedSearch, sortBy, filterPriceRange, filterSizes, maxPrice]);
 
-  // Infinite scroll with IntersectionObserver
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && visibleCount < displayProducts.length) {
-        setVisibleCount(prev => Math.min(prev + PRODUCTS_PER_PAGE, displayProducts.length));
+      if (!entry.isIntersecting) return;
+      if (isTenantMode && tenantProducts.hasMore) {
+        tenantProducts.loadMore();
+        return;
+      }
+      if (!isTenantMode && ownerCatalog.hasMore) {
+        void ownerCatalog.loadMore();
+        return;
+      }
+      if (visibleCount < displayProducts.length) {
+        setVisibleCount((prev) => Math.min(prev + STORE_PRODUCTS_PAGE_SIZE, displayProducts.length));
       }
     }, { threshold: 0.1 });
     observer.observe(el);
     return () => observer.disconnect();
-  }, [displayProducts.length, visibleCount]);
-
-  const visibleProducts = displayProducts.slice(0, visibleCount);
+  }, [displayProducts.length, visibleCount, isTenantMode, tenantProducts.hasMore, tenantProducts.loadMore, ownerCatalog.hasMore, ownerCatalog.loadMore]);
 
   // --- Pull to refresh ---
   const handleTouchStart = (e: React.TouchEvent) => { pullStartY.current = e.touches[0].clientY; };
@@ -189,41 +235,44 @@ const Store = () => {
     }
   };
 
-  // --- Cart helpers ---
-  const getCartQuantity = (productId: string) => {
-    const item = cartItems.find(i => i.product.id === productId);
-    return item?.quantity || 0;
-  };
+  const handleViewProduct = useCallback((productId: string) => {
+    const previewProduct =
+      displayProducts.find((p) => p.id === productId) ??
+      allProducts.find((p) => p.id === productId);
+    navigate(getProductPath(productId, isTenantMode ? storeSlug : null), {
+      state: previewProduct ? { previewProduct } : undefined,
+    });
+  }, [isTenantMode, storeSlug, navigate, displayProducts, allProducts]);
 
-  const handleAddToCart = (product: Product) => {
+  const handleAddToCart = useCallback((product: Product) => {
+    const needsVariants = (product.sizes?.length ?? 0) > 0 || (product.colors?.length ?? 0) > 0;
+    if (needsVariants) {
+      toast({
+        title: "اختر الخيارات أولاً",
+        description: "يرجى اختيار المقاس أو اللون من صفحة المنتج",
+      });
+      handleViewProduct(product.id);
+      return;
+    }
+    if (isTenantMode && tenant.storeInfo?.ownerId) {
+      setStoreOwner(tenant.storeInfo.ownerId);
+    }
     addToCart(product);
     trackAddToCart(product.id, product.name, product.price);
     toast({
       title: "✅ تمت الإضافة",
       description: `${product.name} أُضيف إلى السلة`,
     });
-  };
+  }, [isTenantMode, tenant.storeInfo?.ownerId, setStoreOwner, addToCart, trackAddToCart, toast, handleViewProduct]);
 
-  const handleUpdateQuantity = (productId: string, qty: number) => {
-    updateQuantity(productId, qty);
-  };
-
-  const handleViewProduct = (productId: string) => {
-    const product = allProducts.find(p => p.id === productId);
-    if (product) trackViewContent(product.id, product.name, product.price);
-    const path = isTenantMode ? `/store/${storeSlug}/product/${productId}` : `/product-details/${productId}`;
-    navigate(path);
-  };
-
-  // --- Share ---
-  const handleShare = async (product: Product) => {
+  const handleShare = useCallback(async (product: Product) => {
     const productUrl = isTenantMode ? `${window.location.origin}/store/${storeSlug}/product/${product.id}` : `${window.location.origin}/product-details/${product.id}`;
     const shareData = { title: product.name, text: `${product.name} - ${product.price.toLocaleString()} د.ع`, url: productUrl };
     try {
       if (navigator.share) await navigator.share(shareData);
       else { await navigator.clipboard.writeText(shareData.url); toast({ title: "تم النسخ", description: "تم نسخ رابط المنتج" }); }
     } catch {}
-  };
+  }, [isTenantMode, storeSlug, toast]);
 
   // --- Voice search ---
   const toggleVoiceSearch = () => {
@@ -252,17 +301,45 @@ const Store = () => {
   // Active filter count
   const activeFilterCount = (filterPriceRange[0] > 0 || (filterPriceRange[1] > 0 && filterPriceRange[1] < maxPrice) ? 1 : 0) + (filterSizes.length > 0 ? 1 : 0);
 
-  const themeColors = {
-    backgroundColor: storeSettings.menuBackgroundColor,
-    textColor: storeSettings.menuTextColor,
-    accentColor: storeSettings.menuAccentColor,
-    font: (storeSettings as any).storeFont || 'Tajawal',
-  };
+  const themeColors = useMemo(
+    () => ({
+      backgroundColor: storeSettings.menuBackgroundColor,
+      textColor: storeSettings.menuTextColor,
+      accentColor: storeSettings.menuAccentColor,
+      font: (storeSettings as any).storeFont || 'Tajawal',
+    }),
+    [
+      storeSettings.menuBackgroundColor,
+      storeSettings.menuTextColor,
+      storeSettings.menuAccentColor,
+      (storeSettings as any).storeFont,
+    ]
+  );
+
+  const handleFilterApply = useCallback((range: [number, number], sizes: string[]) => {
+    setFilterPriceRange(range);
+    setFilterSizes(sizes);
+  }, []);
+
+  const handleFilterReset = useCallback(() => {
+    setFilterPriceRange([0, maxPrice]);
+    setFilterSizes([]);
+  }, [maxPrice]);
 
   return (
+    <>
+      <SEOHead
+        title={storeName ? `${storeName} — متجر إلكتروني` : 'المتجر'}
+        description={storeName ? `تسوق من ${storeName} — منتجات متنوعة بأسعار منافسة` : 'متجر إلكتروني'}
+        url={storeSlug ? `${window.location.origin}/store/${storeSlug}` : undefined}
+        storeName={storeName}
+      />
     <StoreThemeProvider colors={themeColors}>
     <div className="min-h-screen bg-background" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-      <MetaPixel />
+      <MarketingScripts
+        storeSlug={isTenantMode ? storeSlug : undefined}
+        storeOwnerId={isTenantMode ? tenant.storeInfo?.ownerId : undefined}
+      />
 
       {/* Pull to refresh indicator */}
       {isRefreshing && (
@@ -276,16 +353,7 @@ const Store = () => {
         <div className="px-4 py-3 max-w-3xl mx-auto">
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center gap-1">
-              <CartDrawer>
-                <button className="relative p-2 rounded-full hover:bg-muted transition-colors">
-                  <ShoppingCart className="w-5 h-5 text-foreground" />
-                  {cartCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold animate-scale-in shadow-sm">
-                      {cartCount}
-                    </span>
-                  )}
-                </button>
-              </CartDrawer>
+              <StoreCartHeaderButton storeSlug={isTenantMode ? storeSlug : undefined} />
               <FavoritesDrawer
                 favorites={favoriteProducts}
                 count={favCount}
@@ -298,10 +366,13 @@ const Store = () => {
               {storeLogo && (
                 <div className="relative">
                   <div className="absolute inset-0 bg-primary/20 rounded-full blur-md" />
-                  <img src={storeLogo} alt="" className="relative w-9 h-9 rounded-full object-cover ring-2 ring-primary/20" />
+                  <img src={resolveMediaDeliveryUrl(storeLogo, { variant: 'thumbnail' })} alt="" className="relative w-9 h-9 rounded-full object-cover ring-2 ring-primary/20" />
                 </div>
               )}
-              <p className="font-bold text-base text-foreground truncate">{storeName}</p>
+              <p className="font-bold text-base text-foreground truncate flex items-center gap-1 justify-center">
+                {storeName}
+                {isTenantMode && <BadgeCheck className="w-4 h-4 text-primary shrink-0" />}
+              </p>
             </div>
             <div className="w-10" />
           </div>
@@ -314,11 +385,13 @@ const Store = () => {
               placeholder="ابحث عن منتج..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-11 pr-10 pl-12 rounded-xl bg-muted/70 border border-transparent text-right text-sm placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/30 focus:bg-card focus:border-primary/30 transition-all text-foreground"
+              className="w-full h-11 pr-10 pl-12 rounded-xl bg-muted/70 border border-transparent text-right text-sm placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 focus:bg-card focus:border-primary/30 transition-all text-foreground"
             />
             <button
               onClick={toggleVoiceSearch}
-              className={`absolute left-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-colors ${isListening ? 'text-destructive animate-pulse bg-destructive/10' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+              type="button"
+              aria-label={isListening ? "إيقاف البحث الصوتي" : "البحث الصوتي"}
+              className={`absolute left-1 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full transition-colors ${isListening ? 'text-destructive animate-pulse bg-destructive/10' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
             >
               {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             </button>
@@ -326,21 +399,35 @@ const Store = () => {
         </div>
       </div>
 
+      <StorefrontTrustBar />
+
       <div className="max-w-3xl mx-auto">
-        {/* Banner — hero placement */}
+        {/* Banner — hero */}
         {bannerImages.length > 0 && (
           <div className="px-4 pt-4">
-            <div className="relative h-40 sm:h-52 overflow-hidden rounded-2xl shadow-md ring-1 ring-border/40">
+            <div className="relative h-44 sm:h-56 overflow-hidden rounded-2xl shadow-lg ring-1 ring-border/40">
               <div className={`w-full h-full transition-all duration-500 ${isTransitioning ? 'opacity-0 scale-[1.03]' : 'opacity-100 scale-100'}`}>
-                <img src={bannerImages[currentImageIndex]} alt="Banner" className="w-full h-full object-cover" loading="lazy" />
+                <img src={bannerImages[currentImageIndex]} alt="" className="w-full h-full object-cover" loading="lazy" />
               </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-foreground/20 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-t from-foreground/50 via-foreground/10 to-transparent pointer-events-none" />
+              <div className="absolute bottom-4 right-4 left-4 text-right pointer-events-none">
+                <p className="text-lg sm:text-xl font-bold text-white">{storeName}</p>
+                <p className="text-xs text-white/90 mt-0.5">تسوق بثقة — توصيل سريع ودفع آمن</p>
+              </div>
               {bannerImages.length > 1 && (
                 <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
                   {bannerImages.map((_, i) => (
                     <button
                       key={i}
-                      onClick={() => { setIsTransitioning(true); setTimeout(() => { setCurrentImageIndex(i); setIsTransitioning(false); }, 200); }}
+                      onClick={() => {
+                        if (bannerDotTimerRef.current) clearTimeout(bannerDotTimerRef.current);
+                        setIsTransitioning(true);
+                        bannerDotTimerRef.current = setTimeout(() => {
+                          bannerDotTimerRef.current = null;
+                          setCurrentImageIndex(i);
+                          setIsTransitioning(false);
+                        }, 200);
+                      }}
                       className={`transition-all rounded-full ${currentImageIndex === i ? "bg-primary w-6 h-2" : "bg-background/70 w-2 h-2 hover:bg-background"}`}
                     />
                   ))}
@@ -363,7 +450,7 @@ const Store = () => {
                 key={cat.id}
                 className={`px-4 py-2 rounded-full transition-all duration-200 whitespace-nowrap text-xs font-semibold ${
                   selectedCategory === cat.id
-                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/25 scale-105"
+                    ? "bg-primary text-primary-foreground scale-105"
                     : "bg-card hover:bg-muted border border-border/60 text-muted-foreground hover:text-foreground"
                 }`}
                 onClick={() => setSelectedCategory(cat.id)}
@@ -391,8 +478,8 @@ const Store = () => {
               currentRange={filterPriceRange}
               availableSizes={availableSizes}
               selectedSizes={filterSizes}
-              onApply={(range, sizes) => { setFilterPriceRange(range); setFilterSizes(sizes); }}
-              onReset={() => { setFilterPriceRange([0, maxPrice]); setFilterSizes([]); }}
+              onApply={handleFilterApply}
+              onReset={handleFilterReset}
               activeFilterCount={activeFilterCount}
             />
           </div>
@@ -421,77 +508,38 @@ const Store = () => {
           </p>
         )}
 
-        {isLoading ? (
-          <div className={viewMode === "grid" ? "grid grid-cols-2 sm:grid-cols-3 gap-3" : "space-y-3"}>
-            {Array.from({ length: 6 }).map((_, i) => (
-              <ProductSkeleton key={i} viewMode={viewMode} />
-            ))}
-          </div>
-        ) : visibleProducts.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-full flex items-center justify-center text-3xl ring-1 ring-primary/10">🛍️</div>
-            <h3 className="text-lg font-bold mb-1 text-foreground">
-              {searchQuery ? "لا توجد نتائج" : "لا توجد منتجات"}
-            </h3>
-            <p className="text-muted-foreground text-sm">
-              {searchQuery ? "جرب كلمات بحث مختلفة" : "تصفح الأقسام الأخرى"}
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className={viewMode === "grid" ? "grid grid-cols-2 sm:grid-cols-3 gap-3" : "space-y-3"}>
-              {visibleProducts.map((product, i) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  viewMode={viewMode}
-                  isFavorite={isFavorite(product.id)}
-                  cartQuantity={getCartQuantity(product.id)}
-                  onToggleFavorite={toggleFavorite}
-                  onAddToCart={handleAddToCart}
-                  onUpdateQuantity={handleUpdateQuantity}
-                  onView={handleViewProduct}
-                  onShare={handleShare}
-                  index={i}
-                />
-              ))}
-            </div>
-            {visibleCount < displayProducts.length && (
-              <div ref={sentinelRef} className="flex justify-center py-6">
-                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              </div>
-            )}
-          </>
-        )}
+        <StoreProductGrid
+          products={displayProducts}
+          viewMode={viewMode}
+          isLoading={isLoading}
+          searchQuery={searchQuery}
+          visibleCount={visibleCount}
+          totalCount={displayProducts.length}
+          isTenantMode={isTenantMode}
+          storeSlug={storeSlug}
+          isFavorite={isFavorite}
+          onToggleFavorite={toggleFavorite}
+          onAddToCart={handleAddToCart}
+          onShare={handleShare}
+          sentinelRef={sentinelRef}
+        />
       </div>
 
-      <WhatsAppButton phoneNumber={(storeSettings as any).whatsappNumber || ""} />
+      <StorefrontFooter
+        storeName={storeName || 'المتجر'}
+        storeSlug={storeSlug}
+        ownerId={isTenantMode ? tenant.storeInfo?.ownerId : displayOwnerId}
+        whatsappNumber={(storeSettings as any).whatsappNumber || tenant.storeInfo?.whatsappNumber}
+        returnPolicy={tenant.storeInfo?.returnPolicy}
+        privacyPolicy={tenant.storeInfo?.privacyPolicy}
+      />
 
-      {/* Fixed Cart Bar */}
-      {cartCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background/95 to-transparent">
-          <button onClick={() => navigate(isTenantMode ? `/store/${storeSlug}/checkout` : '/checkout')} className="w-full max-w-3xl mx-auto block">
-            <div className="bg-gradient-to-r from-primary to-primary/85 rounded-2xl shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 transition-all">
-              <div className="flex items-center justify-between px-5 py-3.5">
-                <div className="flex items-center gap-3">
-                  <div className="relative w-9 h-9 rounded-full bg-primary-foreground/15 flex items-center justify-center">
-                    <ShoppingCart className="w-4 h-4 text-primary-foreground" />
-                    <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold ring-2 ring-primary">
-                      {cartCount}
-                    </span>
-                  </div>
-                  <span className="text-sm font-bold text-primary-foreground">
-                    {cartTotal.toLocaleString()} د.ع
-                  </span>
-                </div>
-                <span className="text-sm font-bold text-primary-foreground">إتمام الطلب ←</span>
-              </div>
-            </div>
-          </button>
-        </div>
-      )}
+      <WhatsAppButton phoneNumber={(storeSettings as any).whatsappNumber || tenant.storeInfo?.whatsappNumber || ""} />
+
+      <StoreFixedCheckoutBar isTenantMode={isTenantMode} storeSlug={storeSlug} />
     </div>
     </StoreThemeProvider>
+    </>
   );
 };
 

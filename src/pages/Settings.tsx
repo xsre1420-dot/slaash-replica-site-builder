@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStore } from "@/context/StoreContext";
 import { toast } from "sonner";
-import { Store, Truck, FileText, MessageCircle, Globe } from "lucide-react";
-import SettingsHeader from "@/components/settings/SettingsHeader";
+import { Store, Truck, FileText, MessageCircle, Globe, Loader2, CheckCircle2 } from "lucide-react";
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import PageHeader from "@/components/layout/PageHeader";
 import StoreInfoTab from "@/components/settings/StoreInfoTab";
 import DeliveryTab from "@/components/settings/DeliveryTab";
 import PoliciesTab from "@/components/settings/PoliciesTab";
@@ -13,13 +14,23 @@ import WhatsAppTab from "@/components/settings/WhatsAppTab";
 import PaymentTab from "@/components/settings/PaymentTab";
 import DesignTab from "@/components/settings/DesignTab";
 import CustomDomainTab from "@/components/settings/CustomDomainTab";
+import { validateStoreSlug, normalizeStoreSlugInput } from "@/lib/storeSlug";
+import { ATTENTION_PARAM } from "@/lib/attentionHighlight";
+import {
+  fetchMerchantComplianceSettings,
+  saveMerchantComplianceSettings,
+} from "@/services/storeService";
 
 const Settings = () => {
   const { user } = useAuth();
   const { storeName, storeLogo, storeGovernorate, storeSettings, updateStore, updateStoreSettings } = useStore();
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstRender = useRef(true);
+  const isDbLoaded = useRef(false);
   const lastSavedRef = useRef<string>("");
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'pending' | 'saving' | 'saved' | 'error'>('idle');
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState('store');
   
   const [settings, setSettings] = useState({
     storeName: storeName,
@@ -45,29 +56,51 @@ const Settings = () => {
   });
 
   useEffect(() => {
-    // Load extra settings from localStorage + slug from DB
-    try {
-      const saved = localStorage.getItem("extra_store_settings");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setSettings(prev => ({ ...prev, ...parsed }));
-      }
-    } catch {}
+    if (!user?.id) return;
 
-    // Load slug from database
-    if (user?.id) {
-      (supabase as any)
-        .from('store_settings')
-        .select('store_slug')
-        .eq('owner_id', user.id)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (data?.store_slug) {
-            setSettings(prev => ({ ...prev, storeSlug: data.store_slug }));
-          }
+    let cancelled = false;
+
+    void fetchMerchantComplianceSettings(user.id).then((compliance) => {
+      if (cancelled) return;
+      if (!compliance) {
+        isDbLoaded.current = true;
+        setSettings((prev) => {
+          lastSavedRef.current = JSON.stringify(prev);
+          return prev;
         });
-    }
+        return;
+      }
+
+      setSettings((prev) => {
+        const merged = {
+          ...prev,
+          storeSlug: compliance.storeSlug || prev.storeSlug,
+          returnPolicy: compliance.returnPolicy || prev.returnPolicy,
+          termsConditions: compliance.termsConditions || prev.termsConditions,
+          privacyPolicy: compliance.privacyPolicy || prev.privacyPolicy,
+          whatsappNumber: compliance.whatsappNumber || prev.whatsappNumber,
+          whatsappWelcomeMessage: compliance.whatsappWelcomeMessage || prev.whatsappWelcomeMessage,
+          whatsappOrderConfirmation: compliance.whatsappOrderConfirmation || prev.whatsappOrderConfirmation,
+          paymentCashOnDelivery: compliance.paymentCashOnDelivery,
+          paymentCreditCard: compliance.paymentCreditCard,
+          paymentEwallet: compliance.paymentEwallet,
+        };
+        lastSavedRef.current = JSON.stringify(merged);
+        return merged;
+      });
+      isDbLoaded.current = true;
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id]);
+
+  useEffect(() => {
+    if (searchParams.get(ATTENTION_PARAM) === 'missing-slug') {
+      setActiveTab('store');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     setSettings(prev => ({
@@ -88,7 +121,32 @@ const Settings = () => {
   const performSave = useCallback(async () => {
     const settingsHash = JSON.stringify(settings);
     if (settingsHash === lastSavedRef.current) return;
-    
+
+    const hasBlobUrls =
+      settings.storeLogo?.startsWith('blob:') ||
+      settings.bannerImages.some((url: string) => url.startsWith('blob:'));
+    if (hasBlobUrls) {
+      setSaveStatus('pending');
+      return;
+    }
+
+    const hasPaymentMethod =
+      settings.paymentCashOnDelivery || settings.paymentCreditCard || settings.paymentEwallet;
+    if (!hasPaymentMethod) {
+      setSaveStatus('error');
+      toast.error("يجب تفعيل طريقة دفع واحدة على الأقل", { id: "settings-payment-error" });
+      return;
+    }
+
+    const normalizedSlug = normalizeStoreSlugInput(settings.storeSlug);
+    const slugError = validateStoreSlug(normalizedSlug);
+    if (slugError) {
+      setSaveStatus('error');
+      toast.error(slugError, { id: "settings-slug-error" });
+      return;
+    }
+
+    setSaveStatus('saving');
     try {
       await updateStore(settings.storeLogo, settings.storeName, settings.storeGovernorate);
       await updateStoreSettings({
@@ -100,38 +158,47 @@ const Settings = () => {
         primaryBannerIndex: settings.primaryBannerIndex,
         deliveryPrices: settings.deliveryPrices
       });
-      // Save slug to database
-      if (user?.id && settings.storeSlug) {
-        await (supabase as any)
-          .from('store_settings')
-          .update({ store_slug: settings.storeSlug })
-          .eq('owner_id', user.id);
+      if (user?.id) {
+        const saveResult = await saveMerchantComplianceSettings(user.id, {
+          storeSlug: normalizedSlug,
+          returnPolicy: settings.returnPolicy,
+          privacyPolicy: settings.privacyPolicy,
+          termsConditions: settings.termsConditions,
+          whatsappNumber: settings.whatsappNumber,
+          whatsappWelcomeMessage: settings.whatsappWelcomeMessage,
+          whatsappOrderConfirmation: settings.whatsappOrderConfirmation,
+          paymentCashOnDelivery: settings.paymentCashOnDelivery,
+          paymentCreditCard: settings.paymentCreditCard,
+          paymentEwallet: settings.paymentEwallet,
+        });
+
+        if (!saveResult.success) {
+          const message =
+            saveResult.error?.includes('unique') || saveResult.error?.includes('23505')
+              ? 'رابط المتجر مستخدم بالفعل — اختر رابطاً آخر'
+              : saveResult.error || 'فشل في حفظ رابط المتجر';
+          throw new Error(message);
+        }
       }
-      localStorage.setItem("extra_store_settings", JSON.stringify({
-        returnPolicy: settings.returnPolicy,
-        termsConditions: settings.termsConditions,
-        privacyPolicy: settings.privacyPolicy,
-        whatsappNumber: settings.whatsappNumber,
-        whatsappWelcomeMessage: settings.whatsappWelcomeMessage,
-        whatsappOrderConfirmation: settings.whatsappOrderConfirmation,
-        paymentCashOnDelivery: settings.paymentCashOnDelivery,
-        paymentCreditCard: settings.paymentCreditCard,
-        paymentEwallet: settings.paymentEwallet,
-      }));
       
       lastSavedRef.current = settingsHash;
+      setSaveStatus('saved');
       toast.success("تم الحفظ", { duration: 1500, id: "settings-save" });
     } catch (error) {
       console.error('Error saving settings:', error);
-      toast.error("فشل في حفظ الإعدادات", { id: "settings-error" });
+      setSaveStatus('error');
+      const message = error instanceof Error ? error.message : 'فشل في حفظ الإعدادات';
+      toast.error(message, { id: "settings-error" });
     }
-  }, [settings, updateStore, updateStoreSettings]);
+  }, [settings, updateStore, updateStoreSettings, user?.id]);
 
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
+    if (isFirstRender.current || !isDbLoaded.current) {
+      if (isFirstRender.current) isFirstRender.current = false;
       return;
     }
+
+    setSaveStatus('pending');
 
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -142,9 +209,24 @@ const Settings = () => {
     }, 2000);
 
     return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
     };
-  }, [settings]);
+  }, [settings, performSave]);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+      if (isDbLoaded.current) {
+        void performSave();
+      }
+    };
+  }, [performSave]);
 
   const tabItems = [
     { value: "store", label: "المتجر", icon: Store },
@@ -155,19 +237,42 @@ const Settings = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background font-arabic relative">
-      <SettingsHeader />
+    <DashboardLayout>
+      <PageHeader
+        title="الإعدادات"
+        description="خصّص متجرك، التوصيل، الدفع، والسياسات — يتم الحفظ تلقائياً"
+        hideBack
+        breadcrumbs={[{ label: 'لوحة التحكم', href: '/builder' }, { label: 'الإعدادات' }]}
+        actions={
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-h-[44px]">
+            {saveStatus === 'pending' && <span>سيتم الحفظ...</span>}
+            {saveStatus === 'saving' && (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>جاري الحفظ...</span>
+              </>
+            )}
+            {saveStatus === 'saved' && (
+              <>
+                <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                <span className="text-success">تم الحفظ</span>
+              </>
+            )}
+            {saveStatus === 'error' && <span className="text-destructive">خطأ في الحفظ</span>}
+          </div>
+        }
+      />
 
-      <div className="max-w-5xl mx-auto p-4 sm:p-6">
-        <Tabs defaultValue="store" className="w-full">
-          <TabsList className="flex w-full bg-muted rounded-xl p-1 h-auto gap-1 mb-6">
+      <div className="ds-page max-w-5xl">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="flex w-full overflow-x-auto scrollbar-hide rounded-xl p-1 h-auto gap-1 mb-6 lg:mb-8">
             {tabItems.map((tab) => {
               const Icon = tab.icon;
               return (
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
-                  className="rounded-lg text-foreground data-[state=active]:bg-card data-[state=active]:shadow-sm flex items-center gap-1.5 text-xs sm:text-sm px-3 sm:px-5 py-2.5 flex-1"
+                  className="flex items-center gap-1.5 text-xs sm:text-sm px-3 sm:px-4 py-2.5 flex-1 min-w-0"
                 >
                   <Icon className="w-4 h-4 shrink-0" />
                   <span className="truncate">{tab.label}</span>
@@ -203,7 +308,7 @@ const Settings = () => {
           <p className="text-xs text-muted-foreground">يتم الحفظ تلقائياً عند إجراء أي تغيير</p>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

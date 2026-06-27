@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchMerchantMarketingSettings,
+  upsertMerchantMarketingSettings,
+} from "@/services/marketingService";
 
 interface MarketingSettings {
   meta_pixel_id: string;
@@ -19,6 +22,7 @@ interface MarketingSettings {
 
 export default function MarketingSettingsTab() {
   const { user } = useAuth();
+  const [storeSlug, setStoreSlug] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState<MarketingSettings>({
     meta_pixel_id: '',
@@ -31,37 +35,34 @@ export default function MarketingSettingsTab() {
 
   const loadSettings = useCallback(async () => {
     if (!user) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase as any)
-      .from('marketing_settings')
-      .select('*')
-      .eq('owner_id', user.id)
-      .single();
-
+    const data = await fetchMerchantMarketingSettings(user.id);
+    setStoreSlug(data?.store_slug || null);
     if (data) {
       setSettings({
-        meta_pixel_id: data.meta_pixel_id || '',
-        facebook_access_token: data.facebook_access_token || '',
-        google_analytics_id: data.google_analytics_id || '',
-        marketing_enabled: data.marketing_enabled || false,
-        email_marketing_enabled: data.email_marketing_enabled || false,
-        sms_marketing_enabled: data.sms_marketing_enabled || false
+        meta_pixel_id: data.meta_pixel_id,
+        facebook_access_token: '',
+        google_analytics_id: data.google_analytics_id,
+        marketing_enabled: data.marketing_enabled,
+        email_marketing_enabled: data.email_marketing_enabled,
+        sms_marketing_enabled: data.sms_marketing_enabled,
       });
     }
   }, [user]);
 
-  useState(() => { loadSettings(); });
+  useEffect(() => { loadSettings(); }, [loadSettings]);
 
   const saveSettings = async () => {
     if (!user) return;
     setLoading(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
-      .from('marketing_settings')
-      .upsert({ owner_id: user.id, ...settings });
+    const result = await upsertMerchantMarketingSettings(user.id, {
+      ...settings,
+    });
 
-    if (error) toast.error("فشل في حفظ الإعدادات");
-    else toast.success("تم حفظ إعدادات التسويق بنجاح");
+    if (!result.success) toast.error("فشل في حفظ الإعدادات");
+    else {
+      if (result.storeSlug) setStoreSlug(result.storeSlug);
+      toast.success("تم حفظ إعدادات التسويق بنجاح");
+    }
     setLoading(false);
   };
 

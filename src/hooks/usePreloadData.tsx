@@ -1,8 +1,11 @@
 
 import { useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { loadProducts, getCategories } from '@/data/dummyData';
 
+/**
+ * Predictive route preloading after login.
+ * Data bootstrap is handled globally by StoreBootstrap / useStoreBootstrap.
+ */
 export const usePreloadData = () => {
   const { user } = useAuth();
   const hasPreloaded = useRef(false);
@@ -11,17 +14,20 @@ export const usePreloadData = () => {
     if (!user?.id || hasPreloaded.current) return;
     hasPreloaded.current = true;
 
-    // Preload products and categories in parallel
-    Promise.all([
-      loadProducts(true),
-      getCategories(true),
-    ]).catch(() => {});
-
-    // Predictive route preloading after a delay
-    const timer = setTimeout(() => {
-      import('@/pages/AddProduct').catch(() => {});
+    const preloadChunks = () => {
       import('@/pages/Orders').catch(() => {});
-    }, 3000);
+      import('@/pages/Products').catch(() => {});
+      import('@/pages/Statistics').catch(() => {});
+      import('@/pages/AddProduct').catch(() => {});
+    };
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    if ('requestIdleCallback' in window) {
+      const idleId = window.requestIdleCallback(preloadChunks, { timeout: 1_500 });
+      return () => window.cancelIdleCallback(idleId);
+    }
+
+    timer = setTimeout(preloadChunks, 800);
 
     return () => clearTimeout(timer);
   }, [user?.id]);

@@ -1,94 +1,51 @@
-
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useCallback } from "react";
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { Button } from "@/components/ui/button";
-import { ImagePlus, X, CheckCircle, Loader2 } from "lucide-react";
-import { Label } from "@/components/ui/label";
-import { uploadImage } from "@/utils/imageUpload";
-import { supabase } from "@/integrations/supabase/client";
+import { ImagePlus, X, Star, GripVertical, Loader2, Upload } from "lucide-react";
+import { uploadImage, deleteImage } from "@/utils/imageUpload";
+import { getAuthenticatedUserId } from "@/lib/authSession";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface ProductImagesManagerProps {
   mainImage: string | null;
   additionalImages: string[];
   onImagesChange: (mainImage: string | null, additionalImages: string[]) => void;
+  onUploadStateChange?: (isUploading: boolean) => void;
 }
+
+const MAX_IMAGES = 10;
 
 const ProductImagesManager = ({
   mainImage,
   additionalImages,
   onImagesChange,
+  onUploadStateChange,
 }: ProductImagesManagerProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isDraggingFiles, setIsDraggingFiles] = useState(false);
 
-  const allImages = useMemo(() => [
-    ...(mainImage ? [mainImage] : []),
-    ...additionalImages,
-  ], [mainImage, additionalImages]);
+  const allImages = useMemo(
+    () => [...(mainImage ? [mainImage] : []), ...additionalImages],
+    [mainImage, additionalImages]
+  );
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-
-    // Get user ID for storage path
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast.error("يجب تسجيل الدخول أولاً");
-      return;
-    }
-
-    setIsUploading(true);
-    setUploadProgress(0);
-    const totalFiles = files.length;
-    const uploadedUrls: string[] = [];
-    let completed = 0;
-
-    try {
-      // Upload all files concurrently
-      const uploadPromises = Array.from(files).map(async (file) => {
-        // Compress image if too large (> 2MB)
-        const processedFile = file.size > 2 * 1024 * 1024 ? await compressImage(file) : file;
-        const url = await uploadImage(processedFile, user.id);
-        completed++;
-        setUploadProgress(Math.round((completed / totalFiles) * 100));
-        return url;
-      });
-
-      const results = await Promise.allSettled(uploadPromises);
-      results.forEach(r => {
-        if (r.status === 'fulfilled') uploadedUrls.push(r.value);
-      });
-
-      if (uploadedUrls.length === 0) {
-        toast.error("فشل في رفع الصور");
-        return;
-      }
-
-      if (uploadedUrls.length < totalFiles) {
-        toast.warning(`تم رفع ${uploadedUrls.length} من ${totalFiles} صور`);
-      }
-
-      if (!mainImage && uploadedUrls.length > 0) {
-        onImagesChange(uploadedUrls[0], [...additionalImages, ...uploadedUrls.slice(1)]);
-      } else {
-        onImagesChange(mainImage, [...additionalImages, ...uploadedUrls]);
-      }
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error("حدث خطأ أثناء رفع الصور");
-    } finally {
-      setIsUploading(false);
-      setUploadProgress(0);
-      if (event.target) event.target.value = '';
-    }
-  };
-
-  const compressImage = (file: File): Promise<File> => {
-    return new Promise((resolve) => {
+  const compressImage = (file: File): Promise<File> =>
+    new Promise((resolve) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
+      let objectUrl: string | null = null;
+
+      const cleanup = () => {
+        if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
+          objectUrl = null;
+        }
+      };
+
       img.onload = () => {
         const maxDim = 1200;
         let { width, height } = img;
@@ -100,37 +57,141 @@ const ProductImagesManager = ({
         canvas.width = width;
         canvas.height = height;
         ctx?.drawImage(img, 0, 0, width, height);
-        canvas.toBlob((blob) => {
-          resolve(blob ? new File([blob], file.name, { type: 'image/jpeg' }) : file);
-        }, 'image/jpeg', 0.85);
+        canvas.toBlob(
+          (blob) => {
+            cleanup();
+            resolve(blob ? new File([blob], file.name, { type: 'image/jpeg' }) : file);
+          },
+          'image/jpeg',
+          0.85
+        );
       };
-      img.onerror = () => resolve(file);
-      img.src = URL.createObjectURL(file);
+      img.onerror = () => {
+        cleanup();
+        resolve(file);
+      };
+      objectUrl = URL.createObjectURL(file);
+      img.src = objectUrl;
     });
+
+  const isImageFile = (file: File) => {
+    if (file.type.startsWith('image/')) return true;
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    return !!ext && ['jpg', 'jpeg', 'jpe', 'png', 'webp', 'gif', 'bmp'].includes(ext);
   };
 
-  const handleChooseFile = () => fileInputRef.current?.click();
+  const uploadFiles = useCallback(async (files: FileList | File[]) => {
+    const list = Array.from(files).filter(isImageFile);
+    if (list.length === 0) {
+      toast.error('يرجى اختيار ملفات صور فقط (JPG, PNG, WebP)');
+      return;
+    }
+
+    const remaining = MAX_IMAGES - allImages.length;
+    if (remaining <= 0) {
+      toast.error(`الحد الأقصى ${MAX_IMAGES} صور`);
+      return;
+    }
+    const toUpload = list.slice(0, remaining);
+    if (toUpload.length < list.length) {
+      toast.warning(`يمكن إضافة ${remaining} صور فقط (الحد ${MAX_IMAGES})`);
+    }
+
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
+      toast.error('يجب تسجيل الدخول أولاً');
+      return;
+    }
+
+    setIsUploading(true);
+    onUploadStateChange?.(true);
+    setUploadProgress(0);
+    const uploadedUrls: string[] = [];
+    let completed = 0;
+    let lastError: string | null = null;
+
+    try {
+      const results = await Promise.allSettled(
+        toUpload.map(async (file) => {
+          const processed = file.size > 2 * 1024 * 1024 ? await compressImage(file) : file;
+          const url = await uploadImage(processed, userId);
+          completed++;
+          setUploadProgress(Math.round((completed / toUpload.length) * 100));
+          return url;
+        })
+      );
+      results.forEach((r, i) => {
+        if (r.status === 'fulfilled') {
+          uploadedUrls.push(r.value);
+        } else {
+          lastError = r.reason instanceof Error ? r.reason.message : 'خطأ غير معروف';
+          console.error('Upload failed:', toUpload[i]?.name, r.reason);
+        }
+      });
+
+      if (uploadedUrls.length === 0) {
+        toast.error(lastError || 'فشل في رفع الصور');
+        return;
+      }
+
+      if (uploadedUrls.length < toUpload.length) {
+        toast.warning(`تم رفع ${uploadedUrls.length} من ${toUpload.length}`);
+      } else {
+        toast.success(`تم رفع ${uploadedUrls.length} صورة`);
+      }
+
+      if (!mainImage) {
+        onImagesChange(uploadedUrls[0], [...additionalImages, ...uploadedUrls.slice(1)]);
+      } else {
+        onImagesChange(mainImage, [...additionalImages, ...uploadedUrls]);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'حدث خطأ أثناء رفع الصور');
+    } finally {
+      setIsUploading(false);
+      onUploadStateChange?.(false);
+      setUploadProgress(0);
+    }
+  }, [allImages.length, mainImage, additionalImages, onImagesChange, onUploadStateChange]);
+
+  const handleFileInput = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) void uploadFiles(event.target.files);
+    if (event.target) event.target.value = '';
+  };
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDraggingFiles(false);
+      if (e.dataTransfer.files?.length) void uploadFiles(e.dataTransfer.files);
+    },
+    [uploadFiles]
+  );
 
   const removeImage = (index: number) => {
-    const isMainImage = index === 0 && mainImage;
-    const updatedImages = [...allImages];
-    updatedImages.splice(index, 1);
-
-    if (isMainImage) {
-      const newMain = updatedImages.length > 0 ? updatedImages[0] : null;
-      const newAdditional = updatedImages.slice(newMain ? 1 : 0);
-      onImagesChange(newMain, newAdditional);
-    } else {
-      onImagesChange(mainImage, updatedImages.filter(img => img !== mainImage));
+    const updated = [...allImages];
+    const removed = updated.splice(index, 1)[0];
+    onImagesChange(updated[0] ?? null, updated.slice(1));
+    if (removed && !removed.startsWith('blob:')) {
+      void deleteImage(removed).catch(() => {
+        /* storage cleanup is best-effort */
+      });
     }
   };
 
   const setAsMain = (index: number) => {
-    if (index === 0 && mainImage) return;
-    const updatedImages = [...allImages];
-    const newMain = updatedImages[index];
-    updatedImages.splice(index, 1);
-    onImagesChange(newMain, [...updatedImages]);
+    if (index === 0) return;
+    const updated = [...allImages];
+    const [newMain] = updated.splice(index, 1);
+    onImagesChange(newMain, updated);
+  };
+
+  const onDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    const updated = [...allImages];
+    const [moved] = updated.splice(result.source.index, 1);
+    updated.splice(result.destination.index, 0, moved);
+    onImagesChange(updated[0] ?? null, updated.slice(1));
   };
 
   return (
@@ -138,92 +199,114 @@ const ProductImagesManager = ({
       <input
         type="file"
         ref={fileInputRef}
-        className="hidden"
-        accept="image/*"
-        onChange={handleImageUpload}
+        className="sr-only"
+        accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
         multiple
+        onChange={handleFileInput}
       />
 
-      {allImages.length === 0 ? (
-        <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-          <div className="flex flex-col items-center">
+      <div
+        onDragOver={(e) => { e.preventDefault(); setIsDraggingFiles(true); }}
+        onDragLeave={() => setIsDraggingFiles(false)}
+        onDrop={handleDrop}
+        className={cn(
+          'relative rounded-2xl border-2 border-dashed transition-all',
+          isDraggingFiles ? 'border-primary bg-primary/5' : 'border-border bg-muted/20',
+          allImages.length === 0 ? 'p-8' : 'p-4'
+        )}
+      >
+        {allImages.length === 0 ? (
+          <div className="flex flex-col items-center text-center gap-3">
             {isUploading ? (
               <>
-                <Loader2 className="h-8 w-8 text-primary mb-2 animate-spin" />
-                <p className="text-muted-foreground mb-2">جاري رفع الصور... {uploadProgress}%</p>
-                <div className="w-48 h-2 bg-muted rounded-full overflow-hidden">
-                  <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                <Loader2 className="h-10 w-10 text-primary animate-spin" />
+                <p className="text-sm text-muted-foreground">جاري الرفع… {uploadProgress}%</p>
+                <div className="w-full max-w-xs h-2 bg-muted rounded-full overflow-hidden">
+                  <div className="h-full bg-primary transition-all" style={{ width: `${uploadProgress}%` }} />
                 </div>
               </>
             ) : (
               <>
-                <ImagePlus className="h-8 w-8 text-muted-foreground mb-2" />
-                <p className="text-muted-foreground mb-2">لا توجد صور للمنتج</p>
-                <Button variant="outline" className="mt-2" onClick={handleChooseFile} type="button">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <Upload className="w-7 h-7 text-primary" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">اسحب الصور هنا أو اضغط للرفع</p>
+                  <p className="text-xs text-muted-foreground mt-1">PNG, JPG — حتى {MAX_IMAGES} صور ({allImages.length}/{MAX_IMAGES})</p>
+                </div>
+                <Button type="button" variant="outline" className="rounded-xl" onClick={() => fileInputRef.current?.click()}>
                   <ImagePlus className="w-4 h-4 ml-2" />
                   اختيار صور
                 </Button>
               </>
             )}
           </div>
-        </div>
-      ) : (
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <Button variant="outline" size="sm" onClick={handleChooseFile} type="button" disabled={isUploading}>
-              {isUploading ? (
-                <>
-                  <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-                  جاري الرفع... {uploadProgress}%
-                </>
-              ) : (
-                <>
-                  <ImagePlus className="w-4 h-4 ml-2" />
-                  إضافة صور
-                </>
-              )}
-            </Button>
-            <Label className="block">صور المنتج</Label>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {allImages.map((image, index) => (
-              <div
-                key={index}
-                className={`relative rounded-lg overflow-hidden border-2 ${
-                  index === 0 && mainImage ? "border-primary" : "border-border"
-                } group`}
-              >
-                <div className="aspect-square w-full">
-                  <img src={image} alt={`صورة المنتج ${index + 1}`} className="w-full h-full object-cover" loading="lazy" />
-                </div>
-                
-                <div className="absolute top-0 right-0 p-1 bg-card/80 backdrop-blur-sm rounded-bl-lg">
-                  {index === 0 && mainImage ? (
-                    <CheckCircle className="w-5 h-5 text-primary" />
-                  ) : (
-                    <Button variant="ghost" size="icon" className="h-6 w-6 p-0" onClick={() => setAsMain(index)} title="تعيين كصورة رئيسية">
-                      <CheckCircle className="w-5 h-5 text-muted-foreground hover:text-primary" />
-                    </Button>
-                  )}
-                </div>
-                
-                <div className="absolute top-0 left-0 p-1">
-                  <Button variant="ghost" size="icon" className="h-6 w-6 bg-card/80 backdrop-blur-sm rounded-full p-0 hover:bg-destructive/10" onClick={() => removeImage(index)}>
-                    <X className="w-4 h-4 text-destructive" />
-                  </Button>
-                </div>
-                
-                {index === 0 && mainImage && (
-                  <div className="absolute bottom-0 left-0 right-0 bg-primary text-primary-foreground text-center text-xs py-1">
-                    الصورة الرئيسية
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <Button type="button" variant="outline" size="sm" className="rounded-xl" disabled={isUploading || allImages.length >= MAX_IMAGES} onClick={() => fileInputRef.current?.click()}>
+                {isUploading ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <ImagePlus className="w-4 h-4 ml-2" />}
+                {isUploading ? `${uploadProgress}%` : 'إضافة صور'}
+              </Button>
+              <p className="text-xs text-muted-foreground">اسحب لإعادة الترتيب · ★ للصورة الرئيسية</p>
+            </div>
+
+            <DragDropContext onDragEnd={onDragEnd}>
+              <Droppable droppableId="product-images" direction="horizontal">
+                {(provided) => (
+                  <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-wrap gap-3">
+                    {allImages.map((image, index) => (
+                      <Draggable key={`${image}-${index}`} draggableId={`${image}-${index}`} index={index}>
+                        {(dragProvided, snapshot) => (
+                          <div
+                            ref={dragProvided.innerRef}
+                            {...dragProvided.draggableProps}
+                            className={cn(
+                              'relative rounded-xl overflow-hidden border-2 bg-card group',
+                              index === 0 ? 'border-primary w-full sm:w-48 aspect-square' : 'border-border w-24 h-24 sm:w-28 sm:h-28',
+                              snapshot.isDragging && 'shadow-lg ring-2 ring-primary/30'
+                            )}
+                          >
+                            <img src={image} alt="" className="w-full h-full object-cover" />
+                            <div {...dragProvided.dragHandleProps} className="absolute top-1 right-1 p-1 rounded-md bg-card/90 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab">
+                              <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
+                            </div>
+                            <div className="absolute top-1 left-1 flex gap-1">
+                              {index !== 0 && (
+                                <button type="button" onClick={() => setAsMain(index)} className="p-1.5 rounded-md bg-card/90 hover:bg-primary/10" aria-label="تعيين كرئيسية">
+                                  <Star className="w-3.5 h-3.5 text-muted-foreground" />
+                                </button>
+                              )}
+                              <button type="button" onClick={() => removeImage(index)} className="p-1.5 rounded-md bg-card/90 hover:bg-destructive/10" aria-label="حذف">
+                                <X className="w-3.5 h-3.5 text-destructive" />
+                              </button>
+                            </div>
+                            {index === 0 && (
+                              <div className="absolute bottom-0 inset-x-0 bg-primary text-primary-foreground text-[10px] font-bold text-center py-1">
+                                الصورة الرئيسية
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                    <button
+                      type="button"
+                      disabled={isUploading || allImages.length >= MAX_IMAGES}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
+                    >
+                      <ImagePlus className="w-5 h-5 mb-1" />
+                      <span className="text-[10px]">إضافة</span>
+                    </button>
                   </div>
                 )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+              </Droppable>
+            </DragDropContext>
+          </>
+        )}
+      </div>
     </div>
   );
 };

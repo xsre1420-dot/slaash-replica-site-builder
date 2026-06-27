@@ -1,44 +1,87 @@
 
 import { useState, useCallback, useMemo, lazy, Suspense } from "react";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, RefreshCw, Download, AlertCircle, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { RefreshCw, Download, AlertCircle, TrendingUp, Users, BarChart3, Package, Copy, Plus, CreditCard, Megaphone } from "lucide-react";
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import PageHeader from "@/components/layout/PageHeader";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SalesStats } from "@/components/statistics/SalesStats";
-import { DateRangeControls } from "@/components/statistics/DateRangeControls";
+import { DateRangeControls, periodLabels } from "@/components/statistics/DateRangeControls";
 import { useRealStatistics } from "@/hooks/useRealStatistics";
+import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
+import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import { copyStorePublicUrl } from "@/lib/storeUrl";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Suggestion #7: Lazy load heavy statistics tabs
 const SalesChart = lazy(() => import("@/components/statistics/SalesChart").then(m => ({ default: m.SalesChart })));
 const CustomerStats = lazy(() => import("@/components/statistics/CustomerStats").then(m => ({ default: m.CustomerStats })));
 const PerformanceStats = lazy(() => import("@/components/statistics/PerformanceStats").then(m => ({ default: m.PerformanceStats })));
 const TimeBasedStats = lazy(() => import("@/components/statistics/TimeBasedStats").then(m => ({ default: m.TimeBasedStats })));
+const PaymentStats = lazy(() => import("@/components/statistics/PaymentStats").then(m => ({ default: m.PaymentStats })));
 const TopProductsSection = lazy(() => import("@/components/statistics/TopProductsSection").then(m => ({ default: m.TopProductsSection })));
+const TopViewedProductsSection = lazy(() => import("@/components/statistics/TopViewedProductsSection").then(m => ({ default: m.TopViewedProductsSection })));
+const CampaignAttributionSection = lazy(() => import("@/components/statistics/CampaignAttributionSection").then(m => ({ default: m.CampaignAttributionSection })));
 
 const TabLoader = () => (
-  <div className="flex items-center justify-center py-12">
-    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+  <div className="space-y-4 py-4">
+    <Skeleton className="h-48 rounded-2xl" />
+    <Skeleton className="h-32 rounded-2xl" />
   </div>
 );
 
+const StatisticsLoading = () => (
+  <DashboardLayout>
+    <PageHeader
+      title="الإحصائيات والتقارير"
+      description="جاري تحميل بيانات متجرك..."
+      hideBack
+      breadcrumbs={[{ label: 'لوحة التحكم', href: '/builder' }, { label: 'الإحصائيات' }]}
+    />
+    <div className="ds-page space-y-6">
+      <Skeleton className="h-24 rounded-2xl" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Skeleton key={i} className="h-28 rounded-2xl" />
+        ))}
+      </div>
+      <Skeleton className="h-64 rounded-2xl" />
+    </div>
+  </DashboardLayout>
+);
+
 const Statistics = () => {
+  const { user } = useAuth();
   const [dateRange, setDateRange] = useState("7");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [selectedMetric, setSelectedMetric] = useState("visitors");
+  const [selectedMetric, setSelectedMetric] = useState("revenue");
   const [activeTab, setActiveTab] = useState("overview");
 
-  const { stats, rawOrders, loading, error, refetch } = useRealStatistics(dateRange);
+  const needsChartOrders =
+    activeTab === 'overview' || activeTab === 'payments' || activeTab === 'performance';
+
+  const { stats, rawOrders, loading, error, refetch, dateBounds, truncated, fetchWarnings } = useRealStatistics(
+    dateRange,
+    startDate,
+    endDate,
+    { includeChartOrders: needsChartOrders }
+  );
+
+  useRealtimeOrders(() => {
+    refetch();
+  });
 
   const exportCSV = useCallback(() => {
     if (!stats) return;
     const rows = [
       ["المؤشر", "القيمة"],
+      ["الفترة", periodLabels[dateRange] || dateRange],
       ["إجمالي المبيعات", `${stats.totalRevenue} د.ع`],
       ["إجمالي الطلبات", String(stats.totalOrders)],
       ["متوسط قيمة الطلب", `${stats.averageOrderValue.toFixed(0)} د.ع`],
-      ["زوار المتجر", String(stats.totalVisitors)],
+      ["زوار فريدون", String(stats.totalVisitors)],
       ["معدل التحويل", `${stats.conversionRate.toFixed(1)}%`],
       ["عملاء جدد", String(stats.newCustomers)],
       ["عملاء عائدون", String(stats.returningCustomers)],
@@ -56,95 +99,108 @@ const Statistics = () => {
     toast.success("تم تصدير التقرير بنجاح");
   }, [stats, dateRange]);
 
-  // Suggestion #16: Smart loader with progress
-  const summaryItems = useMemo(() => {
-    if (!stats) return [];
-    return [
-      { label: "المبيعات", value: `${stats.totalRevenue.toLocaleString()} د.ع`, growth: stats.revenueGrowth },
-      { label: "الطلبات", value: String(stats.totalOrders), growth: stats.ordersGrowth },
-      { label: "الزوار", value: String(stats.totalVisitors), growth: stats.visitorsGrowth },
-    ];
+  const handleCopyStoreLink = async () => {
+    if (!user?.id) return;
+    try {
+      const url = await copyStorePublicUrl(user.id);
+      if (!url) {
+        toast.error("لم يتم العثور على رابط المتجر — حدّد slug في الإعدادات");
+        return;
+      }
+      toast.success("تم نسخ رابط المتجر");
+    } catch {
+      toast.error("فشل في نسخ الرابط");
+    }
+  };
+
+  const hasActivity = stats && (stats.totalOrders > 0 || stats.totalVisitors > 0);
+
+  const insightMessage = useMemo(() => {
+    if (!stats) return null;
+    if (stats.totalOrders === 0 && stats.totalVisitors === 0) {
+      if (stats.totalProducts > 0) {
+        return {
+          type: 'empty' as const,
+          title: 'لا طلبات أو زيارات في هذه الفترة',
+          description: `لديك ${stats.totalProducts.toLocaleString()} منتج${stats.totalProducts === 1 ? '' : 'اً'} منشور${stats.totalProducts === 1 ? '' : 'اً'}. شارك رابط متجرك لبدء تتبع المبيعات، أو جرّب «آخر 30 يوماً» إذا كانت لديك طلبات أقدم.`,
+        };
+      }
+      return {
+        type: 'empty' as const,
+        title: 'لا توجد بيانات بعد',
+        description: 'أضف منتجات وشارك رابط متجرك لبدء تتبع المبيعات والزوار.',
+      };
+    }
+    if (stats.totalVisitors > 0 && stats.totalOrders === 0) {
+      return {
+        type: 'warning' as const,
+        title: 'زوار بدون طلبات',
+        description: `لديك ${stats.totalVisitors} زائر${stats.totalVisitors === 1 ? '' : 'اً'} بدون أي طلب. تحقق من أسعار المنتجات وطرق الدفع.`,
+      };
+    }
+    if (stats.revenueGrowth < 0) {
+      return {
+        type: 'warning' as const,
+        title: 'انخفاض في المبيعات',
+        description: `المبيعات انخفضت ${Math.abs(stats.revenueGrowth).toFixed(1)}% مقارنة بالفترة السابقة.`,
+      };
+    }
+    if (stats.revenueGrowth > 0) {
+      return {
+        type: 'success' as const,
+        title: 'أداء جيد',
+        description: `المبيعات ارتفعت ${stats.revenueGrowth.toFixed(1)}% — استمر في التسويق!`,
+      };
+    }
+    return null;
   }, [stats]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">جاري تحميل الإحصائيات...</p>
-          <p className="text-xs text-muted-foreground/60 mt-1">يتم تحليل بيانات الطلبات والزوار</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <StatisticsLoading />;
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="w-16 h-16 text-destructive mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-2">خطأ في تحميل الإحصائيات</h3>
-          <p className="text-muted-foreground mb-4">{error}</p>
-          <Button onClick={refetch}>إعادة المحاولة</Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!stats) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-2">لا توجد بيانات</h3>
-          <p className="text-muted-foreground">لا توجد إحصائيات لعرضها حالياً</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-background font-arabic">
-      {/* Header */}
-      <div className="bg-card shadow-sm border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex justify-between items-center">
-            <Link to="/builder">
-              <Button variant="ghost" size="icon" className="rounded-xl">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            </Link>
-            <h1 className="text-xl font-bold text-foreground">الإحصائيات والتقارير</h1>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="rounded-xl" onClick={exportCSV}>
-                <Download className="w-4 h-4 ml-1" />
-                تصدير
-              </Button>
-              <Button variant="outline" size="sm" className="rounded-xl" onClick={refetch}>
-                <RefreshCw className="w-4 h-4 ml-1" />
-                تحديث
-              </Button>
-            </div>
+      <DashboardLayout>
+        <PageHeader title="الإحصائيات والتقارير" hideBack breadcrumbs={[{ label: 'لوحة التحكم', href: '/builder' }, { label: 'الإحصائيات' }]} />
+        <div className="ds-page flex items-center justify-center py-16">
+          <div className="text-center max-w-md">
+            <AlertCircle className="w-14 h-14 text-destructive mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-foreground mb-2">تعذّر تحميل الإحصائيات</h3>
+            <p className="text-sm text-muted-foreground mb-6 leading-relaxed">{error}</p>
+            <Button onClick={refetch} className="rounded-xl min-h-[44px]">
+              <RefreshCw className="w-4 h-4 ml-1" />
+              إعادة المحاولة
+            </Button>
           </div>
         </div>
-      </div>
+      </DashboardLayout>
+    );
+  }
 
-      <div className="max-w-7xl mx-auto p-4 sm:p-6">
-        {/* Quick Summary */}
-        <div className="grid grid-cols-3 gap-3 mb-6 animate-fade-in">
-          {summaryItems.map((item) => (
-            <div key={item.label} className="bg-card border border-border rounded-xl p-3 text-center">
-              <p className="text-xs text-muted-foreground mb-1">{item.label}</p>
-              <p className="text-lg font-bold text-foreground">{item.value}</p>
-              {item.growth !== 0 && (
-                <p className={`text-xs font-medium mt-1 ${item.growth >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                  {item.growth >= 0 ? '↑' : '↓'} {Math.abs(item.growth).toFixed(1)}%
-                </p>
-              )}
-            </div>
-          ))}
-        </div>
+  if (!stats) return null;
 
+  return (
+    <DashboardLayout>
+      <PageHeader
+        title="الإحصائيات والتقارير"
+        description={`تحليل أداء متجرك — ${periodLabels[dateRange] || 'الفترة المحددة'}`}
+        hideBack
+        breadcrumbs={[{ label: 'لوحة التحكم', href: '/builder' }, { label: 'الإحصائيات' }]}
+        actions={
+          <>
+            <Button variant="outline" size="sm" className="rounded-xl min-h-[44px]" onClick={exportCSV} disabled={!hasActivity}>
+              <Download className="w-4 h-4 ml-1" />
+              <span className="hidden sm:inline">تصدير</span>
+            </Button>
+            <Button variant="outline" size="sm" className="rounded-xl min-h-[44px]" onClick={refetch}>
+              <RefreshCw className="w-4 h-4 ml-1" />
+              <span className="hidden sm:inline">تحديث</span>
+            </Button>
+          </>
+        }
+      />
+
+      <div className="ds-page">
+        {/* 1. Date controls first — user picks context before reading numbers */}
         <DateRangeControls
           dateRange={dateRange}
           setDateRange={setDateRange}
@@ -156,44 +212,131 @@ const Statistics = () => {
           setSelectedMetric={setSelectedMetric}
         />
 
+        {fetchWarnings.length > 0 && (
+          <div className="rounded-xl border border-destructive/25 bg-destructive/5 p-3 mb-6 text-xs text-muted-foreground text-right space-y-1">
+            {fetchWarnings.map((warning) => (
+              <p key={warning}>{warning}</p>
+            ))}
+          </div>
+        )}
+
+        {truncated && (
+          <div className="rounded-xl border border-warning/30 bg-warning/5 p-3 mb-6 text-xs text-muted-foreground text-right">
+            تم عرض عينة من البيانات (حد أقصى 5,000 سجل). للمتاجر كثيرة النشاط، قد تختلف بعض التفاصيل عن الإجماليات المعروضة في المؤشرات الرئيسية.
+          </div>
+        )}
+
+        {/* 2. Smart insight — tells user what the numbers mean */}
+        {insightMessage && (
+          <div
+            className={`rounded-xl border p-4 mb-6 flex flex-col sm:flex-row sm:items-center gap-3 ${
+              insightMessage.type === 'empty'
+                ? 'border-border/60 bg-muted/30'
+                : insightMessage.type === 'warning'
+                  ? 'border-warning/20 bg-warning/5'
+                  : 'border-success/20 bg-success/5'
+            }`}
+          >
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-foreground">{insightMessage.title}</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{insightMessage.description}</p>
+            </div>
+            {insightMessage.type === 'empty' && (
+              <div className="flex flex-wrap gap-2 shrink-0">
+                <Button size="sm" variant="outline" className="rounded-xl" onClick={handleCopyStoreLink}>
+                  <Copy className="w-3.5 h-3.5 ml-1" />
+                  نسخ الرابط
+                </Button>
+                <Link to="/add-product">
+                  <Button size="sm" className="rounded-xl">
+                    <Plus className="w-3.5 h-3.5 ml-1" />
+                    إضافة منتج
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 3. Primary KPIs */}
         <SalesStats stats={stats} topProducts={stats.topProducts} />
 
-        {/* Suggestion #7: Tabbed lazy-loaded sections */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-          <TabsList className="grid w-full grid-cols-4 mb-4">
-            <TabsTrigger value="overview">الرسم البياني</TabsTrigger>
-            <TabsTrigger value="customers">العملاء</TabsTrigger>
-            <TabsTrigger value="performance">الأداء</TabsTrigger>
-            <TabsTrigger value="products">المنتجات</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="overview">
-            <Suspense fallback={<TabLoader />}>
-              <SalesChart orders={rawOrders} dateRange={dateRange} />
-            </Suspense>
-          </TabsContent>
-          
-          <TabsContent value="customers">
-            <Suspense fallback={<TabLoader />}>
-              <CustomerStats stats={stats} />
-            </Suspense>
-          </TabsContent>
-          
-          <TabsContent value="performance">
-            <Suspense fallback={<TabLoader />}>
-              <PerformanceStats stats={stats} />
-              <TimeBasedStats peakTimes={stats.peakTimes} />
-            </Suspense>
-          </TabsContent>
-          
-          <TabsContent value="products">
-            <Suspense fallback={<TabLoader />}>
-              <TopProductsSection topProducts={stats.topProducts} />
-            </Suspense>
-          </TabsContent>
-        </Tabs>
+        {/* 4. Detailed breakdown tabs */}
+        <div>
+          <h3 className="ds-section-title mb-3 px-1">تفاصيل إضافية</h3>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="flex w-full overflow-x-auto scrollbar-hide rounded-xl p-1 h-auto gap-1 mb-4">
+              <TabsTrigger value="overview" className="gap-1.5 shrink-0">
+                <BarChart3 className="w-4 h-4" />
+                الرسم البياني
+              </TabsTrigger>
+              <TabsTrigger value="customers" className="gap-1.5 shrink-0">
+                <Users className="w-4 h-4" />
+                العملاء
+              </TabsTrigger>
+              <TabsTrigger value="performance" className="gap-1.5 shrink-0">
+                <TrendingUp className="w-4 h-4" />
+                الأداء
+              </TabsTrigger>
+              <TabsTrigger value="campaigns" className="gap-1.5 shrink-0">
+                <Megaphone className="w-4 h-4" />
+                الحملات
+              </TabsTrigger>
+              <TabsTrigger value="payments" className="gap-1.5 shrink-0">
+                <CreditCard className="w-4 h-4" />
+                طرق الدفع
+              </TabsTrigger>
+              <TabsTrigger value="products" className="gap-1.5 shrink-0">
+                <Package className="w-4 h-4" />
+                المنتجات
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview">
+              <Suspense fallback={<TabLoader />}>
+                <SalesChart orders={rawOrders} chartStart={dateBounds.start} chartEnd={dateBounds.end} metric={selectedMetric} />
+              </Suspense>
+            </TabsContent>
+
+            <TabsContent value="customers">
+              <Suspense fallback={<TabLoader />}>
+                <CustomerStats stats={stats} />
+              </Suspense>
+            </TabsContent>
+
+            <TabsContent value="performance">
+              <Suspense fallback={<TabLoader />}>
+                <div className="space-y-6">
+                  <PerformanceStats stats={stats} />
+                  <TimeBasedStats peakTimes={stats.peakTimes} />
+                </div>
+              </Suspense>
+            </TabsContent>
+
+            <TabsContent value="campaigns">
+              <Suspense fallback={<TabLoader />}>
+                <CampaignAttributionSection campaigns={stats.campaignAttribution} />
+              </Suspense>
+            </TabsContent>
+
+            <TabsContent value="payments">
+              <Suspense fallback={<TabLoader />}>
+                <PaymentStats paymentMethods={stats.paymentMethods} />
+              </Suspense>
+            </TabsContent>
+
+            <TabsContent value="products">
+              <Suspense fallback={<TabLoader />}>
+                <div className="space-y-6">
+                  <TopProductsSection topProducts={stats.topProducts} />
+                  <TopViewedProductsSection topViewedProducts={stats.topViewedProducts} />
+                </div>
+              </Suspense>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

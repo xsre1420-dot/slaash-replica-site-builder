@@ -1,5 +1,9 @@
 -- CRITICAL SECURITY FIX: Resolve authentication system conflicts and secure data access
 
+-- Ensure legacy orders schema has columns referenced by policies below
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS customer_address TEXT;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS total_amount DECIMAL(10, 2);
+
 -- 1. Fix the owner context function to use proper Supabase auth
 CREATE OR REPLACE FUNCTION public.get_current_restaurant_owner_id()
 RETURNS uuid

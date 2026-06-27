@@ -1,0 +1,83 @@
+{
+  "summary": {
+    "generatedAt": "2026-06-25T21:21:40.873Z",
+    "scannedFiles": 375,
+    "openFindings": 9,
+    "mitigatedPatterns": 0
+  },
+  "findings": [
+    {
+      "file": "src/utils/checkoutValidation.ts",
+      "line": 81,
+      "pattern": "for_await_db",
+      "severity": "high",
+      "label": "for-loop await DB",
+      "snippet": "for (const [id, product] of direct) { map.set(id, product); } } if (!slug && map.size === 0 && ownerId) { const { data, "
+    },
+    {
+      "file": "src/services/productsCrudService.ts",
+      "line": 72,
+      "pattern": "for_await_db",
+      "severity": "high",
+      "label": "for-loop await DB",
+      "snippet": "for (const select of [PRODUCT_DETAIL_SELECT, ...SELECT_CHAIN]) { const { data, error } = await supabase .from("
+    },
+    {
+      "file": "src/services/productsCrudService.ts",
+      "line": 175,
+      "pattern": "for_await_db",
+      "severity": "high",
+      "label": "for-loop await DB",
+      "snippet": "for (const row of attempts) { const { data, error } = await supabase .from("
+    },
+    {
+      "file": "src/services/productsCrudService.ts",
+      "line": 252,
+      "pattern": "for_await_db",
+      "severity": "high",
+      "label": "for-loop await DB",
+      "snippet": "for (const updateRow of attempts) { for (const select of [PRODUCT_DETAIL_SELECT, PRODUCT_INSERT_RETURN_MINIMAL]) { const"
+    },
+    {
+      "file": "src/services/platformHealthService.ts",
+      "line": 127,
+      "pattern": "for_await_db",
+      "severity": "high",
+      "label": "for-loop await DB",
+      "snippet": "for (const select of productSelectAttempts) { const { error } = await supabase.from("
+    },
+    {
+      "file": "src/services/platformHealthService.ts",
+      "line": 148,
+      "pattern": "for_await_db",
+      "severity": "high",
+      "label": "for-loop await DB",
+      "snippet": "for (const probe of rpcProbes) { try { const { error } = await (supabase as any).rpc("
+    },
+    {
+      "file": "src/services/orderService.ts",
+      "line": 624,
+      "pattern": "for_await_db",
+      "severity": "high",
+      "label": "for-loop await DB",
+      "snippet": "for (let attempt = 1; attempt <= maxAttempts; attempt++) { const { data, error } = await (supabase as any).rpc("
+    },
+    {
+      "file": "src/services/merchantProductCatalogService.ts",
+      "line": 384,
+      "pattern": "for_await_db",
+      "severity": "high",
+      "label": "for-loop await DB",
+      "snippet": "for (const selectColumns of selects) { const { data, error } = await supabase .from("
+    },
+    {
+      "file": "supabase/functions/process-order-webhook-outbox/index.ts",
+      "line": 75,
+      "pattern": "for_await_db",
+      "severity": "high",
+      "label": "for-loop await DB",
+      "snippet": "for (const job of jobs) { const url = job.webhook_url?.trim(); if (!url) { await supabase.rpc("
+    }
+  ],
+  "mitigated": []
+}

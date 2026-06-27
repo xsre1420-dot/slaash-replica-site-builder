@@ -1,0 +1,122 @@
+import { Product, ColorOption, ProductVariant } from '@/types';
+import { applyActiveDiscount, normalizeProductStock } from '@/utils/inventoryUtils';
+
+export const parseJsonField = <T>(value: unknown): T | undefined => {
+  if (value == null) return undefined;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return undefined;
+    }
+  }
+  if (Array.isArray(value)) return value as T;
+  return undefined;
+};
+
+/** Maps a database/RPC product row to domain `Product`. */
+export const mapDbProduct = (
+  row: Record<string, unknown>,
+  options: { applyDiscount?: boolean } = {}
+): Product => {
+  const imageSource = row.thumbnail ?? row.image_url ?? row.image;
+  const product: Product = {
+    id: String(row.id),
+    name: String(row.name),
+    description: String(row.description || ''),
+    category: String(row.category || ''),
+    price: Number(row.price),
+    cost: row.cost != null ? Number(row.cost) : undefined,
+    image: String(imageSource || ''),
+    additionalImages: (row.additional_images as string[]) || undefined,
+    stockQuantity: row.stock_quantity != null ? Number(row.stock_quantity) : undefined,
+    sizes: Array.isArray(row.sizes) ? (row.sizes as string[]) : undefined,
+    colors: parseJsonField<ColorOption[]>(row.colors),
+    variants: parseJsonField<ProductVariant[]>(row.variants),
+    discountType: row.discount_type as Product['discountType'],
+    discountValue: row.discount_value != null ? Number(row.discount_value) : undefined,
+    discountStartDate: row.discount_start_date as string | undefined,
+    discountEndDate: row.discount_end_date as string | undefined,
+    originalPrice: row.original_price != null ? Number(row.original_price) : undefined,
+    sku: (row.sku as string) || undefined,
+    shortDescription: (row.short_description as string) || undefined,
+    seoTitle: (row.seo_title as string) || undefined,
+    seoDescription: (row.seo_description as string) || undefined,
+    productSlug: (row.slug as string) || (row.product_slug as string) || undefined,
+    tags: parseJsonField<string[]>(row.tags),
+    lowStockThreshold: row.low_stock_threshold != null
+      ? Number(row.low_stock_threshold)
+      : row.min_stock_level != null
+        ? Number(row.min_stock_level)
+        : undefined,
+    isActive: row.is_active != null ? Boolean(row.is_active) : true,
+    archivedAt: (row.archived_at as string) || undefined,
+    rating: row.rating != null ? Number(row.rating) : undefined,
+    hasOptions: row.has_options === true ? true : undefined,
+  };
+
+  const normalized = normalizeProductStock(product);
+  return options.applyDiscount ? applyActiveDiscount(normalized) : normalized;
+};
+export const safeMapDbProduct = (
+  row: unknown,
+  options: { applyDiscount?: boolean } = {}
+): Product | null => {
+  if (row == null || typeof row !== 'object') return null;
+  try {
+    return mapDbProduct(row as Record<string, unknown>, options);
+  } catch (err) {
+    console.warn('[productMapper] map failed:', err);
+    return null;
+  }
+};
+
+/** Storefront listing — applies active discounts; honors pre-computed sale_price from slim RPC. */
+export const mapStorefrontProduct = (row: Record<string, unknown>): Product => {
+  if (row.stock_status) {
+    const status = String(row.stock_status);
+    if (status === 'unlimited') {
+      row = { ...row, stock_quantity: null };
+    } else if (row.qty != null) {
+      row = { ...row, stock_quantity: row.qty };
+    } else if (status === 'out') {
+      row = { ...row, stock_quantity: 0 };
+    }
+  }
+
+  if (row.sale_price != null && row.price != null) {
+    const sale = Number(row.sale_price);
+    const list = Number(row.price);
+    if (Number.isFinite(sale) && Number.isFinite(list) && sale !== list) {
+      const discounted = mapDbProduct(
+        { ...row, original_price: list, price: sale },
+        { applyDiscount: false }
+      );
+      return applyActiveDiscount(discounted);
+    }
+  }
+
+  return mapDbProduct(row, { applyDiscount: true });
+};
+
+export const safeMapStorefrontProduct = (row: unknown): Product | null => {
+  if (row == null) return null;
+  let record: Record<string, unknown>;
+  if (typeof row === 'string') {
+    try {
+      record = JSON.parse(row) as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  } else if (typeof row === 'object') {
+    record = row as Record<string, unknown>;
+  } else {
+    return null;
+  }
+  try {
+    return mapStorefrontProduct(record);
+  } catch (err) {
+    console.warn('[productMapper] storefront map failed:', err);
+    return null;
+  }
+};

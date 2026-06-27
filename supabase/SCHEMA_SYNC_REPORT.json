@@ -1,0 +1,93 @@
+{
+  "generatedAt": "2026-06-25T21:21:42.582Z",
+  "projectUrl": "https://mpifosptgoxvroblrrte.supabase.co",
+  "schema": {
+    "tablesInDb": 40,
+    "functionsInDb": 126,
+    "migrationsOnDisk": 150,
+    "latestMigration": "20260625000062_phase2_n_plus_one_orders.sql",
+    "platformSchemaVersion": true
+  },
+  "frontend": {
+    "rpcCalls": 61,
+    "tableQueries": 15
+  },
+  "drift": {
+    "rpcMissingInTypes": [],
+    "tableMissingInTypes": [],
+    "columnIssues": [],
+    "rpcInTypesNotUsedCount": 55,
+    "rpcInTypesNotUsedSample": [
+      "auth_user_store_ids",
+      "check_rpc_rate_limit",
+      "checkout_resolve_duplicate_order",
+      "claim_order_webhook_outbox_batch",
+      "enqueue_product_import_job",
+      "expire_product_discounts",
+      "finalize_order_webhook_delivery",
+      "get_analytics_pipeline_status",
+      "get_current_restaurant_owner_id",
+      "get_owner_orders_page",
+      "get_store_bundle",
+      "get_store_categories_by_slug",
+      "get_storefront_cache_version",
+      "has_active_subscription",
+      "hash_access_code"
+    ]
+  },
+  "live": {
+    "tableStatus": {
+      "store_settings": {
+        "ok": true,
+        "status": 200
+      },
+      "products": {
+        "ok": true,
+        "status": 200
+      },
+      "orders": {
+        "ok": true,
+        "status": 200
+      },
+      "leads": {
+        "ok": true,
+        "status": 200
+      },
+      "shipments": {
+        "ok": true,
+        "status": 200
+      },
+      "platform_schema_version": {
+        "ok": true,
+        "status": 200
+      }
+    },
+    "health": {
+      "error": "{\"code\":\"42501\",\"details\":null,\"hint\":null,\"message\":\"permission denied for function platform_health_check\"}",
+      "status": 401
+    },
+    "rpcStatus": {
+      "platform_health_check": {
+        "callable": true,
+        "status": 401
+      },
+      "get_store_meta": {
+        "callable": true,
+        "status": 200
+      },
+      "get_store_products_page": {
+        "callable": true,
+        "status": 200
+      },
+      "create_order_with_stock_deduction": {
+        "callable": false,
+        "status": 404
+      },
+      "get_owner_bootstrap": {
+        "callable": false,
+        "status": 404
+      }
+    },
+    "skipped": false
+  }
+}

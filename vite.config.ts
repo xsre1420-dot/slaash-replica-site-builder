@@ -35,7 +35,7 @@ export default defineConfig(({ mode }) => ({
           'vendor-query': ['@tanstack/react-query'],
           'vendor-supabase': ['@supabase/supabase-js'],
           'vendor-motion': ['framer-motion'],
-          'vendor-forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
+          'vendor-validation': ['zod'],
         },
       },
     },

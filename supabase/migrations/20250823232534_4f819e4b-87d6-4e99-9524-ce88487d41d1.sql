@@ -1,7 +1,14 @@
 -- Fix security issue: Prevent password hash exposure in restaurant_owners table
 
+ALTER TABLE public.restaurant_owners ADD COLUMN IF NOT EXISTS restaurant_name TEXT;
+ALTER TABLE public.restaurant_owners ADD COLUMN IF NOT EXISTS restaurant_logo TEXT;
+ALTER TABLE public.restaurant_owners ADD COLUMN IF NOT EXISTS username TEXT;
+ALTER TABLE public.restaurant_owners ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now();
+ALTER TABLE public.restaurant_owners ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();
+
 -- 1. Create a secure view for restaurant owner profiles that excludes password_hash
-CREATE OR REPLACE VIEW public.restaurant_owner_profiles AS
+DROP VIEW IF EXISTS public.restaurant_owner_profiles;
+CREATE VIEW public.restaurant_owner_profiles AS
 SELECT 
   id,
   username,
@@ -11,14 +18,8 @@ SELECT
   updated_at
 FROM public.restaurant_owners;
 
--- 2. Enable RLS on the view
-ALTER VIEW public.restaurant_owner_profiles ENABLE ROW LEVEL SECURITY;
-
--- 3. Create secure RLS policies for the view (no password access)
-CREATE POLICY "Restaurant owners can view their own secure profile" 
-ON public.restaurant_owner_profiles 
-FOR SELECT 
-USING (id = get_current_restaurant_owner_id());
+-- 2-3. View RLS policies skipped (views cannot ENABLE ROW LEVEL SECURITY on Supabase Postgres).
+-- Use get_restaurant_owner_profile() for safe reads instead.
 
 -- 4. Create a secure function to get current restaurant owner profile without password
 CREATE OR REPLACE FUNCTION public.get_restaurant_owner_profile()
@@ -78,6 +79,7 @@ $$;
 DROP POLICY IF EXISTS "Restaurant owners can view their own profile" ON public.restaurant_owners;
 
 -- 7. Create a new restrictive SELECT policy that denies all direct SELECT access
+DROP POLICY IF EXISTS "Deny direct SELECT access to restaurant_owners" ON public.restaurant_owners;
 CREATE POLICY "Deny direct SELECT access to restaurant_owners" 
 ON public.restaurant_owners 
 FOR SELECT 

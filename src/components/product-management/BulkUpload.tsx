@@ -5,7 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { getAuthenticatedUserId } from "@/lib/authSession";
+import { bulkImportProducts } from "@/services/productsCrudService";
+import { enqueueProductImportJob, runImportJobToCompletion } from "@/services/importJobService";
+import { syncMerchantProductCatalog } from "@/services/productService";
+import { fetchStoreByUserId } from "@/services/storeService";
 
 interface ParsedProduct {
   name: string;
@@ -23,6 +27,10 @@ interface UploadResult {
   failed: number;
   errors: string[];
 }
+
+/** Inline browser import cap — larger batches use import_jobs queue. */
+const MAX_INLINE_CSV_ROWS = 150;
+const MAX_QUEUED_CSV_ROWS = 5000;
 
 export const BulkUpload = ({ onComplete }: { onComplete: () => void }) => {
   const [open, setOpen] = useState(false);
@@ -99,6 +107,15 @@ export const BulkUpload = ({ onComplete }: { onComplete: () => void }) => {
     reader.onload = (evt) => {
       try {
         const products = parseCSV(evt.target?.result as string);
+        if (products.length > MAX_QUEUED_CSV_ROWS) {
+          toast.error(`الحد الأقصى ${MAX_QUEUED_CSV_ROWS} منتج لكل ملف`);
+          setParsed([]);
+          setParsing(false);
+          return;
+        }
+        if (products.length > MAX_INLINE_CSV_ROWS) {
+          toast.info(`سيتم استيراد ${products.length} منتج في الخلفية (أكثر من ${MAX_INLINE_CSV_ROWS})`);
+        }
         setParsed(products);
         if (products.length === 0) {
           toast.error("لم يتم العثور على منتجات صالحة");
@@ -115,48 +132,61 @@ export const BulkUpload = ({ onComplete }: { onComplete: () => void }) => {
   const handleUpload = async () => {
     if (parsed.length === 0) return;
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const userId = await getAuthenticatedUserId();
+    if (!userId) {
       toast.error("يرجى تسجيل الدخول أولاً");
       return;
     }
 
-    setUploading(true);
-    setProgress(0);
-    let success = 0;
-    let failed = 0;
-    const uploadErrors: string[] = [];
+    const deduped = parsed.filter((product, index, list) => {
+      const key = product.name.trim().toLowerCase();
+      return list.findIndex((p) => p.name.trim().toLowerCase() === key) === index;
+    });
 
-    // Batch insert in chunks of 20
-    const chunkSize = 20;
-    for (let i = 0; i < parsed.length; i += chunkSize) {
-      const chunk = parsed.slice(i, i + chunkSize).map(p => ({
-        name: p.name,
-        description: p.description,
-        category: p.category,
-        price: p.price,
-        cost: p.cost || null,
-        stock_quantity: p.stock_quantity || 0,
-        sizes: p.sizes || null,
-        image_url: p.image_url || null,
-        owner_id: user.id,
-      }));
-
-      const { error } = await supabase.from("products").insert(chunk);
-      if (error) {
-        failed += chunk.length;
-        uploadErrors.push(`خطأ في رفع الدفعة ${Math.floor(i / chunkSize) + 1}: ${error.message}`);
-      } else {
-        success += chunk.length;
-      }
-      setProgress(Math.round(((i + chunkSize) / parsed.length) * 100));
+    if (deduped.length < parsed.length) {
+      toast.info(`تم تجاهل ${parsed.length - deduped.length} منتج مكرر في الملف`);
     }
 
-    setResult({ success, failed, errors: uploadErrors });
+    setUploading(true);
+    setProgress(0);
+
+    const store = await fetchStoreByUserId(userId);
+
+    if (deduped.length > MAX_INLINE_CSV_ROWS) {
+      const queued = await enqueueProductImportJob(userId, store?.id ?? null, deduped);
+      if (!queued.success || !queued.jobId) {
+        toast.error(queued.error ?? "فشل إنشاء مهمة الاستيراد");
+        setUploading(false);
+        return;
+      }
+
+      const final = await runImportJobToCompletion(queued.jobId, (processed, total) => {
+        setProgress(Math.round((processed / total) * 100));
+      });
+
+      setUploading(false);
+      if (!final.success) {
+        toast.error(final.error ?? "فشل الاستيراد الخلفي");
+        return;
+      }
+
+      const imported = final.processedRows ?? deduped.length;
+      setResult({ success: imported, failed: 0, errors: [] });
+      setProgress(100);
+      syncMerchantProductCatalog(userId);
+      toast.success(`تم استيراد ${imported} منتج كمسودة — انشرها من صفحة المنتجات`);
+      onComplete();
+      return;
+    }
+
+    const result = await bulkImportProducts(deduped, userId, store?.id ?? null);
+    setProgress(100);
+    setResult(result);
     setUploading(false);
 
-    if (success > 0) {
-      toast.success(`تم رفع ${success} منتج بنجاح`);
+    if (result.success > 0) {
+      syncMerchantProductCatalog(userId);
+      toast.success(`تم رفع ${result.success} منتج كمسودة — انشرها من صفحة المنتجات`);
       onComplete();
     }
   };

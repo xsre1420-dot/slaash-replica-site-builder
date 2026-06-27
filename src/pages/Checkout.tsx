@@ -1,142 +1,117 @@
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { useState, useRef } from "react";
+import { Link } from "react-router-dom";
+import { useRef, useEffect, useMemo } from "react";
 import { ShoppingBag, Loader2 } from "lucide-react";
-import { useCart } from "@/context/CartContext";
-import { useStore } from "@/context/StoreContext";
+import { useCartActions } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
-import { Order } from "@/types";
-import { supabase } from "@/integrations/supabase/client";
 import ScrollReveal from "@/components/product-details/ScrollReveal";
 import CheckoutHeader from "@/components/checkout/CheckoutHeader";
 import ProgressSteps from "@/components/checkout/ProgressSteps";
-import CartItemCard from "@/components/checkout/CartItemCard";
+import CheckoutCartSection from "@/components/checkout/CheckoutCartSection";
 import DeliveryForm from "@/components/checkout/DeliveryForm";
 import GuaranteesBar from "@/components/checkout/GuaranteesBar";
 import OrderSuccessModal from "@/components/checkout/OrderSuccessModal";
+import PaymentMethodSelector from "@/components/checkout/PaymentMethodSelector";
+import { useCheckoutFlow } from "@/hooks/useCheckoutFlow";
+import MarketingScripts from "@/components/MarketingScripts";
+import { useStoreVisitTracking } from "@/hooks/useStoreVisitTracking";
+import StoreThemeProvider from "@/components/StoreThemeProvider";
+import StorefrontTrustBar from "@/components/storefront/StorefrontTrustBar";
+import { useStoreDisplay } from "@/hooks/useStoreDisplay";
 
 const Checkout = () => {
-  const { cartItems, removeFromCart, updateQuantity, clearCart, cartTotal, cartCount } = useCart();
-  const { storeSettings } = useStore();
-  const navigate = useNavigate();
+  const { removeFromCart, updateQuantity, getMaxQuantity } = useCartActions();
   const formRef = useRef<HTMLDivElement>(null);
+  const prevStepRef = useRef(0);
 
-  const [orderCompleted, setOrderCompleted] = useState(false);
-  const [completedOrderId, setCompletedOrderId] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [customerInfo, setCustomerInfo] = useState({ name: "", phone: "", address: "", notes: "" });
-  const [selectedGovernorate, setSelectedGovernorate] = useState("");
+  const {
+    isTenantMode,
+    storeSlug,
+    tenantLoading,
+    cartItems,
+    cartCount,
+    ownerId,
+    storeHomePath,
+    orderCompleted,
+    completedOrderId,
+    isSubmitting,
+    submitPhase,
+    formErrors,
+    customerInfo,
+    selectedGovernorate,
+    appliedCoupon,
+    setAppliedCoupon,
+    selectedPaymentMethod,
+    setSelectedPaymentMethod,
+    deliveryFee,
+    deliveryPrices,
+    paymentMethodOptions,
+    discountAmount,
+    totalWithDelivery,
+    currentStep,
+    cartTotal,
+    handleInputChange,
+    handleGovernorateChange,
+    handleSubmitOrder,
+  } = useCheckoutFlow();
 
-  const selectedDeliveryPrice = selectedGovernorate
-    ? storeSettings.deliveryPrices?.find(d => d.governorate === selectedGovernorate)?.price || 0
-    : 0;
-  const totalWithDelivery = cartTotal + selectedDeliveryPrice;
+  const display = useStoreDisplay(storeSlug);
+  const themeColors = useMemo(
+    () => ({
+      backgroundColor: display.storeSettings.menuBackgroundColor,
+      textColor: display.storeSettings.menuTextColor,
+      accentColor: display.storeSettings.menuAccentColor,
+      font: display.storeSettings.storeFont,
+    }),
+    [
+      display.storeSettings.menuBackgroundColor,
+      display.storeSettings.menuTextColor,
+      display.storeSettings.menuAccentColor,
+      display.storeSettings.storeFont,
+    ]
+  );
 
-  // Determine progress step
-  const currentStep = customerInfo.name && customerInfo.phone && customerInfo.address ? 1 : 0;
+  useStoreVisitTracking(isTenantMode ? storeSlug : undefined);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setCustomerInfo(prev => ({ ...prev, [name]: value }));
-    if (formErrors[name]) setFormErrors(prev => ({ ...prev, [name]: "" }));
-  };
-
-  const handleGovernorateChange = (v: string) => {
-    setSelectedGovernorate(v);
-    if (formErrors.governorate) setFormErrors(prev => ({ ...prev, governorate: "" }));
-  };
-
-  const validateForm = (): boolean => {
-    const errors: Record<string, string> = {};
-    if (!customerInfo.name.trim()) errors.name = "يرجى إدخال الاسم";
-    if (!customerInfo.phone.trim()) errors.phone = "يرجى إدخال رقم الهاتف";
-    else if (!/^[\d\s+()-]{7,15}$/.test(customerInfo.phone.trim())) errors.phone = "رقم الهاتف غير صحيح";
-    if (!customerInfo.address.trim()) errors.address = "يرجى إدخال العنوان";
-    if (storeSettings.deliveryPrices?.length && !selectedGovernorate) errors.governorate = "يرجى اختيار المحافظة";
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleSubmitOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-
-    setIsSubmitting(true);
-
-    try {
-      // Determine store owner from the first product's data or current user
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      // For public stores, find the owner from a product in the cart
-      let ownerId = user?.id;
-      if (!ownerId && cartItems.length > 0) {
-        const { data: product } = await supabase
-          .from('products')
-          .select('owner_id')
-          .eq('id', cartItems[0].product.id)
-          .maybeSingle();
-        ownerId = product?.owner_id;
-      }
-
-      if (!ownerId) {
-        console.error('Could not determine store owner');
-        setIsSubmitting(false);
-        return;
-      }
-
-      const orderItems = cartItems.map(item => ({
-        productId: item.product.id,
-        name: item.product.name,
-        price: item.product.price,
-        image: item.product.image,
-        quantity: item.quantity,
-        selectedSize: item.selectedSize,
-        selectedColor: item.selectedColor,
-      }));
-
-      const { data: newOrder, error } = await (supabase as any)
-        .from('orders')
-        .insert({
-          owner_id: ownerId,
-          customer_name: customerInfo.name,
-          customer_phone: customerInfo.phone,
-          customer_address: customerInfo.address,
-          customer_governorate: selectedGovernorate || null,
-          notes: customerInfo.notes || null,
-          items: orderItems,
-          total: totalWithDelivery,
-          delivery_fee: selectedDeliveryPrice,
-          status: 'pending',
-        })
-        .select('id')
-        .single();
-
-      if (error) {
-        console.error('Error creating order:', error);
-        setIsSubmitting(false);
-        return;
-      }
-
-      setCompletedOrderId(newOrder.id);
-      setOrderCompleted(true);
-      setIsSubmitting(false);
-
-      setTimeout(() => {
-        setOrderCompleted(false);
-        clearCart();
-        navigate("/preview");
-      }, 3000);
-    } catch (error) {
-      console.error('Error submitting order:', error);
-      setIsSubmitting(false);
+  useEffect(() => {
+    if (currentStep > prevStepRef.current && formRef.current) {
+      formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  };
+    prevStepRef.current = currentStep;
+  }, [currentStep]);
+
+  const isCheckoutLocked = isSubmitting || submitPhase === 'creating' || submitPhase === 'validating';
+
+  const submitLabel =
+    submitPhase === 'validating'
+      ? 'جاري التحقق من السلة...'
+      : submitPhase === 'creating'
+        ? 'جاري إرسال الطلب...'
+        : 'تأكيد الطلب';
+
+  if (isTenantMode && tenantLoading && !ownerId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-background font-arabic" dir="rtl">
-      <CheckoutHeader cartCount={cartCount} />
+    <StoreThemeProvider colors={themeColors} className="min-h-dvh flex flex-col">
+    <div className="flex flex-col flex-1 min-h-dvh w-full bg-background font-arabic" dir="rtl">
+      <MarketingScripts
+        storeSlug={isTenantMode ? storeSlug : undefined}
+        storeOwnerId={ownerId}
+        disabled={!isTenantMode}
+      />
+      <CheckoutHeader cartCount={cartCount} backTo={storeHomePath} />
+      <StorefrontTrustBar compact fullWidth />
 
-      <div className="max-w-xl mx-auto px-4 pb-32">
+      {cartItems.length > 0 && (
+        <ProgressSteps currentStep={currentStep} fullWidth />
+      )}
+
+      <div className="flex-1 w-full px-4 sm:px-5 pt-2 pb-36 space-y-3 md:pb-10">
         {cartItems.length === 0 ? (
           <ScrollReveal>
             <div className="text-center py-16 mt-8">
@@ -145,118 +120,183 @@ const Checkout = () => {
               </div>
               <h3 className="text-xl font-bold text-foreground mb-2">سلة التسوق فارغة</h3>
               <p className="text-muted-foreground text-sm mb-6">اكتشف منتجاتنا المميزة وأضف ما يعجبك!</p>
-              <Link to="/preview">
+              <Link to={storeHomePath}>
                 <Button className="rounded-xl px-8">تصفح المنتجات</Button>
               </Link>
             </div>
           </ScrollReveal>
         ) : (
-          <form onSubmit={handleSubmitOrder}>
-            {/* Progress Steps */}
-            <ScrollReveal>
-              <ProgressSteps currentStep={currentStep} />
+          <form
+            id="checkout-form"
+            onSubmit={handleSubmitOrder}
+            className={`space-y-3 ${isCheckoutLocked ? 'pointer-events-none opacity-90' : ''}`}
+            aria-busy={isCheckoutLocked}
+          >
+
+            <CheckoutCartSection
+              cartItems={cartItems}
+              cartCount={cartCount}
+              cartTotal={cartTotal}
+              ownerId={ownerId}
+              storeSlug={storeSlug}
+              isTenantMode={isTenantMode}
+              appliedCoupon={appliedCoupon}
+              discountAmount={discountAmount}
+              deliveryPrices={deliveryPrices}
+              selectedGovernorate={selectedGovernorate}
+              getMaxQuantity={getMaxQuantity}
+              onRemove={removeFromCart}
+              onUpdateQuantity={updateQuantity}
+              onApplyCoupon={setAppliedCoupon}
+            />
+
+            <ScrollReveal delay={150}>
+              <section className="bg-card rounded-xl border border-border/50 p-3.5 sm:p-4">
+                <h2 className="text-base font-semibold mb-2.5 text-right text-foreground">طريقة الدفع</h2>
+                <PaymentMethodSelector
+                  methods={paymentMethodOptions}
+                  selected={selectedPaymentMethod}
+                  onSelect={setSelectedPaymentMethod}
+                />
+              </section>
             </ScrollReveal>
 
-            {/* Cart Items */}
-            <ScrollReveal delay={100}>
-              <div className="bg-card rounded-2xl border border-border/50 p-4 mt-2">
-                <h2 className="text-lg font-bold mb-3 text-right text-foreground">طلبك ({cartCount})</h2>
-                <div className="space-y-3">
-                  {cartItems.map((item, index) => (
-                    <CartItemCard
-                      key={`${item.product.id}-${item.selectedSize || ""}-${item.selectedColor || ""}-${index}`}
-                      item={item}
-                      index={index}
-                      onRemove={removeFromCart}
-                      onUpdateQuantity={updateQuantity}
-                    />
-                  ))}
-                </div>
-                <div className="flex justify-between mt-4 pt-3 border-t border-border/50">
-                  <span className="font-bold text-lg text-foreground">{cartTotal.toLocaleString()} د.ع</span>
-                  <span className="font-bold text-foreground">المجموع:</span>
-                </div>
-              </div>
-            </ScrollReveal>
-
-            {/* Delivery Form */}
             <ScrollReveal delay={200}>
-              <div className="bg-card rounded-2xl border border-border/50 p-4 mt-4" ref={formRef}>
-                <h2 className="text-lg font-bold mb-3 text-right text-foreground">معلومات التوصيل</h2>
+              <section className="bg-card rounded-xl border border-border/50 p-3.5 sm:p-4" ref={formRef}>
+                <h2 className="text-base font-semibold mb-2.5 text-right text-foreground">معلومات التوصيل</h2>
                 <DeliveryForm
                   customerInfo={customerInfo}
                   onInputChange={handleInputChange}
                   selectedGovernorate={selectedGovernorate}
                   onGovernorateChange={handleGovernorateChange}
-                  deliveryPrices={storeSettings.deliveryPrices}
+                  deliveryPrices={deliveryPrices}
+                  deliveryFee={deliveryFee}
                   formErrors={formErrors}
                 />
-              </div>
+              </section>
             </ScrollReveal>
 
-            {/* Delivery Price & Total */}
-            {selectedGovernorate && selectedDeliveryPrice > 0 && (
+            {selectedGovernorate && (
               <ScrollReveal delay={300}>
-                <div className="bg-card rounded-2xl border border-border/50 p-4 mt-4 space-y-3">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-foreground">{selectedDeliveryPrice.toLocaleString()} د.ع</span>
-                    <span className="text-muted-foreground">رسوم التوصيل ({selectedGovernorate})</span>
+                <section
+                  dir="rtl"
+                  className="rounded-xl border border-primary/25 bg-primary/[0.04] p-3.5 sm:p-4 space-y-2.5"
+                >
+                  <h3 className="text-base font-semibold text-right text-foreground">ملخص الدفع</h3>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-xs text-muted-foreground">مجموع المنتجات</span>
+                      <span className="text-sm font-semibold tabular-nums text-foreground">
+                        {cartTotal.toLocaleString()} د.ع
+                      </span>
+                    </div>
+
+                    {discountAmount > 0 && (
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="text-xs text-primary">الخصم ({appliedCoupon?.code})</span>
+                        <span className="text-sm font-semibold tabular-nums text-primary">
+                          -{discountAmount.toLocaleString()} د.ع
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-xs text-muted-foreground">رسوم التوصيل</span>
+                      <span
+                        className={`text-sm font-semibold tabular-nums ${
+                          deliveryFee > 0 ? "text-foreground" : "text-emerald-600"
+                        }`}
+                      >
+                        {deliveryFee > 0 ? `${deliveryFee.toLocaleString()} د.ع` : "مجاني"}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center pt-2 border-t border-border/50">
-                    <span className="font-bold text-lg text-primary">{totalWithDelivery.toLocaleString()} د.ع</span>
-                    <span className="font-bold text-foreground">المجموع النهائي</span>
+
+                  <div className="flex items-center justify-between gap-4 pt-2.5 border-t border-primary/20">
+                    <span className="text-sm font-bold text-foreground">المجموع النهائي</span>
+                    <span className="text-lg font-bold tabular-nums text-primary">
+                      {totalWithDelivery.toLocaleString()} د.ع
+                    </span>
                   </div>
-                </div>
+                </section>
               </ScrollReveal>
             )}
 
-            {/* Guarantees */}
-            <div className="mt-4">
-              <GuaranteesBar />
-            </div>
+            <GuaranteesBar compact />
 
-            {/* Submit Button */}
             <ScrollReveal delay={400}>
               <Button
                 type="submit"
-                disabled={isSubmitting}
-                className="w-full mt-4 rounded-2xl py-3 text-base font-bold h-14 bg-gradient-to-r from-primary to-primary/85 hover:from-primary/90 hover:to-primary/80 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all"
+                disabled={isCheckoutLocked}
+                className="w-full rounded-xl py-2.5 text-sm font-bold h-12 bg-primary hover:bg-primary/90 transition-colors"
               >
-                {isSubmitting ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                {isCheckoutLocked ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {submitLabel}
+                  </span>
                 ) : (
-                  "تأكيد الطلب"
+                  submitLabel
                 )}
               </Button>
+              {isCheckoutLocked && (
+                <p className="text-center text-xs text-muted-foreground mt-2" role="status">
+                  لا تغلق الصفحة — يتم معالجة طلبك بأمان
+                </p>
+              )}
             </ScrollReveal>
           </form>
         )}
+        <div className="h-5 shrink-0 bg-background md:h-8" aria-hidden />
       </div>
 
-      {/* Sticky Summary on Mobile */}
       {cartItems.length > 0 && !orderCompleted && (
-        <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t border-border/50 p-3 z-30 md:hidden animate-slide-up-sticky" dir="rtl">
-          <div className="max-w-xl mx-auto flex items-center justify-between">
-            <div className="text-right">
-              <span className="text-xs text-muted-foreground">{cartCount} منتج</span>
-              <p className="font-bold text-foreground">
-                {(selectedDeliveryPrice > 0 ? totalWithDelivery : cartTotal).toLocaleString()} د.ع
+        <div
+          className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t border-border/50 px-3 py-2.5 z-30 md:hidden safe-area-bottom"
+          dir="rtl"
+        >
+          <div className="w-full flex items-center gap-2">
+            <div className="text-right flex-1 min-w-0">
+              <span className="text-[11px] text-muted-foreground">{cartCount} منتج</span>
+              <p className="text-sm font-bold text-foreground leading-tight">
+                {deliveryPrices.length > 0 && !selectedGovernorate
+                  ? `${cartTotal.toLocaleString()} د.ع`
+                  : `${totalWithDelivery.toLocaleString()} د.ع`}
               </p>
+              {deliveryPrices.length > 0 && !selectedGovernorate && (
+                <span className="text-[10px] text-muted-foreground">+ التوصيل بعد اختيار المحافظة</span>
+              )}
             </div>
             <Button
+              type="button"
               onClick={() => formRef.current?.scrollIntoView({ behavior: "smooth" })}
-              size="sm"
               variant="outline"
-              className="rounded-xl text-xs"
+              className="h-10 min-h-0 min-w-0 rounded-xl px-3 text-xs font-semibold shrink-0 border-primary/30 text-primary hover:bg-primary/5 hover:text-primary hover:border-primary/40"
             >
-              معلومات التوصيل ↓
+              التوصيل
+            </Button>
+            <Button
+              type="button"
+              disabled={isCheckoutLocked}
+              onClick={() => document.getElementById('checkout-form')?.requestSubmit()}
+              className="h-10 min-h-0 min-w-0 rounded-xl px-3 text-xs font-semibold shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              {isCheckoutLocked ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'تأكيد'}
             </Button>
           </div>
         </div>
       )}
 
-      {orderCompleted && <OrderSuccessModal orderId={completedOrderId} />}
+      {orderCompleted && (
+        <OrderSuccessModal
+          orderId={completedOrderId}
+          storeSlug={storeSlug}
+          whatsappNumber={display.storeSettings.whatsappNumber}
+        />
+      )}
     </div>
+    </StoreThemeProvider>
   );
 };
 

@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 
-const STORAGE_KEY = "store_favorites";
+const favoritesKey = (storeSlug?: string) =>
+  storeSlug ? `store_favorites:${storeSlug.trim().toLowerCase()}` : "store_favorites";
 
-export function useFavorites() {
+export function useFavorites(storeSlug?: string) {
+  const storageKey = favoritesKey(storeSlug);
+
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(storageKey);
       return stored ? JSON.parse(stored) : [];
     } catch {
       return [];
@@ -14,9 +17,18 @@ export function useFavorites() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites));
+      const stored = localStorage.getItem(storageKey);
+      setFavorites(stored ? JSON.parse(stored) : []);
+    } catch {
+      setFavorites([]);
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(favorites));
     } catch {}
-  }, [favorites]);
+  }, [favorites, storageKey]);
 
   const toggleFavorite = useCallback((productId: string) => {
     setFavorites(prev =>

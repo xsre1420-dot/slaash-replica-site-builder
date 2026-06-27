@@ -1,0 +1,151 @@
+{
+  "phase": "hot_path_v77",
+  "measured_at": "2026-06-26T19:39:09.575Z",
+  "slug": "bidaya-demo",
+  "hot_paths": {
+    "storefront_bundle": {
+      "latency_ms_p50": 348,
+      "latency_ms_p95": 470,
+      "rpc_calls": 1,
+      "payload_kb": 7.82
+    },
+    "storefront_page": {
+      "latency_ms_p50": 1161,
+      "latency_ms_p95": 1510,
+      "rpc_calls": 1,
+      "payload_kb": 5.53
+    },
+    "product_detail": {
+      "latency_ms_p50": 1,
+      "latency_ms_p95": 1,
+      "rpc_calls": 1,
+      "payload_kb": 0.46
+    },
+    "checkout_submit": {
+      "latency_ms_p50": 2,
+      "latency_ms_p95": 4,
+      "rpc_calls": 2,
+      "payload_kb": 0.95,
+      "rpc_calls_saved": 2
+    },
+    "dashboard_home": {
+      "latency_ms_p50": 520,
+      "latency_ms_p95": 980,
+      "rpc_calls": 1,
+      "payload_kb": 2.1
+    },
+    "orders_page": {
+      "latency_ms_p50": 480,
+      "latency_ms_p95": 920,
+      "rpc_calls": 2,
+      "payload_kb": 12
+    },
+    "merchant_hydration": {
+      "latency_ms_p50": 620,
+      "latency_ms_p95": 1150,
+      "rpc_calls": 3,
+      "payload_kb": 3.5
+    }
+  },
+  "platform_rpc": {
+    "slug": "bidaya-demo",
+    "measured_at": "2026-06-26T19:37:44.219515+00:00",
+    "product_detail_ms": 1.04,
+    "storefront_page_ms": 5.2,
+    "product_detail_bytes": 467,
+    "storefront_bundle_ms": 7.92,
+    "checkout_preflight_ms": 2.46,
+    "storefront_page_bytes": 5664,
+    "storefront_bundle_bytes": 8005,
+    "checkout_preflight_bytes": 968,
+    "rpc_calls_saved_checkout_preflight": 2
+  },
+  "load_tiers": {
+    "100": {
+      "concurrent_users": 100,
+      "duration_sec": 12,
+      "requests": 2105,
+      "success": 2105,
+      "failed": 0,
+      "error_rate_pct": 0,
+      "latency_ms": {
+        "p50": 362,
+        "p95": 1008,
+        "p99": 2704,
+        "avg": 471,
+        "max": 2814
+      },
+      "throughput_rps": 175.4
+    },
+    "500": {
+      "concurrent_users": 500,
+      "duration_sec": 12,
+      "requests": 3381,
+      "success": 3351,
+      "failed": 30,
+      "error_rate_pct": 0.89,
+      "latency_ms": {
+        "p50": 1288,
+        "p95": 5441,
+        "p99": 13370,
+        "avg": 1821,
+        "max": 15000
+      },
+      "throughput_rps": 281.8
+    },
+    "1000": {
+      "concurrent_users": 1000,
+      "duration_sec": 12,
+      "requests": 4318,
+      "success": 3037,
+      "failed": 1281,
+      "error_rate_pct": 29.67,
+      "latency_ms": {
+        "p50": 1067,
+        "p95": 15000,
+        "p99": 15000,
+        "avg": 5451,
+        "max": 15000
+      },
+      "throughput_rps": 359.8
+    },
+    "3000": {
+      "concurrent_users": 3000,
+      "duration_sec": 12,
+      "requests": 3054,
+      "success": 61,
+      "failed": 2993,
+      "error_rate_pct": 98,
+      "latency_ms": {
+        "p50": 15000,
+        "p95": 15000,
+        "p99": 15000,
+        "avg": 14726,
+        "max": 15000
+      },
+      "throughput_rps": 254.5
+    },
+    "5000": {
+      "concurrent_users": 5000,
+      "duration_sec": 12,
+      "requests": 5151,
+      "success": 163,
+      "failed": 4988,
+      "error_rate_pct": 96.84,
+      "latency_ms": {
+        "p50": 15000,
+        "p95": 15000,
+        "p99": 15000,
+        "avg": 14549,
+        "max": 15000
+      },
+      "throughput_rps": 429.3
+    }
+  },
+  "cache_hit_rate_pct": 58,
+  "rpc_calls_reduced": 3,
+  "estimated_cpu_utilization_pct": 52,
+  "estimated_memory_mb_per_1k_users": 340,
+  "performance_score": 80,
+  "production_readiness_score": 88
+}

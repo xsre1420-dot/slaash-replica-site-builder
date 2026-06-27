@@ -1,24 +1,28 @@
 /**
- * Redis-compatible in-memory cache with TTL, stale-while-revalidate,
- * and namespace-based invalidation.
- * 
- * Design: Mirror Redis patterns (GET/SET/DEL/FLUSH) so migration
- * to Redis is a drop-in replacement of this module.
+ * In-memory cache with TTL, stale-while-revalidate, LRU eviction, and namespace invalidation.
  */
 
 interface CacheEntry<T = unknown> {
   data: T;
   createdAt: number;
-  ttl: number; // ms
-  staleWhileRevalidate: number; // additional ms after TTL where stale data is OK
+  ttl: number;
+  staleWhileRevalidate: number;
 }
+
+const MAX_CACHE_ENTRIES = 2000;
 
 class CacheStore {
   private store = new Map<string, CacheEntry>();
   private revalidating = new Set<string>();
 
-  /** SET — store with TTL (default 60s) and optional stale window (default 30s) */
+  private evictIfNeeded(): void {
+    if (this.store.size <= MAX_CACHE_ENTRIES) return;
+    const oldestKey = this.store.keys().next().value;
+    if (oldestKey) this.store.delete(oldestKey);
+  }
+
   set<T>(key: string, data: T, ttlMs = 60_000, staleMs = 30_000): void {
+    this.evictIfNeeded();
     this.store.set(key, {
       data,
       createdAt: Date.now(),
@@ -27,51 +31,57 @@ class CacheStore {
     });
   }
 
-  /** GET — returns data if fresh, or stale data + calls revalidate fn */
   get<T>(key: string, revalidateFn?: () => Promise<T>): T | null {
     const entry = this.store.get(key) as CacheEntry<T> | undefined;
     if (!entry) return null;
 
     const age = Date.now() - entry.createdAt;
 
-    // Fresh
     if (age < entry.ttl) return entry.data;
 
-    // Stale but within revalidation window
     if (age < entry.ttl + entry.staleWhileRevalidate) {
       if (revalidateFn && !this.revalidating.has(key)) {
         this.revalidating.add(key);
         revalidateFn()
           .then((fresh) => this.set(key, fresh, entry.ttl, entry.staleWhileRevalidate))
-          .catch(() => {})
+          .catch((err) => console.warn('[cache] revalidate failed:', err))
           .finally(() => this.revalidating.delete(key));
       }
-      return entry.data; // serve stale
+      return entry.data;
     }
 
-    // Expired
     this.store.delete(key);
     return null;
   }
 
-  /** DEL — remove a specific key */
   del(key: string): void {
     this.store.delete(key);
   }
 
-  /** FLUSH by prefix — like Redis SCAN + DEL pattern */
   flushByPrefix(prefix: string): void {
     for (const key of this.store.keys()) {
       if (key.startsWith(prefix)) this.store.delete(key);
     }
   }
 
-  /** FLUSHALL */
   flushAll(): void {
     this.store.clear();
   }
 
-  /** Check if key exists and is fresh */
+  /** Remove entries past TTL + stale window to prevent unbounded growth on long sessions. */
+  pruneExpired(): number {
+    const now = Date.now();
+    let removed = 0;
+    for (const [key, entry] of this.store) {
+      const age = now - entry.createdAt;
+      if (age >= entry.ttl + entry.staleWhileRevalidate) {
+        this.store.delete(key);
+        removed += 1;
+      }
+    }
+    return removed;
+  }
+
   has(key: string): boolean {
     const entry = this.store.get(key);
     if (!entry) return false;
@@ -79,22 +89,15 @@ class CacheStore {
     return age < entry.ttl + entry.staleWhileRevalidate;
   }
 
-  /** Get cache stats (for debugging) */
   stats(): { size: number; keys: string[] } {
     return { size: this.store.size, keys: [...this.store.keys()] };
   }
 }
 
-// Singleton — mirrors a single Redis connection
 export const cache = new CacheStore();
 
-// --- Request deduplication (prevents duplicate in-flight requests) ---
 const inflight = new Map<string, Promise<any>>();
 
-/**
- * Deduplicate concurrent requests for the same key.
- * If a request is already in-flight, return the same promise.
- */
 export function dedup<T>(key: string, fn: () => Promise<T>): Promise<T> {
   const existing = inflight.get(key);
   if (existing) return existing as Promise<T>;
@@ -104,19 +107,98 @@ export function dedup<T>(key: string, fn: () => Promise<T>): Promise<T> {
   return promise;
 }
 
-// Cache key namespaces (like Redis key prefixes)
+/** Drop an in-flight deduped request so the next call fetches fresh data. */
+export function clearInflight(key: string): void {
+  inflight.delete(key);
+}
+
+export function clearInflightAll(): void {
+  inflight.clear();
+}
+
 export const CacheKeys = {
   products: (ownerId: string) => `products:${ownerId}`,
+  productsByStore: (storeId: string) => `products:store:${storeId}`,
   categories: (ownerId: string) => `categories:${ownerId}`,
+  categoriesByStore: (storeId: string) => `categories:store:${storeId}`,
   storeSettings: (ownerId: string) => `store_settings:${ownerId}`,
+  store: (userId: string) => `store:${userId}`,
   orders: (ownerId: string, page: number) => `orders:${ownerId}:${page}`,
+  ordersFiltered: (ownerId: string, filterKey: string, page: number, cursor = '') =>
+    `orders:${ownerId}:f:${filterKey}:${page}:${cursor}`,
+  ordersWorkflowCounts: (ownerId: string, filterKey: string) =>
+    `orders:${ownerId}:wc:${filterKey}`,
+  ordersRecent: (ownerId: string) => `orders:${ownerId}:recent`,
+  ordersStatsSummary: (ownerId: string) => `orders:stats:${ownerId}`,
+  dashboardBatch: (ownerId: string) => `dashboard-batch:${ownerId}`,
+  dashboardKpisLight: (ownerId: string) => `dashboard-kpis:${ownerId}`,
+  dashboardWorkflowCounts: (ownerId: string) => `dashboard-workflow:${ownerId}`,
   statistics: (ownerId: string, range: string) => `stats:${ownerId}:${range}`,
+  tenantMeta: (slug: string) => `tenant-meta:${slug}`,
+  tenantProducts: (slug: string, pageKey: string) => `tenant-products:${slug}:${pageKey}`,
+  /** owner_id → store_slug (checkout, invalidation, cross-tab sync) */
+  ownerSlug: (ownerId: string) => `owner-slug:${ownerId}`,
+  /** store_slug → owner_id (product detail, fallbacks) */
+  slugOwner: (slug: string) => `slug-owner:${slug}`,
+  storefrontProduct: (slug: string, productId: string) => `storefront-product:${slug}:${productId}`,
+  footerSuggested: (slug: string) => `footer-suggested:${slug}`,
 } as const;
 
-// TTL presets (ms)
 export const CacheTTL = {
-  SHORT: 30_000,      // 30s — volatile data (orders)
-  MEDIUM: 60_000,     // 1min — products, categories
-  LONG: 300_000,      // 5min — store settings
-  STALE: 30_000,      // 30s stale window
+  SHORT: 30_000,
+  MEDIUM: 60_000,
+  LONG: 300_000,
+  STALE: 15_000,
+  /** Aggregated KPI RPC responses — safe to cache longer when rollups are stable */
+  ANALYTICS: 90_000,
+  ANALYTICS_STALE: 45_000,
+  /** Public storefront catalog — longer TTL reduces RPC churn under viral traffic */
+  STOREFRONT: 120_000,
+  STOREFRONT_STALE: 60_000,
 } as const;
+
+/** Invalidate order list caches only — preserves dashboard batch / analytics KPIs. */
+export function flushOrderListCache(ownerId: string): void {
+  cache.flushByPrefix(`orders:${ownerId}:`);
+  cache.del(CacheKeys.ordersStatsSummary(ownerId));
+  cache.del(CacheKeys.ordersRecent(ownerId));
+}
+
+/** Invalidate order + stats caches only (preserve product catalog). */
+export function flushOrderCache(ownerId: string): void {
+  flushOrderListCache(ownerId);
+  cache.del(CacheKeys.dashboardBatch(ownerId));
+  cache.del(CacheKeys.dashboardKpisLight(ownerId));
+  cache.del(CacheKeys.dashboardWorkflowCounts(ownerId));
+  cache.flushByPrefix(`stats:${ownerId}:`);
+}
+
+/** Invalidate cached merchant data for a single tenant (avoids cross-tenant flush). */
+export function flushOwnerCache(ownerId: string): void {
+  flushOrderCache(ownerId);
+  cache.del(CacheKeys.products(ownerId));
+  cache.del(CacheKeys.categories(ownerId));
+  cache.del(CacheKeys.storeSettings(ownerId));
+  cache.del(CacheKeys.store(ownerId));
+  cache.del(CacheKeys.ownerSlug(ownerId));
+}
+
+/** Drop slug ↔ owner resolution entries after settings or slug changes. */
+export function flushSlugResolutionCache(ownerId: string, slug?: string | null): void {
+  cache.del(CacheKeys.ownerSlug(ownerId));
+  if (slug?.trim()) {
+    cache.del(CacheKeys.slugOwner(slug.trim().toLowerCase()));
+  }
+}
+
+let cachePruneHookInstalled = false;
+
+/** Prune expired in-memory cache entries when the tab becomes visible (long-session hygiene). */
+export function installCachePruneLifecycle(): void {
+  if (cachePruneHookInstalled || typeof document === 'undefined') return;
+  cachePruneHookInstalled = true;
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) cache.pruneExpired();
+  });
+}

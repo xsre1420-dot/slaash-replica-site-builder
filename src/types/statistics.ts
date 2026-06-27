@@ -21,6 +21,19 @@ export interface RealStatistics {
     revenue: number;
     percentage: number;
   }>;
+  topViewedProducts: Array<{
+    productId: string;
+    name: string;
+    views: number;
+    percentage: number;
+  }>;
+  campaignAttribution: Array<{
+    source: string;
+    medium: string;
+    campaign: string;
+    orders: number;
+    revenue: number;
+  }>;
   paymentMethods: Array<{
     name: string;
     value: number;
@@ -33,10 +46,22 @@ export interface RealStatistics {
   }>;
 }
 
+export interface StatisticsDateBounds {
+  start: Date;
+  end: Date;
+  days: number;
+  previousStart: Date;
+}
+
 export interface DatabaseData {
   orders: any[];
   orderItems: any[];
   customers: any[];
   products: any[];
   visits: any[];
+  kpis?: Record<string, unknown>;
+  previousKpis?: Record<string, unknown>;
+  truncated?: boolean;
+  fetchWarnings?: string[];
+  dateBounds?: StatisticsDateBounds;
 }

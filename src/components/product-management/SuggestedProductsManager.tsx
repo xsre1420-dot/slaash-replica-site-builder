@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import {
+  addSuggestedProductLink,
+  listAvailableProductsForSuggestions,
+  listCategoryNamesForOwner,
+  listMerchantSuggestedLinks,
+  removeSuggestedProductLink,
+  type MerchantSuggestedLink,
+} from "@/services/suggestedProductsService";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -42,12 +49,7 @@ interface Product {
   category: string;
 }
 
-interface SuggestedProduct {
-  id: string;
-  suggested_product_id: string;
-  display_order: number;
-  product: Product;
-}
+interface SuggestedProduct extends MerchantSuggestedLink {}
 
 interface SuggestedProductsManagerProps {
   productId: string;
@@ -78,43 +80,8 @@ const SuggestedProductsManager = ({ productId, productName }: SuggestedProductsM
     
     setLoading(true);
     try {
-      // First get suggested products
-      const { data: suggestedData, error: suggestedError } = await (supabase as any)
-        .from('suggested_products')
-        .select('id, suggested_product_id')
-        .eq('product_id', productId)
-        .eq('owner_id', user.id)
-        .limit(20);
-
-      if (suggestedError) throw suggestedError;
-      
-      if (suggestedData && suggestedData.length > 0) {
-        // Get product details for each suggested product
-        const productIds = suggestedData.map(sp => sp.suggested_product_id);
-        const { data: productsData, error: productsError } = await supabase
-          .from('products')
-          .select('id, name, price, image_url, category')
-          .in('id', productIds)
-          .eq('owner_id', user.id);
-
-        if (productsError) throw productsError;
-
-        // Combine the data
-        const combinedData = suggestedData.map(sp => ({
-          ...sp,
-          product: productsData?.find(p => p.id === sp.suggested_product_id) || {
-            id: sp.suggested_product_id,
-            name: 'منتج محذوف',
-            price: 0,
-            image_url: '',
-            category: ''
-          }
-        }));
-
-        setSuggestedProducts(combinedData);
-      } else {
-        setSuggestedProducts([]);
-      }
+      const combinedData = await listMerchantSuggestedLinks(productId, user.id);
+      setSuggestedProducts(combinedData);
     } catch (error) {
       console.error('Error fetching suggested products:', error);
       toast({
@@ -131,14 +98,8 @@ const SuggestedProductsManager = ({ productId, productName }: SuggestedProductsM
     if (!user) return;
     
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, price, image_url, category')
-        .eq('owner_id', user.id)
-        .neq('id', productId);
-
-      if (error) throw error;
-      setAvailableProducts(data || []);
+      const data = await listAvailableProductsForSuggestions(user.id, productId);
+      setAvailableProducts(data);
     } catch (error) {
       console.error('Error fetching available products:', error);
     }
@@ -148,13 +109,8 @@ const SuggestedProductsManager = ({ productId, productName }: SuggestedProductsM
     if (!user) return;
     
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('name')
-        .eq('owner_id', user.id);
-
-      if (error) throw error;
-      setCategories(data?.map(cat => cat.name) || []);
+      const names = await listCategoryNamesForOwner(user.id);
+      setCategories(names);
     } catch (error) {
       console.error('Error fetching categories:', error);
     }
@@ -175,36 +131,10 @@ const SuggestedProductsManager = ({ productId, productName }: SuggestedProductsM
     }
 
     try {
-      const nextOrder = Math.max(...suggestedProducts.map(sp => sp.display_order), 0) + 1;
-      
-      const { data, error } = await (supabase as any)
-        .from('suggested_products')
-        .insert({
-          product_id: productId,
-          suggested_product_id: selectedProductId,
-          owner_id: user.id,
-        })
-        .select('id, suggested_product_id')
-        .single();
+      const result = await addSuggestedProductLink(productId, selectedProductId, user.id);
+      if (!result.success || !result.data) throw new Error(result.error);
 
-      if (error) throw error;
-
-      // Get the product details
-      const { data: productData, error: productError } = await supabase
-        .from('products')
-        .select('id, name, price, image_url, category')
-        .eq('id', selectedProductId)
-        .eq('owner_id', user.id)
-        .single();
-
-      if (productError) throw productError;
-
-      const newSuggestedProduct = {
-        ...(data as any),
-        product: productData
-      };
-
-      setSuggestedProducts([...suggestedProducts, newSuggestedProduct]);
+      setSuggestedProducts([...suggestedProducts, result.data]);
       setDialogOpen(false);
       toast({
         title: "تمت الإضافة",
@@ -224,13 +154,8 @@ const SuggestedProductsManager = ({ productId, productName }: SuggestedProductsM
     if (!user) return;
 
     try {
-      const { error } = await supabase
-        .from('suggested_products')
-        .delete()
-        .eq('id', suggestionId)
-        .eq('owner_id', user.id);
-
-      if (error) throw error;
+      const result = await removeSuggestedProductLink(suggestionId, user.id);
+      if (!result.success) throw new Error(result.error);
 
       setSuggestedProducts(suggestedProducts.filter(sp => sp.id !== suggestionId));
       toast({
@@ -370,7 +295,11 @@ const SuggestedProductsManager = ({ productId, productName }: SuggestedProductsM
           <div className="text-center text-gray-500 py-8">
             لم تتم إضافة منتجات مقترحة لهذا المنتج حتى الآن
             <br />
-            <span className="text-sm">ستظهر المنتجات المقترحة في صفحة تفاصيل المنتج للعملاء</span>
+            <span className="text-sm">ستظهر المنتجات المقترحة في صفحة تفاصيل المنتج</span>
+            <br />
+            <span className="text-sm">
+              ولأسفل صفحة المتجر، اختر المنتجات من قائمة «إدارة المنتجات» الرئيسية
+            </span>
           </div>
         ) : (
           <div className="grid gap-4">

@@ -1,22 +1,13 @@
-import { createContext, useState, useContext, ReactNode, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { createContext, useState, useContext, ReactNode, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "./AuthContext";
-import { cache, CacheKeys, CacheTTL } from "@/lib/cache";
-
-interface DeliveryPrice {
-  governorate: string;
-  price: number;
-}
-
-interface StoreSettings {
-  menuBackgroundColor: string;
-  menuTextColor: string;
-  menuAccentColor: string;
-  storeFont: string;
-  bannerImages: string[];
-  primaryBannerIndex: number;
-  deliveryPrices: DeliveryPrice[];
-}
+import { useStoreHydration } from "./StoreBootstrapContext";
+import {
+  defaultStoreSettings,
+  fetchStoreSettings,
+  invalidateStoreSettingsCache,
+  upsertStoreSettings,
+  type StoreSettings,
+} from "@/services/storeService";
 
 interface StoreContextType {
   storeName: string;
@@ -27,153 +18,82 @@ interface StoreContextType {
   updateStoreSettings: (settings: StoreSettings) => Promise<void>;
 }
 
-const defaultSettings: StoreSettings = {
-  menuBackgroundColor: "#ffffff",
-  menuTextColor: "#333333",
-  menuAccentColor: "#6366f1",
-  storeFont: "Tajawal",
-  bannerImages: [],
-  primaryBannerIndex: 0,
-  deliveryPrices: []
-};
-
 const StoreContext = createContext<StoreContextType | null>(null);
 
 export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
+  const { isReady, hydrationVersion } = useStoreHydration();
   const [storeName, setStoreName] = useState("");
   const [storeLogo, setStoreLogo] = useState("");
   const [storeGovernorate, setStoreGovernorate] = useState("");
-  const [storeSettings, setStoreSettings] = useState<StoreSettings>(defaultSettings);
+  const [storeSettings, setStoreSettings] = useState<StoreSettings>(defaultStoreSettings());
 
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && isReady) {
       loadStoreSettings();
-    } else {
+    } else if (!user?.id) {
       setStoreName("");
       setStoreLogo("");
       setStoreGovernorate("");
-      setStoreSettings(defaultSettings);
+      setStoreSettings(defaultStoreSettings());
     }
-  }, [user?.id]);
+  }, [user?.id, isReady, hydrationVersion]);
 
   const loadStoreSettings = async () => {
     if (!user?.id) return;
 
-    // Check cache first
-    const cacheKey = CacheKeys.storeSettings(user.id);
-    const cached = cache.get<any>(cacheKey);
-    if (cached) {
-      applySettings(cached);
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('store_settings')
-        .select('*')
-        .eq('owner_id', user.id)
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error loading store settings:', error);
-        return;
-      }
-      
-      if (data) {
-        cache.set(cacheKey, data, CacheTTL.LONG, CacheTTL.STALE);
-        applySettings(data);
-      }
-      // No else needed — store_settings is auto-provisioned by DB trigger on signup
-    } catch (error) {
-      console.error('Failed to load store settings:', error);
+    const profile = await fetchStoreSettings(user.id);
+    if (profile) {
+      setStoreName(profile.storeName);
+      setStoreLogo(profile.storeLogo);
+      setStoreGovernorate(profile.storeGovernorate);
+      setStoreSettings(profile.settings);
     }
   };
 
-  const applySettings = (data: any) => {
-    setStoreName(data.store_name || "");
-    setStoreLogo(data.store_logo || "");
-    setStoreGovernorate(data.store_governorate || "");
-    setStoreSettings({
-      menuBackgroundColor: data.menu_background_color || "#ffffff",
-      menuTextColor: data.menu_text_color || "#333333",
-      menuAccentColor: data.menu_accent_color || "#6366f1",
-      storeFont: data.store_font || "Tajawal",
-      bannerImages: data.banner_images || [],
-      primaryBannerIndex: data.primary_banner_index || 0,
-      deliveryPrices: (data.delivery_prices as unknown as DeliveryPrice[]) || []
-    });
-  };
-
-  const updateStore = async (logo: string, name: string, governorate?: string) => {
+  const updateStore = useCallback(async (logo: string, name: string, governorate?: string) => {
     setStoreLogo(logo);
     setStoreName(name);
     if (governorate !== undefined) setStoreGovernorate(governorate);
-    
+
     if (user?.id) {
-      // Invalidate store settings cache on update
-      cache.del(CacheKeys.storeSettings(user.id));
-      await saveStoreSettings({
+      invalidateStoreSettingsCache(user.id);
+      await upsertStoreSettings(user.id, {
         store_name: name,
         store_logo: logo,
-        store_governorate: governorate || storeGovernorate
+        store_governorate: governorate ?? storeGovernorate,
       });
     }
-  };
+  }, [user?.id, storeGovernorate]);
 
-  const updateStoreSettings = async (settings: StoreSettings) => {
+  const updateStoreSettings = useCallback(async (settings: StoreSettings) => {
     setStoreSettings(settings);
-    
+
     if (user?.id) {
-      cache.del(CacheKeys.storeSettings(user.id));
-      await saveStoreSettings({
+      invalidateStoreSettingsCache(user.id);
+      await upsertStoreSettings(user.id, {
         menu_background_color: settings.menuBackgroundColor,
         menu_text_color: settings.menuTextColor,
         menu_accent_color: settings.menuAccentColor,
         store_font: settings.storeFont,
         banner_images: settings.bannerImages,
         primary_banner_index: settings.primaryBannerIndex,
-        delivery_prices: settings.deliveryPrices as any
+        delivery_prices: settings.deliveryPrices,
       });
     }
-  };
+  }, [user?.id]);
 
-  const saveStoreSettings = async (updates: any) => {
-    if (!user?.id) return;
-
-    try {
-      const { data: existingSettings } = await supabase
-        .from('store_settings')
-        .select('id')
-        .eq('owner_id', user.id)
-        .maybeSingle();
-
-      if (existingSettings) {
-        const { error } = await supabase
-          .from('store_settings')
-          .update(updates)
-          .eq('owner_id', user.id);
-        if (error) console.error('Error updating store settings:', error);
-      } else {
-        const { error } = await supabase
-          .from('store_settings')
-          .insert({ owner_id: user.id, ...updates });
-        if (error) console.error('Error inserting store settings:', error);
-      }
-    } catch (error) {
-      console.error('Failed to save store settings:', error);
-    }
-  };
+  const value = useMemo(() => ({
+    storeName,
+    storeLogo,
+    storeGovernorate,
+    storeSettings,
+    updateStore,
+    updateStoreSettings,
+  }), [storeName, storeLogo, storeGovernorate, storeSettings, updateStore, updateStoreSettings]);
 
   return (
-    <StoreContext.Provider value={{ 
-      storeName, 
-      storeLogo, 
-      storeGovernorate,
-      storeSettings, 
-      updateStore, 
-      updateStoreSettings 
-    }}>
+    <StoreContext.Provider value={value}>
       {children}
     </StoreContext.Provider>
   );

@@ -1,0 +1,75 @@
+# Supabase deployment (required for production)
+
+The app code assumes migrations through `20260616000010` are applied.
+
+## Quick deploy (linked project)
+
+```powershell
+supabase login
+supabase link --project-ref YOUR_PROJECT_REF
+npm run db:deploy
+```
+
+### Existing remote DB (tables already created — no data loss)
+
+If `db push` fails with **relation already exists** (e.g. `restaurant_owners`):
+
+**Option A — recommended:** migrations are idempotent; retry:
+
+```powershell
+npm run db:deploy
+```
+
+**Option B — baseline:** mark old migrations as applied, then push the rest:
+
+```powershell
+npm run db:baseline -- -UpTo 20250823232602
+npm run db:deploy
+npm run db:verify
+```
+
+Use `-DryRun` first to preview: `npm run db:baseline -- -UpTo 20250823232602 -DryRun`
+
+Or manually:
+
+```powershell
+supabase db push
+npm run db:types
+```
+
+## Critical migrations (June 2026)
+
+| File | Fixes |
+|------|--------|
+| `20260616000001_checkout_stock_validation_fix.sql` | Checkout stock + tenant owner resolution |
+| `20260616000002_order_realtime_and_variants.sql` | Realtime orders + variant deduction |
+| `20260616000003_merchant_catalog_sync.sql` | Product lifecycle + merchant RPC |
+| `20260616000004_products_schema_repair.sql` | Missing product columns |
+| `20260616000005_platform_schema_contract.sql` | Storefront archived filter + schema contract |
+| `20260616000006_post_audit_hardening.sql` | GRANTs + product view filters |
+| `20260616000007_checkout_stock_unified.sql` | **Checkout stock fix** (variant vs aggregate) |
+| `20260616000008_publish_and_reviews_fix.sql` | **Publish draft + merchant reviews** |
+| `20260616000009_platform_db_integration.sql` | **Health check RPC + schema version** |
+| `20260616000010_platform_sync_consolidation.sql` | **Final consolidation + health v10** |
+
+If checkout fails with "بعض المنتجات غير متوفرة" while products look in stock, apply **`20260616000007`** (or run all migrations in order).
+
+If published products or reviews do not appear, apply **`20260616000008`**.
+
+If many features fail across the platform, run **`npm run db:verify`** then apply all `20260616*.sql` migrations.
+
+## Without CLI
+
+Open **Supabase Dashboard → SQL Editor** and run:
+
+```bash
+npm run db:bundle
+```
+
+Then paste `supabase/apply-platform-sync-bundle.sql` (all 10 June 2026 migrations in order).
+
+## Verify after deploy
+
+1. Create published product → appears in PM, Inventory, Storefront
+2. Guest checkout on `/store/{slug}` → order succeeds
+3. Order appears in merchant Orders within seconds (realtime)

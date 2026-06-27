@@ -1,62 +1,35 @@
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Order, CartItem } from "@/types";
-
-const mapDbOrder = (row: any): Order => ({
-  id: row.id,
-  items: (row.items as any[]).map((item: any): CartItem => ({
-    product: {
-      id: item.product?.id || item.productId || '',
-      name: item.product?.name || item.name || '',
-      description: item.product?.description || '',
-      category: item.product?.category || '',
-      price: Number(item.product?.price || item.price || 0),
-      image: item.product?.image || item.image || '',
-    },
-    quantity: item.quantity || 1,
-    selectedSize: item.selectedSize,
-    selectedColor: item.selectedColor,
-  })),
-  customerInfo: {
-    name: row.customer_name,
-    phone: row.customer_phone,
-    address: row.customer_address || '',
-    notes: row.notes || undefined,
-    governorate: row.customer_governorate || undefined,
-  },
-  total: Number(row.total),
-  date: row.created_at,
-  status: row.status as Order['status'],
-});
+import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { Order } from "@/types";
+import { fetchOrderById } from "@/services/orderService";
+import { flushOwnerCache } from "@/lib/cache";
 
 export const useOrderData = (orderId: string | undefined) => {
+  const { user } = useAuth();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!orderId) {
+  const load = useCallback(async () => {
+    if (!orderId || !user?.id) {
+      setOrder(null);
       setLoading(false);
       return;
     }
 
-    const fetchOrder = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('id', orderId)
-        .maybeSingle();
+    setLoading(true);
+    const result = await fetchOrderById(orderId, user.id);
+    setOrder(result);
+    setLoading(false);
+  }, [orderId, user?.id]);
 
-      if (!error && data) {
-        setOrder(mapDbOrder(data));
-      }
-      setLoading(false);
-    };
+  useEffect(() => {
+    void load();
+  }, [load]);
 
-    fetchOrder();
-  }, [orderId]);
+  const patchOrderStatus = useCallback((status: Order['status']) => {
+    setOrder((prev) => (prev ? { ...prev, status } : prev));
+    if (user?.id) flushOwnerCache(user.id);
+  }, [user?.id]);
 
-  return { order, loading };
+  return { order, loading, refetch: load, patchOrderStatus };
 };
-
-export { mapDbOrder };

@@ -1,9 +1,5 @@
 
-/**
- * Suggestion #18: Undo delete with timed toast
- */
-
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 
 interface UndoDeleteOptions<T> {
@@ -16,6 +12,18 @@ interface UndoDeleteOptions<T> {
 
 export const useUndoDelete = () => {
   const pendingDeleteRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (pendingDeleteRef.current) {
+        clearTimeout(pendingDeleteRef.current);
+        pendingDeleteRef.current = null;
+      }
+    };
+  }, []);
 
   const deleteWithUndo = useCallback(<T,>(options: UndoDeleteOptions<T>) => {
     const { item, itemName, onDelete, onRestore, timeoutMs = 5000 } = options;
@@ -41,9 +49,10 @@ export const useUndoDelete = () => {
 
     // Schedule actual deletion
     pendingDeleteRef.current = setTimeout(async () => {
-      if (cancelled) return;
+      if (cancelled || !mountedRef.current) return;
       
       const result = await onDelete();
+      if (!mountedRef.current || cancelled) return;
       if (!result.success) {
         toast.error(`فشل حذف "${itemName}": ${result.error || 'خطأ غير معروف'}`);
         onRestore?.(item);

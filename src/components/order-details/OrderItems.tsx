@@ -1,60 +1,58 @@
-
-import { CartItem } from "@/types";
+import { CartItem } from '@/types';
+import OptimizedImage from '@/components/OptimizedImage';
 
 interface OrderItemsProps {
   items: CartItem[];
 }
 
 const OrderItems = ({ items }: OrderItemsProps) => {
+  const subtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+
   return (
-    <div>
-      <h3 className="text-lg font-semibold mb-3 text-right">المنتجات</h3>
-      <div className="space-y-3">
-        {items.map((item, index) => (
-          <div
-            key={`${item.product.id}-${index}`}
-            className="flex justify-between items-center border-b border-border pb-3"
-          >
-            <div className="flex items-center">
-              <div>
-                <span className="block font-medium">{item.product.price.toLocaleString()} x {item.quantity}</span>
-                <span className="text-muted-foreground text-sm">
-                  المجموع: {(item.product.price * item.quantity).toLocaleString()} د.ع
+    <div className="space-y-3">
+      {items.map((item, index) => (
+        <div
+          key={`${item.product.id}-${index}`}
+          className="flex gap-3 p-3 rounded-xl border border-border/50 bg-background/80"
+        >
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border border-border bg-muted shrink-0">
+            <OptimizedImage
+              src={item.product.image || '/placeholder.svg'}
+              alt={item.product.name}
+              variant="thumbnail"
+              className="w-full h-full object-cover"
+            />
+          </div>
+
+          <div className="flex-1 min-w-0 text-right">
+            <p className="font-semibold text-foreground line-clamp-2">{item.product.name}</p>
+            <div className="flex flex-wrap gap-1.5 justify-end mt-1.5">
+              {item.selectedSize && (
+                <span className="text-[11px] bg-muted px-2 py-0.5 rounded-md font-medium">
+                  مقاس: {item.selectedSize}
                 </span>
-              </div>
+              )}
+              {item.selectedColor && (
+                <span className="text-[11px] bg-muted px-2 py-0.5 rounded-md font-medium">
+                  لون: {item.selectedColor}
+                </span>
+              )}
             </div>
-            <div className="flex items-center gap-5">
-              <div className="text-right">
-                <span className="block font-semibold">{item.product.name}</span>
-                <span className="text-muted-foreground text-sm line-clamp-1">
-                  {item.product.description}
-                </span>
-                {/* Display selected options */}
-                {(item.selectedSize || item.selectedColor) && (
-                  <div className="flex gap-2 mt-1">
-                    {item.selectedSize && (
-                      <span className="text-xs bg-muted px-2 py-1 rounded-full">
-                        القياس: {item.selectedSize}
-                      </span>
-                    )}
-                    {item.selectedColor && (
-                      <span className="text-xs bg-muted px-2 py-1 rounded-full">
-                        اللون: {item.selectedColor}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="w-16 h-16 rounded-lg overflow-hidden border border-border shadow-sm bg-card flex items-center justify-center">
-                <img
-                  src={item.product.image}
-                  alt={item.product.name}
-                  className="w-full h-full object-contain"
-                />
-              </div>
+            <div className="flex items-center justify-between mt-2 gap-2">
+              <p className="font-bold text-foreground">
+                {(item.product.price * item.quantity).toLocaleString()} د.ع
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {item.product.price.toLocaleString()} × {item.quantity}
+              </p>
             </div>
           </div>
-        ))}
+        </div>
+      ))}
+
+      <div className="flex justify-between items-center pt-2 border-t border-border/50 text-sm">
+        <span className="font-bold text-foreground">{subtotal.toLocaleString()} د.ع</span>
+        <span className="text-muted-foreground">مجموع المنتجات</span>
       </div>
     </div>
   );

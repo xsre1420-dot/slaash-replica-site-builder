@@ -1,22 +1,10 @@
 import { useCallback } from 'react';
-
-interface MetaPixelEventData {
-  content_ids?: string[];
-  content_type?: string;
-  value?: number;
-  currency?: string;
-  content_name?: string;
-}
+import { trackGoogleEvent, trackMetaEvent, type MetaEventPayload } from '@/lib/marketingTracking';
 
 export const useMetaPixel = () => {
-  const trackEvent = useCallback((event: string, data?: MetaPixelEventData) => {
-    if (typeof window !== 'undefined' && window.fbq) {
-      if (data) {
-        window.fbq('track', event, data);
-      } else {
-        window.fbq('track', event);
-      }
-    }
+  const trackEvent = useCallback((event: string, data?: MetaEventPayload) => {
+    trackMetaEvent(event, data);
+    trackGoogleEvent(event.toLowerCase(), data as Record<string, unknown> | undefined);
   }, []);
 
   const trackViewContent = useCallback((productId: string, productName: string, value?: number) => {
@@ -24,8 +12,8 @@ export const useMetaPixel = () => {
       content_ids: [productId],
       content_type: 'product',
       content_name: productName,
-      value: value,
-      currency: 'IQD'
+      value,
+      currency: 'IQD',
     });
   }, [trackEvent]);
 
@@ -34,24 +22,43 @@ export const useMetaPixel = () => {
       content_ids: [productId],
       content_type: 'product',
       content_name: productName,
-      value: value,
-      currency: 'IQD'
+      value,
+      currency: 'IQD',
     });
   }, [trackEvent]);
 
-  const trackPurchase = useCallback((value: number, orderItems: string[]) => {
-    trackEvent('Purchase', {
-      content_ids: orderItems,
+  const trackInitiateCheckout = useCallback((value: number, productIds: string[]) => {
+    trackEvent('InitiateCheckout', {
+      content_ids: productIds,
       content_type: 'product',
-      value: value,
-      currency: 'IQD'
+      value,
+      currency: 'IQD',
+      num_items: productIds.length,
     });
   }, [trackEvent]);
+
+  const trackPurchase = useCallback((value: number, orderItems: string[], orderId?: string) => {
+    trackMetaEvent('Purchase', {
+      content_ids: orderItems,
+      content_type: 'product',
+      value,
+      currency: 'IQD',
+      num_items: orderItems.length,
+      eventID: orderId,
+    });
+    trackGoogleEvent('purchase', {
+      transaction_id: orderId,
+      value,
+      currency: 'IQD',
+      items: orderItems.map((id) => ({ item_id: id })),
+    });
+  }, []);
 
   return {
     trackEvent,
     trackViewContent,
     trackAddToCart,
-    trackPurchase
+    trackInitiateCheckout,
+    trackPurchase,
   };
 };

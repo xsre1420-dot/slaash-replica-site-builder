@@ -1,0 +1,97 @@
+-- Easy access code generation from Supabase SQL Editor (postgres / dashboard only)
+
+CREATE OR REPLACE FUNCTION public.sql_generate_access_code(
+  p_lead_id UUID,
+  p_plan_id TEXT DEFAULT 'annual',
+  p_agreed_price INTEGER DEFAULT NULL,
+  p_store_name TEXT DEFAULT NULL,
+  p_notes TEXT DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
+DECLARE
+  v_lead RECORD;
+  v_plan RECORD;
+  v_record_id UUID := gen_random_uuid();
+  v_plain_code TEXT;
+  v_code_hash TEXT;
+  v_auth_email TEXT;
+  v_auth_password TEXT;
+  v_username TEXT;
+  v_store_name TEXT;
+  v_duration INT;
+  v_price INT;
+BEGIN
+  IF p_plan_id NOT IN ('annual', 'yearly') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'invalid_plan');
+  END IF;
+
+  SELECT l.id, l.full_name, l.whatsapp_number, l.converted_user_id
+  INTO v_lead
+  FROM public.leads l
+  WHERE l.id = p_lead_id;
+
+  IF v_lead.id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'lead_not_found');
+  END IF;
+
+  IF v_lead.converted_user_id IS NOT NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'lead_already_converted');
+  END IF;
+
+  SELECT sp.id, sp.name
+  INTO v_plan
+  FROM public.subscription_plans sp
+  WHERE sp.id = p_plan_id AND sp.is_active = true;
+
+  IF v_plan.id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'invalid_plan');
+  END IF;
+
+  v_duration := CASE WHEN p_plan_id = 'yearly' THEN 12 ELSE 6 END;
+  v_plain_code := 'BDY-' || public._access_code_random_part(4) || '-' || public._access_code_random_part(4);
+  v_code_hash := public.hash_access_code(v_plain_code);
+  v_auth_email := v_record_id::TEXT || '@access.slaash.internal';
+  v_auth_password := encode(gen_random_bytes(24), 'hex');
+  v_username := 'store' || (10000 + floor(random() * 90000)::INT)::TEXT;
+  v_store_name := COALESCE(NULLIF(trim(p_store_name), ''), v_lead.full_name, 'متجري');
+  v_price := COALESCE(p_agreed_price, CASE WHEN p_plan_id = 'yearly' THEN 220000 ELSE 125000 END);
+
+  INSERT INTO public.merchant_access_codes (
+    id, lead_id, code_hash, code_hint, auth_email, auth_password,
+    plan_id, duration_months, agreed_price, store_name, username,
+    status, code_expires_at, notes
+  )
+  VALUES (
+    v_record_id, p_lead_id, v_code_hash, right(replace(v_plain_code, '-', ''), 4),
+    v_auth_email, v_auth_password, p_plan_id, v_duration, v_price,
+    v_store_name, v_username, 'active', NOW() + INTERVAL '30 days',
+    NULLIF(trim(p_notes), '')
+  );
+
+  UPDATE public.leads
+  SET status = 'interested', admin_read_at = NOW()
+  WHERE id = p_lead_id;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'access_code', v_plain_code,
+    'customer_name', v_lead.full_name,
+    'whatsapp', v_lead.whatsapp_number,
+    'plan', p_plan_id,
+    'months', v_duration,
+    'price_iqd', v_price,
+    'whatsapp_message',
+      format(
+        E'مرحباً %s 👋\n\nرمز الدخول لمنصة بداية:\n%s\n\nالمدة: %s أشهر\nالسعر: %s د.ع\n\nادخل من الرابط واختر «رمز التفعيل»:\n/login',
+        v_lead.full_name, v_plain_code, v_duration, to_char(v_price, 'FM999,999,999')
+      )
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.sql_generate_access_code(UUID, TEXT, INTEGER, TEXT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.sql_generate_access_code(UUID, TEXT, INTEGER, TEXT, TEXT) TO postgres, service_role;

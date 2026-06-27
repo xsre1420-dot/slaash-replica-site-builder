@@ -3,12 +3,13 @@ import { Plus, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter 
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Category } from "@/types";
-import { supabase } from "@/integrations/supabase/client";
+import { generateUUID } from "@/lib/uuid";
+import { addCategory, updateCategory, deleteCategory } from "@/services/productService";
 
 interface CategoryDialogProps {
   categories: Category[];
@@ -35,22 +36,20 @@ const CategoryDialog = ({ categories, onCategoryChange, onAddLocalCategory, open
     }
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-      const { error } = await supabase.from('categories').insert([{
+      const result = await addCategory({
+        id: generateUUID(),
         name: newCategory.name.trim(),
-        owner_id: user.id,
-        display_order: categories.length
-      }]);
-      if (error) throw error;
+        order: categories.length,
+      });
+      if (!result.success) throw new Error(result.error);
+
       onCategoryChange();
       setNewCategory({ name: "" });
       setIsAddDialogOpen(false);
       toast({ title: "تم بنجاح", description: "تمت إضافة الفئة الجديدة" });
-    } catch (err: any) {
-      // Fallback to local
+    } catch {
       if (onAddLocalCategory) {
-        const newCat: Category = { id: crypto.randomUUID(), name: newCategory.name.trim(), order: categories.length };
+        const newCat: Category = { id: generateUUID(), name: newCategory.name.trim(), order: categories.length };
         onAddLocalCategory(newCat);
         setNewCategory({ name: "" });
         setIsAddDialogOpen(false);
@@ -69,8 +68,12 @@ const CategoryDialog = ({ categories, onCategoryChange, onAddLocalCategory, open
     }
     setLoading(true);
     try {
-      const { error } = await supabase.from('categories').update({ name: editingCategory.name.trim() }).eq('id', editingCategory.id);
-      if (error) throw error;
+      const result = await updateCategory(editingCategory.id, {
+        ...editingCategory,
+        name: editingCategory.name.trim(),
+      });
+      if (!result.success) throw new Error(result.error);
+
       onCategoryChange();
       setIsEditDialogOpen(false);
       setEditingCategory(null);
@@ -85,13 +88,14 @@ const CategoryDialog = ({ categories, onCategoryChange, onAddLocalCategory, open
     if (!deletingCategory) return;
     setLoading(true);
     try {
-      const { error } = await supabase.from('categories').delete().eq('id', deletingCategory.id);
-      if (error) throw error;
+      const result = await deleteCategory(deletingCategory.id);
+      if (!result.success) throw new Error(result.error);
+
       onCategoryChange();
       setIsDeleteDialogOpen(false);
       setDeletingCategory(null);
       toast({ title: "تم بنجاح", description: "تم حذف الفئة" });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error deleting category:', err);
       toast({ title: "خطأ", description: "فشل في حذف الفئة، تحقق من اتصال الإنترنت", variant: "destructive" });
     }
@@ -128,15 +132,17 @@ const CategoryDialog = ({ categories, onCategoryChange, onAddLocalCategory, open
                   {categories.map((category) => (
                     <div key={category.id} className="flex justify-between items-center p-3 bg-muted border border-border rounded-xl hover:bg-accent transition-colors">
                       <div className="flex items-center gap-1">
-                        <Button type="button" variant="ghost" size="sm"
+                        <Button type="button" variant="ghost" size="icon"
                           onClick={() => { setDeletingCategory(category); setIsDeleteDialogOpen(true); }}
-                          className="hover:bg-destructive/10 hover:text-destructive rounded-lg p-1 h-8 w-8"
+                          aria-label={`حذف فئة ${category.name}`}
+                          className="hover:bg-destructive/10 hover:text-destructive rounded-lg min-h-[44px] min-w-[44px]"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
-                        <Button type="button" variant="ghost" size="sm"
+                        <Button type="button" variant="ghost" size="icon"
                           onClick={() => { setEditingCategory(category); setIsEditDialogOpen(true); }}
-                          className="hover:bg-accent rounded-lg p-1 h-8 w-8"
+                          aria-label={`تعديل فئة ${category.name}`}
+                          className="hover:bg-accent rounded-lg min-h-[44px] min-w-[44px]"
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -147,68 +153,66 @@ const CategoryDialog = ({ categories, onCategoryChange, onAddLocalCategory, open
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">لا توجد فئات. أضف فئة جديدة للبدء.</div>
+              <p className="text-center text-muted-foreground py-4">لا توجد فئات بعد</p>
             )}
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Add */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] text-right rounded-2xl">
+        <DialogContent className="sm:max-w-[400px] text-right rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-right text-xl text-foreground">إضافة فئة جديدة</DialogTitle>
-            <DialogDescription className="text-right text-muted-foreground">أدخل اسم الفئة الجديدة</DialogDescription>
+            <DialogTitle className="text-right">إضافة فئة جديدة</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <Label htmlFor="categoryName" className="block mb-2 text-foreground">اسم الفئة</Label>
-            <Input id="categoryName" value={newCategory.name} onChange={(e) => setNewCategory({ name: e.target.value })} className="text-right rounded-xl" autoFocus />
+            <Label htmlFor="new-category" className="text-right block mb-2">اسم الفئة</Label>
+            <Input
+              id="new-category"
+              value={newCategory.name}
+              onChange={(e) => setNewCategory({ name: e.target.value })}
+              className="text-right rounded-xl"
+              placeholder="مثال: ملابس"
+            />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsAddDialogOpen(false); setNewCategory({ name: "" }); }} className="rounded-xl">إلغاء</Button>
-            <Button onClick={handleAddCategory} disabled={loading} className="rounded-xl">
-              {loading ? "جاري الإضافة..." : "إضافة"}
-            </Button>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)} className="rounded-xl">إلغاء</Button>
+            <Button type="button" onClick={handleAddCategory} disabled={loading} className="rounded-xl">إضافة</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Edit */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] text-right rounded-2xl">
+        <DialogContent className="sm:max-w-[400px] text-right rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-right text-xl text-foreground">تعديل الفئة</DialogTitle>
-            <DialogDescription className="text-right text-muted-foreground">قم بتغيير اسم الفئة</DialogDescription>
+            <DialogTitle className="text-right">تعديل الفئة</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <Label htmlFor="editCategoryName" className="block mb-2 text-foreground">اسم الفئة</Label>
-            <Input id="editCategoryName" value={editingCategory?.name || ""}
-              onChange={(e) => setEditingCategory(editingCategory ? { ...editingCategory, name: e.target.value } : null)}
-              className="text-right rounded-xl" autoFocus />
+            <Label htmlFor="edit-category" className="text-right block mb-2">اسم الفئة</Label>
+            <Input
+              id="edit-category"
+              value={editingCategory?.name || ""}
+              onChange={(e) => setEditingCategory(prev => prev ? { ...prev, name: e.target.value } : null)}
+              className="text-right rounded-xl"
+            />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsEditDialogOpen(false); setEditingCategory(null); }} className="rounded-xl">إلغاء</Button>
-            <Button onClick={handleEditCategory} disabled={loading} className="rounded-xl">
-              {loading ? "جاري التحديث..." : "حفظ"}
-            </Button>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)} className="rounded-xl">إلغاء</Button>
+            <Button type="button" onClick={handleEditCategory} disabled={loading} className="rounded-xl">حفظ</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] text-right rounded-2xl">
+        <DialogContent className="sm:max-w-[400px] text-right rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-right text-xl text-foreground">حذف الفئة</DialogTitle>
-            <DialogDescription className="text-right text-muted-foreground">
-              هل أنت متأكد من رغبتك في حذف فئة "{deletingCategory?.name}"؟ هذا الإجراء لا يمكن التراجع عنه.
+            <DialogTitle className="text-right">حذف الفئة</DialogTitle>
+            <DialogDescription className="text-right">
+              هل أنت متأكد من حذف فئة &quot;{deletingCategory?.name}&quot;؟
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsDeleteDialogOpen(false); setDeletingCategory(null); }} className="rounded-xl">إلغاء</Button>
-            <Button variant="destructive" onClick={handleDeleteCategory} disabled={loading} className="rounded-xl">
-              {loading ? "جاري الحذف..." : "حذف"}
-            </Button>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="rounded-xl">إلغاء</Button>
+            <Button type="button" variant="destructive" onClick={handleDeleteCategory} disabled={loading} className="rounded-xl">حذف</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

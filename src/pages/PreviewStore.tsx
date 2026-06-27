@@ -1,37 +1,80 @@
-import { X, ShoppingCart, Plus, Trash2, Search, Heart, Star } from "lucide-react";
+import { ArrowRight, ShoppingCart, Plus, Search } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { getProductsByCategory, getCategories, loadProducts } from "@/data/dummyData";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { getCategories } from "@/services/productService";
+import { useStoreHydration } from "@/context/StoreBootstrapContext";
+import { useMerchantProductsPage } from "@/hooks/useMerchantProductsPage";
+import { getProductLifecycleStatus } from "@/lib/productLifecycle";
+import { STOREFRONT_PRODUCTS_CHANGED } from "@/services/storefrontProductService";
 import { Product, Category } from "@/types";
 import { useCart } from "@/context/CartContext";
 import { useStore } from "@/context/StoreContext";
 import { Button } from "@/components/ui/button";
-import MetaPixel from "@/components/MetaPixel";
-import { useMetaPixel } from "@/hooks/useMetaPixel";
+import { useAuth } from "@/context/AuthContext";
+import MarketingScripts from "@/components/MarketingScripts";
 import OptimizedImage from "@/components/OptimizedImage";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 const PreviewStore = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const { addToCart, cartItems } = useCart();
+  const { user } = useAuth();
+  const { isReady, hydrationVersion } = useStoreHydration();
+  const { addToCart, cartItems, setStoreOwner } = useCart();
   const { storeName, storeLogo, storeSettings } = useStore();
-  const { trackAddToCart, trackViewContent } = useMetaPixel();
   const navigate = useNavigate();
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const cartTotal = useMemo(
+    () => cartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
+    [cartItems]
+  );
   const [searchQuery, setSearchQuery] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
+  const debouncedSearch = useDebouncedValue(searchQuery, 300);
+
+  const ownerCategoryFilter = useMemo(() => {
+    if (selectedCategory === 'all') return 'all';
+    const cat = categories.find((c) => c.id === selectedCategory);
+    return cat?.name ?? selectedCategory;
+  }, [selectedCategory, categories]);
+
+  const catalog = useMerchantProductsPage(debouncedSearch, ownerCategoryFilter);
+
+  const publishedProducts = useMemo(
+    () => catalog.products.filter((p) => getProductLifecycleStatus(p) === 'published'),
+    [catalog.products]
+  );
+
+  const products = publishedProducts;
+
+  const productsLoading = catalog.loading;
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const onChanged = (e: Event) => {
+      const detail = (e as CustomEvent<{ ownerId?: string }>).detail;
+      if (detail?.ownerId && detail.ownerId !== user.id) return;
+      void catalog.reload();
+    };
+    window.addEventListener(STOREFRONT_PRODUCTS_CHANGED, onChanged);
+    return () => window.removeEventListener(STOREFRONT_PRODUCTS_CHANGED, onChanged);
+  }, [user?.id, catalog.reload]);
+
+  useEffect(() => {
+    if (user?.id) setStoreOwner(user.id);
+  }, [user?.id, setStoreOwner]);
 
   // Load categories from Supabase
   useEffect(() => {
+    if (!isReady) return;
+
     const loadCategoriesData = async () => {
       try {
-        console.log('PreviewStore: تحميل الفئات من Supabase...');
-        const categoriesData = await getCategories();
-        console.log('PreviewStore: تم تحميل', categoriesData.length, 'فئة');
+        const categoriesData = await getCategories(true);
         const allCategories = [
           { id: "all", name: "الكل", order: -1 },
           ...categoriesData
@@ -44,45 +87,29 @@ const PreviewStore = () => {
     };
     loadCategoriesData();
 
+    let lastFocusRefresh = 0;
     const handleFocus = () => {
-      console.log('PreviewStore: إعادة تحميل الفئات عند التركيز على النافذة');
+      const now = Date.now();
+      if (now - lastFocusRefresh < 60_000) return;
+      lastFocusRefresh = now;
       loadCategoriesData();
     };
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, []);
+  }, [isReady, hydrationVersion]);
 
   const bannerImages = storeSettings.bannerImages || [];
 
-  useEffect(() => {
-    const loadProductsData = async () => {
-      await loadProducts();
-      const allProducts = getProductsByCategory(selectedCategory);
-      
-      if (searchQuery.trim()) {
-        const filtered = allProducts.filter(product => 
-          product.name.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-        setProducts(filtered);
-      } else {
-        setProducts(allProducts);
-      }
-    };
-    loadProductsData();
-  }, [selectedCategory, searchQuery]);
-
   const handleAddToCart = (product: Product) => {
     addToCart(product);
-    trackAddToCart(product.id, product.name, product.price);
   };
 
   const handleViewProduct = (productId: string) => {
-    const product = products.find(p => p.id === productId);
-    if (product) {
-      trackViewContent(product.id, product.name, product.price);
-    }
-    navigate(`/product-details/${productId}`);
+    const previewProduct = products.find((p) => p.id === productId);
+    navigate(`/product-details/${productId}`, {
+      state: previewProduct ? { previewProduct } : undefined,
+    });
   };
 
   const toggleFavorite = (productId: string) => {
@@ -94,16 +121,20 @@ const PreviewStore = () => {
   };
 
   useEffect(() => {
-    if (bannerImages.length > 1) {
-      const interval = setInterval(() => {
-        setIsTransitioning(true);
-        setTimeout(() => {
-          setCurrentImageIndex((prev) => (prev + 1) % bannerImages.length);
-          setIsTransitioning(false);
-        }, 150);
-      }, 2500);
-      return () => clearInterval(interval);
-    }
+    if (bannerImages.length <= 1) return;
+    let transitionTimer: ReturnType<typeof setTimeout> | null = null;
+    const interval = setInterval(() => {
+      setIsTransitioning(true);
+      transitionTimer = setTimeout(() => {
+        setCurrentImageIndex((prev) => (prev + 1) % bannerImages.length);
+        setIsTransitioning(false);
+        transitionTimer = null;
+      }, 150);
+    }, 2500);
+    return () => {
+      clearInterval(interval);
+      if (transitionTimer) clearTimeout(transitionTimer);
+    };
   }, [bannerImages.length]);
 
   const handleImageNavigation = (index: number) => {
@@ -123,33 +154,59 @@ const PreviewStore = () => {
     }
   };
 
+  const isStoreOwnerView = Boolean(user?.id);
+
   return (
-    <div className="min-h-screen bg-background">
-      <MetaPixel />
+    <div className="min-h-screen bg-background font-arabic" dir="rtl">
+      <MarketingScripts storeOwnerId={user?.id} disabled />
       
       {/* Header with Logo and Store Name */}
       <div className="bg-background sticky top-0 z-40 border-b border-border">
         <div className="px-4 py-3">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-3">
+            {isStoreOwnerView ? (
+              <Link
+                to="/builder"
+                aria-label="العودة للوحة التحكم"
+                className="w-10 h-10 shrink-0 rounded-full bg-muted/80 border border-border/60 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+            ) : (
+              <div className="w-10 shrink-0" aria-hidden />
+            )}
+
+            <div className="flex items-center justify-center gap-2 min-w-0 flex-1">
               {storeLogo && (
-                <img src={storeLogo} alt={storeName} className="w-10 h-10 rounded-full object-cover" />
+                <img src={storeLogo} alt={storeName} className="w-9 h-9 rounded-full object-cover shrink-0" />
               )}
-              <div className="flex items-center gap-1">
-                <span className="font-bold text-foreground text-base">{storeName}</span>
-                <svg className="w-4 h-4 text-primary" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
-                </svg>
-              </div>
+              <span className="font-bold text-foreground text-base truncate">{storeName}</span>
             </div>
-            
-            <button 
-              onClick={() => setSearchQuery("")}
-              className="p-2"
+
+            <button
+              type="button"
+              onClick={() => setShowSearch((v) => !v)}
+              className="w-10 h-10 shrink-0 flex items-center justify-center rounded-full bg-muted/80 border border-border/60 hover:bg-muted transition-colors"
+              aria-label={showSearch ? "إخفاء البحث" : "البحث عن منتج"}
+              aria-expanded={showSearch}
             >
               <Search className="w-5 h-5 text-muted-foreground" />
             </button>
           </div>
+
+          {showSearch && (
+            <div className="relative mt-3">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="ابحث عن منتج..."
+                className="w-full h-11 pr-10 pl-4 rounded-xl bg-muted/70 border border-transparent text-right text-sm placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 focus:bg-card focus:border-primary/30 transition-all text-foreground"
+                autoFocus
+              />
+            </div>
+          )}
         </div>
         
         {/* Categories Row */}
@@ -167,11 +224,6 @@ const PreviewStore = () => {
               {category.name}
             </button>
           ))}
-          <button className="p-2 flex-shrink-0">
-            <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
         </div>
       </div>
 
@@ -184,7 +236,7 @@ const PreviewStore = () => {
           >
             <img
               src={bannerImages[currentImageIndex]}
-              alt="Store Banner"
+              alt="بانر المتجر"
               className="w-full h-full object-cover"
               loading="lazy"
             />
@@ -210,26 +262,44 @@ const PreviewStore = () => {
 
       {/* Product Count */}
       <div className="px-4 py-4">
-        <span className="text-sm font-medium text-foreground">{products.length} منتجات</span>
+        <span className="text-sm font-medium text-foreground">
+          {productsLoading ? 'جاري التحميل...' : `${products.length} منتجات`}
+        </span>
       </div>
 
       {/* Products Grid */}
       <div className="px-4 pb-28">
-        {products.length === 0 ? (
+        {!isReady || productsLoading ? (
+          <div className="grid grid-cols-2 gap-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-card rounded-xl overflow-hidden animate-pulse">
+                <div className="aspect-square bg-muted" />
+                <div className="p-3 space-y-2">
+                  <div className="h-4 bg-muted rounded" />
+                  <div className="h-4 bg-muted rounded w-2/3 mr-auto" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : products.length === 0 ? (
           <div className="text-center py-16">
             <div className="w-20 h-20 mx-auto mb-6 bg-muted rounded-full flex items-center justify-center">
               <div className="text-4xl">🛍️</div>
             </div>
             <h3 className="text-xl font-bold mb-2 text-foreground">
-              لا توجد منتجات بعد
+              {searchQuery.trim() ? 'لا توجد نتائج للبحث' : 'لا توجد منتجات بعد'}
             </h3>
-            <p className="text-muted-foreground mb-6">ابدأ بإضافة منتجاتك من قسم البناء</p>
-            <Link to="/add-product">
-              <Button className="rounded-full px-8">
-                <Plus className="w-4 h-4 ml-2" />
-                إضافة أول منتج
-              </Button>
-            </Link>
+            <p className="text-muted-foreground mb-6">
+              {searchQuery.trim() ? 'جرّب كلمة بحث أخرى' : 'ابدأ بإضافة منتجاتك من قسم المنتجات'}
+            </p>
+            {!searchQuery.trim() && (
+              <Link to="/add-product">
+                <Button className="rounded-full px-8 min-h-[44px]">
+                  <Plus className="w-4 h-4 ml-2" />
+                  إضافة أول منتج
+                </Button>
+              </Link>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
@@ -265,15 +335,15 @@ const PreviewStore = () => {
                     {product.discountType && product.discountType !== 'none' && product.originalPrice ? (
                       <div className="flex flex-col items-end gap-0.5">
                         <span className="text-xs text-muted-foreground line-through">
-                          IQD {product.originalPrice.toLocaleString()}
+                          {product.originalPrice.toLocaleString()} د.ع
                         </span>
                         <span className="text-sm font-bold text-red-600">
-                          IQD {product.price.toLocaleString()}
+                          {product.price.toLocaleString()} د.ع
                         </span>
                       </div>
                     ) : (
                       <div className="text-sm font-bold text-foreground">
-                        IQD {product.price.toLocaleString()}
+                        {product.price.toLocaleString()} د.ع
                       </div>
                     )}
                   </div>
@@ -284,33 +354,29 @@ const PreviewStore = () => {
         )}
       </div>
 
-      {/* Horizontal Cart Bar */}
+      {/* Cart bar */}
       {cartCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-6 pt-2 bg-gradient-to-t from-background via-background to-transparent">
-          <Link to="/checkout">
-            <div className="accent-gradient rounded-full shadow-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4">
-                <div className="flex items-center gap-3">
-                  <div className="relative rounded-full p-3">
-                    <ShoppingCart className="w-6 h-6 text-white" />
-                    <span className="absolute -top-1 -right-1 bg-white text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shadow-md">
+        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background/95 to-transparent safe-area-bottom">
+          <Link to="/checkout" className="block w-full max-w-3xl mx-auto">
+            <div className="rounded-2xl bg-primary shadow-md shadow-primary/15">
+              <div className="flex items-center justify-between gap-3 px-4 py-3" dir="rtl">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-foreground/15">
+                    <ShoppingCart className="h-4 w-4 text-primary-foreground" />
+                    <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-card text-[10px] font-bold text-primary ring-2 ring-primary">
                       {cartCount}
                     </span>
                   </div>
-                  <div className="text-left">
-                    <div className="text-xs text-white/70">المبلغ الكلي</div>
-                    <div className="text-lg font-bold text-white" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-                      IQD {cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0).toLocaleString()}
-                    </div>
+                  <div className="min-w-0 text-right">
+                    <p className="text-sm font-bold tabular-nums text-primary-foreground leading-tight">
+                      {cartTotal.toLocaleString()} د.ع
+                    </p>
+                    <p className="text-[10px] text-primary-foreground/75">
+                      {cartCount} {cartCount === 1 ? "منتج" : "منتجات"}
+                    </p>
                   </div>
                 </div>
-                
-                <div className="flex items-center gap-2 text-white font-bold text-base">
-                  <span style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>عرض السلة</span>
-                  <svg className="w-5 h-5 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </div>
+                <span className="shrink-0 text-xs font-semibold text-primary-foreground">عرض السلة</span>
               </div>
             </div>
           </Link>

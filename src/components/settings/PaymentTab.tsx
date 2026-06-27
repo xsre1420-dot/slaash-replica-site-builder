@@ -14,16 +14,28 @@ interface PaymentTabProps {
 const paymentMethods = [
   { key: "paymentCashOnDelivery" as const, label: "الدفع عند الاستلام", description: "يدفع العميل نقداً عند استلام الطلب", icon: Banknote },
   { key: "paymentCreditCard" as const, label: "بطاقة ائتمان", description: "الدفع عبر بطاقة فيزا أو ماستركارد", icon: CreditCard },
-  { key: "paymentEwallet" as const, label: "محفظة إلكترونية", description: "زين كاش، آسيا حوالة...", icon: Wallet },
+  { key: "paymentEwallet" as const, label: "محفظة إلكترونية", description: "زين كاش، آسيا حوالة... (تأكيد يدوي)", icon: Wallet },
 ];
 
 const PaymentTab = ({ settings, setSettings }: PaymentTabProps) => {
+  const enabledCount = [
+    settings.paymentCashOnDelivery,
+    settings.paymentCreditCard,
+    settings.paymentEwallet,
+  ].filter(Boolean).length;
+
   return (
     <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 space-y-5">
       <div className="flex items-center gap-2 justify-end">
         <h3 className="text-lg font-bold text-foreground">وسائل الدفع</h3>
         <CreditCard className="w-5 h-5 text-muted-foreground" />
       </div>
+
+      {enabledCount === 0 && (
+        <p className="text-sm text-destructive text-right">
+          يجب تفعيل وسيلة دفع واحدة على الأقل
+        </p>
+      )}
 
       <div className="space-y-3">
         {paymentMethods.map((method) => {
