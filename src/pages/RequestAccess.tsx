@@ -32,7 +32,6 @@ import {
 } from '@/data/subscriptionPlans';
 import { IRAQ_GOVERNORATES, MONTHLY_ORDER_OPTIONS } from '@/data/leadFormOptions';
 import { cn } from '@/lib/utils';
-import { requestAccessCopy } from '@/content/landingCopy';
 
 const RequestAccess = () => {
   const [searchParams] = useSearchParams();
@@ -77,16 +76,16 @@ const RequestAccess = () => {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!selectedPlanId || !getPublicPlanById(selectedPlanId)) {
-      setError(requestAccessCopy.errors.selectPlan);
+      setError('يرجى اختيار الباقة أولاً');
       setStep('plan');
       return;
     }
     if (!governorate) {
-      setError(requestAccessCopy.errors.governorate);
+      setError('يرجى اختيار المحافظة');
       return;
     }
     if (!expectedMonthlyOrders) {
-      setError(requestAccessCopy.errors.orders);
+      setError('يرجى تحديد عدد الطلبات الشهرية المتوقع');
       return;
     }
 
@@ -103,7 +102,7 @@ const RequestAccess = () => {
       });
       setSuccess(true);
     } catch (err) {
-      setError(err instanceof LeadSubmitError ? err.message : requestAccessCopy.errors.generic);
+      setError(err instanceof LeadSubmitError ? err.message : 'حدث خطأ، حاول مرة أخرى');
     } finally {
       setLoading(false);
     }
@@ -117,23 +116,24 @@ const RequestAccess = () => {
             <CheckCircle2 className="h-8 w-8 text-emerald-600" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold font-arabic">{requestAccessCopy.success.title}</h1>
+            <h1 className="text-2xl font-bold font-arabic">تم استلام طلبك!</h1>
             <p className="mx-auto max-w-md font-arabic leading-relaxed text-muted-foreground">
               {selectedPlan ? (
                 <>
-                  {requestAccessCopy.success.body}{' '}
+                  سنتواصل معك عبر واتساب قريباً لتأكيد{' '}
                   <span className="font-semibold text-foreground">
-                    ({selectedPlan.name} — {selectedPlan.toggleLabel} — {formatPlanPriceLabel(selectedPlan)})
-                  </span>
+                    {selectedPlan.name} ({selectedPlan.toggleLabel})
+                  </span>{' '}
+                  — {formatPlanPriceLabel(selectedPlan)} — وإكمال تفعيل متجرك.
                 </>
               ) : (
-                requestAccessCopy.success.body
+                'سيتواصل معك فريقنا عبر واتساب قريباً.'
               )}
             </p>
           </div>
           <Link to="/">
             <Button variant="outline" className="rounded-xl font-arabic">
-              {requestAccessCopy.success.backHome}
+              العودة للرئيسية
             </Button>
           </Link>
         </div>
@@ -151,8 +151,8 @@ const RequestAccess = () => {
         </div>
 
         <AuthPageHeader
-          title={requestAccessCopy.planStep.title}
-          subtitle={requestAccessCopy.planStep.subtitle}
+          title="اختر مدّة اشتراكك"
+          subtitle="باقة واحدة شاملة — حدّد المدة المناسبة، ثم أكمِل بياناتك وسنتواصل معك"
         />
 
         <div className="relative flex justify-center py-2">
@@ -165,9 +165,9 @@ const RequestAccess = () => {
         </div>
 
         <p className="mt-6 text-center text-sm text-muted-foreground font-arabic">
-          {requestAccessCopy.planStep.loginPrompt}{' '}
+          لديك حساب بالفعل؟{' '}
           <Link to="/login" className="font-medium text-primary hover:underline">
-            {requestAccessCopy.planStep.loginLink}
+            تسجيل الدخول
           </Link>
         </p>
       </AuthPageShell>
@@ -183,8 +183,8 @@ const RequestAccess = () => {
       </div>
 
       <AuthPageHeader
-        title={requestAccessCopy.detailsStep.title}
-        subtitle={requestAccessCopy.detailsStep.subtitle}
+        title="أكمل طلبك"
+        subtitle="أخبرنا عنك ومشروعك — سنتواصل معك عبر واتساب لإتمام التفعيل"
       />
 
       {selectedPlan && (
@@ -195,7 +195,7 @@ const RequestAccess = () => {
                 <Crown className="h-5 w-5 text-amber-950" strokeWidth={2} />
               </div>
               <div>
-                <p className="text-xs font-medium text-muted-foreground">{requestAccessCopy.detailsStep.selectedPlanLabel}</p>
+                <p className="text-xs font-medium text-muted-foreground">الباقة المختارة</p>
                 <p className="text-lg font-bold text-foreground">
                   {selectedPlan.name} — {selectedPlan.toggleLabel}
                 </p>
@@ -211,7 +211,7 @@ const RequestAccess = () => {
               className="shrink-0 rounded-xl text-muted-foreground"
               onClick={() => setStep('plan')}
             >
-              {requestAccessCopy.detailsStep.changePlan}
+              تغيير
             </Button>
           </div>
         </div>
@@ -284,7 +284,7 @@ const RequestAccess = () => {
             placeholder="@username أو رابط الحساب"
             icon={Instagram}
             dir="ltr"
-            hint={requestAccessCopy.detailsStep.instagramHint}
+            hint="يساعدنا على فهم نشاطك التجاري بشكل أفضل"
           />
 
           <div className="space-y-2">
@@ -309,7 +309,7 @@ const RequestAccess = () => {
 
         <p className="rounded-xl bg-muted/50 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
           <MessageCircle className="ml-1 inline h-3.5 w-3.5" />
-          {requestAccessCopy.detailsStep.whatsappNote}
+          سنتواصل معك على واتساب خلال ساعات العمل لتأكيد الباقة وإرشادك لخطوات التفعيل.
         </p>
 
         <div className="flex gap-3 pt-1">
@@ -320,18 +320,18 @@ const RequestAccess = () => {
             onClick={() => setStep('plan')}
           >
             <ArrowRight className="h-4 w-4" />
-            {requestAccessCopy.detailsStep.back}
+            رجوع
           </Button>
           <Button type="submit" disabled={loading} className={cn(authSubmitClass, 'flex-[1.4]')}>
-            {loading ? requestAccessCopy.detailsStep.submitting : requestAccessCopy.detailsStep.submit}
+            {loading ? 'جاري الإرسال...' : 'إرسال الطلب'}
           </Button>
         </div>
       </form>
 
       <p className="mt-6 text-center text-sm text-muted-foreground font-arabic">
-        {requestAccessCopy.planStep.loginPrompt}{' '}
+        لديك حساب بالفعل؟{' '}
         <Link to="/login" className="font-medium text-primary hover:underline">
-          {requestAccessCopy.planStep.loginLink}
+          تسجيل الدخول
         </Link>
       </p>
     </AuthPageShell>

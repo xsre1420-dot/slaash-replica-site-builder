@@ -5,3 +5,5 @@ import { getSupabaseClient } from '@/lib/disasterRecovery/supabaseClient';
 
 /** Resilient Supabase client (primary / failover). */
 export const supabase = getSupabaseClient();
+// Prefer generated schema from `npm run db:types` (merged in types.ts).
+

@@ -42,7 +42,7 @@ export const AuthPageShell = ({ children, footer, wide = false, form = false }: 
         </div>
       </header>
 
-      <main className="flex flex-1 flex-col items-center justify-start px-5 pb-6 pt-2 sm:justify-center sm:px-8 sm:pb-10">
+      <main className="flex flex-1 flex-col items-center justify-center px-5 pb-6 pt-2 sm:px-8 sm:pb-10">
         <div
           className={
             wide ? 'w-full max-w-5xl' : form ? 'w-full max-w-xl' : 'w-full max-w-[400px]'
