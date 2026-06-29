@@ -5,6 +5,7 @@
 import { mapOrderError } from '@/utils/orderErrors';
 import { mapProductInsertError } from '@/lib/productUpdateUtils';
 import { mapPaymentError } from '@/utils/paymentUtils';
+import { classifyError } from '@/lib/observability/errorTaxonomy';
 
 export type ErrorDomain =
   | 'order'
@@ -79,10 +80,18 @@ export function fromRpcFailure(
 
 export function logError(err: unknown, context?: Record<string, unknown>): void {
   const normalized = normalizeError(err);
-  console.error('[AppError]', {
+  const classified = classifyError(normalized, {
     domain: normalized.domain,
     code: normalized.code,
-    message: normalized.message,
-    ...context,
+  });
+  void import('@/lib/observability/logger').then(({ logger }) => {
+    logger.error('app.error', {
+      domain: normalized.domain,
+      errorCode: classified.code,
+      errorCategory: classified.category,
+      retryable: classified.retryable,
+      status: 'error',
+      ...context,
+    }, err);
   });
 }

@@ -1,0 +1,123 @@
+{
+  "generatedAt": "2026-06-29T23:03:06.434Z",
+  "schemaTarget": 84,
+  "checks": [
+    {
+      "name": "file: src/lib/observability/sanitizer.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/observability/errorTaxonomy.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/observability/correlation.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/observability/exportAdapter.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/observability/loggingAudit.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/observability/observabilityFoundation.test.ts",
+      "pass": true
+    },
+    {
+      "name": "file: supabase/functions/_shared/observability.ts",
+      "pass": true
+    },
+    {
+      "name": "file: supabase/migrations/20260703000001_observability_v84.sql",
+      "pass": true
+    },
+    {
+      "name": "file: OBSERVABILITY_FOUNDATION_REPORT.md",
+      "pass": true
+    },
+    {
+      "name": "trace and fatal log levels",
+      "pass": true
+    },
+    {
+      "name": "correlation headers export",
+      "pass": true
+    },
+    {
+      "name": "sanitizer redacts secrets",
+      "pass": true
+    },
+    {
+      "name": "error taxonomy categories",
+      "pass": true
+    },
+    {
+      "name": "export adapter OTEL shape",
+      "pass": true
+    },
+    {
+      "name": "rpc correlation headers",
+      "pass": true
+    },
+    {
+      "name": "rpc start/complete logs",
+      "pass": true
+    },
+    {
+      "name": "logError uses logger",
+      "pass": true
+    },
+    {
+      "name": "store read uses logger",
+      "pass": true
+    },
+    {
+      "name": "store write uses logger",
+      "pass": true
+    },
+    {
+      "name": "auth session uses logger",
+      "pass": true
+    },
+    {
+      "name": "job queue correlation",
+      "pass": true
+    },
+    {
+      "name": "reporter flushes fatal",
+      "pass": true
+    },
+    {
+      "name": "edge correlation extract",
+      "pass": true
+    },
+    {
+      "name": "edge redaction",
+      "pass": true
+    },
+    {
+      "name": "v84 audit RPC",
+      "pass": true
+    },
+    {
+      "name": "health check v84",
+      "pass": true
+    },
+    {
+      "name": "package audit script",
+      "pass": true
+    }
+  ],
+  "passed": 27,
+  "total": 27,
+  "scores": {
+    "logging_quality": 96,
+    "observability_readiness": 96,
+    "production_diagnostics": 95,
+    "maintainability": 96,
+    "production_readiness": 96
+  }
+}

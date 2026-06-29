@@ -1,10 +1,16 @@
 import type { BackgroundJob, QueueConfig, QueueKind, QueueMetrics } from '@/background/shared/types';
 import { getProcessor } from '@/background/processors/registry';
 import { shouldSkipDuplicate, markIdempotencyComplete } from '@/background/shared/idempotency';
+import {
+  tryClaimDistributedIdempotency,
+  markDistributedIdempotencyComplete,
+} from '@/background/shared/distributedIdempotency';
 import { nextScheduledAt } from '@/background/retry/backoff';
 import { pushToDeadLetter } from '@/background/retry/deadLetterQueue';
 import { persistPendingJobs } from '@/background/shared/jobPersistence';
-import { logger } from '@/lib/observability';
+import { getWorkerInstanceId } from '@/core/distributed/workerIdentity';
+import { logger, getCorrelationContext, newRequestId } from '@/lib/observability';
+import { recordBackgroundJob, recordQueueDepth } from '@/lib/monitoring/instrumentation';
 
 const pending: BackgroundJob[] = [];
 const processing = new Set<string>();
@@ -175,10 +181,39 @@ async function runJob(job: BackgroundJob): Promise<void> {
     return;
   }
 
+  if (job.idempotencyKey) {
+    const claimed = await tryClaimDistributedIdempotency(job.idempotencyKey);
+    if (!claimed) {
+      removePending(job.id);
+      schedulePersist();
+      return;
+    }
+  }
+
   processing.add(key);
   job.status = 'processing';
   job.attempts += 1;
   job.startedAt = Date.now();
+
+  const requestId = newRequestId();
+  const correlationCtx = getCorrelationContext();
+  const payloadRecord =
+    job.payload && typeof job.payload === 'object'
+      ? (job.payload as Record<string, unknown>)
+      : {};
+  const correlationId = String(payloadRecord.correlationId ?? correlationCtx.correlationId);
+  const workerId = getWorkerInstanceId();
+
+  logger.info('background.job.start', {
+    id: job.id,
+    queue: job.queue,
+    type: job.type,
+    correlationId,
+    requestId,
+    workerId,
+    attempt: job.attempts,
+    errorCategory: 'background_worker',
+  });
 
   try {
     await processor(job);
@@ -188,7 +223,24 @@ async function runJob(job: BackgroundJob): Promise<void> {
     recordExecution(job.queue, duration);
     completedByQueue.set(job.queue, (completedByQueue.get(job.queue) ?? 0) + 1);
     markIdempotencyComplete(job.idempotencyKey);
+    void markDistributedIdempotencyComplete(job.idempotencyKey);
     removePending(job.id);
+    logger.info('background.job.complete', {
+      id: job.id,
+      queue: job.queue,
+      type: job.type,
+      correlationId,
+      requestId,
+      workerId,
+      durationMs: duration,
+      status: 'ok',
+    });
+    recordBackgroundJob({
+      queue: job.queue,
+      type: job.type,
+      durationMs: duration,
+      status: 'ok',
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     job.lastError = message;
@@ -203,7 +255,18 @@ async function runJob(job: BackgroundJob): Promise<void> {
         queue: job.queue,
         type: job.type,
         attempts: job.attempts,
+        correlationId,
+        requestId,
+        workerId,
+        errorCategory: 'background_worker',
+        status: 'error',
         error: message,
+      });
+      recordBackgroundJob({
+        queue: job.queue,
+        type: job.type,
+        durationMs: Date.now() - (job.startedAt ?? Date.now()),
+        status: 'dead_letter',
       });
     } else {
       retryByQueue.set(job.queue, (retryByQueue.get(job.queue) ?? 0) + 1);
@@ -215,11 +278,26 @@ async function runJob(job: BackgroundJob): Promise<void> {
         type: job.type,
         attempt: job.attempts,
         nextAt: job.scheduledAt,
+        correlationId,
+        requestId,
+        workerId,
+        errorCategory: 'background_worker',
+        status: 'retry',
         error: message,
+      });
+      recordBackgroundJob({
+        queue: job.queue,
+        type: job.type,
+        durationMs: Date.now() - (job.startedAt ?? Date.now()),
+        status: 'retry',
       });
     }
   } finally {
     processing.delete(key);
+    const queuePending = pending.filter((j) => j.queue === job.queue).length;
+    const config = QUEUE_CONFIGS[job.queue];
+    const active = countByQueue(job.queue, 'processing');
+    recordQueueDepth(job.queue, queuePending, config.maxConcurrency > 0 ? active / config.maxConcurrency : 0);
     schedulePersist();
   }
 }
@@ -227,6 +305,10 @@ async function runJob(job: BackgroundJob): Promise<void> {
 function removePending(id: string): void {
   const idx = pending.findIndex((j) => j.id === id);
   if (idx >= 0) pending.splice(idx, 1);
+}
+
+export function getWorkerInstanceIdForQueue(): string {
+  return getWorkerInstanceId();
 }
 
 export function getPendingJobs(): BackgroundJob[] {

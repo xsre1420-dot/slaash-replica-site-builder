@@ -3,6 +3,7 @@
  */
 import { cache, CacheKeys } from '@/lib/cache';
 import { enqueueCacheInvalidation } from '@/background/enqueue';
+import { logger } from '@/lib/observability';
 import { rpcPatchMerchantStoreSettings, storesTable, storeSettingsTable } from '@/repositories/store/storeRepository';
 import type { MerchantComplianceSettings } from '@/services/read/store/storeReadService';
 
@@ -16,7 +17,12 @@ export const upsertStoreSettings = async (
   });
 
   if (error) {
-    console.error('Error saving store settings:', error);
+    logger.error('store.settings.save_failed', {
+      domain: 'store',
+      errorCategory: 'database',
+      merchantId: ownerId,
+      status: 'error',
+    }, error);
     return { success: false, error: error.message };
   }
 

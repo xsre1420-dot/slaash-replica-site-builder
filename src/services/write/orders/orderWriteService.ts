@@ -186,6 +186,9 @@ export const createOrder = async (
         logger.info('order.create.success', { orderId, ownerId, attempt, wasIdempotent });
         recordHealthEvent('order', true);
         if (!wasIdempotent) {
+          void import('@/lib/monitoring/instrumentation').then(({ recordBusinessEvent }) => {
+            recordBusinessEvent('order_created');
+          });
           flushOrderCache(ownerId);
           enqueueCacheInvalidation(ownerId, 'full', { bumpVersion: true });
         }

@@ -55,7 +55,12 @@ export const fetchStoreSettings = async (ownerId: string, force = false): Promis
   }
 
   if (error && error.code !== 'PGRST116') {
-    console.error('Error loading store settings:', error);
+    logger.error('store.settings.load_failed', {
+      domain: 'store',
+      errorCategory: 'database',
+      errorCode: error.code,
+      merchantId: ownerId,
+    }, error);
     return null;
   }
 
@@ -216,7 +221,12 @@ export const fetchMerchantComplianceSettings = async (
   const { data, error } = await selectStoreSettingsByOwner(ownerId, STORE_SETTINGS_SELECT);
 
   if (error && error.code !== 'PGRST116') {
-    console.error('Error loading merchant compliance settings:', error);
+    logger.error('store.compliance.load_failed', {
+      domain: 'store',
+      errorCategory: 'database',
+      errorCode: error.code,
+      merchantId: ownerId,
+    }, error);
     return null;
   }
   if (!data) return null;
@@ -250,7 +260,12 @@ export const listPublicStoreSlugs = async (
 ): Promise<PublicStoreSlug[]> => {
   const { data, error } = await rpcListPublicStoreSlugs(limit, offset);
   if (error) {
-    console.warn('[storeService] list_public_store_slugs failed:', error.message);
+    logger.warn('store.slugs.list_failed', {
+      domain: 'store',
+      errorCategory: 'database',
+      rpcName: 'list_public_store_slugs',
+      status: 'error',
+    }, error);
     return [];
   }
   return (data as PublicStoreSlug[]) ?? [];

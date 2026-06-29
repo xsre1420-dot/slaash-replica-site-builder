@@ -7,6 +7,12 @@ import { computeBackoffMs } from '@/background/retry/backoff';
 
 vi.mock('@/lib/observability', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  newRequestId: () => 'test-request-id',
+  getCorrelationContext: () => ({
+    sessionId: 'test-session',
+    traceId: 'test-trace',
+    correlationId: 'test-correlation',
+  }),
 }));
 
 describe('background JobQueue', () => {

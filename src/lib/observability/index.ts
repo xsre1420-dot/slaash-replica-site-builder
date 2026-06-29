@@ -9,8 +9,12 @@ import {
   getCorrelationContext,
   setObservabilityRoute,
   setObservabilityUser,
+  setObservabilityTenant,
   newTrace,
-} from './context';
+  buildCorrelationHeaders,
+  newRequestId,
+  CORRELATION_HEADERS,
+} from './correlation';
 import { isProduction } from '@/lib/env';
 import {
   getAllDomainHealth,
@@ -27,7 +31,7 @@ import {
 export interface ObservabilityConfig {
   webhookUrl?: string;
   sampleRate?: number;
-  logLevel?: 'debug' | 'info' | 'warn' | 'error';
+  logLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 }
 
 export const initObservability = (config: ObservabilityConfig = {}) => {
@@ -86,7 +90,11 @@ export {
   getCorrelationContext,
   setObservabilityRoute,
   setObservabilityUser,
+  setObservabilityTenant,
   newTrace,
+  buildCorrelationHeaders,
+  newRequestId,
+  CORRELATION_HEADERS,
   getAllDomainHealth,
   getDomainHealth,
   recordHealthEvent,
@@ -96,3 +104,8 @@ export {
   type HealthDomain,
   type DomainHealthStats,
 };
+
+export { sanitizeLogContext, sanitizeErrorMessage } from './sanitizer';
+export { classifyError, ERROR_CATEGORY_LABELS, errorCategorySeverity } from './errorTaxonomy';
+export { normalizeObservabilityEvent, formatForBackend } from './exportAdapter';
+export { getLoggingAuditSummary, LOGGING_AUDIT_REGISTRY } from './loggingAudit';

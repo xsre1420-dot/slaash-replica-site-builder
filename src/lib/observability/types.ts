@@ -1,24 +1,40 @@
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 
 export type AlertSeverity = 'info' | 'warning' | 'critical';
 
 export interface CorrelationContext {
   sessionId: string;
   traceId: string;
+  correlationId: string;
   userId?: string;
+  merchantId?: string;
+  storeId?: string;
   route?: string;
+  environment?: string;
 }
 
 export interface LogEvent {
   type: 'log';
   timestamp: string;
   level: LogLevel;
+  severity: string;
   message: string;
   sessionId: string;
   traceId: string;
+  correlationId?: string;
+  requestId?: string;
   spanId?: string;
   route?: string;
   userId?: string;
+  merchantId?: string;
+  storeId?: string;
+  environment?: string;
+  rpcName?: string;
+  edgeFunction?: string;
+  durationMs?: number;
+  status?: string;
+  errorCategory?: string;
+  errorCode?: string;
   context?: Record<string, unknown>;
   error?: {
     name: string;

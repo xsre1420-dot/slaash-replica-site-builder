@@ -1,0 +1,42 @@
+{
+  "schema_version": 85,
+  "service": "slaash-platform",
+  "description": "Vendor-neutral metric catalog — scrape via getMonitoringStatus() or exportMetricsPrometheus()",
+  "export_formats": ["prometheus", "opentelemetry", "json"],
+  "domains": {
+    "http": ["http_requests_total", "http_request_duration_ms", "http_errors_total"],
+    "rpc": ["rpc_calls_total", "rpc_duration_ms", "rpc_errors_total", "rpc_replica_fallback_total"],
+    "edge": ["edge_invocations_total", "edge_duration_ms", "edge_errors_total"],
+    "background": ["background_jobs_total", "background_job_duration_ms", "background_queue_depth", "background_dead_letter_total", "background_worker_utilization"],
+    "checkout": ["checkout_started_total", "checkout_success_total", "checkout_failed_total", "checkout_duration_ms"],
+    "storefront": ["storefront_page_views_total", "storefront_bundle_load_ms"],
+    "database": ["db_query_duration_ms", "db_slow_queries_total", "db_connection_pool_utilization", "db_latency_ms"],
+    "cache": ["cache_hits_total", "cache_misses_total", "cache_hit_rate", "cache_invalidations_total", "cache_failures_total"],
+    "business": ["orders_created_total", "store_visits_total", "customer_registrations_total", "products_created_total", "background_job_throughput"],
+    "infra": ["infra_memory_utilization", "read_replica_utilization"],
+    "errors": ["errors_total", "errors_by_category_total"]
+  },
+  "dashboards": [
+    "platform-overview",
+    "storefront-performance",
+    "database-health",
+    "queue-health",
+    "cache-health",
+    "background-workers",
+    "edge-functions",
+    "business-kpis",
+    "system-errors"
+  ],
+  "alert_rules": [
+    "high-latency-rpc",
+    "high-error-rate",
+    "slow-queries",
+    "queue-backlog",
+    "worker-failures",
+    "database-saturation",
+    "cache-failures",
+    "checkout-failure",
+    "infra-memory",
+    "infra-degradation"
+  ]
+}

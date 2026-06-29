@@ -23,7 +23,14 @@ export const logAuthFailure = (operation: string, detail: unknown): void => {
     detail instanceof Error
       ? { message: detail.message, name: detail.name }
       : detail;
-  console.error(`[auth.${operation}]`, payload);
+
+  void import('@/lib/observability/logger').then(({ logger }) => {
+    logger.error(`auth.${operation}`, {
+      operation,
+      errorCategory: 'authentication',
+      ...((typeof payload === 'object' && payload) ? payload as Record<string, unknown> : { detail: payload }),
+    }, detail instanceof Error ? detail : undefined);
+  });
 
   void import('@/lib/observability/healthMonitor').then(({ recordHealthEvent }) => {
     const domain = operation.startsWith('register') ? 'auth.register' : 'auth.login';

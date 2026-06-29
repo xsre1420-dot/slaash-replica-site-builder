@@ -23,7 +23,10 @@ export const enqueueEvent = (event: ObservabilityEvent) => {
     buffer = buffer.slice(-MAX_BUFFER);
   }
 
-  if (event.type === 'alert' || event.type === 'log' && event.level === 'error') {
+  if (
+    event.type === 'alert' ||
+    (event.type === 'log' && (event.level === 'error' || event.level === 'fatal'))
+  ) {
     flushEvents(true);
   }
 };
