@@ -28,6 +28,8 @@
     "db:verify": "node scripts/verify-platform-db.mjs",
     "db:audit": "node scripts/schema-sync-audit.mjs",
     "audit:read-write": "node scripts/read-write-audit.mjs",
+    "audit:background-jobs": "node scripts/background-jobs-audit.mjs",
+    "audit:enterprise-architecture": "node scripts/enterprise-architecture-audit.mjs",
     "db:isolation-test": "node scripts/tenant-isolation-test.mjs",
     "db:inventory-test": "node scripts/inventory-integrity-test.mjs",
     "db:transaction-test": "node scripts/transaction-integrity-test.mjs",

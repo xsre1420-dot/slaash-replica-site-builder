@@ -1,9 +1,12 @@
 /**
  * Delivery fee and shipment reads — no status mutations.
  */
-import { supabase } from '@/integrations/supabase/client';
 import { DeliveryStatus } from '@/utils/deliveryUtils';
-import { callReadRpc } from '@/lib/readWrite/readClient';
+import {
+  rpcCalculateDeliveryFee,
+  rpcCalculateDeliveryFeeBySlug,
+  rpcGetOrderShipment,
+} from '@/repositories/delivery/deliveryRepository';
 
 export interface ShipmentTrackingEvent {
   id: string;
@@ -37,10 +40,7 @@ export const fetchDeliveryFee = async (
   ownerId: string,
   governorate: string
 ): Promise<number | null> => {
-  const { data, error } = await callReadRpc<number>('calculate_delivery_fee', {
-    p_owner_id: ownerId,
-    p_governorate: governorate,
-  });
+  const { data, error } = await rpcCalculateDeliveryFee(ownerId, governorate);
   if (error) return null;
   return Number(data) || 0;
 };
@@ -49,10 +49,10 @@ export const fetchDeliveryFeeBySlug = async (
   storeSlug: string,
   governorate: string
 ): Promise<number | null> => {
-  const { data, error } = await callReadRpc<number>('calculate_delivery_fee_by_slug', {
-    p_store_slug: storeSlug.trim().toLowerCase(),
-    p_governorate: governorate,
-  });
+  const { data, error } = await rpcCalculateDeliveryFeeBySlug(
+    storeSlug.trim().toLowerCase(),
+    governorate
+  );
   if (error) return null;
   return Number(data) || 0;
 };
@@ -61,16 +61,7 @@ export const fetchOrderShipment = async (
   orderId: string,
   ownerId: string
 ): Promise<OrderShipmentData | null> => {
-  const { data, error } = await callReadRpc<{
-    success?: boolean;
-    shipment?: ShipmentInfo | null;
-    delivery_fee?: number;
-    delivery_status?: string;
-    events?: ShipmentTrackingEvent[];
-  }>('get_order_shipment', {
-    p_order_id: orderId,
-    p_owner_id: ownerId,
-  });
+  const { data, error } = await rpcGetOrderShipment(orderId, ownerId);
 
   if (error || !data?.success) return null;
 

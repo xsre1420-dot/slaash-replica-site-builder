@@ -1,7 +1,6 @@
 /**
  * Order write commands — primary DB only. No list/query reads.
  */
-import { supabase } from '@/integrations/supabase/client';
 import { Order, CartItem } from '@/types';
 import { getOrCreateIdempotencyKey } from '@/utils/checkoutSession';
 import { tryRecoverCheckoutOrder } from '@/services/checkoutRecoveryService';
@@ -16,9 +15,13 @@ import {
   RateLimitExceededError,
 } from '@/lib/security/rateLimiter';
 import type { MarketingAttribution } from '@/lib/attribution';
-import { invalidateStorefrontScope } from '@/services/storefrontProductService';
+import { enqueueCacheInvalidation, enqueueMetaConversion } from '@/background/enqueue';
 import { assertMerchantOwner } from '@/lib/tenantGuard';
-import { callWriteRpc } from '@/lib/readWrite/writeClient';
+import {
+  rpcUpdateMerchantOrderStatus,
+  rpcCreateOrderWithStockDeduction,
+  rpcAttachOrderMarketingAttribution,
+} from '@/repositories/orders/orderRepository';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -83,7 +86,7 @@ export const updateOrderStatus = async (
   await assertMerchantOwner(ownerId);
   const started = performance.now();
 
-  const { data, error } = await (supabase as any).rpc('update_merchant_order_status', {
+  const { data, error } = await rpcUpdateMerchantOrderStatus({
     p_order_id: orderId,
     p_owner_id: ownerId,
     p_status: status,
@@ -135,7 +138,7 @@ export const createOrder = async (
     let lastError = 'Order creation failed';
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      const { data, error } = await (supabase as any).rpc('create_order_with_stock_deduction', {
+      const { data, error } = await rpcCreateOrderWithStockDeduction({
         p_order_id: order.id,
         p_owner_id: ownerId,
         p_idempotency_key: idempotencyKey,
@@ -161,7 +164,7 @@ export const createOrder = async (
         }
 
         if (marketingAttribution && storeSlug?.trim() && !wasIdempotent) {
-          await callWriteRpc('attach_order_marketing_attribution', {
+          await rpcAttachOrderMarketingAttribution({
             p_order_id: orderId,
             p_store_slug: storeSlug.trim().toLowerCase(),
             p_attribution: marketingAttribution,
@@ -169,31 +172,22 @@ export const createOrder = async (
         }
 
         if (storeSlug?.trim() && !wasIdempotent) {
-          void (supabase as any).functions
-            .invoke('meta-conversions', {
-              body: {
-                store_slug: storeSlug.trim().toLowerCase(),
-                order_id: orderId,
-                value: Number(data.total_amount ?? order.total),
-                currency: 'IQD',
-                content_ids: order.items.map((item) => item.product.id),
-                customer_phone: order.customerInfo.phone || null,
-                event_source_url: typeof window !== 'undefined' ? window.location.href : null,
-              },
-            })
-            .catch((err: unknown) => {
-              logger.warn('meta-conversions.invoke.failed', {
-                orderId,
-                message: err instanceof Error ? err.message : String(err),
-              });
-            });
+          enqueueMetaConversion({
+            storeSlug: storeSlug.trim().toLowerCase(),
+            orderId,
+            value: Number(data.total_amount ?? order.total),
+            currency: 'IQD',
+            contentIds: order.items.map((item) => item.product.id),
+            customerPhone: order.customerInfo.phone || null,
+            eventSourceUrl: typeof window !== 'undefined' ? window.location.href : null,
+          });
         }
 
         logger.info('order.create.success', { orderId, ownerId, attempt, wasIdempotent });
         recordHealthEvent('order', true);
         if (!wasIdempotent) {
           flushOrderCache(ownerId);
-          void invalidateStorefrontScope(ownerId, 'full', { bumpVersion: true });
+          enqueueCacheInvalidation(ownerId, 'full', { bumpVersion: true });
         }
         return {
           ...order,

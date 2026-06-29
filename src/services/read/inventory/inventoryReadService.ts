@@ -1,7 +1,11 @@
 /**
  * Inventory audit and movement history — read-only.
  */
-import { supabase } from '@/integrations/supabase/client';
+import {
+  rpcAuditMerchantInventoryIntegrity,
+  inventoryMovementsTable,
+  getAuthUserId,
+} from '@/repositories/inventory/inventoryRepository';
 import { assertMerchantOwner } from '@/lib/tenantGuard';
 
 export class InventoryRestockError extends Error {
@@ -41,9 +45,7 @@ export const auditInventoryIntegrity = async (
 ): Promise<InventoryIntegrityResult | null> => {
   await assertMerchantOwner(ownerId);
 
-  const { data, error } = await (supabase as any).rpc('audit_merchant_inventory_integrity', {
-    p_owner_id: ownerId,
-  });
+  const { data, error } = await rpcAuditMerchantInventoryIntegrity(ownerId);
 
   const payload = data as {
     success?: boolean;
@@ -81,14 +83,13 @@ export const fetchProductMovements = async (
 ): Promise<InventoryMovementRow[]> => {
   let tenantId = ownerId;
   if (!tenantId) {
-    const { data: authData } = await supabase.auth.getUser();
+    const { data: authData } = await getAuthUserId();
     tenantId = authData.user?.id;
   }
   if (!tenantId) return [];
   await assertMerchantOwner(tenantId);
 
-  const { data, error } = await (supabase as any)
-    .from('inventory_movements')
+  const { data, error } = await inventoryMovementsTable()
     .select('id, quantity_delta, reason, created_at')
     .eq('product_id', productId)
     .eq('owner_id', tenantId)

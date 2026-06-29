@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Upload, X, ChevronLeft, ChevronRight, Star, ImageIcon, Store, Loader2, Settings } from "lucide-react";
 import { getAuthenticatedUserId } from "@/lib/authSession";
 import { uploadImage, deleteImage } from "@/utils/imageUpload";
-import { cleanupRemovedBrandingImages } from "@/utils/productImageCleanup";
+import { enqueueBrandingCleanup } from '@/background/enqueue';
 import { toast } from "sonner";
 import { normalizeStoreSlugInput, validateStoreSlug } from "@/lib/storeSlug";
 import AttentionStrip from "@/components/ui/AttentionStrip";
@@ -43,7 +43,7 @@ const StoreInfoTab = ({ settings, setSettings }: StoreInfoTabProps) => {
       const publicUrl = await uploadImage(file, userId);
       setSettings((prev: any) => ({ ...prev, storeLogo: publicUrl }));
       if (previousLogo && previousLogo !== publicUrl) {
-        void cleanupRemovedBrandingImages({ storeLogo: previousLogo }, { storeLogo: publicUrl });
+        enqueueBrandingCleanup({ storeLogo: previousLogo }, { storeLogo: publicUrl });
       }
       toast.success("تم رفع الشعار بنجاح");
     } catch (err) {

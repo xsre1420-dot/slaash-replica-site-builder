@@ -1,4 +1,9 @@
-import { supabase } from '@/integrations/supabase/client';
+import {
+  ordersTable,
+  rpcListMerchantOrders,
+  rpcCountMerchantOrdersByWorkflow,
+} from '@/repositories/orders/orderRepository';
+import { productsTable } from '@/repositories/products/productRepository';
 import { callReadRpc } from '@/lib/readWrite/readClient';
 import { Order } from '@/types';
 import { mapDbOrder } from '@/mappers/orderMapper';
@@ -49,8 +54,7 @@ const enrichOrdersWithProductImages = async (
 
   if (productIds.length === 0) return orders;
 
-  const { data, error } = await supabase
-    .from('products')
+  const { data, error } = await productsTable()
     .select('id, image_url')
     .eq('owner_id', ownerId)
     .in('id', productIds);
@@ -84,8 +88,7 @@ export const fetchOrderById = async (
   return instrumentQuery(
     'orders.fetchById',
     async () => {
-      const { data, error } = await supabase
-        .from('orders')
+      const { data, error } = await ordersTable()
         .select(ORDER_DETAIL_SELECT)
         .eq('id', orderId)
         .eq('owner_id', ownerId)
@@ -206,8 +209,7 @@ const fetchOrdersFilteredFallback = async (
     return { orders: [], total: 0, page, pageSize, totalPages: 1 };
   }
 
-  let query = supabase
-    .from('orders')
+  let query = ordersTable()
     .select(ORDER_LIST_SELECT, { count: 'exact' })
     .eq('owner_id', ownerId);
 
@@ -295,7 +297,7 @@ export const fetchWorkflowTabCounts = async (
     ...filtersToRpcParamsWithoutWorkflow(filters),
   };
 
-  const { data, error } = await (supabase as any).rpc('count_merchant_orders_by_workflow', params);
+  const { data, error } = await rpcCountMerchantOrdersByWorkflow(params);
 
   if (!error && data) {
     const counts = data as WorkflowTabCounts;
@@ -306,8 +308,7 @@ export const fetchWorkflowTabCounts = async (
   const { filterOrdersList, countOrdersByWorkflowTab } = await import('@/utils/orderWorkflowUtils');
   const { getDateRangeForPreset } = await import('@/utils/orderQueryBuilder');
 
-  let query = supabase
-    .from('orders')
+  let query = ordersTable()
     .select(ORDER_LIST_SELECT)
     .eq('owner_id', ownerId);
 
@@ -352,7 +353,7 @@ export const fetchRecentOrders = async (ownerId: string, limit = 5): Promise<Ord
   const cached = cache.get<Order[]>(cacheKey);
   if (cached) return cached;
 
-  const { data, error } = await (supabase as any).rpc('list_merchant_orders', {
+  const { data, error } = await rpcListMerchantOrders({
     p_owner_id: ownerId,
     ...filtersToRpcParams(DEFAULT_ORDER_FILTERS, 0, limit),
   });
@@ -366,8 +367,7 @@ export const fetchRecentOrders = async (ownerId: string, limit = 5): Promise<Ord
     return enriched;
   }
 
-  const { data: rows, error: queryError } = await supabase
-    .from('orders')
+  const { data: rows, error: queryError } = await ordersTable()
     .select(ORDER_LIST_SELECT)
     .eq('owner_id', ownerId)
     .order('created_at', { ascending: false })
@@ -391,8 +391,7 @@ export const fetchOrdersPageLegacy = async (
     const from = page * pageSize;
     const to = from + pageSize - 1;
 
-    const { data, error } = await supabase
-      .from('orders')
+    const { data, error } = await ordersTable()
       .select(ORDER_LIST_SELECT)
       .eq('owner_id', ownerId)
       .order('created_at', { ascending: false })
@@ -432,8 +431,7 @@ export const fetchCustomerInsightsByPhone = async (
   const safePhone = sanitizePostgrestFilterValue(phone);
   const safeDigits = sanitizePostgrestFilterValue(digits);
 
-  const { data, error } = await supabase
-    .from('orders')
+  const { data, error } = await ordersTable()
     .select('total_amount, status, customer_phone')
     .eq('owner_id', ownerId)
     .neq('status', 'cancelled')
@@ -459,8 +457,7 @@ export const fetchOrderStatsRows = async (ownerId: string): Promise<Order[]> => 
   const cached = cache.get<Order[]>(cacheKey);
   if (cached) return cached;
 
-  const { data, error } = await supabase
-    .from('orders')
+  const { data, error } = await ordersTable()
     .select(ORDER_STATS_SELECT)
     .eq('owner_id', ownerId)
     .order('created_at', { ascending: false })

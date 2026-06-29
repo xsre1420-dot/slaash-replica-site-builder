@@ -1,5 +1,9 @@
 import { supabase } from '@/integrations/supabase/client';
 import { assertMerchantOwner } from '@/lib/tenantGuard';
+import { getClientBackgroundStatus } from '@/background/scheduler/JobScheduler';
+import type { ClientBackgroundStatus } from '@/background/shared/types';
+
+export type { ClientBackgroundStatus };
 
 export type BackgroundJobsStatus = {
   status: 'ok' | 'warn' | 'degraded' | 'critical';
@@ -16,6 +20,7 @@ export type BackgroundJobsStatus = {
     processor: string;
   };
   recommendations: string[];
+  client?: ClientBackgroundStatus;
 };
 
 export type WebhookRetryResult = {
@@ -75,4 +80,27 @@ export const retryFailedWebhookEvents = async (
   if (error || !payload?.success) return null;
 
   return { reset: payload.reset ?? 0 };
+};
+
+/** Unified server outbox + client queue monitoring. */
+export const fetchUnifiedBackgroundStatus = async (): Promise<BackgroundJobsStatus | null> => {
+  const server = await fetchBackgroundJobsStatus();
+  const client = typeof window !== 'undefined' ? getClientBackgroundStatus() : undefined;
+  if (!server && !client) return null;
+  if (!server) {
+    return {
+      status: 'ok',
+      analytics: { pending: 0, oldestPendingSeconds: 0, processor: 'client-only' },
+      orderWebhooks: {
+        pending: 0,
+        processing: 0,
+        failedDeadLetter: 0,
+        oldestPendingSeconds: 0,
+        processor: 'client-only',
+      },
+      recommendations: [],
+      client,
+    };
+  }
+  return { ...server, client };
 };

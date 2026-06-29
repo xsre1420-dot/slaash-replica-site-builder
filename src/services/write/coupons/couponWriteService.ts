@@ -1,14 +1,14 @@
 /**
  * Coupon mutations — no list/validation reads.
  */
-import { supabase } from '@/integrations/supabase/client';
+import { marketingCouponsTable } from '@/repositories/coupons/couponRepository';
 import type { MerchantCoupon } from '@/services/read/coupons/couponReadService';
 
 export async function createMerchantCoupon(
   ownerId: string,
   coupon: Omit<MerchantCoupon, 'id' | 'used_count' | 'is_active'> & { is_active?: boolean }
 ): Promise<{ success: boolean; error?: string }> {
-  const { error } = await supabase.from('marketing_coupons').insert({
+  const { error } = await marketingCouponsTable().insert({
     owner_id: ownerId,
     ...coupon,
     is_active: coupon.is_active ?? true,
@@ -23,8 +23,7 @@ export async function updateMerchantCoupon(
   couponId: string,
   updates: Partial<MerchantCoupon>
 ): Promise<{ success: boolean; error?: string }> {
-  const { error } = await supabase
-    .from('marketing_coupons')
+  const { error } = await marketingCouponsTable()
     .update(updates)
     .eq('id', couponId)
     .eq('owner_id', ownerId);
@@ -36,8 +35,7 @@ export async function deleteMerchantCoupon(
   ownerId: string,
   couponId: string
 ): Promise<{ success: boolean; error?: string }> {
-  const { error } = await supabase
-    .from('marketing_coupons')
+  const { error } = await marketingCouponsTable()
     .delete()
     .eq('id', couponId)
     .eq('owner_id', ownerId);

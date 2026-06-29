@@ -1,21 +1,16 @@
 /**
  * Store settings mutations — primary DB writes and cache invalidation.
  */
-import { supabase } from '@/integrations/supabase/client';
 import { cache, CacheKeys } from '@/lib/cache';
-import { invalidateStorefrontScope } from '@/services/write/storefront/storefrontCacheWriteService';
-import { callWriteRpc } from '@/lib/readWrite/writeClient';
+import { enqueueCacheInvalidation } from '@/background/enqueue';
+import { rpcPatchMerchantStoreSettings, storesTable, storeSettingsTable } from '@/repositories/store/storeRepository';
 import type { MerchantComplianceSettings } from '@/services/read/store/storeReadService';
 
 export const upsertStoreSettings = async (
   ownerId: string,
   updates: Record<string, unknown>
 ): Promise<{ success: boolean; error?: string }> => {
-  const { data, error } = await callWriteRpc<{
-    success?: boolean;
-    error?: string;
-    noop?: boolean;
-  }>('patch_merchant_store_settings', {
+  const { data, error } = await rpcPatchMerchantStoreSettings({
     p_owner_id: ownerId,
     p_patch: updates,
   });
@@ -31,7 +26,7 @@ export const upsertStoreSettings = async (
 
   if (data?.noop !== true) {
     cache.del(CacheKeys.storeSettings(ownerId));
-    void invalidateStorefrontScope(ownerId, 'settings');
+    enqueueCacheInvalidation(ownerId, 'settings');
   }
   return { success: true };
 };
@@ -39,7 +34,7 @@ export const upsertStoreSettings = async (
 export const invalidateStoreSettingsCache = (ownerId: string) => {
   cache.del(CacheKeys.storeSettings(ownerId));
   cache.del(CacheKeys.store(ownerId));
-  void invalidateStorefrontScope(ownerId, 'settings');
+  enqueueCacheInvalidation(ownerId, 'settings');
 };
 
 export const saveMerchantComplianceSettings = async (
@@ -66,7 +61,7 @@ export const saveMerchantComplianceSettings = async (
   if (!result.success) return result;
 
   try {
-    await supabase.from('stores').update({ store_slug: settings.storeSlug }).eq('user_id', ownerId);
+    await storesTable().update({ store_slug: settings.storeSlug }).eq('user_id', ownerId);
   } catch {
     /* stores table may not exist before migration */
   }
@@ -78,8 +73,7 @@ export const saveCustomDomain = async (
   ownerId: string,
   domain: string
 ): Promise<{ success: boolean; error?: string; code?: string }> => {
-  const { error } = await supabase
-    .from('store_settings')
+  const { error } = await storeSettingsTable()
     .update({ custom_domain: domain, domain_verified: false })
     .eq('owner_id', ownerId);
 
@@ -93,8 +87,7 @@ export const saveCustomDomain = async (
 export const removeCustomDomain = async (
   ownerId: string
 ): Promise<{ success: boolean; error?: string }> => {
-  const { error } = await supabase
-    .from('store_settings')
+  const { error } = await storeSettingsTable()
     .update({ custom_domain: null, domain_verified: false })
     .eq('owner_id', ownerId);
 

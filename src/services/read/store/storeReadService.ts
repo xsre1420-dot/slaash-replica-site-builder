@@ -1,4 +1,12 @@
-import { supabase } from '@/integrations/supabase/client';
+import {
+  rpcGetStoreForUser,
+  rpcGetOwnerBootstrap,
+  rpcListPublicStoreSlugs,
+  selectStoreByUserId,
+  selectStoreSettingsFallback,
+  selectStoreSettingsByOwner,
+  selectCustomDomainSettings,
+} from '@/repositories/store/storeRepository';
 import { cache, CacheKeys, CacheTTL } from '@/lib/cache';
 import { isSchemaColumnError } from '@/lib/productUpdateUtils';
 import { defaultStoreSettings, StoreProfile, StoreSettings } from '@/types/store';
@@ -36,18 +44,10 @@ export const fetchStoreSettings = async (ownerId: string, force = false): Promis
     if (cached) return mapStoreSettingsRow(cached);
   }
 
-  const { data, error } = await supabase
-    .from('store_settings')
-    .select(STORE_SETTINGS_SELECT)
-    .eq('owner_id', ownerId)
-    .maybeSingle();
+  const { data, error } = await selectStoreSettingsByOwner(ownerId, STORE_SETTINGS_SELECT);
 
   if (error && isSchemaColumnError(error.message)) {
-    const retry = await supabase
-      .from('store_settings')
-      .select(STORE_SETTINGS_SELECT_MINIMAL)
-      .eq('owner_id', ownerId)
-      .maybeSingle();
+    const retry = await selectStoreSettingsByOwner(ownerId, STORE_SETTINGS_SELECT_MINIMAL);
     if (!retry.error && retry.data) {
       cache.set(cacheKey, retry.data, CacheTTL.LONG, CacheTTL.STALE);
       return mapStoreSettingsRow(retry.data as Record<string, unknown>);
@@ -79,7 +79,7 @@ export const fetchStoreByUserId = async (userId: string): Promise<StoreRecord | 
   if (cached) return cached;
 
   try {
-    const { data, error } = await (supabase as any).rpc('get_store_for_user', { p_user_id: userId });
+    const { data, error } = await rpcGetStoreForUser(userId);
     if (!error && data?.id) {
       const record: StoreRecord = {
         id: data.id,
@@ -95,11 +95,7 @@ export const fetchStoreByUserId = async (userId: string): Promise<StoreRecord | 
     // RPC may not exist until migration applied — fall through
   }
 
-  const { data: storeRow } = await supabase
-    .from('stores')
-    .select('id, user_id, store_name, store_slug, theme_id')
-    .eq('user_id', userId)
-    .maybeSingle();
+  const { data: storeRow } = await selectStoreByUserId(userId);
 
   if (storeRow) {
     const record: StoreRecord = {
@@ -113,11 +109,7 @@ export const fetchStoreByUserId = async (userId: string): Promise<StoreRecord | 
     return record;
   }
 
-  const { data: settings } = await supabase
-    .from('store_settings')
-    .select('id, owner_id, store_name, store_slug')
-    .eq('owner_id', userId)
-    .maybeSingle();
+  const { data: settings } = await selectStoreSettingsFallback(userId);
 
   if (!settings) return null;
 
@@ -141,7 +133,7 @@ export interface BootstrapResult {
 /** Phase 6: Combined bootstrap RPC with parallel fallback */
 export const bootstrapOwnerStore = async (userId: string): Promise<BootstrapResult | null> => {
   try {
-    const { data, error } = await (supabase as any).rpc('get_owner_bootstrap', { p_user_id: userId });
+    const { data, error } = await rpcGetOwnerBootstrap(userId);
     if (!error && data?.store?.id) {
       const storeId = data.store.id as string;
       const storeRecord: StoreRecord = {
@@ -221,11 +213,7 @@ export const fetchMerchantComplianceSettings = async (
   const cached = cache.get<Record<string, unknown>>(cacheKey);
   if (cached) return mapMerchantComplianceSettings(cached);
 
-  const { data, error } = await supabase
-    .from('store_settings')
-    .select(STORE_SETTINGS_SELECT)
-    .eq('owner_id', ownerId)
-    .maybeSingle();
+  const { data, error } = await selectStoreSettingsByOwner(ownerId, STORE_SETTINGS_SELECT);
 
   if (error && error.code !== 'PGRST116') {
     console.error('Error loading merchant compliance settings:', error);
@@ -245,11 +233,7 @@ export type CustomDomainSettings = {
 export const fetchCustomDomainSettings = async (
   ownerId: string
 ): Promise<CustomDomainSettings | null> => {
-  const { data, error } = await supabase
-    .from('store_settings')
-    .select('custom_domain, domain_verified')
-    .eq('owner_id', ownerId)
-    .maybeSingle();
+  const { data, error } = await selectCustomDomainSettings(ownerId);
 
   if (error || !data) return null;
   return {
@@ -264,10 +248,7 @@ export const listPublicStoreSlugs = async (
   limit = 5000,
   offset = 0
 ): Promise<PublicStoreSlug[]> => {
-  const { data, error } = await (supabase as any).rpc('list_public_store_slugs', {
-    p_limit: limit,
-    p_offset: offset,
-  });
+  const { data, error } = await rpcListPublicStoreSlugs(limit, offset);
   if (error) {
     console.warn('[storeService] list_public_store_slugs failed:', error.message);
     return [];

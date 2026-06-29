@@ -1,7 +1,11 @@
 /**
  * Shipment status mutations — primary DB only.
  */
-import { supabase } from '@/integrations/supabase/client';
+import {
+  rpcUpdateShipmentStatus,
+  rpcMarkDeliveryFailed,
+  rpcRetryFailedDelivery,
+} from '@/repositories/delivery/deliveryRepository';
 import { DeliveryStatus } from '@/utils/deliveryUtils';
 
 export const updateShipmentStatus = async (
@@ -10,7 +14,7 @@ export const updateShipmentStatus = async (
   status: DeliveryStatus,
   options?: { note?: string; trackingNumber?: string; carrier?: string }
 ): Promise<{ success: boolean; error?: string }> => {
-  const { data, error } = await (supabase as any).rpc('update_shipment_status', {
+  const { data, error } = await rpcUpdateShipmentStatus({
     p_shipment_id: shipmentId,
     p_owner_id: ownerId,
     p_status: status,
@@ -29,7 +33,7 @@ export const markDeliveryFailed = async (
   ownerId: string,
   reason?: string
 ): Promise<{ success: boolean; error?: string }> => {
-  const { data, error } = await (supabase as any).rpc('mark_delivery_failed', {
+  const { data, error } = await rpcMarkDeliveryFailed({
     p_shipment_id: shipmentId,
     p_owner_id: ownerId,
     p_reason: reason || null,
@@ -45,7 +49,7 @@ export const retryFailedDelivery = async (
   ownerId: string,
   note?: string
 ): Promise<{ success: boolean; error?: string }> => {
-  const { data, error } = await (supabase as any).rpc('retry_failed_delivery', {
+  const { data, error } = await rpcRetryFailedDelivery({
     p_shipment_id: shipmentId,
     p_owner_id: ownerId,
     p_note: note || null,

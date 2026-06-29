@@ -1,8 +1,16 @@
 /**
  * Product catalog mutations — primary DB writes and cache sync.
  */
-import { supabase } from '@/integrations/supabase/client';
-import { callSupabaseRpc } from '@/integrations/supabase/rpc';
+import {
+  productsTable,
+  rpcCreateMerchantProductWithStock,
+  rpcRecordProductInitialStock,
+  rpcPatchMerchantProduct,
+  rpcRecordInitialStockMovements,
+  rpcLookupProductIdempotency,
+  rpcRecordProductIdempotency,
+  rpcPublishOwnerProduct,
+} from '@/repositories/products/productRepository';
 import { getAuthenticatedUserId } from '@/lib/authSession';
 import { assertMerchantOwner } from '@/lib/tenantGuard';
 import { cache, CacheKeys } from '@/lib/cache';
@@ -29,9 +37,8 @@ import { fetchStoreByUserId, type StoreRecord } from '@/services/read/store/stor
 import { syncProductCachesAfterMutation } from '@/lib/productCacheSync';
 import {
   collectProductImageUrls,
-  cleanupRemovedProductImages,
-  deleteProductStorageImages,
 } from '@/utils/productImageCleanup';
+import { enqueueImageCleanup, enqueueImageDelete } from '@/background/enqueue';
 import { applyStockQuantityPatch } from '@/services/write/inventory/inventoryWriteService';
 import { InventoryRestockError } from '@/services/read/inventory/inventoryReadService';
 import type { Product } from '@/types';
@@ -63,8 +70,7 @@ async function fetchRowById(
   ownerId: string
 ): Promise<Record<string, unknown> | null> {
   for (const select of [PRODUCT_DETAIL_SELECT, ...SELECT_CHAIN]) {
-    const { data, error } = await supabase
-      .from('products')
+    const { data, error } = await productsTable()
       .select(select)
       .eq('id', productId)
       .eq('owner_id', ownerId)
@@ -94,12 +100,7 @@ export async function createProduct(product: Product): Promise<ProductsCrudResul
 
   const atomicPayloads = [payloads.full, payloads.extended, payloads.standard, payloads.minimal];
   for (const row of atomicPayloads) {
-    const { data: atomicData, error: atomicError } = await callSupabaseRpc<{
-      success?: boolean;
-      product_id?: string;
-      error?: string;
-      detail?: string;
-    }>('create_merchant_product_with_stock', {
+    const { data: atomicData, error: atomicError } = await rpcCreateMerchantProductWithStock({
       p_owner_id: ownerId,
       p_payload: row,
       p_initial_stock: stockQty,
@@ -130,8 +131,7 @@ export async function createProduct(product: Product): Promise<ProductsCrudResul
 
   const attempts = [payloads.full, payloads.extended, payloads.standard, payloads.minimal];
   for (const row of attempts) {
-    const { data, error } = await supabase
-      .from('products')
+    const { data, error } = await productsTable()
       .insert(row)
       .select(PRODUCT_INSERT_RETURN_MINIMAL)
       .single();
@@ -141,16 +141,13 @@ export async function createProduct(product: Product): Promise<ProductsCrudResul
       const mapped = mapDbProduct(data as Record<string, unknown>);
 
       if (stockQty > 0) {
-        const { data: stockData, error: stockError } = await callSupabaseRpc<{ success?: boolean }>(
-          'record_product_initial_stock',
-          {
-            p_product_id: mapped.id,
-            p_owner_id: ownerId,
-            p_quantity: stockQty,
-          }
-        );
+        const { data: stockData, error: stockError } = await rpcRecordProductInitialStock({
+          p_product_id: mapped.id,
+          p_owner_id: ownerId,
+          p_quantity: stockQty,
+        });
         if (stockError || !stockData?.success) {
-          await supabase.from('products').delete().eq('id', mapped.id).eq('owner_id', ownerId);
+          await productsTable().delete().eq('id', mapped.id).eq('owner_id', ownerId);
           return {
             success: false,
             error: 'فشل تسجيل المخزون الافتتاحي — لم يتم إنشاء المنتج. حاول مرة أخرى.',
@@ -206,7 +203,7 @@ export async function updateProduct(
   const attempts = buildProductUpdateAttempts(merged);
 
   for (const updateRow of attempts) {
-    const { data: rpcData, error: rpcError } = await (supabase as any).rpc('patch_merchant_product', {
+    const { data: rpcData, error: rpcError } = await rpcPatchMerchantProduct({
       p_product_id: productId,
       p_owner_id: ownerId,
       p_patch: updateRow,
@@ -222,7 +219,7 @@ export async function updateProduct(
 
       const refreshed = await fetchRowById(productId, ownerId);
       if (refreshed) {
-        void cleanupRemovedProductImages(existingRow, refreshed);
+        enqueueImageCleanup(existingRow, refreshed);
         syncProductCachesAfterMutation(ownerId, refreshed, {
           refreshStats: patchAffectsCatalogStats(patch),
         });
@@ -235,8 +232,7 @@ export async function updateProduct(
     }
 
     for (const select of [PRODUCT_DETAIL_SELECT, PRODUCT_INSERT_RETURN_MINIMAL]) {
-      const { data, error } = await supabase
-        .from('products')
+      const { data, error } = await productsTable()
         .update(updateRow)
         .eq('id', productId)
         .eq('owner_id', ownerId)
@@ -244,7 +240,7 @@ export async function updateProduct(
         .maybeSingle();
 
       if (!error && data) {
-        void cleanupRemovedProductImages(existingRow, data as Record<string, unknown>);
+        enqueueImageCleanup(existingRow, data as Record<string, unknown>);
         syncProductCachesAfterMutation(ownerId, data as Record<string, unknown>, {
           refreshStats: patchAffectsCatalogStats(patch),
         });
@@ -264,15 +260,13 @@ export async function deleteProduct(productId: string): Promise<ProductsCrudResu
   const ownerId = await requireOwnerId();
   if (!ownerId) return { success: false, error: 'يجب تسجيل الدخول أولاً' };
 
-  const { data: row } = await supabase
-    .from('products')
+  const { data: row } = await productsTable()
     .select('image_url, additional_images')
     .eq('id', productId)
     .eq('owner_id', ownerId)
     .maybeSingle();
 
-  const { error } = await supabase
-    .from('products')
+  const { error } = await productsTable()
     .delete()
     .eq('id', productId)
     .eq('owner_id', ownerId);
@@ -280,7 +274,7 @@ export async function deleteProduct(productId: string): Promise<ProductsCrudResu
   if (error) return { success: false, error: error.message };
 
   if (row) {
-    void deleteProductStorageImages(collectProductImageUrls(row));
+    enqueueImageDelete(collectProductImageUrls(row));
   }
 
   removeCachedProduct(ownerId, productId);
@@ -338,8 +332,7 @@ export async function bulkImportProducts(
       ...(storeId ? { store_id: storeId } : {}),
     }));
 
-    const { data: inserted, error } = await supabase
-      .from('products')
+    const { data: inserted, error } = await productsTable()
       .insert(chunk)
       .select('id, stock_quantity');
 
@@ -361,13 +354,10 @@ export async function bulkImportProducts(
       }));
 
     if (movements.length > 0) {
-      const { data: stockData, error: movementError } = await callSupabaseRpc<{ success?: boolean; error?: string }>(
-        'record_initial_stock_movements',
-        {
-          p_owner_id: ownerId,
-          p_items: movements,
-        }
-      );
+      const { data: stockData, error: movementError } = await rpcRecordInitialStockMovements({
+        p_owner_id: ownerId,
+        p_items: movements,
+      });
       if (movementError || !stockData?.success) {
         errors.push(
           `تنبيه: تم رفع المنتجات لكن سجل المخزون فشل: ${movementError ?? stockData?.error ?? 'unknown'}`
@@ -400,9 +390,7 @@ export async function addProduct(
   return runOncePerKey(lockKey, async () => {
     try {
       if (options?.idempotencyKey) {
-        const { data: existingId, error: lookupError } = await callSupabaseRpc<string>(
-          'lookup_product_idempotency',
-          { p_owner_id: userId, p_key: options.idempotencyKey }
+        const { data: existingId, error: lookupError } = await rpcLookupProductIdempotency({ p_owner_id: userId, p_key: options.idempotencyKey }
         );
         if (!lookupError && existingId) {
           return { success: true, productId: existingId };
@@ -421,7 +409,7 @@ export async function addProduct(
       const productId = created.data.id;
 
       if (options?.idempotencyKey) {
-        await callSupabaseRpc('record_product_idempotency', {
+        await rpcRecordProductIdempotency({
           p_owner_id: userId,
           p_key: options.idempotencyKey,
           p_product_id: productId,
@@ -454,10 +442,7 @@ export async function publishProduct(
   if (!ownerId) return { success: false, error: 'يجب تسجيل الدخول أولاً' };
 
   try {
-    const { data, error } = await callSupabaseRpc<{ success?: boolean; product?: Record<string, unknown> }>(
-      'publish_owner_product',
-      { p_product_id: productId }
-    );
+    const { data, error } = await rpcPublishOwnerProduct({ p_product_id: productId });
 
     if (!error && data?.success && data?.product) {
       syncProductCachesAfterMutation(ownerId, data.product as Record<string, unknown>);

@@ -1,4 +1,8 @@
-import { supabase } from '@/integrations/supabase/client';
+import {
+  marketingCouponsTable,
+  rpcValidateStoreCoupon,
+  rpcValidateStoreCouponBySlug,
+} from '@/repositories/coupons/couponRepository';
 
 const COUPON_LIST_SELECT =
   'id, code, discount_type, discount_value, minimum_order_amount, usage_limit, used_count, start_date, end_date, is_active, description';
@@ -23,8 +27,7 @@ export interface MerchantCoupon {
 }
 
 export async function listMerchantCoupons(ownerId: string): Promise<MerchantCoupon[]> {
-  const { data, error } = await supabase
-    .from('marketing_coupons')
+  const { data, error } = await marketingCouponsTable()
     .select(COUPON_LIST_SELECT)
     .eq('owner_id', ownerId)
     .order('created_at', { ascending: false });
@@ -43,7 +46,7 @@ export const validateCoupon = async (
   let rpcError: { message: string } | null = null;
 
   if (storeSlug) {
-    const res = await (supabase as any).rpc('validate_store_coupon_by_slug', {
+    const res = await rpcValidateStoreCouponBySlug({
       p_slug: storeSlug.trim().toLowerCase(),
       p_code: code,
       p_subtotal: subtotal,
@@ -51,7 +54,7 @@ export const validateCoupon = async (
     data = res.data;
     rpcError = res.error;
   } else {
-    const res = await (supabase as any).rpc('validate_store_coupon', {
+    const res = await rpcValidateStoreCoupon({
       p_owner_id: ownerId,
       p_code: code,
       p_subtotal: subtotal,

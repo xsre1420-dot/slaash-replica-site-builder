@@ -34,6 +34,11 @@ vi.mock('@/services/checkoutRecoveryService', () => ({
   tryRecoverCheckoutOrder: vi.fn().mockResolvedValue(null),
 }));
 
+vi.mock('@/background/enqueue', () => ({
+  enqueueCacheInvalidation: vi.fn(),
+  enqueueMetaConversion: vi.fn(),
+}));
+
 vi.mock('@/services/storefrontProductService', () => ({
   invalidateStorefrontForOwner: vi.fn().mockResolvedValue(undefined),
   invalidateStorefrontScope: vi.fn().mockResolvedValue(undefined),

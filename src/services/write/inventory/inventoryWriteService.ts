@@ -1,7 +1,7 @@
 /**
  * Inventory stock mutations — primary DB only.
  */
-import { supabase } from '@/integrations/supabase/client';
+import { rpcIncrementProductStock } from '@/repositories/inventory/inventoryRepository';
 import { assertMerchantOwner } from '@/lib/tenantGuard';
 import { recordHealthEvent } from '@/lib/observability/healthMonitor';
 import type { InventoryProductRow } from '@/utils/inventoryPageUtils';
@@ -44,7 +44,7 @@ export const restockProduct = async ({
       rpcParams.p_min_stock_level = minLevel;
     }
 
-    const { data, error } = await (supabase as any).rpc('increment_product_stock', rpcParams);
+    const { data, error } = await rpcIncrementProductStock(rpcParams);
     const payload = data as { success?: boolean; stock_quantity?: number; error?: string };
     if (!error && payload?.success && payload.stock_quantity != null) {
       recordHealthEvent('inventory', true);
@@ -56,7 +56,7 @@ export const restockProduct = async ({
   }
 
   if (hasMinChange) {
-    const { data, error } = await (supabase as any).rpc('increment_product_stock', {
+    const { data, error } = await rpcIncrementProductStock({
       p_product_id: product.id,
       p_owner_id: ownerId,
       p_delta: 0,
@@ -98,7 +98,7 @@ export const applyStockQuantityPatch = async (
 
   await assertMerchantOwner(ownerId);
 
-  const { data, error } = await (supabase as any).rpc('increment_product_stock', {
+  const { data, error } = await rpcIncrementProductStock({
     p_product_id: productId,
     p_owner_id: ownerId,
     p_delta: delta,

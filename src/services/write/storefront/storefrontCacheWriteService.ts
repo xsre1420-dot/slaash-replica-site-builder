@@ -1,7 +1,6 @@
 /**
  * Storefront cache invalidation — write side effects only. No product/page reads.
  */
-import { supabase } from '@/integrations/supabase/client';
 import { cache, flushSlugResolutionCache } from '@/lib/cache';
 import { cacheDeleteByPrefix } from '@/utils/indexedDB';
 import {
@@ -11,9 +10,14 @@ import {
   recordStorefrontScopedFlush,
   type StorefrontInvalidationScope,
 } from '@/services/storefrontCacheTiers';
-import { requestEdgeStorefrontPurge } from '@/services/storefrontEdgeService';
 import { StorefrontCacheKeys } from '@/services/storefrontCacheService';
-import { callWriteRpc } from '@/lib/readWrite/writeClient';
+import { enqueueEdgePurge } from '@/background/enqueue';
+import {
+  rpcBumpStorefrontCacheVersion,
+  selectStoreSlugForOwner,
+  selectStoreSlugFromStores,
+} from '@/repositories/store/storeRepository';
+
 const STOREFRONT_PRODUCTS_CHANGED = 'storefront:products-changed';
 
 export type { StorefrontInvalidationScope };
@@ -21,9 +25,7 @@ export type { StorefrontInvalidationScope };
 export async function bumpStorefrontCacheVersion(ownerId: string): Promise<number | null> {
   if (!ownerId) return null;
   try {
-    const { data, error } = await callWriteRpc<number>('bump_storefront_cache_version', {
-      p_owner_id: ownerId,
-    });
+    const { data, error } = await rpcBumpStorefrontCacheVersion(ownerId);
     if (error) return null;
     return data != null ? Number(data) : null;
   } catch {
@@ -38,21 +40,13 @@ export async function invalidateStorefrontScope(
 ): Promise<void> {
   recordStorefrontScopedFlush(scope);
 
-  const { data } = await supabase
-    .from('store_settings')
-    .select('store_slug')
-    .eq('owner_id', ownerId)
-    .maybeSingle();
+  const { data } = await selectStoreSlugForOwner(ownerId);
 
   let slug = data?.store_slug?.trim().toLowerCase();
 
   if (!slug) {
     try {
-      const { data: storeRow } = await (supabase as any)
-        .from('stores')
-        .select('store_slug')
-        .eq('user_id', ownerId)
-        .maybeSingle();
+      const { data: storeRow } = await selectStoreSlugFromStores(ownerId);
       slug = storeRow?.store_slug?.trim().toLowerCase();
     } catch {
       /* stores table may not exist */
@@ -72,14 +66,14 @@ export async function invalidateStorefrontScope(
       case 'settings':
       case 'categories':
         flushStorefrontStoreCaches(slug);
-        void requestEdgeStorefrontPurge(slug);
+        enqueueEdgePurge(slug);
         break;
       case 'products':
         flushStorefrontProductCaches(slug);
         cache.flushByPrefix(`edge-page:${slug}`);
         cache.flushByPrefix(`storefront-product:${slug}:`);
         await cacheDeleteByPrefix(`idb:tenant-products:${slug}`);
-        void requestEdgeStorefrontPurge(slug);
+        enqueueEdgePurge(slug);
         break;
       case 'product':
         if (options?.productId) {
@@ -99,7 +93,7 @@ export async function invalidateStorefrontScope(
         cache.del(StorefrontCacheKeys.footer(slug));
         await cacheDeleteByPrefix(`idb:tenant-products:${slug}`);
         await cacheDeleteByPrefix(`idb:tenant-meta:${slug}`);
-        void requestEdgeStorefrontPurge(slug);
+        enqueueEdgePurge(slug);
         break;
     }
   } else if (scope === 'full' || scope === 'products') {

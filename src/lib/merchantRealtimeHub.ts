@@ -10,7 +10,7 @@ import {
   patchCachedProduct,
   removeCachedProduct,
 } from '@/services/productService';
-import { invalidateStorefrontForOwner } from '@/services/storefrontProductService';
+import { enqueueCacheInvalidationForOwner } from '@/background/enqueue';
 import { patchStorefrontProductFromDbRow } from '@/services/storefrontCacheService';
 import { markLocalStorefrontMutation, shouldSuppressRealtimeStorefrontInvalidation } from '@/lib/localMutationGuard';
 import { mapDbProduct } from '@/mappers/productMapper';
@@ -178,7 +178,7 @@ function scheduleProductUiNotify(userId: string, entry: MerchantRealtimeEntry) {
 
 function maybeInvalidateStorefront(userId: string) {
   if (shouldSuppressRealtimeStorefrontInvalidation(userId)) return;
-  void invalidateStorefrontForOwner(userId);
+  enqueueCacheInvalidationForOwner(userId);
 }
 
 function applyProductPayload(userId: string, payload: ProductRealtimePayload) {

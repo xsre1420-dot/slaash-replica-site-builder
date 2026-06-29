@@ -5,7 +5,7 @@
 import { Product, Category } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { getAuthenticatedUserId } from '@/lib/authSession';
-import { invalidateStorefrontForOwner, invalidateStorefrontScope } from '@/services/storefrontProductService';
+import { enqueueCacheInvalidation, enqueueCacheInvalidationForOwner } from '@/background/enqueue';
 import { markLocalStorefrontMutation } from '@/lib/localMutationGuard';
 import { patchStorefrontProductFromOwner } from '@/services/storefrontCacheService';
 import { isStorefrontVisible } from '@/lib/productLifecycle';
@@ -58,7 +58,7 @@ export const syncMerchantProductCatalog = (
   const affectsStorefront = !row || isStorefrontVisible(mapDbProduct(row));
   if (affectsStorefront) {
     markLocalStorefrontMutation(ownerId);
-    void invalidateStorefrontForOwner(ownerId);
+    enqueueCacheInvalidationForOwner(ownerId);
   }
 
   if (row) appendCachedProduct(ownerId, row);
@@ -323,7 +323,7 @@ export const invalidateProducts = async () => {
   const ownerId = await getAuthOwnerId();
   if (ownerId) {
     clearInflight(`${CacheKeys.products(ownerId)}:p0:s:c`);
-    void invalidateStorefrontForOwner(ownerId);
+    enqueueCacheInvalidationForOwner(ownerId);
   }
 };
 
@@ -463,7 +463,7 @@ export const addCategory = async (category: Category): Promise<{ success: boolea
       const current = cache.get<Category[]>(key) || [];
       cache.set(key, [...current, { id: data.id, name: data.name, order: data.display_order }], CacheTTL.MEDIUM, CacheTTL.STALE);
     }
-    void invalidateStorefrontScope(user.id, 'categories');
+    enqueueCacheInvalidation(user.id, 'categories');
     return { success: true };
   } catch {
     return { success: false, error: 'Failed to add category' };
@@ -496,11 +496,11 @@ export const updateCategory = async (categoryId: string, updatedCategory: Catego
 
       if (productsError) return { success: false, error: productsError.message };
       syncMerchantProductCatalog(user.id);
-      void invalidateStorefrontScope(user.id, 'full');
+      enqueueCacheInvalidation(user.id, 'full');
     } else {
       const current = cache.get<Category[]>(key) || [];
       cache.set(key, current.map(c => c.id === categoryId ? { ...updatedCategory, id: categoryId } : c), CacheTTL.MEDIUM, CacheTTL.STALE);
-      void invalidateStorefrontScope(user.id, 'categories');
+      enqueueCacheInvalidation(user.id, 'categories');
     }
     return { success: true };
   } catch {
@@ -524,7 +524,7 @@ export const deleteCategory = async (categoryId: string): Promise<{ success: boo
     const key = CacheKeys.categories(getOwnerId());
     const current = cache.get<Category[]>(key) || [];
     cache.set(key, current.filter(c => c.id !== categoryId), CacheTTL.MEDIUM, CacheTTL.STALE);
-    void invalidateStorefrontScope(user.id, 'categories');
+    enqueueCacheInvalidation(user.id, 'categories');
     return { success: true };
   } catch {
     return { success: false, error: 'Failed to delete category' };

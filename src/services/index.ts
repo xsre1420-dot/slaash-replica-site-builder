@@ -5,6 +5,13 @@
  * Pages, components, and hooks should import from here (or domain service files), never from Supabase directly.
  */
 
+/** Domain modules — preferred import for new code. */
+export * as Modules from '@/modules';
+
+/** Core infrastructure */
+export * as Core from '@/core';
+export * as Config from '@/config';
+
 /** Database RPC wrapper */
 export * as Database from '@/services/database';
 

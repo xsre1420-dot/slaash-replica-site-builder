@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { cache, CacheKeys, CacheTTL, dedup } from '@/lib/cache';
-import { invalidateStorefrontForOwner } from '@/services/storefrontProductService';
+import { enqueueCacheInvalidationForOwner } from '@/background/enqueue';
 
 export interface FooterSuggestedProduct {
   id: string;
@@ -129,7 +129,7 @@ export async function addFooterSuggestedProduct(
   });
 
   if (error) throw error;
-  void invalidateStorefrontForOwner(ownerId);
+  enqueueCacheInvalidationForOwner(ownerId);
 }
 
 export async function removeFooterSuggestedProduct(rowId: string, ownerId: string): Promise<void> {
@@ -140,7 +140,7 @@ export async function removeFooterSuggestedProduct(rowId: string, ownerId: strin
     .eq('owner_id', ownerId);
 
   if (error) throw error;
-  void invalidateStorefrontForOwner(ownerId);
+  enqueueCacheInvalidationForOwner(ownerId);
 }
 
 export { MAX_FOOTER_SUGGESTIONS };

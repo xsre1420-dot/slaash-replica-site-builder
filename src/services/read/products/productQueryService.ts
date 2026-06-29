@@ -1,7 +1,7 @@
 /**
  * Product catalog reads — no mutations or cache invalidation.
  */
-import { supabase } from '@/integrations/supabase/client';
+import { productsTable, pingProductsTable } from '@/repositories/products/productRepository';
 import { getAuthenticatedUserId } from '@/lib/authSession';
 import { assertMerchantOwner } from '@/lib/tenantGuard';
 import { mapDbProduct, safeMapDbProduct } from '@/mappers/productMapper';
@@ -43,8 +43,7 @@ async function fetchRowById(
   ownerId: string
 ): Promise<Record<string, unknown> | null> {
   for (const select of [PRODUCT_DETAIL_SELECT, ...SELECT_CHAIN]) {
-    const { data, error } = await supabase
-      .from('products')
+    const { data, error } = await productsTable()
       .select(select)
       .eq('id', productId)
       .eq('owner_id', ownerId)
@@ -59,7 +58,7 @@ async function fetchRowById(
 /** Verify Supabase connectivity (anon key + products table). */
 export async function checkSupabaseConnection(): Promise<ProductsCrudResult<{ connected: true }>> {
   try {
-    const { error } = await supabase.from('products').select('id').limit(1);
+    const { error } = await pingProductsTable();
     if (error) {
       if (/JWT|Invalid API key|fetch/i.test(error.message)) {
         return { success: false, error: 'تعذر الاتصال — تحقق من VITE_SUPABASE_URL و VITE_SUPABASE_PUBLISHABLE_KEY' };
@@ -89,8 +88,7 @@ export async function listProducts(
   const offset = Math.max(options.offset ?? 0, 0);
 
   for (const select of SELECT_CHAIN) {
-    let query = supabase
-      .from('products')
+    let query = productsTable()
       .select(select, { count: 'exact' })
       .eq('owner_id', ownerId)
       .order('created_at', { ascending: false })
