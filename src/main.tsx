@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { env, isObservabilityClientEnabled } from '@/lib/env';
 import { initObservability, registerGlobalErrorHandlers } from '@/lib/observability';
 import { registerOfflineSyncListeners } from '@/services/offlineSyncService';
+import { startBackgroundWorkers } from '@/background';
 import { installMemoryLifecycle } from '@/lib/memory/lifecycle';
 import App from './App.tsx';
 import './index.css';
@@ -14,6 +15,7 @@ initObservability({
 
 registerGlobalErrorHandlers();
 installMemoryLifecycle();
+startBackgroundWorkers();
 registerOfflineSyncListeners((result) => {
   window.dispatchEvent(new CustomEvent('offline-queue-flushed', { detail: result }));
 });
