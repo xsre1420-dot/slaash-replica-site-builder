@@ -11,6 +11,7 @@ import { persistPendingJobs } from '@/background/shared/jobPersistence';
 import { getWorkerInstanceId } from '@/core/distributed/workerIdentity';
 import { logger, getCorrelationContext, newRequestId } from '@/lib/observability';
 import { recordBackgroundJob, recordQueueDepth } from '@/lib/monitoring/instrumentation';
+import { runWithTraceContext } from '@/lib/tracing';
 
 const pending: BackgroundJob[] = [];
 const processing = new Set<string>();
@@ -216,7 +217,15 @@ async function runJob(job: BackgroundJob): Promise<void> {
   });
 
   try {
-    await processor(job);
+    await runWithTraceContext(
+      {
+        correlationId,
+        requestId,
+        flow: job.queue,
+        stage: 'background_worker',
+      },
+      async () => processor(job)
+    );
     job.status = 'completed';
     job.completedAt = Date.now();
     const duration = job.completedAt - (job.startedAt ?? job.completedAt);

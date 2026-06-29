@@ -3,6 +3,7 @@ import type { ReadRouteDecision } from '@/lib/readWrite/readRouter';
 import { env } from '@/lib/env';
 import { logger, buildCorrelationHeaders, newRequestId } from '@/lib/observability';
 import { classifyError } from '@/lib/observability/errorTaxonomy';
+import { traceSpan } from '@/lib/tracing/spanEngine';
 import { recordRpcCall, recordRpcReplicaFallback, recordHttpRequest } from '@/lib/monitoring/instrumentation';
 import { withCircuitBreaker } from '@/lib/resilience/circuitBreaker';
 
@@ -73,91 +74,101 @@ export async function callSupabaseRpc<T>(
       readRoute: options.readRoute?.reason,
     });
 
-    try {
-      const res = await fetch(`${endpoint.url}/rest/v1/rpc/${fn}`, {
-        method: 'POST',
-        signal: controller.signal,
-        headers: {
-          ...(endpoint.headers ?? {}),
-          ...(env.VITE_SUPABASE_POOLER_URL?.trim() ? { 'x-connection-mode': 'pooler' } : {}),
-          ...correlationHeaders,
-          apikey: endpoint.key,
-          Authorization: `Bearer ${endpoint.key}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(args),
-      });
+    return traceSpan(
+      `rpc.${fn}`,
+      async (span) => {
+        span.setAttribute('rpcName', fn);
+        span.setAttribute('route', endpoint.label);
+        span.setStage('rpc');
 
-      const text = await res.text();
-      let data: T | null = null;
-      try {
-        data = text ? (JSON.parse(text) as T) : null;
-      } catch {
-        const durationMs = Date.now() - started;
-        emitRpcMetrics('error', durationMs, 'validation');
-        logger.warn('rpc.complete', {
-          rpcName: fn,
-          requestId,
-          route: endpoint.label,
-          durationMs,
-          status: 'error',
-          errorCategory: 'validation',
-        });
-        return { data: null, error: text.slice(0, 200) || 'Invalid RPC response', route: endpoint.label };
-      }
+        try {
+          const res = await fetch(`${endpoint.url}/rest/v1/rpc/${fn}`, {
+            method: 'POST',
+            signal: controller.signal,
+            headers: {
+              ...(endpoint.headers ?? {}),
+              ...(env.VITE_SUPABASE_POOLER_URL?.trim() ? { 'x-connection-mode': 'pooler' } : {}),
+              ...correlationHeaders,
+              apikey: endpoint.key,
+              Authorization: `Bearer ${endpoint.key}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(args),
+          });
 
-      if (!res.ok) {
-        const errMsg =
-          typeof data === 'object' && data && 'message' in (data as object)
-            ? String((data as { message?: string }).message)
-            : text.slice(0, 200) || `RPC ${fn} failed (${res.status})`;
-        const classified = classifyError(errMsg);
-        const durationMs = Date.now() - started;
-        emitRpcMetrics('error', durationMs, classified.category);
-        logger.warn('rpc.complete', {
-          rpcName: fn,
-          requestId,
-          route: endpoint.label,
-          durationMs,
-          status: 'error',
-          errorCategory: classified.category,
-          errorCode: classified.code,
-          httpStatus: res.status,
-        });
-        return { data: null, error: errMsg, route: endpoint.label };
-      }
+          const text = await res.text();
+          let data: T | null = null;
+          try {
+            data = text ? (JSON.parse(text) as T) : null;
+          } catch {
+            const durationMs = Date.now() - started;
+            emitRpcMetrics('error', durationMs, 'validation');
+            logger.warn('rpc.complete', {
+              rpcName: fn,
+              requestId,
+              route: endpoint.label,
+              durationMs,
+              status: 'error',
+              errorCategory: 'validation',
+            });
+            return { data: null, error: text.slice(0, 200) || 'Invalid RPC response', route: endpoint.label };
+          }
 
-      const durationMs = Date.now() - started;
-      emitRpcMetrics('ok', durationMs);
-      logger.debug('rpc.complete', {
-        rpcName: fn,
-        requestId,
-        route: endpoint.label,
-        durationMs,
-        status: 'ok',
-      });
+          if (!res.ok) {
+            const errMsg =
+              typeof data === 'object' && data && 'message' in (data as object)
+                ? String((data as { message?: string }).message)
+                : text.slice(0, 200) || `RPC ${fn} failed (${res.status})`;
+            const classified = classifyError(errMsg);
+            const durationMs = Date.now() - started;
+            emitRpcMetrics('error', durationMs, classified.category);
+            logger.warn('rpc.complete', {
+              rpcName: fn,
+              requestId,
+              route: endpoint.label,
+              durationMs,
+              status: 'error',
+              errorCategory: classified.category,
+              errorCode: classified.code,
+              httpStatus: res.status,
+            });
+            return { data: null, error: errMsg, route: endpoint.label };
+          }
 
-      return { data, error: null, route: endpoint.label };
-    } catch (err) {
-      const durationMs = Date.now() - started;
-      const message = err instanceof Error ? err.message : 'RPC failed';
-      const classified = classifyError(err);
-      emitRpcMetrics('error', durationMs, classified.category);
-      logger.warn('rpc.complete', {
-        rpcName: fn,
-        requestId,
-        route: endpoint.label,
-        durationMs,
-        status: 'error',
-        errorCategory: classified.category,
-        errorCode: classified.code,
-        error: message,
-      });
-      if (options.skipBreaker) throw err;
-      return { data: null, error: message, route: endpoint.label };
-    } finally {
+          const durationMs = Date.now() - started;
+          emitRpcMetrics('ok', durationMs);
+          logger.debug('rpc.complete', {
+            rpcName: fn,
+            requestId,
+            route: endpoint.label,
+            durationMs,
+            status: 'ok',
+          });
+
+          return { data, error: null, route: endpoint.label };
+        } catch (err) {
+          const durationMs = Date.now() - started;
+          const message = err instanceof Error ? err.message : 'RPC failed';
+          const classified = classifyError(err);
+          emitRpcMetrics('error', durationMs, classified.category);
+          logger.warn('rpc.complete', {
+            rpcName: fn,
+            requestId,
+            route: endpoint.label,
+            durationMs,
+            status: 'error',
+            errorCategory: classified.category,
+            errorCode: classified.code,
+            error: message,
+          });
+          if (options.skipBreaker) throw err;
+          return { data: null, error: message, route: endpoint.label };
+        }
+      },
+      { rpcName: fn, route: endpoint.label, stage: 'rpc' }
+    ).finally(() => {
       if (timeout) clearTimeout(timeout);
-    }
+    });
   };
 
   const fallbackToPrimary = async (reason: string, priorError?: string): Promise<RpcResult<T>> => {

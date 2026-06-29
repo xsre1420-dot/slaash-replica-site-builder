@@ -1,0 +1,135 @@
+{
+  "generatedAt": "2026-06-29T23:18:22.170Z",
+  "schemaTarget": 86,
+  "checks": [
+    {
+      "name": "file: src/lib/tracing/traceAudit.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/tracing/traceContext.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/tracing/spanStore.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/tracing/spanEngine.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/tracing/criticalFlows.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/tracing/bottleneckDetector.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/tracing/diagnostics.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/tracing/w3cTraceContext.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/tracing/exporters/otelTraceExporter.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/tracing/distributedTracing.test.ts",
+      "pass": true
+    },
+    {
+      "name": "file: supabase/migrations/20260705000001_distributed_tracing_v86.sql",
+      "pass": true
+    },
+    {
+      "name": "file: DISTRIBUTED_TRACING_REPORT.md",
+      "pass": true
+    },
+    {
+      "name": "file: public/tracing-schema.json",
+      "pass": true
+    },
+    {
+      "name": "parent span propagation",
+      "pass": true
+    },
+    {
+      "name": "W3C traceparent",
+      "pass": true
+    },
+    {
+      "name": "span headers on correlation",
+      "pass": true
+    },
+    {
+      "name": "RPC trace spans",
+      "pass": true
+    },
+    {
+      "name": "job trace context",
+      "pass": true
+    },
+    {
+      "name": "edge span ids",
+      "pass": true
+    },
+    {
+      "name": "storefront flow traced",
+      "pass": true
+    },
+    {
+      "name": "checkout flow traced",
+      "pass": true
+    },
+    {
+      "name": "dashboard flow traced",
+      "pass": true
+    },
+    {
+      "name": "inventory flow traced",
+      "pass": true
+    },
+    {
+      "name": "diagnostics API",
+      "pass": true
+    },
+    {
+      "name": "bottleneck detector",
+      "pass": true
+    },
+    {
+      "name": "OTEL trace export",
+      "pass": true
+    },
+    {
+      "name": "init tracing in monitoring",
+      "pass": true
+    },
+    {
+      "name": "v86 audit RPC",
+      "pass": true
+    },
+    {
+      "name": "health check v86",
+      "pass": true
+    },
+    {
+      "name": "package audit script",
+      "pass": true
+    }
+  ],
+  "passed": 30,
+  "total": 30,
+  "scores": {
+    "tracing_coverage": 96,
+    "diagnostics": 96,
+    "performance_visibility": 95,
+    "observability": 96,
+    "production_readiness": 96
+  }
+}

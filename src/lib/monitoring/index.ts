@@ -1,4 +1,5 @@
 import { initObservability as initObsBase, type ObservabilityConfig } from '@/lib/observability';
+import { initTracing } from '@/lib/tracing';
 import { getPlatformMetricsSnapshot } from './snapshot';
 import { evaluateAlertRules } from './alertRules';
 import { listDashboards, DASHBOARDS, getDashboardById } from './dashboards';
@@ -67,6 +68,7 @@ function startMemorySampling(intervalMs: number): void {
 
 export function initMonitoring(config: MonitoringConfig = {}): void {
   initObsBase(config);
+  initTracing();
   startMemorySampling(config.memorySampleIntervalMs ?? 60_000);
 }
 

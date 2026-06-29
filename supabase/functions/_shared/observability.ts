@@ -4,6 +4,9 @@ export const CORRELATION_HEADERS = {
   correlationId: 'x-correlation-id',
   requestId: 'x-request-id',
   traceId: 'x-trace-id',
+  spanId: 'x-span-id',
+  parentSpanId: 'x-parent-span-id',
+  traceparent: 'traceparent',
 } as const;
 
 const SENSITIVE_KEY =
@@ -45,11 +48,18 @@ export function extractCorrelationFromRequest(req: Request): {
   correlationId?: string;
   requestId?: string;
   traceId?: string;
+  spanId?: string;
+  parentSpanId?: string;
+  traceparent?: string;
 } {
+  const tp = req.headers.get(CORRELATION_HEADERS.traceparent);
   return {
     correlationId: req.headers.get(CORRELATION_HEADERS.correlationId) ?? undefined,
     requestId: req.headers.get(CORRELATION_HEADERS.requestId) ?? crypto.randomUUID(),
     traceId: req.headers.get(CORRELATION_HEADERS.traceId) ?? undefined,
+    spanId: req.headers.get(CORRELATION_HEADERS.spanId) ?? undefined,
+    parentSpanId: req.headers.get(CORRELATION_HEADERS.parentSpanId) ?? undefined,
+    traceparent: tp ?? undefined,
   };
 }
 
@@ -94,6 +104,7 @@ export const withEdgeSpan = async <T>(
 ): Promise<T> => {
   const correlation = req ? extractCorrelationFromRequest(req) : {};
   const requestId = correlation.requestId ?? crypto.randomUUID();
+  const edgeSpanId = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
   const started = performance.now();
   logStructured('debug', `${name}.start`, {
     ...fields,
@@ -101,6 +112,10 @@ export const withEdgeSpan = async <T>(
     requestId,
     correlationId: correlation.correlationId,
     traceId: correlation.traceId,
+    spanId: edgeSpanId,
+    parentSpanId: correlation.spanId ?? correlation.parentSpanId,
+    traceparent: correlation.traceparent,
+    stage: 'edge',
   });
   try {
     const result = await fn();
@@ -110,6 +125,9 @@ export const withEdgeSpan = async <T>(
       requestId,
       correlationId: correlation.correlationId,
       traceId: correlation.traceId,
+      spanId: edgeSpanId,
+      parentSpanId: correlation.spanId ?? correlation.parentSpanId,
+      stage: 'edge',
       durationMs: Math.round(performance.now() - started),
       status: 'ok',
     });

@@ -11,6 +11,8 @@ import {
   isSchemaColumnError,
 } from '@/lib/productUpdateUtils';
 import { cache, CacheKeys, CacheTTL, dedup } from '@/lib/cache';
+import { cachedFetchNullable } from '@/lib/cache/enterpriseCache';
+import { callReadRpc } from '@/lib/readWrite/readClient';
 import { isStorefrontVisible } from '@/lib/productLifecycle';
 import {
   fetchStorefrontBundleViaEdge,
@@ -24,6 +26,7 @@ import {
 import { ProductCacheKeys } from '@/services/storefrontCacheTiers';
 import type { StorefrontInvalidationScope } from '@/services/storefrontCacheTiers';
 import type { StorefrontBundleCache, StorefrontProductsPage } from '@/types/storefrontCache';
+import { traceCriticalFlow } from '@/lib/tracing';
 
 const MINIMAL_STOREFRONT_SELECT =
   'id, name, category, price, original_price, image_url, stock_quantity, discount_type, discount_value, discount_start_date, discount_end_date, is_active, archived_at, product_slug, created_at';
@@ -35,18 +38,22 @@ export async function fetchStorePolicies(
   slug: string
 ): Promise<{ returnPolicy: string; privacyPolicy: string }> {
   const normalized = slug.trim().toLowerCase();
-  try {
-    const { data, error } = await (supabase as any).rpc('get_store_policies', {
-      p_slug: normalized,
-    });
-    if (error || !data) return { returnPolicy: '', privacyPolicy: '' };
-    return {
-      returnPolicy: String(data.return_policy || ''),
-      privacyPolicy: String(data.privacy_policy || ''),
-    };
-  } catch {
-    return { returnPolicy: '', privacyPolicy: '' };
-  }
+  const result = await cachedFetchNullable({
+    key: `storefront-policies:${normalized}`,
+    domain: 'storefront',
+    ttlPolicyPath: 'static.policies',
+    fetchFn: async () => {
+      const { data, error } = await callReadRpc<Record<string, unknown>>('get_store_policies', {
+        p_slug: normalized,
+      });
+      if (error || !data) return { returnPolicy: '', privacyPolicy: '' };
+      return {
+        returnPolicy: String(data.return_policy || ''),
+        privacyPolicy: String(data.privacy_policy || ''),
+      };
+    },
+  });
+  return result ?? { returnPolicy: '', privacyPolicy: '' };
 }
 
 export const STOREFRONT_PRODUCTS_CHANGED = 'storefront:products-changed';
@@ -98,6 +105,7 @@ export async function loadStorefrontBundle(
   slug: string,
   options: { limit?: number; cursor?: string | null; category?: string; search?: string } = {}
 ): Promise<StorefrontBundleCache | null> {
+  return traceCriticalFlow('storefront.load', 'frontend', 'loadBundle', async () => {
   const normalized = slug.trim().toLowerCase();
   if (!/^[a-z0-9-]+$/.test(normalized)) return null;
 
@@ -110,6 +118,7 @@ export async function loadStorefrontBundle(
   if (cached?.store) return cached;
 
   return dedup(key, () => fetchStorefrontBundleFresh(normalized, options));
+  }, { slug, search: options.search });
 }
 
 async function fetchStorefrontBundleFresh(
@@ -411,6 +420,8 @@ export async function fetchStorefrontProductsPage(
     search?: string;
   } = {}
 ): Promise<StorefrontProductsPage> {
+  const flow = options.search?.trim() ? 'product.search' : 'storefront.load';
+  return traceCriticalFlow(flow as 'product.search' | 'storefront.load', 'frontend', 'productsPage', async () => {
   const normalized = slug.trim().toLowerCase();
   const limit = options.limit ?? 24;
   const category = options.category?.trim() || '';
@@ -521,6 +532,7 @@ export async function fetchStorefrontProductsPage(
 
     return { products: [], nextCursor: null, hasMore: false };
   });
+  }, { slug, search: options.search });
 }
 
 /** Single product for storefront detail page — RPC + slug catalog fallback (works for anon). */

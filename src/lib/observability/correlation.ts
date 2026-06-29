@@ -4,6 +4,7 @@
  */
 import type { CorrelationContext } from './types';
 import { generateUUID } from '@/lib/uuid';
+import { buildTracePropagationHeaders } from '@/lib/tracing/w3cTraceContext';
 import { isProduction } from '@/lib/env';
 
 export const CORRELATION_HEADERS = {
@@ -109,10 +110,12 @@ export const buildEventBase = () => {
 export const buildCorrelationHeaders = (requestId?: string): Record<string, string> => {
   const ctx = getCorrelationContext();
   const rid = requestId ?? newRequestId();
+  const active = buildTracePropagationHeaders();
   return {
     [CORRELATION_HEADERS.correlationId]: ctx.correlationId,
     [CORRELATION_HEADERS.requestId]: rid,
     [CORRELATION_HEADERS.traceId]: ctx.traceId,
+    ...active,
   };
 };
 

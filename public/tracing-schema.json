@@ -1,0 +1,38 @@
+{
+  "schema_version": 86,
+  "service": "slaash-platform",
+  "description": "Distributed tracing — W3C traceparent + span propagation across frontend, RPC, edge, workers",
+  "context_fields": ["traceId", "spanId", "parentSpanId", "correlationId", "requestId"],
+  "headers": {
+    "traceparent": "W3C Trace Context",
+    "x-trace-id": "Platform trace identifier",
+    "x-span-id": "Current span identifier",
+    "x-parent-span-id": "Parent span identifier",
+    "x-correlation-id": "End-to-end correlation identifier",
+    "x-request-id": "Per-request identifier"
+  },
+  "critical_flows": [
+    "storefront.load",
+    "product.search",
+    "checkout",
+    "order.create",
+    "inventory.update",
+    "payment",
+    "notification",
+    "import",
+    "analytics",
+    "dashboard.load"
+  ],
+  "stages": [
+    "frontend",
+    "api",
+    "rpc",
+    "database",
+    "edge",
+    "cache",
+    "background_worker",
+    "external_api"
+  ],
+  "export_formats": ["opentelemetry", "jaeger", "tempo", "datadog", "newrelic", "elastic"],
+  "diagnostics_api": ["getTraceDiagnostic", "getTraceDiagnosticByCorrelationId", "detectBottlenecks"]
+}

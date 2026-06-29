@@ -55,5 +55,5 @@ export const instrumentQuery = async <T>(
       throw new Error(error.message);
     }
     return data;
-  }, context);
+  }, { ...context, stage: 'database' });
 };

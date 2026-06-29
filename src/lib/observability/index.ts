@@ -109,3 +109,10 @@ export { sanitizeLogContext, sanitizeErrorMessage } from './sanitizer';
 export { classifyError, ERROR_CATEGORY_LABELS, errorCategorySeverity } from './errorTaxonomy';
 export { normalizeObservabilityEvent, formatForBackend } from './exportAdapter';
 export { getLoggingAuditSummary, LOGGING_AUDIT_REGISTRY } from './loggingAudit';
+export {
+  getTraceDiagnostic,
+  getTraceDiagnosticByCorrelationId,
+  exportTracesOtel,
+  traceCriticalFlow,
+  CRITICAL_FLOWS,
+} from '@/lib/tracing';

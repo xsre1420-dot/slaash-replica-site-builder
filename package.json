@@ -52,6 +52,7 @@
     "audit:horizontal-scaling": "node scripts/horizontal-scaling-audit.mjs",
     "audit:observability-foundation": "node scripts/observability-foundation-audit.mjs",
     "audit:metrics-monitoring": "node scripts/metrics-monitoring-audit.mjs",
+    "audit:distributed-tracing": "node scripts/distributed-tracing-audit.mjs",
     "db:scaling-test": "node scripts/distributed-scaling-test.mjs",
     "db:capacity-projection": "node scripts/scaling-capacity-projection.mjs",
     "db:analytics-test": "node scripts/analytics-pipeline-test.mjs",

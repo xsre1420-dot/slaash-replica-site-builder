@@ -79,7 +79,7 @@ export async function getHealthProbe(): Promise<HealthProbe> {
 
   return {
     ...liveness,
-    version: '85',
+    version: '86',
     deployment: getDeploymentReadiness(),
     scaling: getScalingAuditSummary(),
     cache: getCacheMonitoringSnapshot().aggregate,

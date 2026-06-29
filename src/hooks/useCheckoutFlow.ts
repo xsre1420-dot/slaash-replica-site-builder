@@ -21,6 +21,7 @@ import {
 import { tryRecoverCheckoutOrder } from "@/services/checkoutRecoveryService";
 import { mapOrderError } from "@/utils/orderErrors";
 import { logger, metrics, reportError, alertOnError, recordHealthEvent } from "@/lib/observability";
+import { traceCriticalFlow } from "@/lib/tracing";
 import { getStoredMarketingAttribution, clearMarketingAttribution } from "@/lib/attribution";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import {
@@ -446,6 +447,10 @@ export const useCheckoutFlow = () => {
     setSubmitPhase('validating');
     metrics.increment('checkout.submit.started');
 
+    await traceCriticalFlow('checkout', 'frontend', 'submit', async (span) => {
+    span.setAttribute('ownerId', ownerId);
+    span.setAttribute('itemCount', cartItems.length);
+
     pinCheckoutAttempt(ownerId);
 
     let releaseLockOnExit = true;
@@ -659,6 +664,7 @@ export const useCheckoutFlow = () => {
         }
       }
     }
+    });
   }, [
     isSubmitting,
     ownerId,

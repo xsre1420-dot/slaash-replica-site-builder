@@ -6,6 +6,7 @@ import { assertMerchantOwner } from '@/lib/tenantGuard';
 import { recordHealthEvent } from '@/lib/observability/healthMonitor';
 import type { InventoryProductRow } from '@/utils/inventoryPageUtils';
 import { InventoryRestockError } from '@/services/read/inventory/inventoryReadService';
+import { traceCriticalFlow } from '@/lib/tracing';
 
 type RestockProductParams = {
   product: InventoryProductRow;
@@ -20,6 +21,7 @@ export const restockProduct = async ({
   addAmount,
   minLevel,
 }: RestockProductParams): Promise<{ newQuantity: number; added: number }> => {
+  return traceCriticalFlow('inventory.update', 'rpc', 'restock', async () => {
   if (addAmount < 0) {
     throw new InventoryRestockError('لا يمكن خصم المخزون يدوياً — يُخصم تلقائياً عند الطلب');
   }
@@ -77,6 +79,7 @@ export const restockProduct = async ({
   }
 
   return { newQuantity: previousQty, added: 0 };
+  }, { productId: product.id, ownerId });
 };
 
 /** Apply absolute stock target via locked increment RPC (add-only; deducts rejected). */
