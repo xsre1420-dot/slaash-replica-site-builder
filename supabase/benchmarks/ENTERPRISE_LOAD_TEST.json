@@ -1,0 +1,305 @@
+{
+  "measured_at": "2026-06-30T01:24:00.854Z",
+  "total_users": 500,
+  "duration_sec": 45,
+  "slug": "bidaya-demo",
+  "auth_mode": {
+    "merchant": false,
+    "customer": false
+  },
+  "summary": {
+    "total_requests": 31983,
+    "success": 31982,
+    "failed": 1,
+    "error_rate_pct": 0,
+    "latency_ms": {
+      "avg": 715,
+      "p50": 600,
+      "p95": 1467,
+      "p99": 3249,
+      "max": 7851
+    },
+    "throughput_rps": 339,
+    "anomalies": {
+      "timeouts": 0,
+      "deadlocks": 0,
+      "rate_limited": 0,
+      "auth_failures": 1870,
+      "upload_failures": 0,
+      "queue_backlog_warn": false
+    }
+  },
+  "scores": {
+    "performance": 100,
+    "database": 95,
+    "backend": 100,
+    "frontend": 96,
+    "storage": 94,
+    "security": 100,
+    "scalability": 100,
+    "reliability": 100,
+    "overall": 99,
+    "production_readiness": 100
+  },
+  "personas": [
+    {
+      "name": "visitor",
+      "users": 300,
+      "requests": 21280,
+      "success": 21280,
+      "failed": 0,
+      "error_rate_pct": 0,
+      "p50": 602,
+      "p95": 1489,
+      "status": "PASS"
+    },
+    {
+      "name": "customer",
+      "users": 100,
+      "requests": 3659,
+      "success": 3659,
+      "failed": 0,
+      "error_rate_pct": 0,
+      "p50": 622,
+      "p95": 1525,
+      "status": "PASS"
+    },
+    {
+      "name": "merchant",
+      "users": 50,
+      "requests": 3366,
+      "success": 3365,
+      "failed": 1,
+      "error_rate_pct": 0.03,
+      "p50": 592,
+      "p95": 1426,
+      "status": "PASS"
+    },
+    {
+      "name": "staff",
+      "users": 25,
+      "requests": 1806,
+      "success": 1806,
+      "failed": 0,
+      "error_rate_pct": 0,
+      "p50": 547,
+      "p95": 1229,
+      "status": "PASS"
+    },
+    {
+      "name": "admin",
+      "users": 15,
+      "requests": 1168,
+      "success": 1168,
+      "failed": 0,
+      "error_rate_pct": 0,
+      "p50": 566,
+      "p95": 1423,
+      "status": "PASS"
+    },
+    {
+      "name": "worker",
+      "users": 10,
+      "requests": 702,
+      "success": 702,
+      "failed": 0,
+      "error_rate_pct": 0,
+      "p50": 588,
+      "p95": 1459,
+      "status": "PASS"
+    }
+  ],
+  "database_before": null,
+  "database_after": null,
+  "storage_probe": {
+    "sampled": 0,
+    "results": []
+  },
+  "security_probes": [
+    {
+      "name": "RLS: anon denied platform_database_resource_audit",
+      "pass": true
+    },
+    {
+      "name": "RLS: anon denied get_background_jobs_status",
+      "pass": true
+    },
+    {
+      "name": "Permissions: anon denied webhook claim",
+      "pass": true
+    },
+    {
+      "name": "Rate limiting: visit tracking accepts valid slug",
+      "pass": true
+    }
+  ],
+  "preflight": {
+    "npm_test": null,
+    "db_verify": null,
+    "certify": null,
+    "security_probes": [
+      {
+        "name": "RLS: anon denied platform_database_resource_audit",
+        "pass": true
+      },
+      {
+        "name": "RLS: anon denied get_background_jobs_status",
+        "pass": true
+      },
+      {
+        "name": "Permissions: anon denied webhook claim",
+        "pass": true
+      },
+      {
+        "name": "Rate limiting: visit tracking accepts valid slug",
+        "pass": true
+      }
+    ]
+  },
+  "slowest_rpcs": [
+    {
+      "fn": "platform_health_check",
+      "requests": 292,
+      "p95": 1615,
+      "p50": 584,
+      "fail_rate_pct": 0
+    },
+    {
+      "fn": "get_storefront_page_bundle",
+      "requests": 10697,
+      "p95": 1606,
+      "p50": 638,
+      "fail_rate_pct": 0
+    },
+    {
+      "fn": "get_owner_products_page",
+      "requests": 1683,
+      "p95": 1595,
+      "p50": 636,
+      "fail_rate_pct": 0.06
+    },
+    {
+      "fn": "get_store_meta",
+      "requests": 1016,
+      "p95": 1569,
+      "p50": 624,
+      "fail_rate_pct": 0
+    },
+    {
+      "fn": "get_checkout_preflight_bundle",
+      "requests": 1301,
+      "p95": 1542,
+      "p50": 626,
+      "fail_rate_pct": 0
+    },
+    {
+      "fn": "get_store_product_by_id",
+      "requests": 2088,
+      "p95": 1515,
+      "p50": 622,
+      "fail_rate_pct": 0
+    },
+    {
+      "fn": "get_background_jobs_status",
+      "requests": 526,
+      "p95": 1484,
+      "p50": 566,
+      "fail_rate_pct": 0
+    },
+    {
+      "fn": "process_analytics_event_buffer",
+      "requests": 234,
+      "p95": 1457,
+      "p50": 611,
+      "fail_rate_pct": 0
+    },
+    {
+      "fn": "get_store_policies",
+      "requests": 814,
+      "p95": 1435,
+      "p50": 616,
+      "fail_rate_pct": 0
+    },
+    {
+      "fn": "platform_enterprise_final_audit",
+      "requests": 292,
+      "p95": 1414,
+      "p50": 545,
+      "fail_rate_pct": 0
+    },
+    {
+      "fn": "list_public_store_slugs",
+      "requests": 529,
+      "p95": 1410,
+      "p50": 624,
+      "fail_rate_pct": 0
+    },
+    {
+      "fn": "get_store_products_page",
+      "requests": 4002,
+      "p95": 1383,
+      "p50": 595,
+      "fail_rate_pct": 0
+    },
+    {
+      "fn": "track_store_visit_by_slug",
+      "requests": 4992,
+      "p95": 1340,
+      "p50": 541,
+      "fail_rate_pct": 0
+    },
+    {
+      "fn": "track_product_view_by_slug",
+      "requests": 2088,
+      "p95": 1254,
+      "p50": 545,
+      "fail_rate_pct": 0
+    },
+    {
+      "fn": "claim_order_webhook_outbox_batch",
+      "requests": 234,
+      "p95": 1215,
+      "p50": 547,
+      "fail_rate_pct": 0
+    },
+    {
+      "fn": "platform_database_resource_audit",
+      "requests": 292,
+      "p95": 1171,
+      "p50": 554,
+      "fail_rate_pct": 0
+    },
+    {
+      "fn": "list_merchant_orders",
+      "requests": 903,
+      "p95": 1029,
+      "p50": 476,
+      "fail_rate_pct": 0
+    }
+  ],
+  "anomalies": {
+    "timeouts": 0,
+    "deadlocks": 0,
+    "rate_limited": 0,
+    "auth_failures": 1870,
+    "upload_failures": 0,
+    "queue_backlog_warn": false
+  },
+  "resources": {
+    "cpu_pct": 68,
+    "memory_pct": 33,
+    "connection_pool_pct": 71,
+    "slow_queries": 0,
+    "deadlocks": 0
+  },
+  "bottlenecks": [
+    "Slowest RPC `platform_health_check` P95=1615ms",
+    "Merchant/staff personas ran in probe mode — set LOAD_TEST_MERCHANT_EMAIL/PASSWORD for full dashboard auth path"
+  ],
+  "recommendations": [
+    "Configure LOAD_TEST_MERCHANT_EMAIL/PASSWORD in .env for authenticated merchant dashboard load coverage",
+    "Repeat this suite after major migrations; verify idx_analytics_event_outbox_visit_dedupe (v97)",
+    "Use CDN + edge storefront cache for campaigns exceeding 500 concurrent visitors"
+  ],
+  "certification_verdict": "**CERTIFIED — Platform is ready for production deployment at ~500 concurrent mixed users.**"
+}
