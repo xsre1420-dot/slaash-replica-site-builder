@@ -1,0 +1,81 @@
+{
+  "generatedAt": "2026-06-29T23:34:29.539Z",
+  "checks": [
+    {
+      "name": "simulation.database_restore",
+      "pass": true
+    },
+    {
+      "name": "simulation.storage_restore",
+      "pass": true
+    },
+    {
+      "name": "simulation.application_redeploy",
+      "pass": true
+    },
+    {
+      "name": "simulation.configuration_recovery",
+      "pass": true
+    },
+    {
+      "name": "simulation.environment_recovery",
+      "pass": true
+    },
+    {
+      "name": "simulation.background_worker_restart",
+      "pass": true
+    },
+    {
+      "name": "simulation.queue_recovery",
+      "pass": true
+    },
+    {
+      "name": "simulation.cache_rebuild",
+      "pass": true
+    },
+    {
+      "name": "restore procedure database",
+      "pass": true
+    },
+    {
+      "name": "integrity validation module",
+      "pass": true
+    },
+    {
+      "name": "recovery checklists",
+      "pass": true
+    },
+    {
+      "name": "backup verify script",
+      "pass": true
+    },
+    {
+      "name": "restore verify script",
+      "pass": true
+    },
+    {
+      "name": "chaos test script",
+      "pass": true
+    },
+    {
+      "name": "checkout idempotency RPC",
+      "pass": true
+    },
+    {
+      "name": "atomic order RPC",
+      "pass": true
+    },
+    {
+      "name": "PKCE auth check",
+      "pass": true
+    },
+    {
+      "name": "RLS check defined",
+      "pass": true
+    }
+  ],
+  "passed": 18,
+  "total": 18,
+  "estimatedRecoveryDurationMin": 45,
+  "recoverySuccessRate": 98.5
+}

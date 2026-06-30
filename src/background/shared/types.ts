@@ -56,6 +56,7 @@ export type QueueMetrics = {
 export type ClientBackgroundStatus = {
   startedAt: number;
   uptimeMs: number;
+  workerInstanceId: string;
   queues: QueueMetrics[];
   slowJobs: Array<{ id: string; queue: QueueKind; type: string; durationMs: number }>;
   recentFailures: Array<{ id: string; queue: QueueKind; type: string; error: string; at: number }>;

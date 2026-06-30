@@ -1,0 +1,122 @@
+{
+  "generatedAt": "2026-06-29T23:34:30.247Z",
+  "checks": [
+    {
+      "name": "data.schema_v90",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "data.schema_version_table",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "ref.table_orders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "ref.table_order_items",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "ref.table_products",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "ref.table_stores",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "business.atomic_checkout_rpc",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "business.idempotency_recovery_rpc",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "auth.pkce_flow",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "permissions.rls_enabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "inventory.stock_deduction",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "order.idempotency",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "financial.payment_table",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "integrity.domain_data_integrity",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "integrity.domain_referential_integrity",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "integrity.domain_business_rules",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "integrity.domain_authentication",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "integrity.domain_permissions",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "integrity.domain_inventory_consistency",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "integrity.domain_order_consistency",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "integrity.domain_financial_consistency",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "dr.engine_intact",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "backup.engine_intact",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "passed": 23,
+  "total": 23
+}

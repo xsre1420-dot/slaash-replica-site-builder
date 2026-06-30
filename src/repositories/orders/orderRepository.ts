@@ -1,4 +1,4 @@
-import { supabase, callWriteRpc, callReadRpc } from '@/repositories/base';
+import { supabase, callWriteRpc, callReadRpc, adaptRpcResult } from '@/repositories/base';
 
 export async function rpcUpdateMerchantOrderStatus(args: {
   p_order_id: string;
@@ -29,7 +29,7 @@ export async function rpcCountMerchantOrdersByWorkflow(args: Record<string, unkn
 }
 
 export async function rpcGetOrderStatsBatch(args: Record<string, unknown>) {
-  return (supabase as any).rpc('get_merchant_order_stats_batch', args);
+  return adaptRpcResult(await callReadRpc('get_merchant_order_stats_batch', args));
 }
 
 export function ordersTable() {

@@ -13,6 +13,13 @@ import { logger, getCorrelationContext, newRequestId } from '@/lib/observability
 import { recordBackgroundJob, recordQueueDepth } from '@/lib/monitoring/instrumentation';
 import { runWithTraceContext } from '@/lib/tracing';
 
+let resumeHook: (() => void) | null = null;
+
+/** Register callback to resume scheduler when jobs are enqueued while suspended. */
+export function registerWorkerResumeHook(fn: () => void): void {
+  resumeHook = fn;
+}
+
 const pending: BackgroundJob[] = [];
 const processing = new Set<string>();
 const completedByQueue = new Map<QueueKind, number>();
@@ -87,6 +94,7 @@ export function enqueueJob<T>(
   pending.push(job);
   pending.sort((a, b) => a.scheduledAt - b.scheduledAt);
   schedulePersist();
+  resumeHook?.();
   return id;
 }
 
@@ -324,6 +332,11 @@ export function getPendingJobs(): BackgroundJob[] {
   return [...pending];
 }
 
+/** True when jobs are pending or actively processing — used for adaptive poll intervals. */
+export function hasBackgroundQueueWork(): boolean {
+  return pending.length > 0 || processing.size > 0;
+}
+
 export function setWorkerRunning(active: boolean): void {
   workerRunning = active;
 }
@@ -338,6 +351,7 @@ export function resetQueuesForTests(): void {
   processedTimestamps.length = 0;
   workerRunning = false;
   lastHeartbeatAt = null;
+  resumeHook = null;
   if (persistTimer) {
     clearTimeout(persistTimer);
     persistTimer = null;

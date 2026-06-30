@@ -76,6 +76,7 @@ let visibilityHookInstalled = false;
 function startRealtimeHeartbeat() {
   if (heartbeatTimer || typeof window === 'undefined') return;
   heartbeatTimer = setInterval(() => {
+    if (typeof document !== 'undefined' && document.hidden) return;
     for (const entry of merchantEntries.values()) {
       if (entry.channel && (entry.productUiHandlers.size > 0 || entry.orderHandlers.size > 0)) {
         void entry.channel.send({ type: 'broadcast', event: 'heartbeat', payload: { t: Date.now() } });

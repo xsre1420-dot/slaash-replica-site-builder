@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Disaster Recovery Validation Schema",
+  "version": 90,
+  "recoverySimulations": [
+    "database_restore", "storage_restore", "application_redeploy",
+    "configuration_recovery", "environment_recovery", "background_worker_restart",
+    "queue_recovery", "cache_rebuild"
+  ],
+  "integrityDomains": [
+    "data_integrity", "referential_integrity", "business_rules",
+    "authentication", "permissions", "inventory_consistency",
+    "order_consistency", "financial_consistency"
+  ],
+  "checklistPhases": ["pre_recovery", "during_recovery", "post_recovery"],
+  "automationCommands": [
+    "recovery:simulate", "recovery:integrity-check", "restore:verify",
+    "backup:verify", "recovery:check", "db:chaos-test", "audit:dr-validation"
+  ],
+  "principle": "never_assume_restore_success"
+}

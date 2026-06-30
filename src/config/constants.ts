@@ -10,7 +10,13 @@ export const APP_CONSTANTS = {
   },
   import: {
     inlineRowThreshold: 150,
-    defaultBatchSize: 25,
+    defaultBatchSize: 50,
     maxBatchLoop: 400,
+    maxBatchSize: 50,
+  },
+  largeDataset: {
+    keysetPaginationRecommendedAbovePage: 20,
+    deepOffsetThreshold: 1000,
+    statsCapRows: 5000,
   },
 } as const;

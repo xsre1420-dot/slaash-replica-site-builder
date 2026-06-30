@@ -1,8 +1,9 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { callSupabaseRpc } from '@/integrations/supabase/rpc';
+import { callReadRpc } from '@/lib/readWrite/readClient';
 import { DatabaseData } from '@/types/statistics';
-import { cache, CacheKeys, CacheTTL, clearInflight, dedup } from '@/lib/cache';
+import { cache, CacheKeys, clearInflight } from '@/lib/cache';
+import { cachedFetch } from '@/lib/cache/enterpriseCache';
 import { assertMerchantOwner } from '@/lib/tenantGuard';
 
 const withTimeout = <T>(promise: Promise<T>, ms = 12000): Promise<T> => {
@@ -46,7 +47,7 @@ const fetchStatisticsPageBundleRpc = async (
   previousEnd: string
 ): Promise<{ current?: Record<string, unknown>; previous?: Record<string, unknown> } | undefined> => {
   try {
-    const { data, error } = await callSupabaseRpc<Record<string, unknown>>(
+    const { data, error } = await callReadRpc<Record<string, unknown>>(
       'get_statistics_page_bundle',
       {
         p_owner_id: ownerId,
@@ -105,7 +106,7 @@ const fetchStoreStatisticsRpc = async (
   periodEnd: string
 ): Promise<Record<string, unknown> | undefined> => {
   try {
-    const { data, error } = await (supabase as any).rpc('get_store_statistics', {
+    const { data, error } = await callReadRpc<Record<string, unknown>>('get_store_statistics', {
       p_owner_id: ownerId,
       p_start: periodStart,
       p_end: periodEnd,
@@ -207,7 +208,7 @@ const fetchOrderItemsForStatistics = async (
   toIso: string
 ): Promise<DatabaseData['orderItems']> => {
   try {
-    const { data, error } = await (supabase as any).rpc('get_order_items_for_statistics', {
+    const { data, error } = await callReadRpc<unknown>('get_order_items_for_statistics', {
       p_owner_id: ownerId,
       p_start: fromIso,
       p_end: toIso,
@@ -266,10 +267,12 @@ export const fetchStatisticsData = async (
     clearInflight(cacheKey);
   }
 
-  const cached = options?.skipCache ? null : cache.get<DatabaseData>(cacheKey);
-  if (cached) return cached;
-
-  return dedup(cacheKey, async () => {
+  return cachedFetch({
+    key: cacheKey,
+    domain: 'analytics',
+    skipCache: options?.skipCache,
+    ttlPolicyPath: 'medium.statistics',
+    fetchFn: async () => {
     const periodStart = bounds.start.toISOString();
     const periodEnd = bounds.end.toISOString();
     const previousEnd = new Date(bounds.start.getTime() - 1);
@@ -365,12 +368,6 @@ export const fetchStatisticsData = async (
         dateBounds: bounds,
       };
 
-      cache.set(
-        cacheKey,
-        result,
-        rpcReady ? CacheTTL.ANALYTICS : CacheTTL.SHORT,
-        rpcReady ? CacheTTL.ANALYTICS_STALE : CacheTTL.STALE
-      );
       return result;
     } catch (err) {
       console.error('[statistics] fetch failed, returning empty dataset:', err);
@@ -384,5 +381,6 @@ export const fetchStatisticsData = async (
         dateBounds: bounds,
       };
     }
+    },
   });
 };

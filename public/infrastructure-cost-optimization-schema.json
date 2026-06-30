@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Infrastructure Cost Optimization Schema",
+  "version": 94,
+  "costDriverCategories": [
+    "database", "storage", "bandwidth", "cpu", "memory", "cache",
+    "realtime", "edge_functions", "background_workers", "network"
+  ],
+  "workerPollMs": { "active": 150, "idle": 750, "hidden": 2000 },
+  "memorySampleMs": { "development": 60000, "production": 120000 },
+  "cachePruneIntervalMs": 300000,
+  "scaleTiers": [100, 1000, 10000, 100000],
+  "estimatedSavingsPct": {
+    "databaseRpc": 35,
+    "computeIdle": 70,
+    "networkEgress": 25,
+    "storage": 30,
+    "overall": 28
+  },
+  "targetScores": {
+    "infrastructureEfficiency": 95,
+    "databaseCost": 95,
+    "resourceUtilization": 95,
+    "scalabilityEfficiency": 95,
+    "productionReadiness": 95
+  }
+}

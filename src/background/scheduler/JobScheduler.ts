@@ -3,17 +3,24 @@ import {
   setWorkerRunning,
   getAllQueueMetrics,
   getPendingJobs,
+  hasBackgroundQueueWork,
   restoreJobs,
 } from '@/background/queues/JobQueue';
 import { getDeadLetterJobs } from '@/background/retry/deadLetterQueue';
 import { registerAllProcessors } from '@/background/processors';
 import { restorePendingJobs } from '@/background/shared/jobPersistence';
 import type { ClientBackgroundStatus, QueueKind } from '@/background/shared/types';
+import { getWorkerInstanceId } from '@/core/distributed/workerIdentity';
+import { resolveWorkerPollIntervalMs } from '@/lib/costOptimization/computeEfficiency';
+import { shouldSuspendWorkerPolling } from '@/lib/finOpsScaling/operationalEfficiency';
+import { registerWorkerResumeHook } from '@/background/queues/JobQueue';
 import { logger } from '@/lib/observability';
 
-let intervalId: ReturnType<typeof setInterval> | null = null;
+let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let startedAt = 0;
 let shuttingDown = false;
+let suspended = false;
+let visibilityHookInstalled = false;
 
 const SLOW_JOB_MS = 3000;
 
@@ -25,45 +32,85 @@ async function restorePersistedJobs(): Promise<void> {
   }
 }
 
-export function startBackgroundWorkers(): void {
-  if (typeof window === 'undefined') return;
-  if (intervalId != null) return;
+function installVisibilityResumeHook(): void {
+  if (visibilityHookInstalled || typeof document === 'undefined') return;
+  visibilityHookInstalled = true;
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && suspended && !shuttingDown) {
+      resumeBackgroundWorkersIfSuspended();
+    }
+  });
+}
 
-  registerAllProcessors();
-  startedAt = Date.now();
+function scheduleNextTick(): void {
+  if (shuttingDown) return;
+
+  const hasWork = hasBackgroundQueueWork();
+  if (shouldSuspendWorkerPolling(hasWork)) {
+    suspended = true;
+    setWorkerRunning(false);
+    installVisibilityResumeHook();
+    return;
+  }
+
+  suspended = false;
   setWorkerRunning(true);
-  shuttingDown = false;
-
-  void restorePersistedJobs().then(() => processQueueTick());
-
-  const pollMs = 150;
-  intervalId = setInterval(() => {
+  const delayMs = resolveWorkerPollIntervalMs(hasWork);
+  pollTimer = setTimeout(async () => {
+    pollTimer = null;
     if (shuttingDown) return;
-    void processQueueTick().catch((err) => {
+    try {
+      await processQueueTick();
+    } catch (err) {
       logger.warn('background.worker.tick_failed', {
         message: err instanceof Error ? err.message : String(err),
       });
-    });
-  }, pollMs);
+    }
+    scheduleNextTick();
+  }, delayMs);
+}
 
-  window.addEventListener('beforeunload', stopBackgroundWorkers);
-  window.addEventListener('pagehide', stopBackgroundWorkers);
+/** Resume scheduler after suspend (visibility change or new job enqueued). */
+export function resumeBackgroundWorkersIfSuspended(): void {
+  if (shuttingDown || !suspended) return;
+  suspended = false;
+  setWorkerRunning(true);
+  void processQueueTick().finally(() => scheduleNextTick());
+}
 
-  logger.info('background.workers.started', { pollMs });
+export function startBackgroundWorkers(): void {
+  if (typeof window === 'undefined') return;
+  if (pollTimer != null || (suspended && !shuttingDown)) return;
+
+  registerAllProcessors();
+  registerWorkerResumeHook(resumeBackgroundWorkersIfSuspended);
+  startedAt = Date.now();
+  setWorkerRunning(true);
+  shuttingDown = false;
+  suspended = false;
+
+  void restorePersistedJobs().then(() => processQueueTick().finally(() => scheduleNextTick()));
+
+  logger.info('background.workers.started', { mode: 'adaptive_poll_suspend' });
 }
 
 export function stopBackgroundWorkers(): void {
   if (shuttingDown) return;
   shuttingDown = true;
+  suspended = false;
   setWorkerRunning(false);
-  if (intervalId != null) {
-    clearInterval(intervalId);
-    intervalId = null;
+  if (pollTimer != null) {
+    clearTimeout(pollTimer);
+    pollTimer = null;
   }
 }
 
 export function isBackgroundWorkersRunning(): boolean {
-  return intervalId != null && !shuttingDown;
+  return (pollTimer != null || suspended) && !shuttingDown;
+}
+
+export function isBackgroundWorkersSuspended(): boolean {
+  return suspended && !shuttingDown;
 }
 
 export function getClientBackgroundStatus(): ClientBackgroundStatus {
@@ -95,6 +142,7 @@ export function getClientBackgroundStatus(): ClientBackgroundStatus {
   return {
     startedAt,
     uptimeMs: startedAt ? now - startedAt : 0,
+    workerInstanceId: getWorkerInstanceId(),
     queues,
     slowJobs,
     recentFailures,
@@ -106,4 +154,5 @@ export function resetSchedulerForTests(): void {
   stopBackgroundWorkers();
   startedAt = 0;
   shuttingDown = false;
+  suspended = false;
 }

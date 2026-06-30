@@ -3,7 +3,6 @@ import type { Database } from '@/integrations/supabase/types.generated';
 import { resolveSupabaseConfig } from './failover';
 import { createAuthStorage } from '@/lib/authUtils';
 import { env } from '@/lib/env';
-import { teardownMerchantRealtimeHub } from '@/lib/merchantRealtimeHub';
 
 let client: SupabaseClient<Database> | null = null;
 
@@ -39,6 +38,6 @@ export const getSupabaseClient = (): SupabaseClient<Database> => {
 };
 
 export const resetSupabaseClient = (): void => {
-  teardownMerchantRealtimeHub();
+  void import('@/lib/merchantRealtimeHub').then((m) => m.teardownMerchantRealtimeHub());
   client = null;
 };

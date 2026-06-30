@@ -1,4 +1,4 @@
-import { supabase, callWriteRpc } from '@/repositories/base';
+import { supabase, callWriteRpc, callReadRpc, adaptRpcResult } from '@/repositories/base';
 
 export function storeSettingsTable() {
   return supabase.from('store_settings');
@@ -8,16 +8,19 @@ export function storesTable() {
   return supabase.from('stores');
 }
 
+/** @consistency requires_primary */
 export async function rpcGetStoreForUser(p_user_id: string) {
-  return (supabase as any).rpc('get_store_for_user', { p_user_id });
+  return adaptRpcResult(await callReadRpc('get_store_for_user', { p_user_id }));
 }
 
+/** @consistency replica_safe */
 export async function rpcGetOwnerBootstrap(p_user_id: string) {
-  return (supabase as any).rpc('get_owner_bootstrap', { p_user_id });
+  return adaptRpcResult(await callReadRpc('get_owner_bootstrap', { p_user_id }));
 }
 
+/** @consistency replica_safe */
 export async function rpcListPublicStoreSlugs(p_limit: number, p_offset: number) {
-  return (supabase as any).rpc('list_public_store_slugs', { p_limit, p_offset });
+  return adaptRpcResult(await callReadRpc('list_public_store_slugs', { p_limit, p_offset }));
 }
 
 export async function rpcPatchMerchantStoreSettings(args: Record<string, unknown>) {

@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FinOps and Scaling Schema",
+  "version": 95,
+  "rightSizingCategories": [
+    "database", "connection_pool", "read_replicas", "background_workers",
+    "realtime", "edge_functions", "cache", "storage", "bandwidth", "monitoring", "cpu"
+  ],
+  "concurrentScaleTiers": [100, 500, 1000, 5000, 10000, 50000, 100000],
+  "retentionDomains": [
+    "application_logs", "metrics_monitoring", "database_backups",
+    "storage_backups", "audit_tables", "client_cache_l1", "edge_function_logs"
+  ],
+  "finOpsCategories": ["database", "storage", "bandwidth", "caching", "background", "compute"],
+  "targetScores": {
+    "finOps": 95,
+    "infrastructureEfficiency": 95,
+    "scalabilityPlanning": 95,
+    "operationalEfficiency": 95,
+    "productionReadiness": 95
+  }
+}

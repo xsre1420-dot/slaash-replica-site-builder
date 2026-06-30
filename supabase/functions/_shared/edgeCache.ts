@@ -16,6 +16,16 @@ type VersionEntry = { version: number; expiresAt: number };
 const payloadCache = new Map<string, PayloadEntry>();
 const versionCache = new Map<string, VersionEntry>();
 
+function pruneExpiredPayloads(): void {
+  const now = Date.now();
+  for (const [key, hit] of payloadCache) {
+    if (now > hit.expiresAt) payloadCache.delete(key);
+  }
+  for (const [key, hit] of versionCache) {
+    if (now > hit.expiresAt) versionCache.delete(key);
+  }
+}
+
 export function edgeCacheStats(): {
   payloadEntries: number;
   versionEntries: number;
@@ -71,6 +81,9 @@ export function buildPayloadKey(
 }
 
 export function getMemoryCached(key: string, currentVersion: number): string | null {
+  if (payloadCache.size >= EDGE_MEMORY_MAX * 0.9) {
+    pruneExpiredPayloads();
+  }
   const hit = payloadCache.get(key);
   if (!hit) return null;
   if (Date.now() > hit.expiresAt || hit.version !== currentVersion) {

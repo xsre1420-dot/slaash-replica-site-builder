@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Distributed scaling architecture probes (v72).
+ * Distributed scaling architecture probes (v80).
  */
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
@@ -62,6 +62,26 @@ tests.push({
 });
 
 tests.push({
+  name: 'service boundaries module exists',
+  pass: read('src/core/distributed/serviceBoundaries.ts').includes('SERVICE_BOUNDARIES'),
+});
+
+tests.push({
+  name: 'failure isolation module exists',
+  pass: read('src/core/distributed/failureIsolation.ts').includes('runIsolatedSubsystem'),
+});
+
+tests.push({
+  name: 'distributed idempotency module exists',
+  pass: read('src/background/shared/distributedIdempotency.ts').includes('tryClaimDistributedIdempotency'),
+});
+
+tests.push({
+  name: 'v80 migration exists',
+  pass: read('supabase/migrations/20260630000001_distributed_scaling_v80.sql').includes('platform_distributed_capacity_model'),
+});
+
+tests.push({
   name: 'circuit breaker module exists',
   pass: read('src/lib/resilience/circuitBreaker.ts').includes('withCircuitBreaker'),
 });
@@ -85,7 +105,7 @@ const health = await rpc('platform_health_check', {}, serviceHeaders ?? anonHead
 tests.push({
   name: 'platform_health_check reachable',
   pass:
-    (health.status === 200 && health.json?.required_version >= 72) ||
+    (health.status === 200 && health.json?.required_version >= 80) ||
     health.status === 401 ||
     health.status === 403 ||
     health.json?.code === 'PGRST202',
@@ -104,8 +124,8 @@ tests.push({
 if (serviceHeaders) {
   const scaling = await rpc('platform_scaling_audit', {}, serviceHeaders);
   tests.push({
-    name: 'platform_scaling_audit reports v72 architecture',
-    pass: scaling.json?.success === true && scaling.json?.schema_version >= 72,
+    name: 'platform_scaling_audit reports v80 architecture',
+    pass: scaling.json?.success === true && scaling.json?.schema_version >= 80,
   });
 
   const jobs = await rpc('get_background_jobs_status', {}, serviceHeaders);
@@ -128,7 +148,7 @@ if (serviceHeaders) {
 }
 
 const passed = tests.filter((t) => t.pass).length;
-console.log('\n=== Distributed Scaling Tests (v72) ===\n');
+console.log('\n=== Distributed Scaling Tests (v80) ===\n');
 for (const t of tests) {
   console.log(`${t.pass ? '✓' : '✗'} ${t.name}`);
 }

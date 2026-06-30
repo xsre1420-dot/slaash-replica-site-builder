@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Supabase Security Schema",
+  "version": 92,
+  "auditAreas": ["rls", "authentication", "authorization", "storage", "edge_functions", "secrets"],
+  "authorizationRoles": ["store_owner", "customer", "admin", "background_worker", "edge_function", "service_role", "anon"],
+  "edgeFunctions": [
+    "get-store-products", "payment-webhook", "redeem-access-code",
+    "meta-conversions", "process-import-jobs", "process-background-queue",
+    "process-order-webhook-outbox", "optimize-image"
+  ],
+  "storageBuckets": ["product-images"]
+}

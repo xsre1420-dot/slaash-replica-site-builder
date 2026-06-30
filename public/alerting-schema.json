@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Enterprise Alerting Schema",
+  "version": 87,
+  "description": "Vendor-neutral alerting and incident response contract",
+  "incidentSeverity": ["critical", "high", "medium", "low", "informational"],
+  "alertCategories": [
+    "api", "rpc", "database", "queue", "edge", "cache",
+    "checkout", "inventory", "auth", "storage", "jobs", "errors", "infra"
+  ],
+  "healthSubsystems": [
+    "application", "database", "rpc_layer", "edge_functions",
+    "queue_workers", "cache_layer", "realtime", "storage",
+    "search", "background_processing"
+  ],
+  "vendorFormats": [
+    "generic", "grafana", "pagerduty", "opsgenie",
+    "datadog", "newrelic", "cloud_monitoring"
+  ],
+  "operationalMetrics": ["mttd", "mttr", "error_budget", "service_availability", "system_health_score"],
+  "playbookFields": [
+    "symptoms", "likelyCauses", "immediateActions",
+    "verificationSteps", "recoveryProcedure", "escalationPath"
+  ]
+}

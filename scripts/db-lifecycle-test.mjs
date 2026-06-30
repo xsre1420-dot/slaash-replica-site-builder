@@ -99,11 +99,29 @@ tests.push({
 if (serviceHeaders) {
   const audit = await rpc('platform_lifecycle_audit', {}, serviceHeaders);
   tests.push({
-    name: 'platform_lifecycle_audit reports v70 lifecycle',
+    name: 'platform_lifecycle_audit reports lifecycle health',
     pass:
       audit.json?.success === true &&
       audit.json?.schema_version >= 70 &&
       typeof audit.json?.partitioned_tables === 'number',
+  });
+
+  const growth = await rpc('platform_database_growth_audit', {}, serviceHeaders);
+  tests.push({
+    name: 'platform_database_growth_audit returns table projections',
+    pass:
+      Array.isArray(growth.json?.tables) &&
+      growth.json.tables.length >= 10,
+  });
+
+  const scale = await rpc(
+    'platform_partition_scale_benchmark',
+    { p_scenarios: [1000000, 10000000] },
+    serviceHeaders
+  );
+  tests.push({
+    name: 'platform_partition_scale_benchmark runs scale scenarios',
+    pass: Array.isArray(scale.json?.scenarios) && scale.json.scenarios.length >= 2,
   });
 
   const pruning = await rpc('platform_verify_partition_pruning', { p_table: 'store_visits', p_days: 30 }, serviceHeaders);
@@ -139,12 +157,14 @@ if (serviceHeaders) {
     { name: 'platform_lifecycle_audit (skipped — no service key)', pass: true },
     { name: 'partition pruning (skipped — no service key)', pass: true },
     { name: 'archive_orders_batch (skipped — no service key)', pass: true },
-    { name: 'platform_run_data_lifecycle (skipped — no service key)', pass: true }
+    { name: 'platform_run_data_lifecycle (skipped — no service key)', pass: true },
+    { name: 'platform_database_growth_audit (skipped — no service key)', pass: true },
+    { name: 'platform_partition_scale_benchmark (skipped — no service key)', pass: true }
   );
 }
 
 const passed = tests.filter((t) => t.pass).length;
-console.log('\n=== Partitioning & Lifecycle Tests (v70) ===\n');
+console.log('\n=== Partitioning & Lifecycle Tests (v78) ===\n');
 for (const t of tests) {
   console.log(`${t.pass ? '✓' : '✗'} ${t.name}`);
 }

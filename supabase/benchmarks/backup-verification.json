@@ -1,0 +1,93 @@
+{
+  "generatedAt": "2026-06-29T23:28:28.966Z",
+  "checks": [
+    {
+      "name": "script.backup-database.sh",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "script.restore-database.sh",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "module.backupAudit.ts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "module.databaseBackupStrategy.ts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "module.storageBackupStrategy.ts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "module.configurationBackupStrategy.ts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "module.backupValidation.ts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "module.backupEngine.ts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "db.policies.all_tiers",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "db.critical.import_jobs",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "storage.all_asset_classes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "config.no_plaintext_secrets",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "metadata.migrations_git",
+      "ok": true,
+      "detail": "177 files"
+    },
+    {
+      "name": "migration.v88_audit_rpc",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "report.present",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "schema.present",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "dr.local_backup_intact",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "passed": 17,
+  "total": 17,
+  "message": "All static backup verification checks passed"
+}

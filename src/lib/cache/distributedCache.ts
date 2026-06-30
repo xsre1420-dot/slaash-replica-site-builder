@@ -3,6 +3,7 @@
  */
 import { cache } from '@/lib/cache';
 import { isKvCacheEnabled, kvDel, kvFlushPrefix, kvGet, kvSet } from '@/lib/cache/kvAdapter';
+import { recordCacheHit, recordCacheMiss, recordCacheRebuild } from '@/lib/cache/cacheMonitoring';
 
 export async function distributedGet<T>(
   key: string,
@@ -11,7 +12,10 @@ export async function distributedGet<T>(
   fetchFn: () => Promise<T>
 ): Promise<T> {
   const l1 = cache.get<T>(key);
-  if (l1 != null) return l1;
+  if (l1 != null) {
+    recordCacheHit('other', 0, 'l1');
+    return l1;
+  }
 
   if (isKvCacheEnabled()) {
     const raw = await kvGet(key);
@@ -19,6 +23,7 @@ export async function distributedGet<T>(
       try {
         const parsed = JSON.parse(raw) as T;
         cache.set(key, parsed, ttlMs, staleMs);
+        recordCacheHit('other', 0, 'l2');
         return parsed;
       } catch {
         /* invalid kv payload */
@@ -26,7 +31,10 @@ export async function distributedGet<T>(
     }
   }
 
+  recordCacheMiss('other');
+  const rebuildStart = performance.now();
   const fresh = await fetchFn();
+  recordCacheRebuild('other', performance.now() - rebuildStart);
   cache.set(key, fresh, ttlMs, staleMs);
   if (isKvCacheEnabled()) {
     const ttlSec = Math.max(1, Math.ceil((ttlMs + staleMs) / 1000));

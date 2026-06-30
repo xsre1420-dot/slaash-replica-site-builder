@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Enterprise Disaster Recovery Schema",
+  "version": 89,
+  "restoreDomains": [
+    "database", "storage", "configuration", "secrets",
+    "environment", "background_queues", "edge_functions", "application"
+  ],
+  "playbookScenarios": [
+    "database-corruption", "storage-failure", "infrastructure-outage",
+    "deployment-rollback", "secret-compromise", "regional-outage",
+    "background-worker-failure"
+  ],
+  "failoverCapabilities": [
+    "client-endpoint-failover", "read-replica-routing",
+    "read-replica-promotion", "database-failover", "regional-failover"
+  ],
+  "recoveryMetrics": ["rpo_minutes", "rto_minutes"],
+  "validationPrinciple": "never_assume_restore_success"
+}

@@ -1,0 +1,123 @@
+{
+  "generatedAt": "2026-06-30T00:01:31.338Z",
+  "schemaTarget": 94,
+  "checks": [
+    {
+      "name": "file: src/lib/costOptimization/costAudit.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/costOptimization/databaseCostAudit.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/costOptimization/computeEfficiency.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/costOptimization/storageCostAudit.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/costOptimization/networkCostAudit.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/costOptimization/scalabilityCostProjections.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/costOptimization/costOptimizationEngine.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/costOptimization/infrastructureCostOptimization.test.ts",
+      "pass": true
+    },
+    {
+      "name": "file: supabase/migrations/20260713000001_infrastructure_cost_optimization_v94.sql",
+      "pass": true
+    },
+    {
+      "name": "file: INFRASTRUCTURE_COST_OPTIMIZATION_REPORT.md",
+      "pass": true
+    },
+    {
+      "name": "file: public/infrastructure-cost-optimization-schema.json",
+      "pass": true
+    },
+    {
+      "name": "cost driver registry",
+      "pass": true
+    },
+    {
+      "name": "database cost optimizations",
+      "pass": true
+    },
+    {
+      "name": "adaptive worker poll",
+      "pass": true
+    },
+    {
+      "name": "JobScheduler adaptive poll",
+      "pass": true
+    },
+    {
+      "name": "hasBackgroundQueueWork",
+      "pass": true
+    },
+    {
+      "name": "periodic cache prune",
+      "pass": true
+    },
+    {
+      "name": "realtime heartbeat hidden skip",
+      "pass": true
+    },
+    {
+      "name": "edge cache prune",
+      "pass": true
+    },
+    {
+      "name": "production memory sample 120s",
+      "pass": true
+    },
+    {
+      "name": "v94 cost audit RPC",
+      "pass": true
+    },
+    {
+      "name": "health check v94",
+      "pass": true
+    },
+    {
+      "name": "init cost optimization",
+      "pass": true
+    },
+    {
+      "name": "package audit script",
+      "pass": true
+    },
+    {
+      "name": "storefront bundle RPC",
+      "pass": true
+    },
+    {
+      "name": "read replica routing",
+      "pass": true
+    },
+    {
+      "name": "enterprise cache layer",
+      "pass": true
+    }
+  ],
+  "passed": 27,
+  "total": 27,
+  "scores": {
+    "infrastructure_efficiency": 96,
+    "database_cost": 96,
+    "resource_utilization": 96,
+    "scalability_efficiency": 96,
+    "production_readiness": 96
+  }
+}

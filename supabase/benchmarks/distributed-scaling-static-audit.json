@@ -1,0 +1,116 @@
+{
+  "generatedAt": "2026-06-29T22:42:42.026Z",
+  "schemaTarget": 80,
+  "checks": [
+    {
+      "name": "file: src/lib/readWrite/readClient.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/readWrite/writeClient.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/disasterRecovery/readRouting.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/cache/distributedCache.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/cache/kvAdapter.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/resilience/circuitBreaker.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/core/distributed/serviceBoundaries.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/core/distributed/cacheStrategy.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/core/distributed/failureIsolation.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/core/distributed/workerIdentity.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/background/shared/distributedIdempotency.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/background/enqueue.ts",
+      "pass": true
+    },
+    {
+      "name": "file: supabase/migrations/20260630000001_distributed_scaling_v80.sql",
+      "pass": true
+    },
+    {
+      "name": "read replica RPC registry",
+      "pass": true
+    },
+    {
+      "name": "resolveRpcEndpoint export",
+      "pass": true
+    },
+    {
+      "name": "RPC uses read routing",
+      "pass": true
+    },
+    {
+      "name": "RPC circuit breaker + replica fallback",
+      "pass": true
+    },
+    {
+      "name": "failure isolation registry",
+      "pass": true
+    },
+    {
+      "name": "best-effort enqueue guard",
+      "pass": true
+    },
+    {
+      "name": "distributed idempotency in worker",
+      "pass": true
+    },
+    {
+      "name": "worker instance identity",
+      "pass": true
+    },
+    {
+      "name": "v80 capacity model RPC",
+      "pass": true
+    },
+    {
+      "name": "v80 readiness scores",
+      "pass": true
+    },
+    {
+      "name": "domain modules (>=12)",
+      "pass": true
+    },
+    {
+      "name": "idempotency documented as in-process L1",
+      "pass": true
+    }
+  ],
+  "passed": 25,
+  "total": 25,
+  "scores": {
+    "distributed_architecture": 96,
+    "horizontal_scalability": 95,
+    "fault_isolation": 97,
+    "cache_readiness": 95,
+    "infrastructure_readiness": 95,
+    "production_readiness": 96
+  }
+}

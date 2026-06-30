@@ -25,6 +25,10 @@ const envSchema = z.object({
   VITE_CDN_BASE_URL: z.union([z.string().url(), z.literal('')]).optional(),
   /** Read replica PostgREST URL — routes classified read-only RPCs off primary. */
   VITE_SUPABASE_READ_REPLICA_URL: z.union([z.string().url(), z.literal('')]).optional(),
+  /** Regional read replica URL for multi-region read scaling. */
+  VITE_SUPABASE_REGIONAL_REPLICA_URL: z.union([z.string().url(), z.literal('')]).optional(),
+  /** Region label sent as x-read-region header (e.g. eu-west, us-east). */
+  VITE_READ_REPLICA_REGION: z.string().min(2).max(32).optional(),
   /** Upstash Redis REST — shared L2 cache across browser tabs / instances. */
   VITE_KV_REST_URL: z.union([z.string().url(), z.literal('')]).optional(),
   VITE_KV_REST_TOKEN: z.string().min(10).optional(),
@@ -48,6 +52,8 @@ const raw = {
   VITE_STOREFRONT_EDGE_ENABLED: import.meta.env.VITE_STOREFRONT_EDGE_ENABLED as string | undefined,
   VITE_CDN_BASE_URL: import.meta.env.VITE_CDN_BASE_URL as string | undefined,
   VITE_SUPABASE_READ_REPLICA_URL: import.meta.env.VITE_SUPABASE_READ_REPLICA_URL as string | undefined,
+  VITE_SUPABASE_REGIONAL_REPLICA_URL: import.meta.env.VITE_SUPABASE_REGIONAL_REPLICA_URL as string | undefined,
+  VITE_READ_REPLICA_REGION: import.meta.env.VITE_READ_REPLICA_REGION as string | undefined,
   VITE_KV_REST_URL: import.meta.env.VITE_KV_REST_URL as string | undefined,
   VITE_KV_REST_TOKEN: import.meta.env.VITE_KV_REST_TOKEN as string | undefined,
 };

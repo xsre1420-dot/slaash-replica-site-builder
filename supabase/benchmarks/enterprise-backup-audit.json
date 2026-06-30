@@ -1,0 +1,126 @@
+{
+  "generatedAt": "2026-06-29T23:28:28.436Z",
+  "schemaTarget": 88,
+  "checks": [
+    {
+      "name": "file: src/lib/backup/backupAudit.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/backup/databaseBackupStrategy.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/backup/storageBackupStrategy.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/backup/configurationBackupStrategy.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/backup/backupValidation.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/backup/backupSchedule.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/backup/recoveryObjectives.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/backup/backupEngine.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/backup/enterpriseBackup.test.ts",
+      "pass": true
+    },
+    {
+      "name": "file: supabase/migrations/20260707000001_enterprise_backup_v88.sql",
+      "pass": true
+    },
+    {
+      "name": "file: scripts/verify-backup.mjs",
+      "pass": true
+    },
+    {
+      "name": "file: BACKUP_STRATEGY_REPORT.md",
+      "pass": true
+    },
+    {
+      "name": "file: public/backup-schema.json",
+      "pass": true
+    },
+    {
+      "name": "backup audit registry",
+      "pass": true
+    },
+    {
+      "name": "database full backup policy",
+      "pass": true
+    },
+    {
+      "name": "PITR policy",
+      "pass": true
+    },
+    {
+      "name": "storage product images",
+      "pass": true
+    },
+    {
+      "name": "secrets inventory",
+      "pass": true
+    },
+    {
+      "name": "validation procedures",
+      "pass": true
+    },
+    {
+      "name": "retention policy",
+      "pass": true
+    },
+    {
+      "name": "recovery objectives",
+      "pass": true
+    },
+    {
+      "name": "backup status API",
+      "pass": true
+    },
+    {
+      "name": "init backup in DR",
+      "pass": true
+    },
+    {
+      "name": "v88 audit RPC",
+      "pass": true
+    },
+    {
+      "name": "health check v88",
+      "pass": true
+    },
+    {
+      "name": "package audit script",
+      "pass": true
+    },
+    {
+      "name": "verify backup script",
+      "pass": true
+    },
+    {
+      "name": "import_jobs critical table",
+      "pass": true
+    }
+  ],
+  "passed": 28,
+  "total": 28,
+  "scores": {
+    "backup_coverage": 97,
+    "recovery_readiness": 96,
+    "reliability": 96,
+    "production_readiness": 96
+  }
+}

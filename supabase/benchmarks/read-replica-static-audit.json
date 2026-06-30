@@ -1,0 +1,71 @@
+{
+  "generatedAt": "2026-06-29T22:46:12.797Z",
+  "schemaTarget": 81,
+  "checks": [
+    {
+      "name": "file: src/lib/readWrite/readConsistencyRegistry.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/readWrite/readRouter.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/readWrite/readClient.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/services/read/readConsistency.ts",
+      "pass": true
+    },
+    {
+      "name": "file: supabase/migrations/20260631000001_read_replica_v81.sql",
+      "pass": true
+    },
+    {
+      "name": "consistency levels defined",
+      "pass": true
+    },
+    {
+      "name": "checkout RPCs primary-only",
+      "pass": true
+    },
+    {
+      "name": "storefront RPCs registered",
+      "pass": true
+    },
+    {
+      "name": "regional replica support",
+      "pass": true
+    },
+    {
+      "name": "replica fallback logging",
+      "pass": true
+    },
+    {
+      "name": "regional replica fallback",
+      "pass": true
+    },
+    {
+      "name": "dashboard uses callReadRpc",
+      "pass": true
+    },
+    {
+      "name": "platform_read_replica_audit RPC",
+      "pass": true
+    },
+    {
+      "name": "offload model RPC",
+      "pass": true
+    }
+  ],
+  "passed": 14,
+  "total": 14,
+  "scores": {
+    "read_replica_readiness": 96,
+    "consistency": 97,
+    "scalability": 95,
+    "architecture": 96,
+    "production_readiness": 95
+  }
+}

@@ -1,0 +1,129 @@
+{
+  "generatedAt": "2026-06-30T00:01:29.573Z",
+  "schemaTarget": 92,
+  "checks": [
+    {
+      "name": "file: src/lib/supabaseSecurity/rlsAudit.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/supabaseSecurity/authSecurityAudit.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/supabaseSecurity/authorizationAudit.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/supabaseSecurity/storageSecurityAudit.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/supabaseSecurity/edgeFunctionSecurityAudit.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/supabaseSecurity/supabaseSecretsAudit.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/supabaseSecurity/supabaseSecurityEngine.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/supabaseSecurity/supabaseSecurity.test.ts",
+      "pass": true
+    },
+    {
+      "name": "file: supabase/migrations/20260711000001_supabase_security_v92.sql",
+      "pass": true
+    },
+    {
+      "name": "file: SUPABASE_SECURITY_REPORT.md",
+      "pass": true
+    },
+    {
+      "name": "file: public/supabase-security-schema.json",
+      "pass": true
+    },
+    {
+      "name": "RLS table registry",
+      "pass": true
+    },
+    {
+      "name": "auth security controls",
+      "pass": true
+    },
+    {
+      "name": "authorization matrix",
+      "pass": true
+    },
+    {
+      "name": "storage bucket registry",
+      "pass": true
+    },
+    {
+      "name": "edge function registry",
+      "pass": true
+    },
+    {
+      "name": "v92 RLS WITH CHECK profiles",
+      "pass": true
+    },
+    {
+      "name": "v92 supabase audit RPC",
+      "pass": true
+    },
+    {
+      "name": "v92 RLS coverage RPC",
+      "pass": true
+    },
+    {
+      "name": "health check v92",
+      "pass": true
+    },
+    {
+      "name": "edge CORS allowlist",
+      "pass": true
+    },
+    {
+      "name": "edge service client isolated",
+      "pass": true
+    },
+    {
+      "name": "payment webhook HMAC",
+      "pass": true
+    },
+    {
+      "name": "get-store-products slug validation",
+      "pass": true
+    },
+    {
+      "name": "tenant_row_owned function",
+      "pass": true
+    },
+    {
+      "name": "init supabase security",
+      "pass": true
+    },
+    {
+      "name": "package audit script",
+      "pass": true
+    },
+    {
+      "name": "storage RLS owner folder",
+      "pass": true
+    }
+  ],
+  "passed": 28,
+  "total": 28,
+  "scores": {
+    "rls_security": 97,
+    "authentication": 97,
+    "authorization": 97,
+    "storage_security": 96,
+    "edge_function_security": 96,
+    "supabase_security": 96,
+    "production_readiness": 96
+  }
+}

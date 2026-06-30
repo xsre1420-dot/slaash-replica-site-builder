@@ -66,7 +66,10 @@ export const flushEvents = (urgent = false) => {
 
 export const startReporter = () => {
   if (flushTimer) return;
-  flushTimer = setInterval(() => flushEvents(false), FLUSH_INTERVAL_MS);
+  flushTimer = setInterval(() => {
+    if (typeof document !== 'undefined' && document.hidden) return;
+    flushEvents(false);
+  }, FLUSH_INTERVAL_MS);
 
   if (typeof window !== 'undefined') {
     window.addEventListener('visibilitychange', () => {

@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Enterprise Security Hardening Schema",
+  "version": 91,
+  "auditAreas": [
+    "frontend", "backend", "supabase", "edge_functions", "database",
+    "authentication", "authorization", "storage", "environment", "secrets"
+  ],
+  "vulnerabilityCategories": [
+    "sql_injection", "xss", "csrf", "broken_authentication", "broken_authorization",
+    "sensitive_data_exposure", "mass_assignment", "idor", "unsafe_file_upload",
+    "unsafe_redirect", "open_cors", "weak_validation", "unsafe_serialization"
+  ],
+  "secureDefaults": ["csp", "security_headers", "pkce", "jwt_redaction", "rate_limit_readiness"],
+  "secretsPrinciples": ["no_service_role_in_client", "vault_only", "gitignore_env"]
+}

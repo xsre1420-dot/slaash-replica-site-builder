@@ -71,7 +71,7 @@ describe('Auth pages integration', () => {
     await waitFor(
       () => {
         expect(screen.queryByText('حدث خطأ غير متوقع')).not.toBeInTheDocument();
-        expect(screen.getByText('اختر مدة اشتراكك')).toBeInTheDocument();
+        expect(screen.getByText('اختر مدّة اشتراكك')).toBeInTheDocument();
       },
       { timeout: 12000 }
     );
@@ -91,7 +91,7 @@ describe('Auth pages integration', () => {
     await waitFor(
       () => {
         expect(screen.queryByText('حدث خطأ غير متوقع')).not.toBeInTheDocument();
-        expect(screen.getByText('اختر مدة اشتراكك')).toBeInTheDocument();
+        expect(screen.getByText('اختر مدّة اشتراكك')).toBeInTheDocument();
       },
       { timeout: 8000 }
     );

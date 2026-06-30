@@ -1,0 +1,149 @@
+{
+  "generatedAt": "2026-06-30T00:01:28.365Z",
+  "schemaTarget": 96,
+  "checks": [
+    {
+      "name": "file: src/lib/enterpriseFinalAudit/domainAssessments.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/enterpriseFinalAudit/verificationRegistry.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/enterpriseFinalAudit/technicalDebtRegistry.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/enterpriseFinalAudit/finalAuditEngine.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/enterpriseFinalAudit/enterpriseFinalAudit.test.ts",
+      "pass": true
+    },
+    {
+      "name": "file: supabase/migrations/20260715000001_enterprise_final_audit_v96.sql",
+      "pass": true
+    },
+    {
+      "name": "file: ENTERPRISE_FINAL_AUDIT_REPORT.md",
+      "pass": true
+    },
+    {
+      "name": "file: public/enterprise-final-audit-schema.json",
+      "pass": true
+    },
+    {
+      "name": "prior phase: v87 alerting",
+      "pass": true
+    },
+    {
+      "name": "prior phase: v88 backup",
+      "pass": true
+    },
+    {
+      "name": "prior phase: v89 DR",
+      "pass": true
+    },
+    {
+      "name": "prior phase: v90 DR validation",
+      "pass": true
+    },
+    {
+      "name": "prior phase: v91 security",
+      "pass": true
+    },
+    {
+      "name": "prior phase: v92 supabase",
+      "pass": true
+    },
+    {
+      "name": "prior phase: v93 certification",
+      "pass": true
+    },
+    {
+      "name": "prior phase: v94 cost",
+      "pass": true
+    },
+    {
+      "name": "prior phase: v95 finops",
+      "pass": true
+    },
+    {
+      "name": "domain assessments",
+      "pass": true
+    },
+    {
+      "name": "28+ domains",
+      "pass": true
+    },
+    {
+      "name": "verification registry",
+      "pass": true
+    },
+    {
+      "name": "production launch checklist",
+      "pass": true
+    },
+    {
+      "name": "zero production blockers",
+      "pass": true
+    },
+    {
+      "name": "v96 final audit RPC",
+      "pass": true
+    },
+    {
+      "name": "health check v96",
+      "pass": true
+    },
+    {
+      "name": "init enterprise final audit",
+      "pass": true
+    },
+    {
+      "name": "CI workflow",
+      "pass": true
+    },
+    {
+      "name": "build:ci script",
+      "pass": true
+    },
+    {
+      "name": "package enterprise final audit",
+      "pass": true
+    },
+    {
+      "name": "certify enterprise script",
+      "pass": true
+    },
+    {
+      "name": "RLS tenant isolation",
+      "pass": true
+    },
+    {
+      "name": "hot path bundle RPC",
+      "pass": true
+    },
+    {
+      "name": "read write separation",
+      "pass": true
+    }
+  ],
+  "passed": 32,
+  "total": 32,
+  "scores": {
+    "architecture": 97,
+    "performance": 97,
+    "security": 97,
+    "scalability": 96,
+    "reliability": 96,
+    "maintainability": 96,
+    "developer_experience": 95,
+    "infrastructure": 96,
+    "operational_readiness": 96,
+    "production_readiness": 96,
+    "overall_enterprise": 96
+  }
+}

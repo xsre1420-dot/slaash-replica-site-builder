@@ -1,0 +1,7 @@
+{
+  "status": "ready",
+  "service": "slaash-storefront",
+  "probe": "readiness",
+  "checks": ["env", "workers", "scaling_audit", "session"],
+  "sticky_sessions_required": false
+}

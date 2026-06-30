@@ -1,0 +1,129 @@
+{
+  "generatedAt": "2026-06-30T00:01:28.960Z",
+  "schemaTarget": 93,
+  "checks": [
+    {
+      "name": "file: src/lib/securityCertification/owaspAudit.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/securityCertification/penetrationReview.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/securityCertification/dependencyAudit.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/securityCertification/abuseProtection.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/securityCertification/certificationEngine.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/securityCertification/enterpriseSecurityCertification.test.ts",
+      "pass": true
+    },
+    {
+      "name": "file: supabase/migrations/20260712000001_enterprise_security_certification_v93.sql",
+      "pass": true
+    },
+    {
+      "name": "file: ENTERPRISE_SECURITY_CERTIFICATION_REPORT.md",
+      "pass": true
+    },
+    {
+      "name": "file: public/enterprise-security-certification-schema.json",
+      "pass": true
+    },
+    {
+      "name": "file: scripts/dependency-security-audit.mjs",
+      "pass": true
+    },
+    {
+      "name": "OWASP registry",
+      "pass": true
+    },
+    {
+      "name": "penetration scenarios",
+      "pass": true
+    },
+    {
+      "name": "dependency policy registry",
+      "pass": true
+    },
+    {
+      "name": "abuse protection registry",
+      "pass": true
+    },
+    {
+      "name": "WAF vendor-neutral headers",
+      "pass": true
+    },
+    {
+      "name": "replay nonce guard",
+      "pass": true
+    },
+    {
+      "name": "v93 certification RPC",
+      "pass": true
+    },
+    {
+      "name": "health check v93",
+      "pass": true
+    },
+    {
+      "name": "prior v91 security hardening",
+      "pass": true
+    },
+    {
+      "name": "prior v92 supabase security",
+      "pass": true
+    },
+    {
+      "name": "init security certification",
+      "pass": true
+    },
+    {
+      "name": "package certification audit",
+      "pass": true
+    },
+    {
+      "name": "package dependency audit",
+      "pass": true
+    },
+    {
+      "name": "existing rate limiter",
+      "pass": true
+    },
+    {
+      "name": "existing sanitize",
+      "pass": true
+    },
+    {
+      "name": "edge CORS allowlist",
+      "pass": true
+    },
+    {
+      "name": "payment webhook HMAC",
+      "pass": true
+    },
+    {
+      "name": "idempotency RPC exists",
+      "pass": true
+    }
+  ],
+  "passed": 28,
+  "total": 28,
+  "scores": {
+    "owasp_compliance": 97,
+    "application_security": 97,
+    "infrastructure_security": 96,
+    "dependency_security": 96,
+    "operational_security": 96,
+    "production_security": 96,
+    "overall_enterprise_security": 96
+  }
+}

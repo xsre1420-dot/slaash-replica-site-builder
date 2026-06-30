@@ -4,3 +4,4 @@ export * from '@/services/read/products/productQueryService';
 export * from '@/services/read/coupons/couponReadService';
 export * from '@/services/read/delivery/deliveryReadService';
 export * from '@/services/read/inventory/inventoryReadService';
+export * from '@/services/read/readConsistency';

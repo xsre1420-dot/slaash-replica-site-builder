@@ -5,6 +5,7 @@
 import { enqueueJob } from '@/background/queues/JobQueue';
 import type { QueueKind } from '@/background/shared/types';
 import type { StorefrontInvalidationScope } from '@/services/storefrontCacheTiers';
+import { safeEnqueueBestEffort } from '@/core/distributed/failureIsolation';
 
 export { enqueueJob };
 
@@ -60,19 +61,23 @@ export function enqueueImageCleanup(
   before: Record<string, unknown>,
   after: Record<string, unknown>
 ): string {
-  return enqueueJob('image', 'image.cleanupRemoved', { before, after });
+  return safeEnqueueBestEffort('media', () =>
+    enqueueJob('image', 'image.cleanupRemoved', { before, after })
+  );
 }
 
 export function enqueueImageDelete(urls: string[]): string {
   if (urls.length === 0) return '';
-  return enqueueJob('image', 'image.deleteStorage', { urls });
+  return safeEnqueueBestEffort('media', () => enqueueJob('image', 'image.deleteStorage', { urls }));
 }
 
 export function enqueueBrandingCleanup(
   before: { storeLogo?: string | null },
   after: { storeLogo?: string | null }
 ): string {
-  return enqueueJob('image', 'image.cleanupBranding', { before, after });
+  return safeEnqueueBestEffort('media', () =>
+    enqueueJob('image', 'image.cleanupBranding', { before, after })
+  );
 }
 
 export function enqueueAnalyticsVisit(
@@ -80,11 +85,13 @@ export function enqueueAnalyticsVisit(
   pagePath: string,
   userAgent: string | null
 ): string {
-  return enqueueJob(
-    'analytics',
-    'analytics.trackVisit',
-    { storeSlug, pagePath, userAgent },
-    { idempotencyKey: `visit:${storeSlug}:${pagePath}` }
+  return safeEnqueueBestEffort('analytics', () =>
+    enqueueJob(
+      'analytics',
+      'analytics.trackVisit',
+      { storeSlug, pagePath, userAgent },
+      { idempotencyKey: `visit:${storeSlug}:${pagePath}` }
+    )
   );
 }
 
@@ -93,20 +100,24 @@ export function enqueueAnalyticsProductView(
   productId: string,
   pagePath: string | null
 ): string {
-  return enqueueJob(
-    'analytics',
-    'analytics.trackProductView',
-    { slug, productId, pagePath },
-    { idempotencyKey: `view:${slug}:${productId}` }
+  return safeEnqueueBestEffort('analytics', () =>
+    enqueueJob(
+      'analytics',
+      'analytics.trackProductView',
+      { slug, productId, pagePath },
+      { idempotencyKey: `view:${slug}:${productId}` }
+    )
   );
 }
 
 export function enqueueImportBatchJob(jobId: string, batchSize = 25): string {
-  return enqueueJob(
-    'import',
-    'import.processBatch',
-    { jobId, batchSize },
-    { idempotencyKey: `import:start:${jobId}` }
+  return safeEnqueueBestEffort('imports', () =>
+    enqueueJob(
+      'import',
+      'import.processBatch',
+      { jobId, batchSize },
+      { idempotencyKey: `import:start:${jobId}` }
+    )
   );
 }
 

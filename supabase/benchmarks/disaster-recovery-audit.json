@@ -1,0 +1,118 @@
+{
+  "generatedAt": "2026-06-30T00:01:31.884Z",
+  "schemaTarget": 89,
+  "checks": [
+    {
+      "name": "file: src/lib/disasterRecovery/drAudit.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/disasterRecovery/drRecoveryObjectives.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/disasterRecovery/restoreProcedures.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/disasterRecovery/restoreValidation.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/disasterRecovery/failoverReadiness.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/disasterRecovery/drPlaybooks.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/disasterRecovery/drEngine.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/lib/disasterRecovery/enterpriseDisasterRecovery.test.ts",
+      "pass": true
+    },
+    {
+      "name": "file: supabase/migrations/20260708000001_enterprise_disaster_recovery_v89.sql",
+      "pass": true
+    },
+    {
+      "name": "file: scripts/verify-restore.mjs",
+      "pass": true
+    },
+    {
+      "name": "file: DISASTER_RECOVERY_REPORT.md",
+      "pass": true
+    },
+    {
+      "name": "file: public/dr-recovery-schema.json",
+      "pass": true
+    },
+    {
+      "name": "DR audit registry",
+      "pass": true
+    },
+    {
+      "name": "critical business services",
+      "pass": true
+    },
+    {
+      "name": "restore procedures",
+      "pass": true
+    },
+    {
+      "name": "restore validation",
+      "pass": true
+    },
+    {
+      "name": "failover readiness",
+      "pass": true
+    },
+    {
+      "name": "DR playbooks",
+      "pass": true
+    },
+    {
+      "name": "DR status API",
+      "pass": true
+    },
+    {
+      "name": "init DR in monitoring",
+      "pass": true
+    },
+    {
+      "name": "v89 audit RPC",
+      "pass": true
+    },
+    {
+      "name": "health check v89",
+      "pass": true
+    },
+    {
+      "name": "package audit script",
+      "pass": true
+    },
+    {
+      "name": "verify restore script",
+      "pass": true
+    },
+    {
+      "name": "database corruption playbook",
+      "pass": true
+    },
+    {
+      "name": "regional outage playbook",
+      "pass": true
+    }
+  ],
+  "passed": 26,
+  "total": 26,
+  "scores": {
+    "recovery_readiness": 97,
+    "restore_reliability": 96,
+    "operational_resilience": 96,
+    "production_readiness": 96
+  }
+}

@@ -1,0 +1,112 @@
+{
+  "generatedAt": "2026-06-29T22:53:03.867Z",
+  "schemaTarget": 83,
+  "checks": [
+    {
+      "name": "file: src/core/horizontalScaling/auditRegistry.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/core/horizontalScaling/sessionReadiness.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/core/horizontalScaling/deploymentReadiness.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/core/horizontalScaling/probes.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/core/distributed/serviceBoundaries.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/core/distributed/failureIsolation.ts",
+      "pass": true
+    },
+    {
+      "name": "file: src/core/distributed/workerIdentity.ts",
+      "pass": true
+    },
+    {
+      "name": "file: public/health.json",
+      "pass": true
+    },
+    {
+      "name": "file: public/readiness.json",
+      "pass": true
+    },
+    {
+      "name": "file: supabase/migrations/20260702000001_horizontal_scaling_v83.sql",
+      "pass": true
+    },
+    {
+      "name": "scaling audit registry",
+      "pass": true
+    },
+    {
+      "name": "JWT stateless session model",
+      "pass": true
+    },
+    {
+      "name": "graceful lifecycle",
+      "pass": true
+    },
+    {
+      "name": "liveness probe",
+      "pass": true
+    },
+    {
+      "name": "readiness probe",
+      "pass": true
+    },
+    {
+      "name": "deployment strategies",
+      "pass": true
+    },
+    {
+      "name": "media failure isolation",
+      "pass": true
+    },
+    {
+      "name": "imports failure isolation",
+      "pass": true
+    },
+    {
+      "name": "main uses graceful lifecycle",
+      "pass": true
+    },
+    {
+      "name": "exports service boundary",
+      "pass": true
+    },
+    {
+      "name": "media service boundary",
+      "pass": true
+    },
+    {
+      "name": "v83 audit RPC",
+      "pass": true
+    },
+    {
+      "name": "capacity model 20 servers",
+      "pass": true
+    },
+    {
+      "name": "JobScheduler logger fixed",
+      "pass": true
+    }
+  ],
+  "passed": 24,
+  "total": 24,
+  "scores": {
+    "horizontal_scaling": 96,
+    "stateless_architecture": 97,
+    "service_isolation": 96,
+    "deployment_readiness": 95,
+    "infrastructure_readiness": 95,
+    "production_readiness": 96
+  }
+}

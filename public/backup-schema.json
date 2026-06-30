@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Enterprise Backup Strategy Schema",
+  "version": 88,
+  "domains": ["database", "storage", "configuration", "secrets", "metadata", "background_jobs"],
+  "databaseTiers": ["full", "incremental", "pitr"],
+  "storageAssetClasses": [
+    "product_images", "store_assets", "documents", "media_uploads", "user_generated"
+  ],
+  "configScopes": [
+    "environment_variables", "secrets", "config_files", "infrastructure", "deployment"
+  ],
+  "retentionTiers": ["hot", "warm", "cold", "archive"],
+  "validationFrequencies": ["on_deploy", "weekly", "monthly", "quarterly"],
+  "recoveryMetrics": ["rpo_minutes", "rto_minutes"]
+}

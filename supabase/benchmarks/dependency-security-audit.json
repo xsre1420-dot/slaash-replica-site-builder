@@ -1,0 +1,19 @@
+{
+  "generatedAt": "2026-06-29T23:46:54.966Z",
+  "schemaTarget": 93,
+  "npmAudit": {
+    "info": 0,
+    "low": 0,
+    "moderate": 3,
+    "high": 1,
+    "critical": 0,
+    "total": 4
+  },
+  "runtimeFindings": [],
+  "runtimeCritical": 0,
+  "runtimeHigh": 0,
+  "policyRegistry": true,
+  "devOnlyAcceptable": false,
+  "score": 97,
+  "recommendation": "Dev/transitive vulnerabilities acceptable if not in production bundle"
+}

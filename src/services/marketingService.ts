@@ -1,5 +1,8 @@
+import { cachedFetchNullable } from '@/lib/cache/enterpriseCache';
+import { callReadRpc } from '@/lib/readWrite/readClient';
+import { cache, CacheTTL } from '@/lib/cache';
+import { invalidateMarketingPublicCache } from '@/lib/cache/cacheInvalidation';
 import { supabase } from '@/integrations/supabase/client';
-import { cache, CacheKeys, CacheTTL } from '@/lib/cache';
 import { resolveStoreSlugByOwnerId } from '@/services/storefrontProductService';
 
 export interface StoreMarketingConfig {
@@ -28,20 +31,20 @@ function normalizeConfig(raw: Record<string, unknown> | null): StoreMarketingCon
 
 export async function fetchStoreMarketingBySlug(slug: string): Promise<StoreMarketingConfig | null> {
   const normalized = slug.trim().toLowerCase();
-  const cacheKey = CacheKeys.tenantMeta(`marketing:${normalized}`);
-  const cached = cache.get<StoreMarketingConfig>(cacheKey);
-  if (cached) return cached;
+  const cacheKey = `marketing:public:${normalized}`;
 
-  const { data, error } = await (supabase as any).rpc('get_store_marketing_public', {
-    p_slug: normalized,
+  return cachedFetchNullable({
+    key: cacheKey,
+    domain: 'marketing',
+    ttlPolicyPath: 'long.marketing_public',
+    fetchFn: async () => {
+      const { data, error } = await callReadRpc<Record<string, unknown>>('get_store_marketing_public', {
+        p_slug: normalized,
+      });
+      if (error || !data) return null;
+      return normalizeConfig(data);
+    },
   });
-
-  if (error || !data) return null;
-  const config = normalizeConfig(data as Record<string, unknown>);
-  if (config) {
-    cache.set(cacheKey, config, CacheTTL.MEDIUM, CacheTTL.SHORT);
-  }
-  return config;
 }
 
 export async function fetchStoreMarketingByOwner(ownerId: string): Promise<StoreMarketingConfig | null> {
@@ -76,7 +79,7 @@ export async function fetchStoreMarketingConfig(opts: {
 
 export function invalidateStoreMarketingCache(storeSlug?: string, ownerId?: string): void {
   if (storeSlug?.trim()) {
-    cache.del(CacheKeys.tenantMeta(`marketing:${storeSlug.trim().toLowerCase()}`));
+    invalidateMarketingPublicCache(storeSlug);
   }
   if (ownerId) {
     cache.del(`marketing:owner:${ownerId}`);

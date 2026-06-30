@@ -1,4 +1,5 @@
 import { callSupabaseRpc } from '@/integrations/supabase/rpc';
+import { APP_CONSTANTS } from '@/config/constants';
 import { assertMerchantOwner } from '@/lib/tenantGuard';
 import { instrumentAsync } from '@/lib/observability';
 import type { BulkImportRow } from '@/services/productsCrudService';
@@ -71,7 +72,7 @@ export async function enqueueProductImportJob(
 /** Process one batch of a queued import job (client-driven or edge worker). */
 export async function processProductImportBatch(
   jobId: string,
-  batchSize = 25
+  batchSize = APP_CONSTANTS.import.defaultBatchSize
 ): Promise<ProcessImportBatchResult> {
   return instrumentAsync('import.processBatch', async () => {
     const { data, error } = await callSupabaseRpc<{

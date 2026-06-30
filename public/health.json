@@ -1,1 +1,8 @@
-{"status":"ok","service":"slaash-storefront","observability":"enabled"}
+{
+  "status": "ok",
+  "service": "slaash-storefront",
+  "probe": "liveness",
+  "observability": "enabled",
+  "stateless": true,
+  "sticky_sessions_required": false
+}
