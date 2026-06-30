@@ -4512,6 +4512,10 @@ export type Database = {
         Args: { p_owner_id: string }
         Returns: Json
       }
+      get_merchant_order_with_archive_fallback: {
+        Args: { p_order_id: string; p_owner_id: string }
+        Returns: Json
+      }
       get_merchant_product_by_id: {
         Args: { p_product_id: string }
         Returns: Json
@@ -4824,8 +4828,17 @@ export type Database = {
         Args: { p_owner_id: string; p_patch: Json }
         Returns: Json
       }
+      platform_approximate_row_count: {
+        Args: { p_owner_id?: string; p_table: string }
+        Returns: number
+      }
       platform_benchmark_hot_queries: {
         Args: { p_owner_id?: string; p_slug?: string; p_warm_cache?: boolean }
+        Returns: Json
+      }
+      platform_cache_architecture_audit: { Args: never; Returns: Json }
+      platform_cache_load_model: {
+        Args: { p_cache_hit_rate?: number; p_concurrent_users?: number }
         Returns: Json
       }
       platform_connection_benchmark: {
@@ -4834,8 +4847,25 @@ export type Database = {
       }
       platform_connection_pool_recommendations: { Args: never; Returns: Json }
       platform_data_lifecycle_audit: { Args: never; Returns: Json }
+      platform_database_growth_audit: { Args: never; Returns: Json }
       platform_database_resource_audit: { Args: never; Returns: Json }
+      platform_disaster_recovery_audit: { Args: never; Returns: Json }
+      platform_disaster_recovery_validation_audit: {
+        Args: never
+        Returns: Json
+      }
+      platform_distributed_capacity_model: {
+        Args: {
+          p_app_instances?: number
+          p_cdn_enabled?: boolean
+          p_kv_enabled?: boolean
+          p_read_replica?: boolean
+          p_worker_instances?: number
+        }
+        Returns: Json
+      }
       platform_distributed_scaling_audit: { Args: never; Returns: Json }
+      platform_distributed_tracing_audit: { Args: never; Returns: Json }
       platform_drop_partitions_before: {
         Args: { p_before: string; p_parent_table: string }
         Returns: Json
@@ -4848,19 +4878,54 @@ export type Database = {
         }
         Returns: Json
       }
+      platform_enterprise_alerting_audit: { Args: never; Returns: Json }
+      platform_enterprise_backup_audit: { Args: never; Returns: Json }
+      platform_enterprise_final_audit: { Args: never; Returns: Json }
+      platform_enterprise_security_audit: { Args: never; Returns: Json }
+      platform_enterprise_security_certification_audit: {
+        Args: never
+        Returns: Json
+      }
+      platform_finops_scaling_audit: { Args: never; Returns: Json }
       platform_fk_index_audit: { Args: never; Returns: Json }
       platform_health_check: { Args: never; Returns: Json }
+      platform_horizontal_capacity_model: {
+        Args: { p_app_instances?: number }
+        Returns: Json
+      }
+      platform_horizontal_scaling_audit: { Args: never; Returns: Json }
       platform_hot_path_benchmark: {
         Args: { p_product_id?: string; p_slug?: string }
         Returns: Json
       }
+      platform_infrastructure_cost_audit: { Args: never; Returns: Json }
       platform_internals_audit: { Args: never; Returns: Json }
+      platform_large_dataset_benchmark: {
+        Args: { p_owner_id?: string; p_slug?: string }
+        Returns: Json
+      }
       platform_lifecycle_audit: { Args: never; Returns: Json }
       platform_lock_audit: { Args: never; Returns: Json }
       platform_lock_benchmark: { Args: { p_owner_id?: string }; Returns: Json }
+      platform_maintain_partition_statistics: {
+        Args: { p_parent_tables?: string[] }
+        Returns: Json
+      }
+      platform_metrics_monitoring_audit: { Args: never; Returns: Json }
+      platform_observability_audit: { Args: never; Returns: Json }
+      platform_partition_scale_benchmark: {
+        Args: { p_scenarios?: number[] }
+        Returns: Json
+      }
       platform_payload_benchmark: { Args: { p_slug?: string }; Returns: Json }
       platform_postgresql_internals_audit: { Args: never; Returns: Json }
       platform_postgresql_internals_benchmark: { Args: never; Returns: Json }
+      platform_read_replica_audit: { Args: never; Returns: Json }
+      platform_read_replica_offload_model: {
+        Args: { p_read_rps?: number; p_replica_count?: number }
+        Returns: Json
+      }
+      platform_rls_coverage_audit: { Args: never; Returns: Json }
       platform_run_data_lifecycle: { Args: never; Returns: Json }
       platform_run_internals_maintenance: {
         Args: {
@@ -4872,6 +4937,11 @@ export type Database = {
         Returns: Json
       }
       platform_scaling_audit: { Args: never; Returns: Json }
+      platform_supabase_security_audit: { Args: never; Returns: Json }
+      platform_tenant_dataset_stats: {
+        Args: { p_owner_id: string }
+        Returns: Json
+      }
       platform_transaction_integrity_audit: { Args: never; Returns: Json }
       platform_verify_partition_pruning: {
         Args: { p_days?: number; p_table?: string }
@@ -4928,6 +4998,14 @@ export type Database = {
       }
       prune_order_webhook_outbox: {
         Args: { p_keep_days?: number }
+        Returns: number
+      }
+      prune_payment_webhook_events: {
+        Args: { p_keep_days?: number }
+        Returns: number
+      }
+      prune_product_views: {
+        Args: { p_retention_days?: number }
         Returns: number
       }
       prune_rpc_rate_limits: {
