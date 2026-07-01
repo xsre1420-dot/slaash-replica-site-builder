@@ -25,6 +25,7 @@ import {
   summarizeInventoryAlerts,
   type PeriodMetrics,
 } from '@/utils/dashboardInsightsUtils';
+import { getProductLifecycleStatus } from '@/lib/productLifecycle';
 import {
   buildOrderDashboardStatsFromBatch,
   fetchDashboardStatisticsBatch,
@@ -75,7 +76,11 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
   });
   const [hasSlug, setHasSlug] = useState<boolean | null>(null);
   const [pendingReviewsCount, setPendingReviewsCount] = useState(0);
-  const [catalogKpis, setCatalogKpis] = useState<{ productCount: number; lowStockCount: number } | null>(null);
+  const [catalogKpis, setCatalogKpis] = useState<{
+    productCount: number;
+    publishedCount: number;
+    lowStockCount: number;
+  } | null>(null);
   const [kpiLoading, setKpiLoading] = useState(true);
 
   useEffect(() => {
@@ -202,16 +207,30 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
     };
   }, [loadPeriods, refreshKey]);
 
-  const products = useMemo(
-    () => (catalogKpis != null ? [] : getProductsSync()),
-    [catalogKpis, refreshKey, user?.id]
+  const localProducts = useMemo(
+    () => getProductsSync(),
+    [refreshKey, user?.id, catalogKpis]
   );
-  const productCount = catalogKpis?.productCount ?? products.length;
-  const lowStockCount = catalogKpis?.lowStockCount ?? countLowStockProducts(products);
+
+  const localNonArchivedCount = useMemo(
+    () =>
+      localProducts.filter((product) => getProductLifecycleStatus(product) !== 'archived').length,
+    [localProducts]
+  );
+
+  const catalogTotalCount = Math.max(
+    catalogKpis?.productCount ?? 0,
+    localNonArchivedCount
+  );
+  const draftCount = Math.max(
+    countDraftProducts(localProducts),
+    Math.max(0, catalogTotalCount - (catalogKpis?.publishedCount ?? catalogTotalCount))
+  );
+  const lowStockCount =
+    catalogKpis?.lowStockCount ?? countLowStockProducts(localProducts);
   const inventorySummary = catalogKpis
     ? { low: catalogKpis.lowStockCount, out: 0 }
-    : summarizeInventoryAlerts(products);
-  const draftCount = catalogKpis ? 0 : countDraftProducts(products);
+    : summarizeInventoryAlerts(localProducts);
 
   const actions = useMemo((): DashboardActionItem[] => {
     const items: DashboardActionItem[] = [];
@@ -251,7 +270,7 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
       });
     }
 
-    if (productCount === 0) {
+    if (catalogTotalCount === 0) {
       items.push({
         id: 'empty-catalog',
         title: 'متجرك بدون منتجات',
@@ -284,7 +303,7 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
     return items;
   }, [
     pendingFulfillment,
-    productCount,
+    catalogTotalCount,
     hasSlug,
     lowStockCount,
     inventorySummary.low,

@@ -3,6 +3,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useRecentOrders } from '@/hooks/useRecentOrders';
 import { useDashboardInsights } from '@/hooks/useDashboardInsights';
 import { useRealtimeOrders } from '@/hooks/useRealtimeOrders';
+import { useRealtimeProducts } from '@/hooks/useRealtimeProducts';
 import {
   DashboardAttentionSection,
   DashboardTodayKpis,
@@ -16,6 +17,10 @@ const DashboardOverview = memo(function DashboardOverview() {
 
   useRealtimeOrders(() => {
     refetch();
+    setStatsRefreshKey((k) => k + 1);
+  });
+
+  useRealtimeProducts(() => {
     setStatsRefreshKey((k) => k + 1);
   });
 

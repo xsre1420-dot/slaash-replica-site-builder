@@ -57,7 +57,8 @@ async function requireOwnerId(): Promise<string | null> {
   return ownerId;
 }
 
-async function resolveStoreId(ownerId: string): Promise<string | null> {
+async function resolveStoreId(ownerId: string, bustCache = false): Promise<string | null> {
+  if (bustCache) cache.del(CacheKeys.store(ownerId));
   const cachedStore = cache.get<StoreRecord>(CacheKeys.store(ownerId));
   if (cachedStore?.id) return cachedStore.id;
 
@@ -82,6 +83,11 @@ async function fetchRowById(
   return null;
 }
 
+const isRetriableStoreScopeError = (err: unknown): boolean => {
+  const code = String(err ?? '').toLowerCase();
+  return code === 'forbidden' || code.includes('foreign key') && code.includes('store_id');
+};
+
 /** Create a product row in Supabase. */
 export async function createProduct(product: Product): Promise<ProductsCrudResult<Product>> {
   const ownerId = await requireOwnerId();
@@ -94,17 +100,22 @@ export async function createProduct(product: Product): Promise<ProductsCrudResul
     return { success: false, error: 'انتظر اكتمال رفع الصورة قبل الحفظ' };
   }
 
-  const storeId = await resolveStoreId(ownerId);
+  const storeId = await resolveStoreId(ownerId, true);
   const payloads = buildProductInsertPayload(product, ownerId, storeId);
-  const stockQty = Math.max(product.stockQuantity ?? 0, 0);
+  const hasExplicitStock =
+    product.stockQuantity != null && Number.isFinite(product.stockQuantity);
+  const stockQty = hasExplicitStock ? Math.max(product.stockQuantity!, 0) : null;
 
   const atomicPayloads = [payloads.full, payloads.extended, payloads.standard, payloads.minimal];
   for (const row of atomicPayloads) {
-    const { data: atomicData, error: atomicError } = await rpcCreateMerchantProductWithStock({
+    const rpcArgs: Record<string, unknown> = {
       p_owner_id: ownerId,
       p_payload: row,
-      p_initial_stock: stockQty,
-    });
+    };
+    if (hasExplicitStock) {
+      rpcArgs.p_initial_stock = stockQty;
+    }
+    const { data: atomicData, error: atomicError } = await rpcCreateMerchantProductWithStock(rpcArgs);
 
     if (!atomicError && atomicData?.success && atomicData.product_id) {
       const fetched = await fetchRowById(atomicData.product_id, ownerId);
@@ -112,6 +123,11 @@ export async function createProduct(product: Product): Promise<ProductsCrudResul
         syncProductCachesAfterMutation(ownerId);
         return { success: true, data: mapDbProduct(fetched) };
       }
+    }
+
+    const rpcCode = atomicData?.error ?? (atomicError ? String(atomicError.message ?? atomicError) : null);
+    if (isRetriableStoreScopeError(rpcCode) && 'store_id' in row) {
+      continue;
     }
 
     if (atomicError && !isSchemaColumnError(atomicError)) {
@@ -140,11 +156,11 @@ export async function createProduct(product: Product): Promise<ProductsCrudResul
       syncProductCachesAfterMutation(ownerId);
       const mapped = mapDbProduct(data as Record<string, unknown>);
 
-      if (stockQty > 0) {
+      if (hasExplicitStock && stockQty! > 0) {
         const { data: stockData, error: stockError } = await rpcRecordProductInitialStock({
           p_product_id: mapped.id,
           p_owner_id: ownerId,
-          p_quantity: stockQty,
+          p_quantity: stockQty!,
         });
         if (stockError || !stockData?.success) {
           await productsTable().delete().eq('id', mapped.id).eq('owner_id', ownerId);
@@ -156,6 +172,9 @@ export async function createProduct(product: Product): Promise<ProductsCrudResul
       }
 
       return { success: true, data: mapped };
+    }
+    if (error && isRetriableStoreScopeError(error.message) && 'store_id' in row) {
+      continue;
     }
     if (error && !isSchemaColumnError(error.message)) {
       return { success: false, error: mapProductInsertError(error.message) };

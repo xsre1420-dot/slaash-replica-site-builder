@@ -5,6 +5,7 @@ import { ShoppingCart, Plus, Minus, Trash2, ArrowLeft, ShieldCheck } from "lucid
 import { useCartActions, useCartState } from "@/context/CartContext";
 import { useNavigate } from "react-router-dom";
 import { getCheckoutPath } from "@/lib/storefrontPaths";
+import OptimizedImage from "@/components/OptimizedImage";
 
 interface CartDrawerProps {
   children?: React.ReactNode;
@@ -58,10 +59,14 @@ const CartDrawer = memo(function CartDrawer({ children, checkoutPath, storeSlug 
               <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
                 {cartItems.map((item, i) => (
                   <div key={`${item.product.id}-${item.selectedSize}-${item.selectedColor}-${i}`} className="flex gap-3 bg-muted/40 hover:bg-muted/60 transition-colors rounded-2xl p-3">
-                    <img
+                    <OptimizedImage
                       src={item.product.image}
                       alt={item.product.name}
-                      className="w-16 h-16 rounded-xl object-cover flex-shrink-0 ring-1 ring-border/40"
+                      variant="thumbnail"
+                      className="w-16 h-16 rounded-xl flex-shrink-0 ring-1 ring-border/40"
+                      width={64}
+                      height={64}
+                      loading="lazy"
                     />
                     <div className="flex-1 min-w-0">
                       <h4 className="text-sm font-semibold text-foreground text-right truncate">{item.product.name}</h4>

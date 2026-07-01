@@ -232,6 +232,17 @@ export interface GenerateAccessCodePayload {
   notes?: string;
 }
 
+const parseSupabaseRpcError = (error: { message?: string; code?: string; details?: string }): string => {
+  const msg = [error.message, error.details, error.code].filter(Boolean).join(' ');
+  if (/PGRST202|schema cache|Could not find the function/i.test(msg)) {
+    return 'db_migration_required';
+  }
+  if (/function|schema cache/i.test(msg)) {
+    return 'db_migration_required';
+  }
+  return error.message ?? 'rpc_failed';
+};
+
 export const generateAccessCode = async (
   payload: GenerateAccessCodePayload
 ): Promise<{
@@ -254,22 +265,20 @@ export const generateAccessCode = async (
   });
 
   if (error) {
-    const msg = error.message ?? '';
-    if (/function|schema cache/i.test(msg)) {
-      throw new Error('قاعدة البيانات تحتاج تحديث — npm run db:deploy');
-    }
-    throw new Error(msg);
+    throw new Error(parseSupabaseRpcError(error));
   }
 
   const result = data as {
     success?: boolean;
     error?: string;
     access_code?: string;
+    code_id?: string;
     plan_id?: string;
     duration_months?: number;
     agreed_price?: number | null;
     code_expires_at?: string;
     message?: string;
+    code_hint?: string;
   };
 
   if (!result?.success || !result.access_code) {
@@ -278,7 +287,7 @@ export const generateAccessCode = async (
 
   return {
     accessCode: result.access_code,
-    codeId: payload.leadId,
+    codeId: result.code_id ?? payload.leadId,
     planId: result.plan_id ?? payload.planId,
     durationMonths: result.duration_months ?? (payload.planId === 'yearly' ? 12 : 6),
     agreedPrice: result.agreed_price ?? null,
@@ -292,6 +301,11 @@ export const generateAccessCode = async (
 type RedeemFunctionResult = {
   success?: boolean;
   error?: string;
+  preview?: boolean;
+  plan_id?: string;
+  duration_months?: number;
+  agreed_price?: number | null;
+  store_name?: string | null;
   session?: {
     access_token: string;
     refresh_token: string;
@@ -312,14 +326,22 @@ const parseRedeemFunctionResult = async (
 
   if (error?.context && typeof error.context.json === 'function') {
     try {
-      const body = (await error.context.json()) as RedeemFunctionResult;
-      if (body && typeof body === 'object') return body;
+      const body = (await error.context.json()) as RedeemFunctionResult & { error?: string };
+      if (body && typeof body === 'object') {
+        if (body.error === 'Forbidden origin') {
+          return { success: false, error: 'cors_blocked' };
+        }
+        return body;
+      }
     } catch {
       /* ignore malformed edge response */
     }
   }
 
   const msg = error?.message ?? '';
+  if (/403|forbidden origin/i.test(msg)) {
+    return { success: false, error: 'cors_blocked' };
+  }
   if (/401|403|non-2xx|jwt|unauthorized/i.test(msg)) {
     return { success: false, error: 'edge_unavailable' };
   }
@@ -376,5 +398,173 @@ export const fetchLeadAccessCodes = async (leadId: string) => {
   const payload = data as { success?: boolean; rows?: unknown[]; error?: string };
   if (!payload?.success) throw new Error(payload?.error || 'forbidden');
   return (payload.rows ?? []) as import('@/types/accessCodes').AccessCodeRecord[];
+};
+
+export const revokeLeadAccessCode = async (
+  leadId: string,
+  opts?: { codeId?: string; reason?: string }
+): Promise<{ codeId: string; codeHint: string }> => {
+  const { data, error } = await (supabase as any).rpc('admin_revoke_lead_access_code', {
+    p_lead_id: leadId,
+    p_code_id: opts?.codeId ?? null,
+    p_reason: opts?.reason ?? 'lost-by-customer',
+  });
+
+  if (error) {
+    throw new Error(parseSupabaseRpcError(error));
+  }
+
+  const result = data as {
+    success?: boolean;
+    error?: string;
+    code_id?: string;
+    code_hint?: string;
+  };
+
+  if (!result?.success || !result.code_id) {
+    throw new Error(result?.error || 'revoke_failed');
+  }
+
+  return { codeId: result.code_id, codeHint: result.code_hint ?? '****' };
+};
+
+export const replaceLeadAccessCode = async (
+  leadId: string,
+  opts?: { codeId?: string; reason?: string; planId?: string; durationMonths?: number; agreedPrice?: number | null; storeName?: string }
+): Promise<{
+  accessCode: string;
+  codeId: string;
+  planId: string;
+  durationMonths: number;
+  agreedPrice: number | null;
+  replacedCodeHint: string | null;
+}> => {
+  const { data, error } = await (supabase as any).rpc('admin_replace_lead_access_code', {
+    p_lead_id: leadId,
+    p_code_id: opts?.codeId ?? null,
+    p_reason: opts?.reason ?? 'replaced-by-admin',
+  });
+
+  if (error) {
+    const parsed = parseSupabaseRpcError(error);
+    if (parsed === 'db_migration_required' && opts?.planId) {
+      try {
+        await revokeLeadAccessCode(leadId, { codeId: opts.codeId, reason: opts.reason });
+        const generated = await generateAccessCode({
+          leadId,
+          planId: opts.planId as 'annual' | 'yearly',
+          agreedPrice: opts.agreedPrice ?? undefined,
+          storeName: opts.storeName,
+        });
+        return {
+          accessCode: generated.accessCode,
+          codeId: generated.codeId,
+          planId: generated.planId,
+          durationMonths: generated.durationMonths,
+          agreedPrice: generated.agreedPrice,
+          replacedCodeHint: null,
+        };
+      } catch {
+        throw new Error('db_migration_required');
+      }
+    }
+    throw new Error(parsed);
+  }
+
+  const result = data as {
+    success?: boolean;
+    error?: string;
+    access_code?: string;
+    code_id?: string;
+    plan_id?: string;
+    duration_months?: number;
+    agreed_price?: number | null;
+    replaced_code_hint?: string;
+  };
+
+  if (!result?.success || !result.access_code || !result.code_id) {
+    throw new Error(result?.error || 'replace_failed');
+  }
+
+  return {
+    accessCode: result.access_code,
+    codeId: result.code_id,
+    planId: result.plan_id ?? 'annual',
+    durationMonths: result.duration_months ?? 6,
+    agreedPrice: result.agreed_price ?? null,
+    replacedCodeHint: result.replaced_code_hint ?? null,
+  };
+};
+
+export const verifyLeadAccessCode = async (
+  leadId: string,
+  plainCode: string
+): Promise<import('@/types/accessCodes').AccessCodeVerifyResult> => {
+  const { data, error } = await (supabase as any).rpc('admin_verify_lead_access_code', {
+    p_lead_id: leadId,
+    p_plain_code: plainCode.trim(),
+  });
+
+  if (error) {
+    const msg = error.message ?? '';
+    if (/function|schema cache/i.test(msg)) {
+      throw new Error('قاعدة البيانات تحتاج تحديث — npm run db:deploy');
+    }
+    throw new Error(msg);
+  }
+
+  const result = data as {
+    success?: boolean;
+    error?: string;
+    code_id?: string;
+    code_hint?: string;
+    plan_id?: string;
+    plan_label?: string;
+    duration_months?: number;
+    agreed_price?: number | null;
+    store_name?: string | null;
+    created_at?: string;
+  };
+
+  if (!result?.success || !result.code_id) {
+    throw new Error(result?.error || 'invalid_code');
+  }
+
+  return {
+    codeId: result.code_id,
+    codeHint: result.code_hint ?? '****',
+    planId: result.plan_id ?? 'annual',
+    planLabel: result.plan_label ?? result.plan_id ?? 'annual',
+    durationMonths: result.duration_months ?? 6,
+    agreedPrice: result.agreed_price ?? null,
+    storeName: result.store_name ?? null,
+    createdAt: result.created_at ?? new Date().toISOString(),
+  };
+};
+
+export const previewAccessCode = async (code: string): Promise<import('@/types/accessCodes').AccessCodePreview> => {
+  const { data, error } = await supabase.functions.invoke('redeem-access-code', {
+    body: { code: code.trim(), preview: true },
+  });
+
+  const result = await parseRedeemFunctionResult(data, error);
+
+  if (!result.success || !result.preview) {
+    throw new Error(result.error || 'invalid_code');
+  }
+
+  const payload = result as {
+    plan_id?: string;
+    duration_months?: number;
+    agreed_price?: number | null;
+    store_name?: string | null;
+  };
+
+  return {
+    planId: payload.plan_id ?? 'annual',
+    durationMonths: payload.duration_months ?? 6,
+    agreedPrice: payload.agreed_price ?? null,
+    storeName: payload.store_name ?? null,
+  };
 };
 

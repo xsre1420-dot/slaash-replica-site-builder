@@ -1,7 +1,6 @@
 import { useState, useEffect, type FormEvent } from 'react';
-import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -11,13 +10,8 @@ import { useSubscription } from '@/context/SubscriptionContext';
 import { fetchMerchantAccess } from '@/services/subscriptionService';
 import { useToast } from '@/hooks/use-toast';
 import { AdminAuthShell, AdminAuthLoadingScreen } from '@/components/admin/AdminAuthShell';
-import { AuthEmailField } from '@/components/auth/AuthFormFields';
-import {
-  authHintClass,
-  authPasswordInputClass,
-  authSubmitClass,
-  authToggleButtonClass,
-} from '@/components/auth/authFormStyles';
+import { AuthEmailField, AuthPageHeader, AuthPasswordField } from '@/components/auth/AuthFormFields';
+import { authSubmitClass } from '@/components/auth/authFormStyles';
 import { validateEmail, sanitizeInternalRedirect } from '@/lib/authUtils';
 import { env } from '@/lib/env';
 
@@ -107,17 +101,19 @@ const AdminLogin = () => {
 
   return (
     <AdminAuthShell>
-      <div className="mb-6 space-y-1 text-center">
-        <h1 className="text-xl font-bold text-slate-100">دخول المسؤولين</h1>
-        <p className="text-sm text-slate-400">بريدك وكلمة المرور المُسجّلة في إعدادات المنصة</p>
-        {env.VITE_SUPABASE_PUBLISHABLE_KEY === 'missing-anon-key' && (
-          <p className="text-xs text-red-400 mt-2">إعدادات Supabase غير مكتملة — راجع ملف .env</p>
-        )}
-      </div>
+      <AuthPageHeader
+        title="دخول المسؤولين"
+        subtitle="بريدك وكلمة المرور المُسجّلة في إعدادات المنصة"
+        meta={
+          env.VITE_SUPABASE_PUBLISHABLE_KEY === 'missing-anon-key' ? (
+            <p className="text-xs text-destructive mt-2">إعدادات Supabase غير مكتملة — راجع ملف .env</p>
+          ) : undefined
+        }
+      />
 
       {user && !isAdmin && (
-        <Alert className="mb-4 rounded-lg border-amber-500/30 bg-amber-500/10 text-right">
-          <AlertDescription className="text-sm text-amber-100/90">
+        <Alert className="mb-4 rounded-lg border-warning/30 bg-warning/10 text-right">
+          <AlertDescription className="text-sm text-foreground">
             أنت مسجّل كتاجر. سجّل الخروج أولاً أو استخدم حساب مسؤول.
           </AlertDescription>
         </Alert>
@@ -157,44 +153,26 @@ const AdminLogin = () => {
           <div className="mb-1.5 flex items-center justify-between gap-3">
             <Link
               to="/reset-password"
-              className="text-xs font-medium text-slate-300 hover:text-slate-100"
+              className="text-xs font-medium text-primary hover:text-primary/80"
             >
               نسيت كلمة المرور؟
             </Link>
-            <label htmlFor="admin-login-password" className="text-sm font-medium text-slate-200">
-              كلمة المرور
-            </label>
           </div>
-          <div className="relative">
-            <Input
-              id="admin-login-password"
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className={authPasswordInputClass}
-              disabled={isLoading}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className={authToggleButtonClass}
-              aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
-              aria-pressed={showPassword}
-            >
-              {showPassword ? (
-                <EyeOff className="h-[18px] w-[18px]" />
-              ) : (
-                <Eye className="h-[18px] w-[18px]" />
-              )}
-            </button>
-          </div>
-          <p className={authHintClass}>8 أحرف على الأقل</p>
+          <AuthPasswordField
+            id="admin-login-password"
+            label="كلمة المرور"
+            value={password}
+            onChange={setPassword}
+            show={showPassword}
+            onToggle={() => setShowPassword(!showPassword)}
+            disabled={isLoading}
+            hint="8 أحرف على الأقل"
+            autoComplete="current-password"
+          />
         </div>
 
         <div className="flex items-center justify-end gap-2.5">
-          <Label htmlFor="admin-remember-me" className="cursor-pointer text-sm font-normal text-slate-400">
+          <Label htmlFor="admin-remember-me" className="cursor-pointer text-sm font-normal text-muted-foreground">
             تذكرني على هذا الجهاز
           </Label>
           <Checkbox
@@ -219,9 +197,9 @@ const AdminLogin = () => {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-xs text-slate-500">
+      <p className="mt-8 text-center text-sm text-muted-foreground">
         تاجر؟{' '}
-        <Link to="/login" className="font-medium text-slate-300 hover:text-slate-100">
+        <Link to="/login" className="font-semibold text-primary hover:text-primary/80">
           دخول المنصة برمز التفعيل
         </Link>
       </p>

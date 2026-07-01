@@ -4073,22 +4073,7 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "stores_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "restaurant_owner_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stores_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "restaurant_owners"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       subscription_plans: {
         Row: {
@@ -4329,6 +4314,14 @@ export type Database = {
         Returns: Json
       }
       admin_mark_lead_contacted: { Args: { p_lead_id: string }; Returns: Json }
+      admin_replace_lead_access_code: {
+        Args: { p_code_id?: string; p_lead_id: string; p_reason?: string }
+        Returns: Json
+      }
+      admin_revoke_lead_access_code: {
+        Args: { p_code_id?: string; p_lead_id: string; p_reason?: string }
+        Returns: Json
+      }
       admin_unread_leads_count: { Args: never; Returns: number }
       admin_update_lead: {
         Args: {
@@ -4348,6 +4341,10 @@ export type Database = {
           p_status?: string
           p_user_id: string
         }
+        Returns: Json
+      }
+      admin_verify_lead_access_code: {
+        Args: { p_lead_id: string; p_plain_code: string }
         Returns: Json
       }
       apply_merchant_lock_defaults: {
@@ -4686,6 +4683,7 @@ export type Database = {
         }
         Returns: Json
       }
+      is_access_code_signup: { Args: { p_meta: Json }; Returns: boolean }
       is_checkout_fast_path: { Args: never; Returns: boolean }
       is_payment_method_allowed: {
         Args: { p_owner_id: string; p_payment_method: string }
@@ -4943,6 +4941,7 @@ export type Database = {
         Returns: Json
       }
       platform_transaction_integrity_audit: { Args: never; Returns: Json }
+      platform_verify_analytics_hot_path_indexes: { Args: never; Returns: Json }
       platform_verify_partition_pruning: {
         Args: { p_days?: number; p_table?: string }
         Returns: Json
@@ -4987,6 +4986,10 @@ export type Database = {
         Returns: number
       }
       product_variant_stock_sum: { Args: { p_variants: Json }; Returns: number }
+      provision_merchant_store: {
+        Args: { p_store_name?: string; p_user_id: string; p_username?: string }
+        Returns: Json
+      }
       prune_analytics_event_outbox: {
         Args: { p_keep_days?: number }
         Returns: number

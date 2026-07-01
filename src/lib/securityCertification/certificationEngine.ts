@@ -8,6 +8,7 @@ import {
   getAbuseProtectionSummary,
   getWafIntegrationManifest,
   ABUSE_PROTECTION_REGISTRY,
+  WAF_ABUSE_HEADERS,
 } from './abuseProtection';
 import { getEnterpriseSecurityStatus } from '@/lib/securityHardening';
 import { getSupabaseSecurityStatus } from '@/lib/supabaseSecurity';

@@ -76,6 +76,10 @@ vi.mock('@/hooks/useRealtimeOrders', () => ({
   useRealtimeOrders: vi.fn(),
 }));
 
+vi.mock('@/hooks/useRealtimeProducts', () => ({
+  useRealtimeProducts: vi.fn(),
+}));
+
 describe('DashboardOverview', () => {
   it('renders action items and performance KPIs', () => {
     render(

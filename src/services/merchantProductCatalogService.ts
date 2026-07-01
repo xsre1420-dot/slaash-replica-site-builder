@@ -42,6 +42,8 @@ export const getCurrentStoreId = (): string | null => _currentStoreId;
 
 const getOwnerId = (): string | null => _currentOwnerId;
 
+import { invalidateDashboardCaches } from '@/lib/cache/cacheInvalidation';
+
 /** Keep merchant + storefront product caches consistent after mutations */
 export const syncMerchantProductCatalog = (
   ownerId: string,
@@ -53,6 +55,7 @@ export const syncMerchantProductCatalog = (
   clearInflight(`${CacheKeys.products(ownerId)}:p0:s:c`);
   if (options?.refreshStats !== false) {
     cache.flushByPrefix(`stats:${ownerId}:`);
+    invalidateDashboardCaches(ownerId);
   }
 
   const affectsStorefront = !row || isStorefrontVisible(mapDbProduct(row));

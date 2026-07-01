@@ -27,6 +27,7 @@ const variantStockSum = (variants?: Product['variants']) =>
 export function mergeProductStock(server: Product, cartProduct: Product): Product {
   return normalizeProductStock({
     ...server,
+    image: server.image?.trim() ? server.image : cartProduct.image,
     sizes: server.sizes?.length ? server.sizes : cartProduct.sizes,
     colors: server.colors?.length ? server.colors : cartProduct.colors,
   });

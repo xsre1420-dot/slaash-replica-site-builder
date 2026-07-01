@@ -3,7 +3,6 @@ import {
   rpcGetOwnerBootstrap,
   rpcListPublicStoreSlugs,
   selectStoreByUserId,
-  selectStoreSettingsFallback,
   selectStoreSettingsByOwner,
   selectCustomDomainSettings,
 } from '@/repositories/store/storeRepository';
@@ -114,19 +113,8 @@ export const fetchStoreByUserId = async (userId: string): Promise<StoreRecord | 
     return record;
   }
 
-  const { data: settings } = await selectStoreSettingsFallback(userId);
-
-  if (!settings) return null;
-
-  const record: StoreRecord = {
-    id: settings.id,
-    userId: settings.owner_id,
-    storeName: settings.store_name || '',
-    storeSlug: settings.store_slug || null,
-    themeId: 'default',
-  };
-  cache.set(cacheKey, record, CacheTTL.LONG, CacheTTL.STALE);
-  return record;
+  // store_settings without a stores row — omit store_id on writes (never use settings.id as stores.id)
+  return null;
 };
 
 export interface BootstrapResult {

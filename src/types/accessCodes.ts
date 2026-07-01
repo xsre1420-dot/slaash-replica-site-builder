@@ -21,8 +21,14 @@ export const ACCESS_CODE_ERROR_MESSAGES: Record<string, string> = {
   invalid_code: 'رمز التفعيل غير صحيح',
   code_expired: 'تم إلغاء هذا الرمز — تواصل مع فريق المبيعات للحصول على رمز جديد',
   code_revoked: 'تم إلغاء هذا الرمز',
+  active_code_exists: 'يوجد رمز نشط لهذا العميل — أرسله أو انتظر التفعيل قبل إنشاء رمز جديد',
+  no_active_code: 'لا يوجد رمز نشط لإلغائه',
+  revoke_failed: 'تعذر إلغاء الرمز',
   subscription_expired: 'انتهى اشتراكك — تواصل معنا للتجديد',
   activation_failed: 'تعذر تفعيل الحساب، حاول لاحقاً',
+  create_user_failed: 'تعذر إنشاء حساب التاجر — تواصل مع فريق المبيعات',
+  subscription_failed: 'تعذر تفعيل الاشتراك — تواصل مع فريق المبيعات',
+  provision_failed: 'تعذر تهيئة المتجر — حاول مرة أخرى أو تواصل مع الدعم',
   lead_already_converted: 'هذا العميل مُفعّل مسبقاً',
   forbidden: 'ليس لديك صلاحية — أضف حسابك كمسؤول',
   login_failed: 'تعذر تسجيل الدخول، حاول مرة أخرى',
@@ -30,10 +36,32 @@ export const ACCESS_CODE_ERROR_MESSAGES: Record<string, string> = {
   rate_limited: 'محاولات كثيرة — انتظر قليلاً ثم حاول مرة أخرى',
   edge_unavailable:
     'خدمة تفعيل الرمز غير متوفرة حالياً — تأكد من نشر redeem-access-code على Supabase',
+  cors_blocked:
+    'تعذر الاتصال بخدمة التفعيل من هذا العنوان — أضف localhost إلى ALLOWED_ORIGINS في Supabase',
   network_error: 'تعذر الاتصال بالخادم — تحقق من الإنترنت',
   invalid_plan: 'الباقة غير متوفرة — شغّل npm run db:deploy',
   lead_not_found: 'الطلب غير موجود',
   generate_failed: 'تعذر إنشاء الرمز',
+  replace_failed: 'تعذر استبدال الرمز',
+  db_migration_required: 'قاعدة البيانات تحتاج تحديث — شغّل: npm run db:deploy',
+};
+
+export type AccessCodePreview = {
+  planId: string;
+  durationMonths: number;
+  agreedPrice: number | null;
+  storeName: string | null;
+};
+
+export type AccessCodeVerifyResult = {
+  codeId: string;
+  codeHint: string;
+  planId: string;
+  planLabel: string;
+  durationMonths: number;
+  agreedPrice: number | null;
+  storeName: string | null;
+  createdAt: string;
 };
 
 export const formatAccessCodeInput = (value: string): string => {

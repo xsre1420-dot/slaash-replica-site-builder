@@ -163,11 +163,9 @@ const Index = () => {
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <Link to="/login">
-              <Button variant="ghost" size="sm" className="rounded-xl text-muted-foreground hover:text-foreground">
-                تسجيل الدخول
-              </Button>
-            </Link>
+            <Button asChild variant="ghost" size="sm" className="rounded-xl text-muted-foreground hover:text-foreground">
+              <Link to="/login">تسجيل الدخول</Link>
+            </Button>
             <a href="#pricing">
               <Button size="sm" className="rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground px-5 font-semibold">
                 الباقات
@@ -226,11 +224,9 @@ const Index = () => {
                   <ArrowLeft className="mr-1 h-4 w-4 group-hover:-translate-x-0.5 transition-transform" strokeWidth={1.75} />
                 </Button>
               </a>
-              <Link to="/login">
-                <Button variant="outline" size="lg" className="min-w-[200px] sm:min-w-[220px]">
-                  لدي حساب بالفعل
-                </Button>
-              </Link>
+              <Button asChild variant="outline" size="lg" className="min-w-[200px] sm:min-w-[220px]">
+                <Link to="/login">لدي حساب بالفعل</Link>
+              </Button>
             </motion.div>
 
             <motion.div

@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import AdminPrivateMeta from '@/components/admin/AdminPrivateMeta';
 import AdminSidebar from '@/components/admin/AdminSidebar';
+import { adminPageBgClass } from '@/components/admin/adminVisualStyles';
 import { fetchLeadStats } from '@/services/leadAdminService';
 import { useEffect } from 'react';
 
@@ -31,11 +32,11 @@ const AdminLayout = ({ children, title = 'لوحة الإدارة' }: AdminLayou
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] font-arabic" dir="rtl">
+    <div className={adminPageBgClass} dir="rtl">
       <AdminPrivateMeta title={title} />
 
       {/* Top bar — mobile only actions */}
-      <header className="sticky top-0 z-40 border-b border-border/40 bg-white/90 backdrop-blur-md lg:hidden">
+      <header className="sticky top-0 z-40 border-b border-border/40 bg-background/90 backdrop-blur-md lg:hidden">
         <div className="flex h-14 items-center justify-between gap-3 px-4">
           <div className="flex items-center gap-2 min-w-0">
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
@@ -69,7 +70,7 @@ const AdminLayout = ({ children, title = 'لوحة الإدارة' }: AdminLayou
       <div className="mx-auto flex max-w-[1400px] gap-0 lg:gap-6 lg:p-5">
         {/* Desktop sidebar */}
         <aside className="hidden lg:block w-[260px] shrink-0">
-          <div className="sticky top-5 overflow-hidden rounded-2xl border border-border/50 bg-white shadow-sm shadow-black/[0.03]">
+          <div className="sticky top-5 overflow-hidden rounded-2xl border border-border/50 bg-card shadow-sm shadow-black/[0.03]">
             <AdminSidebar userEmail={user?.email} onLogout={() => void handleLogout()} />
           </div>
         </aside>
@@ -88,7 +89,7 @@ const AdminLayout = ({ children, title = 'لوحة الإدارة' }: AdminLayou
               </Badge>
             )}
           </div>
-          <div className="p-4 lg:p-0 lg:rounded-2xl lg:border lg:border-border/40 lg:bg-white lg:p-6 lg:shadow-sm lg:shadow-black/[0.02]">
+          <div className="p-4 lg:p-0 lg:rounded-2xl lg:border lg:border-border/40 lg:bg-card lg:p-6 lg:shadow-sm lg:shadow-black/[0.02]">
             {children}
           </div>
         </main>

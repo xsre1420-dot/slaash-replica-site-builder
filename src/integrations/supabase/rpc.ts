@@ -29,6 +29,21 @@ function isReplicaLabel(label: string | undefined): boolean {
   return label != null && REPLICA_LABELS.has(label);
 }
 
+/** PostgREST auth: apikey stays anon; Bearer must be the signed-in user's JWT when available. */
+async function resolvePostgrestAuthHeaders(apiKey: string): Promise<Record<string, string>> {
+  try {
+    const { supabase } = await import('@/integrations/supabase/client');
+    const { data } = await supabase.auth.getSession();
+    const accessToken = data.session?.access_token?.trim();
+    return {
+      apikey: apiKey,
+      Authorization: `Bearer ${accessToken || apiKey}`,
+    };
+  } catch {
+    return { apikey: apiKey, Authorization: `Bearer ${apiKey}` };
+  }
+}
+
 /** Typed RPC wrapper with read-replica routing + circuit breaker + primary fallback. */
 export async function callSupabaseRpc<T>(
   fn: string,
@@ -82,6 +97,7 @@ export async function callSupabaseRpc<T>(
         span.setStage('rpc');
 
         try {
+          const authHeaders = await resolvePostgrestAuthHeaders(endpoint.key);
           const res = await fetch(`${endpoint.url}/rest/v1/rpc/${fn}`, {
             method: 'POST',
             signal: controller.signal,
@@ -89,8 +105,7 @@ export async function callSupabaseRpc<T>(
               ...(endpoint.headers ?? {}),
               ...(env.VITE_SUPABASE_POOLER_URL?.trim() ? { 'x-connection-mode': 'pooler' } : {}),
               ...correlationHeaders,
-              apikey: endpoint.key,
-              Authorization: `Bearer ${endpoint.key}`,
+              ...authHeaders,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(args),

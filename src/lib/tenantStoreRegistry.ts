@@ -154,13 +154,29 @@ function getEntry(slug: string): SlugEntry {
   return entry;
 }
 
+const pendingNotifySlugs = new Set<string>();
+
 function notify(slug: string) {
-  getEntry(slug).listeners.forEach((l) => l());
+  if (pendingNotifySlugs.has(slug)) return;
+  pendingNotifySlugs.add(slug);
+  setTimeout(() => {
+    pendingNotifySlugs.delete(slug);
+    getEntry(slug).listeners.forEach((l) => l());
+  }, 0);
 }
 
 function setSnapshot(slug: string, patch: Partial<TenantStoreSnapshot>) {
   const entry = getEntry(slug);
-  entry.snapshot = { ...entry.snapshot, ...patch };
+  const next = { ...entry.snapshot, ...patch };
+  if (
+    entry.snapshot.storeInfo === next.storeInfo &&
+    entry.snapshot.categories === next.categories &&
+    entry.snapshot.loading === next.loading &&
+    entry.snapshot.error === next.error
+  ) {
+    return;
+  }
+  entry.snapshot = next;
   notify(slug);
 }
 
@@ -177,6 +193,11 @@ export function subscribeTenantStore(slug: string, listener: () => void): () => 
 
 export function getTenantStoreSnapshot(slug: string): TenantStoreSnapshot | null {
   return entries.get(slug)?.snapshot ?? null;
+}
+
+/** Ensures a registry entry exists; used by useSyncExternalStore getSnapshot. */
+export function peekTenantStoreSnapshot(slug: string): TenantStoreSnapshot {
+  return getEntry(slug).snapshot;
 }
 
 export function invalidateTenantStore(slug: string): void {

@@ -8,6 +8,7 @@ import { getEdgeCorsHeaders } from '../_shared/cors.ts';
 interface RedeemBody {
   code: string;
   store_name?: string;
+  preview?: boolean;
 }
 
 const signInWithEphemeralPassword = async (
@@ -132,12 +133,66 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (body.preview === true) {
+      if (codeRow.status === 'revoked') {
+        return new Response(JSON.stringify({ success: false, error: 'code_revoked' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (codeRow.status === 'expired' && !codeRow.redeemed_user_id) {
+        return new Response(JSON.stringify({ success: false, error: 'code_expired' }), {
+          status: 410,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (codeRow.status !== 'active' && codeRow.status !== 'redeemed') {
+        return new Response(JSON.stringify({ success: false, error: 'code_expired' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          preview: true,
+          plan_id: codeRow.plan_id,
+          duration_months: codeRow.duration_months,
+          agreed_price: codeRow.agreed_price,
+          store_name: codeRow.store_name,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const now = new Date();
 
     const storeName = body.store_name?.trim() || codeRow.store_name || 'متجري';
     const username = codeRow.username || `store${Math.floor(10000 + Math.random() * 90000)}`;
     let userId = codeRow.redeemed_user_id as string | null;
     let subscriptionEndAt = codeRow.subscription_end_at as string | null;
+
+    const ensureStoreProvision = async (targetUserId: string): Promise<boolean> => {
+      const { data: provisionData, error: provisionError } = await adminClient.rpc(
+        'provision_merchant_store',
+        {
+          p_user_id: targetUserId,
+          p_store_name: storeName,
+          p_username: username,
+        }
+      );
+      if (provisionError || !(provisionData as { success?: boolean })?.success) {
+        logStructured('error', 'redeem-access-code.provision_failed', {
+          message: provisionError?.message,
+          data: provisionData,
+        });
+        return false;
+      }
+      return true;
+    };
 
     if (!userId) {
       const initialPassword = generateAuthPassword();
@@ -155,8 +210,11 @@ Deno.serve(async (req) => {
       });
 
       if (createError || !createdUser.user) {
-        logStructured('error', 'redeem-access-code.create_user_failed', { message: createError?.message });
-        return new Response(JSON.stringify({ success: false, error: 'activation_failed' }), {
+        logStructured('error', 'redeem-access-code.create_user_failed', {
+          message: createError?.message,
+          email: codeRow.auth_email,
+        });
+        return new Response(JSON.stringify({ success: false, error: 'create_user_failed' }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -185,7 +243,16 @@ Deno.serve(async (req) => {
       if (subError) {
         logStructured('error', 'redeem-access-code.subscription_failed', { message: subError.message });
         await adminClient.auth.admin.deleteUser(userId);
-        return new Response(JSON.stringify({ success: false, error: 'activation_failed' }), {
+        return new Response(JSON.stringify({ success: false, error: 'subscription_failed' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (!(await ensureStoreProvision(userId))) {
+        await adminClient.auth.admin.deleteUser(userId);
+        await adminClient.from('subscriptions').delete().eq('user_id', userId);
+        return new Response(JSON.stringify({ success: false, error: 'provision_failed' }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -244,6 +311,13 @@ Deno.serve(async (req) => {
       if (subRow.end_date && new Date(subRow.end_date) < now) {
         return new Response(JSON.stringify({ success: false, error: 'subscription_expired' }), {
           status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (!(await ensureStoreProvision(userId as string))) {
+        return new Response(JSON.stringify({ success: false, error: 'provision_failed' }), {
+          status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }

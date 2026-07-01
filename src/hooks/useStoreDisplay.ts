@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useStore } from '@/context/StoreContext';
 import { useTenantStore } from '@/context/TenantStoreContext';
 import { DeliveryPrice } from '@/utils/deliveryUtils';
+import { Category } from '@/types';
 
 export interface StoreDisplaySettings {
   bannerImages: string[];
@@ -20,6 +21,10 @@ export interface StoreDisplayInfo {
   storeLogo: string;
   storeSettings: StoreDisplaySettings;
   ownerId?: string;
+  categories: Category[];
+  refetch: () => void;
+  returnPolicy?: string;
+  privacyPolicy?: string;
 }
 
 /**
@@ -39,6 +44,10 @@ export const useStoreDisplay = (storeSlug?: string): StoreDisplayInfo & { isTena
         storeName: info?.storeName || '',
         storeLogo: info?.storeLogo || '',
         ownerId: info?.ownerId,
+        categories: tenant.categories,
+        refetch: tenant.refetch,
+        returnPolicy: info?.returnPolicy,
+        privacyPolicy: info?.privacyPolicy,
         storeSettings: {
           bannerImages: info?.bannerImages || [],
           menuBackgroundColor: info?.menuBackgroundColor || '#ffffff',
@@ -58,10 +67,12 @@ export const useStoreDisplay = (storeSlug?: string): StoreDisplayInfo & { isTena
       loading: false,
       storeName: ownStore.storeName,
       storeLogo: ownStore.storeLogo,
+      categories: [] as Category[],
+      refetch: () => {},
       storeSettings: {
         ...ownStore.storeSettings,
         whatsappNumber: '',
       },
     };
-  }, [isTenantMode, tenant.storeInfo, tenant.loading, ownStore]);
+  }, [isTenantMode, tenant.storeInfo, tenant.loading, tenant.categories, tenant.refetch, ownStore]);
 };

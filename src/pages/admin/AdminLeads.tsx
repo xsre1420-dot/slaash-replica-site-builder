@@ -17,6 +17,7 @@ import {
 import AdminLayout from '@/components/admin/AdminLayout';
 import GenerateAccessCodeDialog from '@/components/admin/GenerateAccessCodeDialog';
 import LeadStatsBar from '@/components/admin/LeadStatsBar';
+import LeadWorkflowBadge from '@/components/admin/LeadWorkflowBadge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -48,13 +49,11 @@ import {
   type LeadRecord,
   type LeadStatus,
 } from '@/types/leads';
-import { canCreateAccessCodeForLead } from '@/utils/leadAccessCodeUtils';
+import { canCreateAccessCodeForLead, accessCodeBlockReason } from '@/utils/leadAccessCodeUtils';
 import {
-  LEAD_STATUS_COLORS,
   buildInitialWhatsAppMessage,
   formatLeadRelativeTime,
   getLeadFilterEmptyMessage,
-  getLeadPriorityLabel,
   LEAD_FILTER_DEFINITIONS,
   type LeadQuickFilter,
 } from '@/utils/leadWorkflowUtils';
@@ -160,8 +159,17 @@ const AdminLeads = () => {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const openCodeDialog = (lead: LeadRecord) => {
-    if (!canCreateAccessCodeForLead(lead)) {
+    const block = accessCodeBlockReason(lead);
+    if (block === 'converted') {
       toast.info('العميل مُفعّل — راجع تفاصيل الطلب');
+      return;
+    }
+    if (block === 'pending') {
+      toast.info('يوجد رمز نشط لهذا العميل — بانتظار التفعيل');
+      return;
+    }
+    if (!canCreateAccessCodeForLead(lead)) {
+      toast.info('لا يمكن إنشاء رمز لهذا الطلب');
       return;
     }
     setCodeLead(lead);
@@ -206,21 +214,7 @@ const AdminLeads = () => {
     void load();
   };
 
-  const renderStatusBadge = (lead: LeadRecord) => (
-    <Badge variant="outline" className={cn('font-normal', LEAD_STATUS_COLORS[lead.status])}>
-      {LEAD_STATUS_LABELS[lead.status]}
-    </Badge>
-  );
-
-  const renderPriority = (lead: LeadRecord) => {
-    const label = getLeadPriorityLabel(lead);
-    if (!label) return null;
-    return (
-      <Badge variant="secondary" className="text-[10px]">
-        {label}
-      </Badge>
-    );
-  };
+  const renderWorkflowBadge = (lead: LeadRecord) => <LeadWorkflowBadge lead={lead} />;
 
   const renderCodeButton = (lead: LeadRecord, fullWidth = false) => {
     if (lead.converted_user_id) {
@@ -266,14 +260,16 @@ const AdminLeads = () => {
             className="flex w-full items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-muted/40 transition-colors"
             onClick={() => setHelpOpen((v) => !v)}
           >
-            <span className="font-medium text-muted-foreground">سير العمل: تواصل → رمز → تفعيل</span>
+            <span className="font-medium text-muted-foreground">مسار المتابعة: غير مقروء → تواصل → رمز → تفعيل</span>
             <ChevronDown className={cn('h-4 w-4 transition-transform', helpOpen && 'rotate-180')} />
           </button>
           {helpOpen && (
             <div className="border-t border-border/50 px-4 py-3 text-sm text-muted-foreground space-y-2">
-              <p>1. اضغط واتساب — يُرسل رسالة جاهزة ويُسجّل «تم التواصل» تلقائياً.</p>
-              <p>2. بعد الاتفاق اضغط «إنشاء رمز» وأرسله للعميل.</p>
-              <p>3. العميل يدخل من /login برمز التفعيل — يصبح «مُفعّل».</p>
+              <p>1. <strong className="text-foreground font-medium">غير مقروء</strong> — طلب جديد لم يُفتح؛ افتح التفاصيل أو اضغط واتساب.</p>
+              <p>2. <strong className="text-foreground font-medium">بانتظار التواصل</strong> — طُلِع عليه؛ راسِل العميل واضغط «تم التواصل».</p>
+              <p>3. <strong className="text-foreground font-medium">يحتاج رمز</strong> — بعد الاتفاق أنشئ رمز التفعيل وأرسله.</p>
+              <p>4. <strong className="text-foreground font-medium">بانتظار التفعيل</strong> — العميل يدخل من /login بالرمز.</p>
+              <p>5. <strong className="text-foreground font-medium">مُفعّل</strong> — يظهر ضمن «عملاء مُفعّلون» ويخرج من مسار المتابعة.</p>
             </div>
           )}
         </div>
@@ -322,8 +318,7 @@ const AdminLeads = () => {
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-bold">{lead.full_name}</p>
-                      {lead.is_unread && <Badge className="h-5 text-[10px]">جديد</Badge>}
-                      {renderPriority(lead)}
+                      {renderWorkflowBadge(lead)}
                     </div>
                     <p className="text-xs text-muted-foreground font-mono mt-0.5" dir="ltr">
                       {lead.whatsapp_number}
@@ -332,7 +327,6 @@ const AdminLeads = () => {
                       {formatLeadRelativeTime(lead.created_at)}
                     </p>
                   </div>
-                  {renderStatusBadge(lead)}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {lead.selected_plan_name && <Badge variant="outline">{lead.selected_plan_name}</Badge>}
@@ -391,7 +385,7 @@ const AdminLeads = () => {
                   <TableHead className="text-right">العميل</TableHead>
                   <TableHead className="text-right">الباقة / المحافظة</TableHead>
                   <TableHead className="text-right hidden lg:table-cell">الحجم</TableHead>
-                  <TableHead className="text-right">الحالة</TableHead>
+                  <TableHead className="text-right">مرحلة المتابعة</TableHead>
                   <TableHead className="text-right hidden sm:table-cell">الوقت</TableHead>
                   <TableHead className="text-right min-w-[260px]">إجراءات</TableHead>
                 </TableRow>
@@ -414,11 +408,7 @@ const AdminLeads = () => {
                     <TableRow key={lead.id} className={lead.is_unread ? 'bg-primary/[0.02]' : undefined}>
                       <TableCell className="font-medium">
                         <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            {lead.full_name}
-                            {lead.is_unread && <Badge className="h-5 text-[10px]">جديد</Badge>}
-                            {renderPriority(lead)}
-                          </div>
+                          <div className="font-medium">{lead.full_name}</div>
                           <p className="text-xs text-muted-foreground mt-0.5 font-mono" dir="ltr">
                             {lead.whatsapp_number}
                           </p>
@@ -439,7 +429,7 @@ const AdminLeads = () => {
                       <TableCell className="hidden lg:table-cell text-xs text-muted-foreground max-w-[140px]">
                         {getMonthlyOrderLabel(lead.expected_monthly_orders)}
                       </TableCell>
-                      <TableCell>{renderStatusBadge(lead)}</TableCell>
+                      <TableCell>{renderWorkflowBadge(lead)}</TableCell>
                       <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
                         <div>{formatLeadRelativeTime(lead.created_at)}</div>
                         <div className="text-[11px]">
@@ -524,6 +514,15 @@ const AdminLeads = () => {
         open={codeOpen}
         onOpenChange={setCodeOpen}
         onGenerated={() => {
+          if (codeLead) {
+            setRows((prev) =>
+              prev.map((row) =>
+                row.id === codeLead.id
+                  ? { ...row, has_pending_code: true, status: row.status === 'new' || row.status === 'contacted' ? 'interested' : row.status }
+                  : row
+              )
+            );
+          }
           void load();
           void loadStats();
         }}

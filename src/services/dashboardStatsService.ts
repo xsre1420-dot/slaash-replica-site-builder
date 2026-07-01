@@ -14,7 +14,10 @@ import type { OrderDashboardStats, WorkflowTabCounts } from '@/types/orders';
 import { traceCriticalFlow } from '@/lib/tracing';
 
 export type DashboardCatalogKpis = {
+  /** All non-archived products (drafts + published). */
   productCount: number;
+  /** Published storefront-visible products. */
+  publishedCount: number;
   lowStockCount: number;
 };
 
@@ -34,10 +37,24 @@ const parseCatalogKpis = (payload: Record<string, unknown>): DashboardCatalogKpi
   if (!raw || typeof raw !== 'object') return null;
   const record = raw as Record<string, unknown>;
   const productCount = Number(record.product_count);
+  const publishedCount = Number(record.published_count ?? record.published_product_count);
   const lowStockCount = Number(record.low_stock_count);
-  if (!Number.isFinite(productCount) && !Number.isFinite(lowStockCount)) return null;
+  if (
+    !Number.isFinite(productCount) &&
+    !Number.isFinite(publishedCount) &&
+    !Number.isFinite(lowStockCount)
+  ) {
+    return null;
+  }
+  const published = Number.isFinite(publishedCount)
+    ? publishedCount
+    : Number.isFinite(productCount)
+      ? productCount
+      : 0;
+  const total = Number.isFinite(productCount) ? productCount : published;
   return {
-    productCount: Number.isFinite(productCount) ? productCount : 0,
+    productCount: Math.max(total, published),
+    publishedCount: published,
     lowStockCount: Number.isFinite(lowStockCount) ? lowStockCount : 0,
   };
 };

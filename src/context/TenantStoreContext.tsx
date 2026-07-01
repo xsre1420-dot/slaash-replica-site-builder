@@ -1,8 +1,15 @@
-import React, { createContext, useContext, useSyncExternalStore, ReactNode, useCallback } from 'react';
+import React, {
+  createContext,
+  useContext,
+  ReactNode,
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 import { Category, Product } from '@/types';
 import {
   subscribeTenantStore,
-  getTenantStoreSnapshot,
+  peekTenantStoreSnapshot,
   fetchTenantStore,
   type TenantStoreInfo,
 } from '@/lib/tenantStoreRegistry';
@@ -18,9 +25,16 @@ export interface TenantStoreData {
 }
 
 const TenantStoreContext = createContext<string | null>(null);
+const SLUG_RE = /^[a-z0-9-]+$/;
 
 export function TenantStoreProvider({ slug, children }: { slug: string; children: ReactNode }) {
   const normalized = slug.trim().toLowerCase();
+
+  useEffect(() => {
+    if (!SLUG_RE.test(normalized)) return;
+    void fetchTenantStore(normalized);
+  }, [normalized]);
+
   return (
     <TenantStoreContext.Provider value={normalized}>
       {children}
@@ -30,18 +44,25 @@ export function TenantStoreProvider({ slug, children }: { slug: string; children
 
 function useTenantStoreFromRegistry(slug: string | undefined): TenantStoreData {
   const normalized = slug?.trim().toLowerCase();
+  const isValidSlug = !!normalized && SLUG_RE.test(normalized);
 
-  const snapshot = useSyncExternalStore(
-    (onStoreChange) => (normalized ? subscribeTenantStore(normalized, onStoreChange) : () => {}),
-    () => (normalized ? getTenantStoreSnapshot(normalized) : null),
-    () => (normalized ? getTenantStoreSnapshot(normalized) : null)
+  const [snapshot, setSnapshot] = useState(() =>
+    isValidSlug ? peekTenantStoreSnapshot(normalized!) : null
   );
 
-  const refetch = useCallback(() => {
-    if (normalized) void fetchTenantStore(normalized, true);
-  }, [normalized]);
+  useEffect(() => {
+    if (!isValidSlug) return;
+    setSnapshot(peekTenantStoreSnapshot(normalized!));
+    return subscribeTenantStore(normalized!, () => {
+      setSnapshot(peekTenantStoreSnapshot(normalized!));
+    });
+  }, [isValidSlug, normalized]);
 
-  if (!normalized || !/^[a-z0-9-]+$/.test(normalized)) {
+  const refetch = useCallback(() => {
+    if (isValidSlug) void fetchTenantStore(normalized!, true);
+  }, [isValidSlug, normalized]);
+
+  if (!isValidSlug) {
     return {
       storeInfo: null,
       products: [],
@@ -52,24 +73,12 @@ function useTenantStoreFromRegistry(slug: string | undefined): TenantStoreData {
     };
   }
 
-  if (!snapshot) {
-    void fetchTenantStore(normalized);
-    return {
-      storeInfo: null,
-      products: [],
-      categories: [],
-      loading: true,
-      error: null,
-      refetch,
-    };
-  }
-
   return {
-    storeInfo: snapshot.storeInfo,
+    storeInfo: snapshot!.storeInfo,
     products: [],
-    categories: snapshot.categories,
-    loading: snapshot.loading,
-    error: snapshot.error,
+    categories: snapshot!.categories,
+    loading: snapshot!.loading,
+    error: snapshot!.error,
     refetch,
   };
 }

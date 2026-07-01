@@ -5,10 +5,18 @@ const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') || '')
   .map((s) => s.trim())
   .filter(Boolean);
 
+/** Local Vite/dev servers — safe to allow for access-code login during development. */
+const isLocalDevOrigin = (origin: string): boolean =>
+  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
+
 export function getEdgeCorsHeaders(origin: string | null): Record<string, string> | null {
   const base = {
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   };
+
+  if (origin && isLocalDevOrigin(origin)) {
+    return { ...base, 'Access-Control-Allow-Origin': origin };
+  }
 
   if (isProduction()) {
     if (ALLOWED_ORIGINS.length === 0) {

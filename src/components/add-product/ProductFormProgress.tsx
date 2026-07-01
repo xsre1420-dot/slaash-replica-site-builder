@@ -62,6 +62,8 @@ const ProductFormProgress = ({ steps, completionPercentage }: ProductFormProgres
             <span className={cn('flex-1', step.completed && 'font-medium')}>{step.label}</span>
             {step.required === false ? (
               <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">اختياري</span>
+            ) : step.completed ? (
+              <span className="text-[10px] text-primary/80">تم</span>
             ) : (
               <span className="text-[10px] text-destructive/80">مطلوب</span>
             )}

@@ -5,6 +5,7 @@ import { ar } from 'date-fns/locale';
 import { MessageCircle, Copy, ArrowRight, KeyRound, ClipboardList } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import GenerateAccessCodeDialog from '@/components/admin/GenerateAccessCodeDialog';
+import LeadAccessCodePanel from '@/components/admin/LeadAccessCodePanel';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,6 +21,7 @@ import {
   fetchLeadAccessCodes,
   fetchLeadById,
   markLeadContacted,
+  replaceLeadAccessCode,
   updateLead,
 } from '@/services/leadAdminService';
 import {
@@ -29,9 +31,10 @@ import {
   type LeadRecord,
   type LeadStatus,
 } from '@/types/leads';
-import { type AccessCodeRecord } from '@/types/accessCodes';
+import { type AccessCodeRecord, ACCESS_CODE_ERROR_MESSAGES } from '@/types/accessCodes';
 import { getMonthlyOrderLabel } from '@/data/leadFormOptions';
-import { canCreateAccessCodeForLead } from '@/utils/leadAccessCodeUtils';
+import { canCreateAccessCodeForLead, accessCodeBlockReason } from '@/utils/leadAccessCodeUtils';
+import { saveGeneratedAccessCode, getStoredAccessCodeForLead } from '@/utils/accessCodeSessionStore';
 import {
   LEAD_STATUS_COLORS,
   buildFollowUpWhatsAppMessage,
@@ -54,6 +57,14 @@ const AdminLeadDetail = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [codeOpen, setCodeOpen] = useState(false);
+  const [codesLoading, setCodesLoading] = useState(false);
+  const [replacingCode, setReplacingCode] = useState(false);
+  const [revealedAccessCode, setRevealedAccessCode] = useState<string | null>(null);
+  const [codeDialogDeliver, setCodeDialogDeliver] = useState<{
+    accessCode: string;
+    codeId: string;
+    meta: { planId: string; durationMonths: number; agreedPrice: number | null };
+  } | null>(null);
 
   const loadLead = async (id: string) => {
     const data = await fetchLeadById(id);
@@ -73,6 +84,7 @@ const AdminLeadDetail = () => {
   };
 
   const loadCodes = async (id: string) => {
+    setCodesLoading(true);
     try {
       const rows = await fetchLeadAccessCodes(id);
       setCodes(rows);
@@ -80,8 +92,16 @@ const AdminLeadDetail = () => {
       setLead((prev) => (prev ? { ...prev, has_pending_code: hasPending } : prev));
     } catch {
       setCodes([]);
+    } finally {
+      setCodesLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!leadId) return;
+    setRevealedAccessCode(null);
+    setCodeDialogDeliver(null);
+  }, [leadId]);
 
   useEffect(() => {
     if (!leadId) return;
@@ -133,6 +153,66 @@ const AdminLeadDetail = () => {
     }
   };
 
+  const openCodeDialog = () => {
+    if (!lead) return;
+    const block = accessCodeBlockReason(lead);
+    if (block === 'converted') {
+      toast.info('العميل مُفعّل — راجع تفاصيل الطلب');
+      return;
+    }
+    if (block === 'pending') {
+      setCodeOpen(true);
+      return;
+    }
+    if (!canCreateAccessCodeForLead(lead)) {
+      toast.info('لا يمكن إنشاء رمز لهذا الطلب');
+      return;
+    }
+    setCodeOpen(true);
+  };
+
+  const handleReplaceCode = async (): Promise<{ accessCode: string; codeId: string } | void> => {
+    if (!leadId || !lead) return;
+    setReplacingCode(true);
+    try {
+      const activeCode = codes.find((c) => c.status === 'active');
+      const result = await replaceLeadAccessCode(leadId, {
+        codeId: activeCode?.id,
+        reason: 'replaced-by-admin: same subscription terms',
+        planId: activeCode?.plan_id ?? lead.selected_plan_id ?? 'annual',
+        durationMonths: activeCode?.duration_months,
+        agreedPrice: activeCode?.agreed_price,
+        storeName: lead.full_name,
+      });
+      saveGeneratedAccessCode({
+        leadId,
+        codeId: result.codeId,
+        accessCode: result.accessCode,
+        createdAt: new Date().toISOString(),
+      });
+      setRevealedAccessCode(result.accessCode);
+      setCodeDialogDeliver({
+        accessCode: result.accessCode,
+        codeId: result.codeId,
+        meta: {
+          planId: result.planId,
+          durationMonths: result.durationMonths,
+          agreedPrice: result.agreedPrice,
+        },
+      });
+      await loadCodes(leadId);
+      setLead((prev) => (prev ? { ...prev, has_pending_code: true } : prev));
+      setCodeOpen(true);
+      toast.success('تم إنشاء الرمز — أرسله للعميل الآن');
+      return { accessCode: result.accessCode, codeId: result.codeId };
+    } catch (err) {
+      const code = err instanceof Error ? err.message : 'replace_failed';
+      toast.error(ACCESS_CODE_ERROR_MESSAGES[code] || 'تعذر استبدال الرمز');
+    } finally {
+      setReplacingCode(false);
+    }
+  };
+
   if (loading || !lead) {
     return (
       <AdminLayout>
@@ -145,6 +225,10 @@ const AdminLeadDetail = () => {
     lead.status === 'contacted' || lead.status === 'interested'
       ? buildFollowUpWhatsAppMessage(lead)
       : buildInitialWhatsAppMessage(lead);
+
+  const activeCodeRecord = codes.find((c) => c.status === 'active') ?? null;
+  const canManageCode =
+    !lead.converted_user_id && (lead.has_pending_code || activeCodeRecord != null);
 
   return (
     <AdminLayout title="تفاصيل الطلب">
@@ -216,20 +300,34 @@ const AdminLeadDetail = () => {
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            {canCreateAccessCodeForLead(lead) && !lead.has_pending_code && (
+            {canCreateAccessCodeForLead(lead) && (
               <Button
                 size="lg"
                 className="rounded-xl gap-2 w-full sm:w-auto sm:min-w-[200px]"
-                onClick={() => setCodeOpen(true)}
+                onClick={openCodeDialog}
               >
                 <KeyRound className="w-5 h-5" />
                 إنشاء رمز دخول
               </Button>
             )}
-            {lead.has_pending_code && (
-              <Badge variant="outline" className="self-start px-3 py-2 text-amber-700 border-amber-500/30">
-                رمز مُرسَل — بانتظار تفعيل العميل
-              </Badge>
+            {canManageCode && (
+              <Button
+                size="lg"
+                variant={activeCodeRecord && !getStoredAccessCodeForLead(lead.id, activeCodeRecord.id) ? 'default' : 'outline'}
+                className={cn(
+                  'rounded-xl gap-2 w-full sm:w-auto',
+                  activeCodeRecord &&
+                    !getStoredAccessCodeForLead(lead.id, activeCodeRecord.id) &&
+                    'bg-amber-600 hover:bg-amber-700 text-white'
+                )}
+                onClick={() => setCodeOpen(true)}
+              >
+                <KeyRound className="w-5 h-5" />
+                {activeCodeRecord &&
+                !getStoredAccessCodeForLead(lead.id, activeCodeRecord.id)
+                  ? 'إنشاء رمز جديد للعميل'
+                  : 'إدارة الرمز'}
+              </Button>
             )}
             {lead.converted_user_id && (
               <Badge variant="outline" className="self-start px-3 py-2 text-emerald-700 border-emerald-500/30">
@@ -269,34 +367,16 @@ const AdminLeadDetail = () => {
           </div>
         </div>
 
-        {codes.length > 0 && (
-          <div className="rounded-2xl border border-border/50 bg-card p-6 space-y-3">
-            <h3 className="font-semibold">رموز الدخول</h3>
-            {codes.map((code) => (
-              <div
-                key={code.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/50 bg-muted/20 px-4 py-3 text-sm"
-              >
-                <div>
-                  <p className="font-mono font-semibold" dir="ltr">
-                    BDY-****-{code.code_hint}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {code.plan_id === 'yearly' ? 'سنة' : '6 أشهر'}
-                    {code.agreed_price ? ` · ${code.agreed_price.toLocaleString('ar-IQ')} د.ع` : ''}
-                    {' · '}
-                    {code.status === 'redeemed' ? 'مُفعّل' : code.status === 'active' ? 'بانتظار التفعيل' : code.status}
-                  </p>
-                </div>
-                {code.subscription_end_at && (
-                  <p className="text-xs text-muted-foreground">
-                    ينتهي {format(new Date(code.subscription_end_at), 'dd/MM/yyyy')}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        <LeadAccessCodePanel
+          lead={lead}
+          codes={codes}
+          codesLoading={codesLoading}
+          replacing={replacingCode}
+          revealedAccessCode={revealedAccessCode}
+          onRefreshCodes={() => leadId && void loadCodes(leadId)}
+          onManageCode={canManageCode ? () => setCodeOpen(true) : undefined}
+          onReplaceCode={canManageCode ? handleReplaceCode : undefined}
+        />
 
         <div className="rounded-2xl border border-border/50 bg-card p-6 space-y-4">
           <div className="space-y-2">
@@ -347,8 +427,19 @@ const AdminLeadDetail = () => {
       <GenerateAccessCodeDialog
         lead={lead}
         open={codeOpen}
-        onOpenChange={setCodeOpen}
-        onGenerated={() => void refreshAfterCode()}
+        onOpenChange={(open) => {
+          setCodeOpen(open);
+          if (!open) setCodeDialogDeliver(null);
+        }}
+        activeCode={activeCodeRecord}
+        initialDeliver={codeDialogDeliver}
+        onGenerated={({ accessCode, codeId }) => {
+          setRevealedAccessCode(accessCode);
+          setLead((prev) =>
+            prev ? { ...prev, has_pending_code: true, status: prev.status === 'new' ? 'interested' : prev.status } : prev
+          );
+          void refreshAfterCode();
+        }}
       />
     </AdminLayout>
   );

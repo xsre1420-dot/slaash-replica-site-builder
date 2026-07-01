@@ -10,7 +10,6 @@ import {
   Clock,
   Inbox,
   ExternalLink,
-  Shield,
   Sparkles,
   GitBranch,
   Activity,
@@ -18,6 +17,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ADMIN_LOGO_SRC } from '@/components/admin/adminVisualStyles';
 import { fetchLeadStats, type LeadStatsPayload } from '@/services/leadAdminService';
 import { useVisibilityAwareInterval } from '@/hooks/useVisibilityAwareInterval';
 
@@ -99,12 +99,14 @@ const AdminSidebar = ({ onNavigate, userEmail, onLogout }: AdminSidebarProps) =>
       {/* Brand */}
       <div className="border-b border-border/50 px-4 py-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Shield className="h-5 w-5" strokeWidth={1.75} />
-          </div>
+          <img
+            src={ADMIN_LOGO_SRC}
+            alt="بداية"
+            className="h-9 w-9 shrink-0 rounded-xl border border-primary/15 bg-background object-contain p-1"
+          />
           <div className="min-w-0">
-            <p className="font-bold text-sm text-foreground truncate">لوحة المبيعات</p>
-            <p className="text-[11px] text-muted-foreground">بداية — للمسؤولين</p>
+            <p className="truncate text-sm font-bold text-foreground">لوحة المبيعات</p>
+            <p className="text-[11px] text-muted-foreground">إدارة الاشتراكات — بداية</p>
           </div>
         </div>
       </div>

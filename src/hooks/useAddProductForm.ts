@@ -1,4 +1,5 @@
 import { useMemo, useCallback, useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getAuthenticatedUserId } from '@/lib/authSession';
 import { createProductIdempotencyKey } from '@/lib/productCreateLock';
 import { addProduct, getCategories } from '@/services/productService';
@@ -271,11 +272,15 @@ export function useAddProductForm() {
       }
 
       idempotencyKeyRef.current = createProductIdempotencyKey();
-      sonnerToast.error(result.error || 'فشل في إضافة المنتج');
+      const message = result.error || 'فشل في إضافة المنتج';
+      toast({ title: 'لم يتم الحفظ', description: message, variant: 'destructive' });
+      sonnerToast.error(message);
     } catch (err) {
       idempotencyKeyRef.current = createProductIdempotencyKey();
       console.error('[addProduct] submit failed:', err);
-      sonnerToast.error(err instanceof Error ? err.message : 'فشل في إضافة المنتج');
+      const message = err instanceof Error ? err.message : 'فشل في إضافة المنتج';
+      toast({ title: 'لم يتم الحفظ', description: message, variant: 'destructive' });
+      sonnerToast.error(message);
     } finally {
       setIsSubmitting(false);
       setPendingSaveMode(null);

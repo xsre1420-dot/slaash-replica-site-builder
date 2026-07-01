@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "powershell -ExecutionPolicy Bypass -File scripts/dev.ps1",
+    "dev:kill": "powershell -ExecutionPolicy Bypass -File scripts/kill-dev-ports.ps1",
+    "dev:raw": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "build:ci": "npm run typecheck && npm run lint && npm run test && npm run build",

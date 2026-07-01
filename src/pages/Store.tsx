@@ -7,7 +7,6 @@ import { useCartActions } from "@/context/CartContext";
 import MarketingScripts from "@/components/MarketingScripts";
 import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { useStoreVisitTracking } from "@/hooks/useStoreVisitTracking";
-import { useTenantStore } from "@/context/TenantStoreContext";
 import { useStoreProductsPage } from "@/hooks/useStoreProductsPage";
 import { useMerchantProductsPage } from "@/hooks/useMerchantProductsPage";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -24,6 +23,7 @@ import { STORE_PRODUCTS_PAGE_SIZE } from "@/constants/pagination";
 import { resolveMediaDeliveryUrl } from "@/utils/cdnMediaUtils";
 import StorefrontTrustBar from "@/components/storefront/StorefrontTrustBar";
 import StorefrontFooter from "@/components/storefront/StorefrontFooter";
+import SEOHead from "@/components/seo/SEOHead";
 import { getProductPath } from "@/lib/storefrontPaths";
 import { persistCheckoutStoreSlug } from "@/lib/checkoutStoreContext";
 import { BadgeCheck } from "lucide-react";
@@ -37,8 +37,11 @@ const Store = () => {
     storeSettings,
     ownerId: displayOwnerId,
     loading: displayLoading,
+    categories: tenantCategories,
+    refetch: refetchTenantStore,
+    returnPolicy,
+    privacyPolicy,
   } = useStoreDisplay(storeSlug);
-  const tenant = useTenantStore(storeSlug);
   useStoreVisitTracking(isTenantMode ? storeSlug : undefined);
 
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -113,7 +116,7 @@ const Store = () => {
   const loadData = useCallback(async (force = false) => {
     if (isTenantMode) {
       if (force) {
-        tenant.refetch();
+        refetchTenantStore();
         tenantProducts.refetch();
       }
       return;
@@ -127,13 +130,13 @@ const Store = () => {
       setCategories([{ id: "all", name: "الكل", order: -1 }, ...getCategoriesSync()]);
     }
     setIsLoading(false);
-  }, [isTenantMode, tenant, tenantProducts, ownerCatalog]);
+  }, [isTenantMode, refetchTenantStore, tenantProducts, ownerCatalog]);
 
   useEffect(() => {
     if (isTenantMode && !displayLoading) {
-      setCategories([{ id: "all", name: "الكل", order: -1 }, ...tenant.categories]);
+      setCategories([{ id: "all", name: "الكل", order: -1 }, ...tenantCategories]);
     }
-  }, [isTenantMode, displayLoading, tenant.categories]);
+  }, [isTenantMode, displayLoading, tenantCategories]);
 
   useEffect(() => { if (!isTenantMode) loadData(); }, [loadData, isTenantMode]);
 
@@ -164,12 +167,10 @@ const Store = () => {
     return Array.from(sizes);
   }, [allProducts]);
 
-  // Initialize filter range
+  // Initialize filter range once maxPrice is known
   useEffect(() => {
-    if (filterPriceRange[1] === 0 && maxPrice > 0) {
-      setFilterPriceRange([0, maxPrice]);
-    }
-  }, [maxPrice, filterPriceRange]);
+    setFilterPriceRange((prev) => (prev[1] === 0 && maxPrice > 0 ? [0, maxPrice] : prev));
+  }, [maxPrice]);
 
   // --- Filter, search, sort ---
   const displayProducts = useMemo(() => {
@@ -254,8 +255,8 @@ const Store = () => {
       handleViewProduct(product.id);
       return;
     }
-    if (isTenantMode && tenant.storeInfo?.ownerId) {
-      setStoreOwner(tenant.storeInfo.ownerId);
+    if (isTenantMode && displayOwnerId) {
+      setStoreOwner(displayOwnerId);
     }
     addToCart(product);
     trackAddToCart(product.id, product.name, product.price);
@@ -263,7 +264,7 @@ const Store = () => {
       title: "✅ تمت الإضافة",
       description: `${product.name} أُضيف إلى السلة`,
     });
-  }, [isTenantMode, tenant.storeInfo?.ownerId, setStoreOwner, addToCart, trackAddToCart, toast, handleViewProduct]);
+  }, [isTenantMode, displayOwnerId, setStoreOwner, addToCart, trackAddToCart, toast, handleViewProduct]);
 
   const handleShare = useCallback(async (product: Product) => {
     const productUrl = isTenantMode ? `${window.location.origin}/store/${storeSlug}/product/${product.id}` : `${window.location.origin}/product-details/${product.id}`;
@@ -338,7 +339,7 @@ const Store = () => {
     <div className="min-h-screen bg-background" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <MarketingScripts
         storeSlug={isTenantMode ? storeSlug : undefined}
-        storeOwnerId={isTenantMode ? tenant.storeInfo?.ownerId : undefined}
+        storeOwnerId={isTenantMode ? displayOwnerId : undefined}
       />
 
       {/* Pull to refresh indicator */}
@@ -528,13 +529,13 @@ const Store = () => {
       <StorefrontFooter
         storeName={storeName || 'المتجر'}
         storeSlug={storeSlug}
-        ownerId={isTenantMode ? tenant.storeInfo?.ownerId : displayOwnerId}
-        whatsappNumber={(storeSettings as any).whatsappNumber || tenant.storeInfo?.whatsappNumber}
-        returnPolicy={tenant.storeInfo?.returnPolicy}
-        privacyPolicy={tenant.storeInfo?.privacyPolicy}
+        ownerId={displayOwnerId}
+        whatsappNumber={storeSettings.whatsappNumber}
+        returnPolicy={returnPolicy}
+        privacyPolicy={privacyPolicy}
       />
 
-      <WhatsAppButton phoneNumber={(storeSettings as any).whatsappNumber || tenant.storeInfo?.whatsappNumber || ""} />
+      <WhatsAppButton phoneNumber={storeSettings.whatsappNumber || ""} />
 
       <StoreFixedCheckoutBar isTenantMode={isTenantMode} storeSlug={storeSlug} />
     </div>

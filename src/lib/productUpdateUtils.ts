@@ -123,6 +123,9 @@ export const buildLegacyProductInsertPayload = (
 
 export const mapProductInsertError = (message: string): string => {
   const m = message.toLowerCase();
+  if (m === 'forbidden') {
+    return 'تعذر تنفيذ العملية — أعد تسجيل الدخول ثم حاول مرة أخرى';
+  }
   if (m.includes('row-level security') || m.includes('policy')) {
     return 'ليس لديك صلاحية إضافة منتج — أعد تسجيل الدخول';
   }
