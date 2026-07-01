@@ -29,7 +29,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import OrderStatusBadges from './OrderStatusBadges';
-import OrderWorkflowProgress from './OrderWorkflowProgress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatOrderNumber, getOrderWorkflowCategory } from '@/utils/orderWorkflowUtils';
 import { getPaymentMethodLabel } from '@/utils/paymentUtils';
@@ -113,7 +112,6 @@ const OrderMobileCard = ({ order, onUpdateStatus, selected, onToggleSelect }: Or
         </div>
 
         <OrderStatusBadges order={order} compact className="mb-2 justify-end" />
-        <OrderWorkflowProgress order={order} compact className="mb-2" />
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground justify-end">
           <span>{format(new Date(order.date), 'yyyy-MM-dd · hh:mm a')}</span>
@@ -254,11 +252,8 @@ const OrdersDataTable = ({
                   </TableCell>
                 )}
                 <TableCell className="align-top">
-                  <Link to={`/orders/${order.id}`} className="block space-y-1">
+                  <Link to={`/orders/${order.id}`} className="block space-y-0.5">
                     <p className="font-bold text-foreground">{formatOrderNumber(order.id)}</p>
-                    <p className="text-xs text-muted-foreground font-mono truncate max-w-[120px]" dir="ltr">
-                      {order.id.slice(0, 13)}…
-                    </p>
                     <p className="text-xs text-muted-foreground">
                       {order.items.length} منتج · {getPaymentMethodLabel(order.paymentMethod)}
                     </p>
@@ -290,7 +285,6 @@ const OrdersDataTable = ({
                 </TableCell>
                 <TableCell className="align-top">
                   <OrderStatusBadges order={order} compact />
-                  <OrderWorkflowProgress order={order} compact className="mt-2 max-w-[200px]" />
                 </TableCell>
                 <TableCell className="align-top">
                   <p className="font-bold text-foreground">{order.total.toLocaleString()} د.ع</p>

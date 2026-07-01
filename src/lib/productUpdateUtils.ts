@@ -72,6 +72,7 @@ export const buildProductInsertPayload = (
     additional_images: product.additionalImages ?? [],
     owner_id: ownerId,
     is_active: product.isActive !== false,
+    stock_quantity: product.stockQuantity ?? null,
   };
 
   const standard: Record<string, unknown> = {

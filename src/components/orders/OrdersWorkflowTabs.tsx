@@ -2,6 +2,8 @@ import { cn } from '@/lib/utils';
 import { OrderWorkflowTab, WORKFLOW_TABS } from '@/utils/orderWorkflowUtils';
 import type { WorkflowTabCounts } from '@/types/orders';
 
+const PRIMARY_TAB_IDS: OrderWorkflowTab[] = ['all', 'new', 'processing', 'delivered', 'cancelled'];
+
 interface OrdersWorkflowTabsProps {
   tabCounts: WorkflowTabCounts;
   activeTab: OrderWorkflowTab;
@@ -9,12 +11,16 @@ interface OrdersWorkflowTabsProps {
 }
 
 const OrdersWorkflowTabs = ({ tabCounts, activeTab, onTabChange }: OrdersWorkflowTabsProps) => {
+  const visibleTabs = WORKFLOW_TABS.filter(
+    (tab) => PRIMARY_TAB_IDS.includes(tab.id) || (tabCounts[tab.id] ?? 0) > 0 || activeTab === tab.id
+  );
+
   return (
     <div className="relative min-w-0 w-full overflow-hidden" dir="rtl">
       <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-4 bg-gradient-to-r from-background to-transparent" />
       <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-4 bg-gradient-to-l from-background to-transparent" />
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none snap-x snap-mandatory overscroll-x-contain">
-        {WORKFLOW_TABS.map((tab) => {
+        {visibleTabs.map((tab) => {
           const count = tabCounts[tab.id] ?? 0;
           const isActive = activeTab === tab.id;
           return (

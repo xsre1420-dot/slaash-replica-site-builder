@@ -1,19 +1,13 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Package,
-  Clock,
-  TrendingUp,
   ShoppingBag,
   Bell,
   Loader2,
   Download,
-  CalendarDays,
-  CalendarRange,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/layout/PageHeader';
-import StatCard from '@/components/ui/StatCard';
 import EmptyState from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -21,11 +15,12 @@ import { useOrders } from '@/hooks/useOrders';
 import { useAuth } from '@/context/AuthContext';
 import { useRealtimeOrders, OrderRealtimeEvent } from '@/hooks/useRealtimeOrders';
 import OrdersToolbar, { DEFAULT_ORDER_FILTERS } from '@/components/orders/OrdersToolbar';
-import OrdersWorkflowTabs from '@/components/orders/OrdersWorkflowTabs';
+import OrdersSummaryStrip from '@/components/orders/OrdersSummaryStrip';
 import OrdersDataTable from '@/components/orders/OrdersDataTable';
 import OrdersBulkBar from '@/components/orders/OrdersBulkBar';
 import OrdersPagination from '@/components/orders/OrdersPagination';
 import OrderNotificationsCenter from '@/components/orders/OrderNotificationsCenter';
+import { useOrderNotifications, eventToNotification } from '@/hooks/useOrderNotifications';
 import {
   OrderListFilters,
   formatOrderNumber,
@@ -38,7 +33,6 @@ import { ORDERS_PER_PAGE } from '@/services/orderService';
 import { toast } from 'sonner';
 import { copyStorePublicUrl } from '@/lib/storeUrl';
 import { useScrollPersistence } from '@/hooks/useScrollPersistence';
-import AttentionStrip from '@/components/ui/AttentionStrip';
 import { ATTENTION_PARAM } from '@/lib/attentionHighlight';
 import { canTransitionOrderStatus } from '@/utils/orderStatusUtils';
 import { runWithConcurrency } from '@/utils/runWithConcurrency';
@@ -79,7 +73,6 @@ const Orders = () => {
     openOrder,
   } = useOrderNotifications(user?.id);
 
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkProcessing, setBulkProcessing] = useState(false);
 
@@ -256,12 +249,7 @@ const Orders = () => {
   const hasActiveFilters =
     filters.search ||
     filters.workflowTab !== 'all' ||
-    filters.orderStatus !== 'all' ||
-    filters.paymentStatus !== 'all' ||
-    filters.deliveryStatus !== 'all' ||
-    filters.datePreset !== 'all' ||
-    filters.minValue != null ||
-    filters.maxValue != null;
+    filters.datePreset !== 'all';
 
   const headerActions = (
     <div className="flex items-center gap-2 flex-wrap justify-end">
@@ -299,8 +287,8 @@ const Orders = () => {
   return (
     <DashboardLayout>
       <PageHeader
-        title="إدارة الطلبات"
-        description="تابع الطلبات، حدّث الحالات، وعالج الشحن والدفع بسرعة"
+        title="الطلبات"
+        description="راجع الطلبات الجديدة وحدّث حالتها"
         hideBack
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/builder' },
@@ -309,96 +297,20 @@ const Orders = () => {
         actions={headerActions}
       />
 
-      <div className="ds-page space-y-5 sm:space-y-6 pb-24 sm:pb-6 min-w-0">
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
-          <StatCard
-            label="إجمالي الطلبات"
-            value={stats.total}
-            icon={Package}
-            onClick={() => updateFilters({ workflowTab: 'all', datePreset: 'all' })}
-            active={filters.workflowTab === 'all' && filters.datePreset === 'all'}
-          />
-          <StatCard
-            label="طلبات جديدة"
-            value={stats.newOrders}
-            icon={Clock}
-            iconClassName="bg-warning/10 ring-warning/15 [&_svg]:text-warning"
-            onClick={() => updateFilters({ workflowTab: 'new' })}
-            active={filters.workflowTab === 'new'}
-          />
-          <StatCard
-            label="بانتظار التنفيذ"
-            value={stats.pendingFulfillment}
-            icon={ShoppingBag}
-            iconClassName="bg-primary/10 ring-primary/15 [&_svg]:text-primary"
-            onClick={() => updateFilters({ workflowTab: 'processing' })}
-            active={filters.workflowTab === 'processing'}
-          />
-          <StatCard
-            label="إيرادات مكتملة"
-            value={`${stats.revenue.toLocaleString()} د.ع`}
-            icon={TrendingUp}
-            iconClassName="bg-success/10 ring-success/15 [&_svg]:text-success"
-            onClick={() => updateFilters({ workflowTab: 'delivered' })}
-            active={filters.workflowTab === 'delivered'}
-          />
-        </section>
+      <div className="ds-page space-y-4 pb-24 sm:pb-6 min-w-0">
+        <OrdersSummaryStrip
+          stats={stats}
+          tabCounts={tabCounts}
+          activeTab={filters.workflowTab}
+          datePreset={filters.datePreset}
+          onFilter={updateFilters}
+        />
 
-        <section className="grid grid-cols-3 gap-2 sm:gap-3">
-          <StatCard
-            label="طلبات اليوم"
-            value={stats.todayOrders}
-            icon={CalendarDays}
-            iconClassName="bg-blue-500/10 ring-blue-500/15 [&_svg]:text-blue-600"
-            onClick={() => updateFilters({ datePreset: 'today', workflowTab: 'all' })}
-            active={filters.datePreset === 'today'}
-            className="p-3 sm:p-5"
-          />
-          <StatCard
-            label="هذا الأسبوع"
-            value={stats.weekOrders}
-            icon={CalendarRange}
-            iconClassName="bg-violet-500/10 ring-violet-500/15 [&_svg]:text-violet-600"
-            onClick={() => updateFilters({ datePreset: 'week', workflowTab: 'all' })}
-            active={filters.datePreset === 'week'}
-            className="p-3 sm:p-5"
-          />
-          <StatCard
-            label="هذا الشهر"
-            value={stats.monthOrders}
-            icon={CalendarDays}
-            iconClassName="bg-indigo-500/10 ring-indigo-500/15 [&_svg]:text-indigo-600"
-            onClick={() => updateFilters({ datePreset: 'month', workflowTab: 'all' })}
-            active={filters.datePreset === 'month'}
-            className="p-3 sm:p-5"
-          />
-        </section>
-
-        {stats.pendingFulfillment > 0 && (
-          <AttentionStrip
-            attentionKey="pending-orders"
-            icon={Clock}
-            message={`${stats.pendingFulfillment} ${
-              stats.pendingFulfillment === 1 ? 'طلب' : 'طلبات'
-            } تحتاج المعالجة — راجع الطلبات وحدّث حالتها`}
-          />
-        )}
-
-        <section className="space-y-3 min-w-0">
-          <OrdersWorkflowTabs
-            tabCounts={tabCounts}
-            activeTab={filters.workflowTab}
-            onTabChange={(tab) => updateFilters({ workflowTab: tab })}
-          />
-
-          <OrdersToolbar
-            filters={filters}
-            onChange={updateFilters}
-            onClear={clearFilters}
-            showAdvanced={showAdvanced}
-            onToggleAdvanced={() => setShowAdvanced((v) => !v)}
-          />
-        </section>
+        <OrdersToolbar
+          filters={filters}
+          onChange={updateFilters}
+          onClear={clearFilters}
+        />
 
         {loading && orders.length === 0 ? (
           <div className="space-y-3">

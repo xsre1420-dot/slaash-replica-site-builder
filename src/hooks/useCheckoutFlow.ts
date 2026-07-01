@@ -50,6 +50,19 @@ import { resolveStoreSlugByOwnerId } from "@/services/storefrontProductService";
 
 const COUPON_STORAGE_KEY = (ownerId: string) => `checkout-coupon:${ownerId}`;
 
+const CHECKOUT_FIELD_IDS: Record<string, string> = {
+  name: 'delivery-name',
+  phone: 'delivery-phone',
+  address: 'delivery-address',
+  governorate: 'delivery-governorate',
+};
+
+const focusCheckoutField = (field: string) => {
+  const el = document.getElementById(CHECKOUT_FIELD_IDS[field] ?? '');
+  el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (el instanceof HTMLElement) el.focus({ preventScroll: true });
+};
+
 export const useCheckoutFlow = () => {
   const { username: storeSlug } = useParams<{ username?: string }>();
   const isTenantMode = !!storeSlug;
@@ -345,12 +358,20 @@ export const useCheckoutFlow = () => {
     if (!address) errors.address = "يرجى إدخال العنوان";
     if (deliveryPrices.length && !selectedGovernorate) errors.governorate = "يرجى اختيار المحافظة";
     setFormErrors(errors);
-    return Object.keys(errors).length === 0;
+    const firstKey = Object.keys(errors)[0];
+    if (firstKey) {
+      toast.error(errors[firstKey]);
+      focusCheckoutField(firstKey);
+      return false;
+    }
+    return true;
   };
 
   const finalizeSuccessfulOrder = useCallback(
     (orderId: string, computedTotal: number, validationItems: typeof cartItems, idempotent = false) => {
       submitSucceededRef.current = true;
+      submitLockRef.current = false;
+      setIsSubmitting(false);
       setSubmitPhase('success');
 
       if (!idempotent) {
@@ -410,7 +431,11 @@ export const useCheckoutFlow = () => {
 
   const handleSubmitOrder = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (submitLockRef.current || isSubmitting || submitSucceededRef.current) return;
+    if (submitSucceededRef.current) return;
+    if (submitLockRef.current || isSubmitting) {
+      toast.info('جاري معالجة طلبك — انتظر قليلاً');
+      return;
+    }
     if (!validateForm()) return;
 
     if (!ownerId) {

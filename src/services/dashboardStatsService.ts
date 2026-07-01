@@ -165,12 +165,20 @@ export const buildOrderDashboardStatsFromBatch = (
   const week = batch.week;
   const allTime = batch.allTime;
 
+  const totalRevenue = netRevenueFromRpc(allTime) || month?.revenue || 0;
+  const deliveredCount = counts?.delivered ?? 0;
+
   return {
     total: counts?.all ?? month?.orders ?? 0,
     newOrders: counts?.new ?? 0,
     pendingFulfillment: (counts?.new ?? 0) + (counts?.processing ?? 0) + (counts?.paid ?? 0),
-    delivered: counts?.delivered ?? 0,
-    revenue: netRevenueFromRpc(allTime) || month?.revenue || 0,
+    delivered: deliveredCount,
+    revenue: totalRevenue,
+    todayRevenue: today?.revenue ?? 0,
+    weekRevenue: week?.revenue ?? 0,
+    monthRevenue: month?.revenue ?? 0,
+    pendingRevenue: 0,
+    avgOrderValue: deliveredCount > 0 ? Math.round(totalRevenue / deliveredCount) : 0,
     todayOrders: today?.orders ?? 0,
     weekOrders: week?.orders ?? 0,
     monthOrders: month?.orders ?? 0,

@@ -42,13 +42,14 @@ describe('checkoutValidation', () => {
     expect(result.subtotal).toBe(1000);
   });
 
-  it('rejects when server stock is zero even if cart had stale stock', () => {
+  it('allows legacy unset server stock (zero aggregate) for simple products', () => {
     const staleCart = product('p1', 500, 10);
     const freshServer = product('p1', 500, 0);
     const items: CartItem[] = [{ product: staleCart, quantity: 2 }];
     const result = validateAndRefreshCart(items, new Map([['p1', freshServer]]));
-    expect(result.updatedItems).toHaveLength(0);
-    expect(result.errors[0]).toContain('غير متوفر');
+    expect(result.updatedItems).toHaveLength(1);
+    expect(result.updatedItems[0].quantity).toBe(2);
+    expect(result.valid).toBe(true);
   });
 
   it('uses aggregate stock when variant rows are zero', () => {

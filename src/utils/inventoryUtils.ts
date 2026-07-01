@@ -21,6 +21,17 @@ export const normalizeProductStock = (product: Product): Product => {
     return { ...product, stockQuantity: sum, variants };
   }
 
+  // Legacy bug: empty stock field was saved as aggregate 0 — treat as unlimited when no variant rows.
+  if (
+    aggregate === 0 &&
+    !variants?.length &&
+    !product.sizes?.length &&
+    !product.colors?.length &&
+    product.hasOptions !== true
+  ) {
+    return { ...product, stockQuantity: undefined };
+  }
+
   return product;
 };
 

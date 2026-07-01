@@ -176,6 +176,40 @@ export const getOrderStatusLabel = (status: Order['status']): string => {
 export const getWorkflowTabLabel = (tab: OrderWorkflowTab): string =>
   WORKFLOW_TABS.find((t) => t.id === tab)?.label ?? tab;
 
+export type SimplifiedOrderStatusKey =
+  | 'new'
+  | 'processing'
+  | 'shipping'
+  | 'completed'
+  | 'cancelled'
+  | 'refunded';
+
+/** Single merchant-facing status for list cards (one badge instead of order/payment/delivery). */
+export const getSimplifiedOrderDisplayStatus = (
+  order: Order
+): { label: string; key: SimplifiedOrderStatusKey } => {
+  const workflow = getOrderWorkflowCategory(order);
+
+  switch (workflow) {
+    case 'new':
+      return { label: 'طلب جديد', key: 'new' };
+    case 'processing':
+      return { label: 'قيد المعالجة', key: 'processing' };
+    case 'paid':
+      return { label: 'قيد التجهيز', key: 'processing' };
+    case 'shipped':
+      return { label: 'جاري التوصيل', key: 'shipping' };
+    case 'delivered':
+      return { label: 'مكتمل', key: 'completed' };
+    case 'cancelled':
+      return { label: 'ملغي', key: 'cancelled' };
+    case 'refunded':
+      return { label: 'مسترد', key: 'refunded' };
+    default:
+      return { label: 'طلب جديد', key: 'new' };
+  }
+};
+
 export const buildOrderTimelineEvents = (
   order: Order,
   shipmentEvents: { status: string; note?: string; created_at: string }[] = []
@@ -233,11 +267,20 @@ export const buildOrderTimelineEvents = (
 
 export const computeOrderStats = (orders: Order[]) => {
   const workflowCounts = countOrdersByWorkflowTab(orders);
-  const revenue = orders
-    .filter((o) => {
-      const payment = getEffectivePaymentStatus(o);
-      return o.status === 'completed' && payment !== 'refunded';
-    })
+  const completedOrders = orders.filter((o) => {
+    const payment = getEffectivePaymentStatus(o);
+    return o.status === 'completed' && payment !== 'refunded';
+  });
+
+  const revenue = completedOrders.reduce((sum, o) => sum + o.total, 0);
+
+  const revenueInPeriod = (predicate: (date: Date) => boolean) =>
+    completedOrders
+      .filter((o) => predicate(new Date(o.date)))
+      .reduce((sum, o) => sum + o.total, 0);
+
+  const pendingRevenue = orders
+    .filter((o) => o.status === 'pending')
     .reduce((sum, o) => sum + o.total, 0);
 
   const todayOrders = orders.filter((o) => isToday(new Date(o.date))).length;
@@ -250,6 +293,11 @@ export const computeOrderStats = (orders: Order[]) => {
     pendingFulfillment: workflowCounts.new + workflowCounts.processing + workflowCounts.paid,
     delivered: workflowCounts.delivered,
     revenue,
+    todayRevenue: revenueInPeriod((d) => isToday(d)),
+    weekRevenue: revenueInPeriod((d) => isThisWeek(d, { weekStartsOn: 6 })),
+    monthRevenue: revenueInPeriod((d) => isThisMonth(d)),
+    pendingRevenue,
+    avgOrderValue: completedOrders.length > 0 ? Math.round(revenue / completedOrders.length) : 0,
     todayOrders,
     weekOrders,
     monthOrders,

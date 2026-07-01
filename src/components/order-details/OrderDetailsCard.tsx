@@ -122,7 +122,7 @@ const OrderDetailsCard = ({
           </div>
         </div>
         <div className="px-4 sm:px-5 py-3 sm:py-4 bg-muted/20 border-t border-border/40 space-y-3">
-          <OrderStatusBadges order={order} showWorkflow />
+          <OrderStatusBadges order={order} />
           <OrderWorkflowProgress order={order} />
         </div>
       </div>

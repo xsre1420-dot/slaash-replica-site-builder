@@ -4393,6 +4393,13 @@ export type Database = {
         Args: { p: Database["public"]["Tables"]["products"]["Row"] }
         Returns: Json
       }
+      checkout_product_stock_deductible: {
+        Args: {
+          p: Database["public"]["Tables"]["products"]["Row"]
+          p_qty: number
+        }
+        Returns: boolean
+      }
       checkout_resolve_duplicate_order: {
         Args: {
           p_idempotency_key?: string

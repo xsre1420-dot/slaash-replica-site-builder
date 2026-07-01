@@ -53,6 +53,11 @@ describe('inventoryUtils', () => {
     expect(getAvailableQty(product, 'M')).toBe(0);
   });
 
+  it('treats legacy unset aggregate zero as unlimited for simple products', () => {
+    const product = baseProduct({ stockQuantity: 0 });
+    expect(getAvailableQty(product)).toBe(Number.MAX_SAFE_INTEGER);
+  });
+
   it('trusts variant qty when aggregate stock_quantity is zero (drift)', () => {
     const product = baseProduct({
       stockQuantity: 0,
