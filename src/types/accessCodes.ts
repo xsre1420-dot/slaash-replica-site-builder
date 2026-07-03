@@ -11,6 +11,7 @@ export type AccessCodeRecord = {
   username: string | null;
   status: AccessCodeStatus;
   code_expires_at: string;
+  subscription_start_at?: string | null;
   subscription_end_at: string | null;
   redeemed_at: string | null;
   redeemed_user_id: string | null;
@@ -19,9 +20,9 @@ export type AccessCodeRecord = {
 
 export const ACCESS_CODE_ERROR_MESSAGES: Record<string, string> = {
   invalid_code: 'رمز التفعيل غير صحيح',
-  code_expired: 'تم إلغاء هذا الرمز — تواصل مع فريق المبيعات للحصول على رمز جديد',
+  code_expired: 'انتهت صلاحية الرمز — اطلب رمزاً جديداً من فريق المبيعات',
   code_revoked: 'تم إلغاء هذا الرمز',
-  active_code_exists: 'يوجد رمز نشط لهذا العميل — أرسله أو انتظر التفعيل قبل إنشاء رمز جديد',
+  active_code_exists: 'يوجد رمز قديم — سيتم استبداله تلقائياً عند إنشاء رمز جديد للعميل المُفعّل',
   no_active_code: 'لا يوجد رمز نشط لإلغائه',
   revoke_failed: 'تعذر إلغاء الرمز',
   subscription_expired: 'انتهى اشتراكك — تواصل معنا للتجديد',
@@ -29,7 +30,7 @@ export const ACCESS_CODE_ERROR_MESSAGES: Record<string, string> = {
   create_user_failed: 'تعذر إنشاء حساب التاجر — تواصل مع فريق المبيعات',
   subscription_failed: 'تعذر تفعيل الاشتراك — تواصل مع فريق المبيعات',
   provision_failed: 'تعذر تهيئة المتجر — حاول مرة أخرى أو تواصل مع الدعم',
-  lead_already_converted: 'هذا العميل مُفعّل مسبقاً',
+  lead_already_converted: 'هذا العميل مُفعّل — استخدم «إنشاء رمز جديد للعميل»',
   forbidden: 'ليس لديك صلاحية — أضف حسابك كمسؤول',
   login_failed: 'تعذر تسجيل الدخول، حاول مرة أخرى',
   redeem_failed: 'تعذر تفعيل الرمز — تحقق من الرمز أو تواصل مع المبيعات',
@@ -78,13 +79,33 @@ export const buildAccessCodeWhatsAppMessage = (opts: {
   durationMonths: number;
   agreedPrice?: number | null;
   loginUrl: string;
+  /** When set, this is a login-only reissue — subscription is NOT extended. */
+  subscriptionEndAt?: string | null;
+  isLoginReissue?: boolean;
 }): string => {
   const priceLine = opts.agreedPrice
     ? `\nالسعر المتفق عليه: ${opts.agreedPrice.toLocaleString('ar-IQ')} د.ع`
     : '';
+
+  if (opts.isLoginReissue && opts.subscriptionEndAt) {
+    const endDate = new Date(opts.subscriptionEndAt).toLocaleDateString('ar-IQ', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+    return (
+      `مرحباً ${opts.customerName} 👋\n\n` +
+      `🔑 *رمز دخول جديد لحسابك:*\n${opts.accessCode}\n\n` +
+      `اشتراك *${opts.planLabel}* ينتهي في *${endDate}* (متبقٍ ${opts.durationMonths} ${opts.durationMonths === 1 ? 'شهر' : 'أشهر'}).\n` +
+      `⚠️ هذا الرمز للدخول فقط — *لا يمدّد* مدة الاشتراك.${priceLine}\n\n` +
+      `ادخل من الرابط:\n${opts.loginUrl}\n\n` +
+      `الصق الرمز في صفحة تسجيل الدخول واضغط «دخول للمنصة».`
+    );
+  }
+
   return (
     `مرحباً ${opts.customerName} 👋\n\n` +
-    `تم الاتفاق على اشتراك *${opts.planLabel}* (${opts.durationMonths} ${opts.durationMonths === 12 ? 'شهر' : 'أشهر'}).${priceLine}\n\n` +
+    `تم الاتفاق على اشتراك *${opts.planLabel}* (${opts.durationMonths} ${opts.durationMonths === 12 ? 'شهر' : opts.durationMonths === 1 ? 'شهر' : 'أشهر'}).${priceLine}\n\n` +
     `🔑 *رمز الدخول للمنصة:*\n${opts.accessCode}\n\n` +
     `ادخل من الرابط:\n${opts.loginUrl}\n\n` +
     `الصق الرمز في صفحة تسجيل الدخول واضغط «دخول للمنصة».`

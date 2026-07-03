@@ -24,6 +24,7 @@ import { useAuth } from '@/context/AuthContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import PlatformDbStatusBanner from '@/components/platform/PlatformDbStatusBanner';
 import RealtimeReconnectBanner from '@/components/RealtimeReconnectBanner';
+import SubscriptionExpiryBanner from '@/components/dashboard/SubscriptionExpiryBanner';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -458,6 +459,7 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
           <main id="main-content" className="flex-1 min-w-0 w-full max-w-full overflow-x-hidden">
             <PlatformDbStatusBanner />
             <RealtimeReconnectBanner />
+            <SubscriptionExpiryBanner />
             {children}
           </main>
         </div>

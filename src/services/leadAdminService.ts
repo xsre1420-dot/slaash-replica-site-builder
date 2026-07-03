@@ -217,6 +217,31 @@ export const upsertSubscription = async (opts: {
   if (!payload?.success) throw new Error(payload?.error || 'upsert_failed');
 };
 
+export const extendSubscription = async (
+  leadId: string,
+  opts: { extraMonths?: number; reason?: string } = {}
+): Promise<{ subscriptionEndAt: string; subscriptionStartAt: string | null }> => {
+  const { data, error } = await (supabase as any).rpc('admin_extend_subscription', {
+    p_lead_id: leadId,
+    p_extra_months: opts.extraMonths ?? 6,
+    p_reason: opts.reason ?? null,
+  });
+  if (error) throw new Error(parseSupabaseRpcError(error));
+  const result = data as {
+    success?: boolean;
+    error?: string;
+    subscription_end_at?: string;
+    subscription_start_at?: string | null;
+  };
+  if (!result?.success || !result.subscription_end_at) {
+    throw new Error(result?.error || 'extend_failed');
+  }
+  return {
+    subscriptionEndAt: result.subscription_end_at,
+    subscriptionStartAt: result.subscription_start_at ?? null,
+  };
+};
+
 export const checkIsPlatformAdmin = async (): Promise<boolean> => {
   const { data, error } = await (supabase as any).rpc('is_platform_admin');
   if (error) return false;
@@ -252,6 +277,8 @@ export const generateAccessCode = async (
   durationMonths: number;
   agreedPrice: number | null;
   codeExpiresAt: string;
+  subscriptionStartAt: string | null;
+  subscriptionEndAt: string | null;
   storeName: string;
   username: string;
   message?: string;
@@ -277,6 +304,8 @@ export const generateAccessCode = async (
     duration_months?: number;
     agreed_price?: number | null;
     code_expires_at?: string;
+    subscription_start_at?: string | null;
+    subscription_end_at?: string | null;
     message?: string;
     code_hint?: string;
   };
@@ -292,6 +321,8 @@ export const generateAccessCode = async (
     durationMonths: result.duration_months ?? (payload.planId === 'yearly' ? 12 : 6),
     agreedPrice: result.agreed_price ?? null,
     codeExpiresAt: result.code_expires_at ?? '',
+    subscriptionStartAt: result.subscription_start_at ?? null,
+    subscriptionEndAt: result.subscription_end_at ?? null,
     storeName: payload.storeName ?? '',
     username: '',
     message: result.message,
@@ -438,6 +469,9 @@ export const replaceLeadAccessCode = async (
   durationMonths: number;
   agreedPrice: number | null;
   replacedCodeHint: string | null;
+  codeExpiresAt?: string;
+  subscriptionStartAt?: string | null;
+  subscriptionEndAt?: string | null;
 }> => {
   const { data, error } = await (supabase as any).rpc('admin_replace_lead_access_code', {
     p_lead_id: leadId,
@@ -480,6 +514,9 @@ export const replaceLeadAccessCode = async (
     duration_months?: number;
     agreed_price?: number | null;
     replaced_code_hint?: string;
+    code_expires_at?: string;
+    subscription_start_at?: string | null;
+    subscription_end_at?: string | null;
   };
 
   if (!result?.success || !result.access_code || !result.code_id) {
@@ -493,7 +530,106 @@ export const replaceLeadAccessCode = async (
     durationMonths: result.duration_months ?? 6,
     agreedPrice: result.agreed_price ?? null,
     replacedCodeHint: result.replaced_code_hint ?? null,
+    codeExpiresAt: result.code_expires_at,
+    subscriptionStartAt: result.subscription_start_at ?? null,
+    subscriptionEndAt: result.subscription_end_at ?? null,
   };
+};
+
+export const reissueLeadAccessCode = async (
+  leadId: string,
+  opts: {
+    planId?: string;
+    agreedPrice?: number | null;
+    storeName?: string;
+    notes?: string;
+    codeId?: string;
+  } = {}
+): Promise<{
+  accessCode: string;
+  codeId: string;
+  planId: string;
+  durationMonths: number;
+  agreedPrice: number | null;
+  codeExpiresAt?: string;
+  subscriptionStartAt?: string | null;
+  subscriptionEndAt?: string | null;
+}> => {
+  const replaceOpts = {
+    codeId: opts.codeId,
+    reason: opts.notes ?? 'reissued-for-active-customer',
+    planId: opts.planId,
+    agreedPrice: opts.agreedPrice,
+    storeName: opts.storeName,
+  };
+
+  if (opts.codeId) {
+    const replaced = await replaceLeadAccessCode(leadId, replaceOpts);
+    return {
+      accessCode: replaced.accessCode,
+      codeId: replaced.codeId,
+      planId: replaced.planId,
+      durationMonths: replaced.durationMonths,
+      agreedPrice: replaced.agreedPrice,
+      codeExpiresAt: replaced.codeExpiresAt,
+      subscriptionStartAt: replaced.subscriptionStartAt,
+      subscriptionEndAt: replaced.subscriptionEndAt,
+    };
+  }
+
+  try {
+    const result = await generateAccessCode({
+      leadId,
+      planId: (opts.planId ?? 'annual') as 'annual' | 'yearly',
+      agreedPrice: opts.agreedPrice ?? undefined,
+      storeName: opts.storeName,
+      notes: opts.notes ?? 'reissued-for-active-customer',
+    });
+    return {
+      accessCode: result.accessCode,
+      codeId: result.codeId,
+      planId: result.planId,
+      durationMonths: result.durationMonths,
+      agreedPrice: result.agreedPrice,
+      codeExpiresAt: result.codeExpiresAt,
+      subscriptionStartAt: result.subscriptionStartAt,
+      subscriptionEndAt: result.subscriptionEndAt,
+    };
+  } catch (err) {
+    const code = err instanceof Error ? err.message : 'generate_failed';
+    if (code === 'active_code_exists') {
+      const replaced = await replaceLeadAccessCode(leadId, replaceOpts);
+      return {
+        accessCode: replaced.accessCode,
+        codeId: replaced.codeId,
+        planId: replaced.planId,
+        durationMonths: replaced.durationMonths,
+        agreedPrice: replaced.agreedPrice,
+        codeExpiresAt: replaced.codeExpiresAt,
+        subscriptionStartAt: replaced.subscriptionStartAt,
+        subscriptionEndAt: replaced.subscriptionEndAt,
+      };
+    }
+    throw err;
+  }
+};
+
+export const issueNewLoginCodeForConvertedLead = async (
+  leadId: string,
+  opts: {
+    planId?: string;
+    agreedPrice?: number | null;
+    storeName?: string;
+    notes?: string;
+  },
+  codes: import('@/types/accessCodes').AccessCodeRecord[] = []
+) => {
+  const active = codes.find((c) => c.status === 'active');
+  return reissueLeadAccessCode(leadId, {
+    ...opts,
+    codeId: active?.id,
+    notes: opts.notes ?? (active ? 'replaced: customer lost login code' : 'reissued-for-active-customer'),
+  });
 };
 
 export const verifyLeadAccessCode = async (

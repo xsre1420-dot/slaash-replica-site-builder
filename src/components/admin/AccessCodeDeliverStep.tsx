@@ -1,15 +1,22 @@
 import { Copy, KeyRound, RefreshCw, Send } from 'lucide-react';
+import { format } from 'date-fns';
+import { ar } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { buildAccessCodeWhatsAppMessage } from '@/types/accessCodes';
 import { buildWhatsAppUrl, type LeadRecord } from '@/types/leads';
 import { PUBLIC_SUBSCRIPTION_PLANS } from '@/data/subscriptionPlans';
 import { cn } from '@/lib/utils';
+import { formatAccessCodeExpiryLabel } from '@/utils/accessCodeExpiryUtils';
 
 export type AccessCodeDeliverMeta = {
   planId: string;
   durationMonths: number;
   agreedPrice: number | null;
+  subscriptionStartAt?: string | null;
+  subscriptionEndAt?: string | null;
+  codeExpiresAt?: string | null;
+  convertedCustomer?: boolean;
 };
 
 type AccessCodeDeliverStepProps = {
@@ -45,6 +52,8 @@ export const AccessCodeDeliverStep = ({
       durationMonths: meta.durationMonths,
       agreedPrice: meta.agreedPrice,
       loginUrl: `${window.location.origin}/login`,
+      subscriptionEndAt: meta.subscriptionEndAt,
+      isLoginReissue: meta.convertedCustomer && Boolean(meta.subscriptionEndAt),
     })
   );
 
@@ -65,8 +74,34 @@ export const AccessCodeDeliverStep = ({
             <span className="font-semibold">{meta.agreedPrice.toLocaleString('ar-IQ')} د.ع</span>
           </div>
         )}
+        {meta.subscriptionStartAt && !meta.convertedCustomer && (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-muted-foreground">بداية الاشتراك</span>
+            <span className="font-semibold text-xs">
+              {format(new Date(meta.subscriptionStartAt), 'dd MMM yyyy', { locale: ar })}
+            </span>
+          </div>
+        )}
+        {(meta.subscriptionEndAt || meta.codeExpiresAt) && (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-muted-foreground">صلاحية الرمز</span>
+            <span className="font-semibold text-xs text-right">
+              {formatAccessCodeExpiryLabel(
+                {
+                  subscription_end_at: meta.subscriptionEndAt ?? null,
+                  code_expires_at: meta.codeExpiresAt ?? meta.subscriptionEndAt ?? null,
+                  status: 'active',
+                  duration_months: meta.durationMonths,
+                },
+                { converted: meta.convertedCustomer }
+              ) ?? '—'}
+            </span>
+          </div>
+        )}
         <Badge variant="outline" className="mt-1 text-[10px] text-emerald-700 border-emerald-500/30">
-          نفس شروط الاشتراك — يُحافظ عليها عند الاستبدال
+          {meta.convertedCustomer
+            ? 'رمز دخول — لا يمدّد الاشتراك، ينتهي مع تاريخ الاشتراك'
+            : 'يبدأ الاشتراك من تاريخ إنشاء الرمز — وليس من دخول العميل'}
         </Badge>
       </div>
 

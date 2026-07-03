@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { MessageCircle, Copy, ArrowRight, KeyRound, ClipboardList } from 'lucide-react';
+import { MessageCircle, Copy, ArrowRight, ClipboardList, CalendarPlus } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import GenerateAccessCodeDialog from '@/components/admin/GenerateAccessCodeDialog';
+import ExtendSubscriptionDialog from '@/components/admin/ExtendSubscriptionDialog';
 import LeadAccessCodePanel from '@/components/admin/LeadAccessCodePanel';
+import LeadCodeActionButton from '@/components/admin/LeadCodeActionButton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -18,10 +20,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  fetchLeadAccessCodes,
   fetchLeadById,
   markLeadContacted,
-  replaceLeadAccessCode,
   updateLead,
 } from '@/services/leadAdminService';
 import {
@@ -31,10 +31,8 @@ import {
   type LeadRecord,
   type LeadStatus,
 } from '@/types/leads';
-import { type AccessCodeRecord, ACCESS_CODE_ERROR_MESSAGES } from '@/types/accessCodes';
 import { getMonthlyOrderLabel } from '@/data/leadFormOptions';
-import { canCreateAccessCodeForLead, accessCodeBlockReason } from '@/utils/leadAccessCodeUtils';
-import { saveGeneratedAccessCode, getStoredAccessCodeForLead } from '@/utils/accessCodeSessionStore';
+import { useLeadAccessCodeDialog } from '@/hooks/useLeadAccessCodeDialog';
 import {
   LEAD_STATUS_COLORS,
   buildFollowUpWhatsAppMessage,
@@ -44,6 +42,7 @@ import {
 } from '@/utils/leadWorkflowUtils';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { isConvertedLead } from '@/utils/leadAccessCodeUtils';
 
 const QUICK_STATUSES: LeadStatus[] = ['new', 'contacted', 'interested', 'customer', 'rejected'];
 
@@ -51,20 +50,34 @@ const AdminLeadDetail = () => {
   const { leadId } = useParams<{ leadId: string }>();
   const navigate = useNavigate();
   const [lead, setLead] = useState<LeadRecord | null>(null);
-  const [codes, setCodes] = useState<AccessCodeRecord[]>([]);
   const [notes, setNotes] = useState('');
   const [status, setStatus] = useState<LeadStatus>('new');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [codeOpen, setCodeOpen] = useState(false);
-  const [codesLoading, setCodesLoading] = useState(false);
-  const [replacingCode, setReplacingCode] = useState(false);
-  const [revealedAccessCode, setRevealedAccessCode] = useState<string | null>(null);
-  const [codeDialogDeliver, setCodeDialogDeliver] = useState<{
-    accessCode: string;
-    codeId: string;
-    meta: { planId: string; durationMonths: number; agreedPrice: number | null };
-  } | null>(null);
+  const [extendOpen, setExtendOpen] = useState(false);
+
+  const {
+    codeOpen,
+    setCodeOpen,
+    codes,
+    codesLoading,
+    replacingCode,
+    revealedAccessCode,
+    codeDialogDeliver,
+    activeCodeRecord,
+    canManageCode,
+    canReissueCode,
+    loadCodes,
+    openCodeDialog,
+    handleReplaceCode,
+    handleReissueCode,
+    handleGenerated,
+    resetForLead,
+  } = useLeadAccessCodeDialog({
+    onLeadPatch: (_leadId, patch) => {
+      setLead((prev) => (prev ? { ...prev, ...patch } : prev));
+    },
+  });
 
   const loadLead = async (id: string) => {
     const data = await fetchLeadById(id);
@@ -83,32 +96,21 @@ const AdminLeadDetail = () => {
     return data;
   };
 
-  const loadCodes = async (id: string) => {
-    setCodesLoading(true);
-    try {
-      const rows = await fetchLeadAccessCodes(id);
-      setCodes(rows);
-      const hasPending = rows.some((c) => c.status === 'active');
-      setLead((prev) => (prev ? { ...prev, has_pending_code: hasPending } : prev));
-    } catch {
-      setCodes([]);
-    } finally {
-      setCodesLoading(false);
-    }
+  const loadCodesForLead = async (id: string) => {
+    await loadCodes(id);
   };
 
   useEffect(() => {
     if (!leadId) return;
-    setRevealedAccessCode(null);
-    setCodeDialogDeliver(null);
-  }, [leadId]);
+    resetForLead();
+  }, [leadId, resetForLead]);
 
   useEffect(() => {
     if (!leadId) return;
     void (async () => {
       setLoading(true);
       await loadLead(leadId);
-      await loadCodes(leadId);
+      await loadCodesForLead(leadId);
       setLoading(false);
     })();
   }, [leadId, navigate]);
@@ -145,7 +147,7 @@ const AdminLeadDetail = () => {
 
   const refreshAfterCode = async () => {
     if (!leadId) return;
-    await loadCodes(leadId);
+    await loadCodesForLead(leadId);
     const data = await fetchLeadById(leadId);
     if (data) {
       setLead(data);
@@ -153,64 +155,9 @@ const AdminLeadDetail = () => {
     }
   };
 
-  const openCodeDialog = () => {
+  const openLeadCodeDialog = () => {
     if (!lead) return;
-    const block = accessCodeBlockReason(lead);
-    if (block === 'converted') {
-      toast.info('العميل مُفعّل — راجع تفاصيل الطلب');
-      return;
-    }
-    if (block === 'pending') {
-      setCodeOpen(true);
-      return;
-    }
-    if (!canCreateAccessCodeForLead(lead)) {
-      toast.info('لا يمكن إنشاء رمز لهذا الطلب');
-      return;
-    }
-    setCodeOpen(true);
-  };
-
-  const handleReplaceCode = async (): Promise<{ accessCode: string; codeId: string } | void> => {
-    if (!leadId || !lead) return;
-    setReplacingCode(true);
-    try {
-      const activeCode = codes.find((c) => c.status === 'active');
-      const result = await replaceLeadAccessCode(leadId, {
-        codeId: activeCode?.id,
-        reason: 'replaced-by-admin: same subscription terms',
-        planId: activeCode?.plan_id ?? lead.selected_plan_id ?? 'annual',
-        durationMonths: activeCode?.duration_months,
-        agreedPrice: activeCode?.agreed_price,
-        storeName: lead.full_name,
-      });
-      saveGeneratedAccessCode({
-        leadId,
-        codeId: result.codeId,
-        accessCode: result.accessCode,
-        createdAt: new Date().toISOString(),
-      });
-      setRevealedAccessCode(result.accessCode);
-      setCodeDialogDeliver({
-        accessCode: result.accessCode,
-        codeId: result.codeId,
-        meta: {
-          planId: result.planId,
-          durationMonths: result.durationMonths,
-          agreedPrice: result.agreedPrice,
-        },
-      });
-      await loadCodes(leadId);
-      setLead((prev) => (prev ? { ...prev, has_pending_code: true } : prev));
-      setCodeOpen(true);
-      toast.success('تم إنشاء الرمز — أرسله للعميل الآن');
-      return { accessCode: result.accessCode, codeId: result.codeId };
-    } catch (err) {
-      const code = err instanceof Error ? err.message : 'replace_failed';
-      toast.error(ACCESS_CODE_ERROR_MESSAGES[code] || 'تعذر استبدال الرمز');
-    } finally {
-      setReplacingCode(false);
-    }
+    void openCodeDialog(lead);
   };
 
   if (loading || !lead) {
@@ -225,10 +172,6 @@ const AdminLeadDetail = () => {
     lead.status === 'contacted' || lead.status === 'interested'
       ? buildFollowUpWhatsAppMessage(lead)
       : buildInitialWhatsAppMessage(lead);
-
-  const activeCodeRecord = codes.find((c) => c.status === 'active') ?? null;
-  const canManageCode =
-    !lead.converted_user_id && (lead.has_pending_code || activeCodeRecord != null);
 
   return (
     <AdminLayout title="تفاصيل الطلب">
@@ -300,39 +243,22 @@ const AdminLeadDetail = () => {
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            {canCreateAccessCodeForLead(lead) && (
+            <LeadCodeActionButton
+              lead={lead}
+              activeCode={activeCodeRecord}
+              codes={codes}
+              size="lg"
+              onClick={openLeadCodeDialog}
+            />
+            {isConvertedLead(lead) && (
               <Button
-                size="lg"
-                className="rounded-xl gap-2 w-full sm:w-auto sm:min-w-[200px]"
-                onClick={openCodeDialog}
+                variant="outline"
+                className="rounded-xl gap-2 w-full sm:w-auto border-primary/30"
+                onClick={() => setExtendOpen(true)}
               >
-                <KeyRound className="w-5 h-5" />
-                إنشاء رمز دخول
+                <CalendarPlus className="w-4 h-4" />
+                تمديد الاشتراك
               </Button>
-            )}
-            {canManageCode && (
-              <Button
-                size="lg"
-                variant={activeCodeRecord && !getStoredAccessCodeForLead(lead.id, activeCodeRecord.id) ? 'default' : 'outline'}
-                className={cn(
-                  'rounded-xl gap-2 w-full sm:w-auto',
-                  activeCodeRecord &&
-                    !getStoredAccessCodeForLead(lead.id, activeCodeRecord.id) &&
-                    'bg-amber-600 hover:bg-amber-700 text-white'
-                )}
-                onClick={() => setCodeOpen(true)}
-              >
-                <KeyRound className="w-5 h-5" />
-                {activeCodeRecord &&
-                !getStoredAccessCodeForLead(lead.id, activeCodeRecord.id)
-                  ? 'إنشاء رمز جديد للعميل'
-                  : 'إدارة الرمز'}
-              </Button>
-            )}
-            {lead.converted_user_id && (
-              <Badge variant="outline" className="self-start px-3 py-2 text-emerald-700 border-emerald-500/30">
-                العميل مُفعّل
-              </Badge>
             )}
             <Button
               variant="outline"
@@ -373,9 +299,10 @@ const AdminLeadDetail = () => {
           codesLoading={codesLoading}
           replacing={replacingCode}
           revealedAccessCode={revealedAccessCode}
-          onRefreshCodes={() => leadId && void loadCodes(leadId)}
+          onRefreshCodes={() => leadId && void loadCodesForLead(leadId)}
           onManageCode={canManageCode ? () => setCodeOpen(true) : undefined}
           onReplaceCode={canManageCode ? handleReplaceCode : undefined}
+          onReissueCode={canReissueCode ? handleReissueCode : undefined}
         />
 
         <div className="rounded-2xl border border-border/50 bg-card p-6 space-y-4">
@@ -427,20 +354,31 @@ const AdminLeadDetail = () => {
       <GenerateAccessCodeDialog
         lead={lead}
         open={codeOpen}
-        onOpenChange={(open) => {
-          setCodeOpen(open);
-          if (!open) setCodeDialogDeliver(null);
-        }}
+        onOpenChange={setCodeOpen}
         activeCode={activeCodeRecord}
+        codes={codes}
         initialDeliver={codeDialogDeliver}
+        onReissue={handleReissueCode}
+        onReplace={handleReplaceCode}
+        replacing={replacingCode}
         onGenerated={({ accessCode, codeId }) => {
-          setRevealedAccessCode(accessCode);
-          setLead((prev) =>
-            prev ? { ...prev, has_pending_code: true, status: prev.status === 'new' ? 'interested' : prev.status } : prev
-          );
+          handleGenerated({ accessCode, codeId });
           void refreshAfterCode();
         }}
       />
+
+      {lead && isConvertedLead(lead) && (
+        <ExtendSubscriptionDialog
+          leadId={lead.id}
+          customerName={lead.full_name}
+          open={extendOpen}
+          onOpenChange={setExtendOpen}
+          onExtended={() => {
+            void loadCodesForLead(lead.id);
+            void refreshAfterCode();
+          }}
+        />
+      )}
     </AdminLayout>
   );
 };

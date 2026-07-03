@@ -126,6 +126,38 @@ Deno.serve(async (req) => {
       });
     }
 
+    const now = new Date();
+
+    if (
+      codeRow.status === 'active' &&
+      codeRow.code_expires_at &&
+      new Date(codeRow.code_expires_at) < now
+    ) {
+      await adminClient
+        .from('merchant_access_codes')
+        .update({ status: 'expired', updated_at: now.toISOString() })
+        .eq('id', codeRow.id);
+      return new Response(JSON.stringify({ success: false, error: 'code_expired' }), {
+        status: 410,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (
+      codeRow.status === 'active' &&
+      codeRow.subscription_end_at &&
+      new Date(codeRow.subscription_end_at) < now
+    ) {
+      await adminClient
+        .from('merchant_access_codes')
+        .update({ status: 'expired', updated_at: now.toISOString() })
+        .eq('id', codeRow.id);
+      return new Response(JSON.stringify({ success: false, error: 'subscription_expired' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     if (codeRow.status === 'expired' && !codeRow.redeemed_user_id) {
       return new Response(JSON.stringify({ success: false, error: 'code_expired' }), {
         status: 410,
@@ -136,6 +168,28 @@ Deno.serve(async (req) => {
     if (body.preview === true) {
       if (codeRow.status === 'revoked') {
         return new Response(JSON.stringify({ success: false, error: 'code_revoked' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (
+        codeRow.status === 'active' &&
+        codeRow.code_expires_at &&
+        new Date(codeRow.code_expires_at) < now
+      ) {
+        return new Response(JSON.stringify({ success: false, error: 'code_expired' }), {
+          status: 410,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (
+        codeRow.status === 'active' &&
+        codeRow.subscription_end_at &&
+        new Date(codeRow.subscription_end_at) < now
+      ) {
+        return new Response(JSON.stringify({ success: false, error: 'subscription_expired' }), {
           status: 403,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -168,12 +222,40 @@ Deno.serve(async (req) => {
       );
     }
 
-    const now = new Date();
-
     const storeName = body.store_name?.trim() || codeRow.store_name || 'متجري';
     const username = codeRow.username || `store${Math.floor(10000 + Math.random() * 90000)}`;
     let userId = codeRow.redeemed_user_id as string | null;
     let subscriptionEndAt = codeRow.subscription_end_at as string | null;
+    let signInEmail = codeRow.auth_email as string;
+
+    const { data: leadRow } = await adminClient
+      .from('leads')
+      .select('converted_user_id')
+      .eq('id', codeRow.lead_id)
+      .maybeSingle();
+
+    const convertedUserId = (leadRow?.converted_user_id as string | null) ?? null;
+    const isExistingCustomer = Boolean(convertedUserId);
+
+    if (!userId && convertedUserId) {
+      userId = convertedUserId;
+    }
+
+    if (isExistingCustomer && userId) {
+      const { data: existingAuthUser, error: existingAuthError } =
+        await adminClient.auth.admin.getUserById(userId);
+      if (existingAuthError || !existingAuthUser.user?.email) {
+        logStructured('error', 'redeem-access-code.existing_user_lookup_failed', {
+          message: existingAuthError?.message,
+          userId,
+        });
+        return new Response(JSON.stringify({ success: false, error: 'login_failed' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      signInEmail = existingAuthUser.user.email;
+    }
 
     const ensureStoreProvision = async (targetUserId: string): Promise<boolean> => {
       const { data: provisionData, error: provisionError } = await adminClient.rpc(
@@ -221,14 +303,23 @@ Deno.serve(async (req) => {
       }
 
       userId = createdUser.user.id;
-      const subscriptionEnd = addMonths(now, codeRow.duration_months).toISOString();
+      const subscriptionStart =
+        codeRow.subscription_start_at &&
+        !Number.isNaN(new Date(codeRow.subscription_start_at as string).getTime())
+          ? new Date(codeRow.subscription_start_at as string).toISOString()
+          : now.toISOString();
+      const subscriptionEnd =
+        codeRow.subscription_end_at &&
+        new Date(codeRow.subscription_end_at as string) > new Date(subscriptionStart)
+          ? new Date(codeRow.subscription_end_at as string).toISOString()
+          : addMonths(new Date(subscriptionStart), codeRow.duration_months).toISOString();
       subscriptionEndAt = subscriptionEnd;
 
       const { error: subError } = await adminClient.from('subscriptions').upsert(
         {
           user_id: userId,
           plan_name: codeRow.plan_id,
-          start_date: now.toISOString(),
+          start_date: subscriptionStart,
           end_date: subscriptionEnd,
           status: 'active',
           lead_id: codeRow.lead_id,
@@ -274,6 +365,7 @@ Deno.serve(async (req) => {
           status: 'redeemed',
           redeemed_at: now.toISOString(),
           redeemed_user_id: userId,
+          subscription_start_at: subscriptionStart,
           subscription_end_at: subscriptionEnd,
           store_name: storeName,
           username,
@@ -321,6 +413,21 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+
+      if (codeRow.status === 'active' && isExistingCustomer) {
+        subscriptionEndAt = subRow.end_date ?? subscriptionEndAt;
+        await adminClient
+          .from('merchant_access_codes')
+          .update({
+            status: 'redeemed',
+            redeemed_at: now.toISOString(),
+            redeemed_user_id: userId,
+            subscription_end_at: subscriptionEndAt,
+            store_name: storeName,
+            username,
+          })
+          .eq('id', codeRow.id);
+      }
     }
 
     const authClient = getAnonSupabase();
@@ -330,7 +437,7 @@ Deno.serve(async (req) => {
         adminClient,
         authClient,
         userId as string,
-        codeRow.auth_email as string
+        signInEmail
       );
     } catch (signInErr) {
       logStructured('error', 'redeem-access-code.sign_in_failed', {

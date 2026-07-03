@@ -19,6 +19,18 @@ import { buildAccessCodeWhatsAppMessage } from '@/types/accessCodes';
 import { buildWhatsAppUrl, type LeadRecord } from '@/types/leads';
 import { PUBLIC_SUBSCRIPTION_PLANS } from '@/data/subscriptionPlans';
 import { getStoredAccessCodeForLead } from '@/utils/accessCodeSessionStore';
+import {
+  canCreateAccessCodeForLead,
+  canReissueAccessCodeForLead,
+  getLastRedeemedAccessCode,
+  getRawActiveAccessCode,
+  isConvertedLead,
+} from '@/utils/leadAccessCodeUtils';
+import {
+  formatAccessCodeExpiryLabel,
+  getRemainingSubscriptionMonths,
+  getAccessCodeEffectiveEnd,
+} from '@/utils/accessCodeExpiryUtils';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -32,6 +44,10 @@ type LeadAccessCodePanelProps = {
   onRefreshCodes?: () => void;
   onManageCode?: () => void;
   onReplaceCode?: () =>
+    | Promise<{ accessCode: string; codeId: string } | void>
+    | { accessCode: string; codeId: string }
+    | void;
+  onReissueCode?: () =>
     | Promise<{ accessCode: string; codeId: string } | void>
     | { accessCode: string; codeId: string }
     | void;
@@ -57,21 +73,28 @@ export const LeadAccessCodePanel = ({
   onRefreshCodes,
   onManageCode,
   onReplaceCode,
+  onReissueCode,
 }: LeadAccessCodePanelProps) => {
   const [confirmReplaceOpen, setConfirmReplaceOpen] = useState(false);
   const [localRevealedCode, setLocalRevealedCode] = useState<string | null>(null);
-  const activeCode = codes.find((c) => c.status === 'active') ?? null;
+  const activeCode = getRawActiveAccessCode(codes);
   const historyCodes = codes.filter((c) => c.status !== 'active');
+  const lastRedeemed = getLastRedeemedAccessCode(codes);
+  const converted = isConvertedLead(lead);
+  const activeExpiryLabel = activeCode
+    ? formatAccessCodeExpiryLabel(activeCode, { converted })
+    : null;
+  const reissueEnd = lastRedeemed ? getAccessCodeEffectiveEnd(lastRedeemed) : null;
+  const reissueRemainingMonths = reissueEnd ? getRemainingSubscriptionMonths(reissueEnd) : null;
   const sessionPlaintext =
     activeCode != null ? getStoredAccessCodeForLead(lead.id, activeCode.id) : null;
   const plaintext = revealedAccessCode ?? localRevealedCode ?? sessionPlaintext;
-  const showPanel = Boolean(activeCode || historyCodes.length > 0 || lead.has_pending_code);
-  const canManage = Boolean(
-    !lead.converted_user_id && (activeCode || lead.has_pending_code) && onManageCode
+  const showPanel = Boolean(
+    activeCode || historyCodes.length > 0 || lead.has_pending_code || converted
   );
-  const canReplace = Boolean(
-    !lead.converted_user_id && (activeCode || lead.has_pending_code) && onReplaceCode
-  );
+  const canManage = Boolean((activeCode || lead.has_pending_code) && onManageCode);
+  const canReplace = Boolean((activeCode || lead.has_pending_code) && onReplaceCode);
+  const canReissue = Boolean(canReissueAccessCodeForLead(lead, codes) && onReissueCode);
 
   const copyPlaintext = async () => {
     if (!plaintext) return;
@@ -90,6 +113,8 @@ export const LeadAccessCodePanel = ({
             durationMonths: activeCode.duration_months,
             agreedPrice: activeCode.agreed_price,
             loginUrl: `${window.location.origin}/login`,
+            subscriptionEndAt: activeCode.subscription_end_at,
+            isLoginReissue: converted && Boolean(activeCode.subscription_end_at),
           })
         )
       : null;
@@ -97,6 +122,13 @@ export const LeadAccessCodePanel = ({
   const handleConfirmReplace = async () => {
     setConfirmReplaceOpen(false);
     const result = await onReplaceCode?.();
+    if (result?.accessCode) {
+      setLocalRevealedCode(result.accessCode);
+    }
+  };
+
+  const handleReissue = async () => {
+    const result = await onReissueCode?.();
     if (result?.accessCode) {
       setLocalRevealedCode(result.accessCode);
     }
@@ -119,7 +151,80 @@ export const LeadAccessCodePanel = ({
               {statusLabel.active}
             </Badge>
           )}
+          {converted && !activeCode && !lead.has_pending_code && (
+            <Badge variant="outline" className="text-emerald-700 border-emerald-500/30">
+              اشتراك مُفعّل
+            </Badge>
+          )}
         </div>
+
+        {canReissue && (
+          <div className="rounded-2xl border-2 border-dashed border-amber-500/30 bg-amber-500/[0.05] p-4 space-y-3">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              العميل مُفعّل. إذا نسي رمز الدخول، أنشئ رمزاً جديداً — ينتهي في{' '}
+              <strong>نفس تاريخ اشتراكه الأصلي</strong> (6 أو 12 شهراً من التفعيل الأول، لا
+              يُمدَّد).
+            </p>
+            {lastRedeemed ? (
+              <div className="rounded-xl border border-primary/15 bg-background/60 px-3 py-2 text-xs space-y-1">
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">الباقة</span>
+                  <span className="font-medium">{planLabel(lastRedeemed.plan_id)}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">المدة</span>
+                  <span className="font-medium">
+                    {converted && reissueRemainingMonths
+                      ? `${reissueRemainingMonths} ${reissueRemainingMonths === 1 ? 'شهر متبقٍ' : 'أشهر متبقية'}`
+                      : `${lastRedeemed.duration_months} شهر`}
+                  </span>
+                </div>
+              {reissueEnd && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">بداية الاشتراك</span>
+                  <span className="font-medium">
+                    {format(
+                      new Date(lastRedeemed.subscription_start_at ?? lastRedeemed.created_at),
+                      'dd MMM yyyy',
+                      { locale: ar }
+                    )}
+                  </span>
+                </div>
+              )}
+              {reissueEnd && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">ينتهي الاشتراك</span>
+                    <span className="font-medium">
+                      {format(new Date(reissueEnd), 'dd MMM yyyy', { locale: ar })}
+                    </span>
+                  </div>
+                )}
+                {lastRedeemed.agreed_price != null && (
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">السعر</span>
+                    <span className="font-medium">
+                      {lastRedeemed.agreed_price.toLocaleString('ar-IQ')} د.ع
+                    </span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-primary/15 bg-background/60 px-3 py-2 text-xs text-muted-foreground">
+                {lead.selected_plan_name
+                  ? `الباقة: ${lead.selected_plan_name}`
+                  : 'سيُنشأ الرمز بنفس شروط الاشتراك الحالي'}
+              </div>
+            )}
+            <Button
+              className="w-full rounded-xl gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+              disabled={replacing}
+              onClick={() => void handleReissue()}
+            >
+              <RefreshCw className={cn('h-4 w-4', replacing && 'animate-spin')} />
+              {replacing ? 'جاري إنشاء رمز جديد...' : 'إنشاء رمز جديد للعميل'}
+            </Button>
+          </div>
+        )}
 
         {activeCode ? (
           <div className="rounded-2xl border-2 border-dashed border-primary/25 bg-primary/[0.04] p-4 space-y-3">
@@ -149,8 +254,18 @@ export const LeadAccessCodePanel = ({
               </div>
               <div className="flex justify-between gap-2">
                 <span className="text-muted-foreground">المدة</span>
-                <span className="font-medium">{activeCode.duration_months} شهر</span>
+                <span className="font-medium">
+                  {converted && activeCode.subscription_end_at
+                    ? `${activeCode.duration_months} ${activeCode.duration_months === 1 ? 'شهر متبقٍ' : 'أشهر متبقية'}`
+                    : `${activeCode.duration_months} شهر`}
+                </span>
               </div>
+              {activeExpiryLabel && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">صلاحية الرمز</span>
+                  <span className="font-medium text-xs text-right">{activeExpiryLabel}</span>
+                </div>
+              )}
               {activeCode.agreed_price != null && (
                 <div className="flex justify-between gap-2">
                   <span className="text-muted-foreground">السعر</span>
@@ -258,6 +373,10 @@ export const LeadAccessCodePanel = ({
                 </Button>
               )}
             </div>
+          </div>
+        ) : converted && !canReissue && !activeCode ? (
+          <div className="rounded-xl border border-destructive/25 bg-destructive/5 p-4 text-sm text-destructive text-center">
+            انتهى اشتراك هذا العميل — لا يمكن إنشاء رمز دخول جديد حتى يتم تجديد الاشتراك.
           </div>
         ) : null}
 

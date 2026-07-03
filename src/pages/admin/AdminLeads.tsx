@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -7,7 +7,6 @@ import {
   MessageCircle,
   Copy,
   Eye,
-  KeyRound,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -16,6 +15,7 @@ import {
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import GenerateAccessCodeDialog from '@/components/admin/GenerateAccessCodeDialog';
+import LeadCodeActionButton from '@/components/admin/LeadCodeActionButton';
 import LeadStatsBar from '@/components/admin/LeadStatsBar';
 import LeadWorkflowBadge from '@/components/admin/LeadWorkflowBadge';
 import { Input } from '@/components/ui/input';
@@ -49,14 +49,8 @@ import {
   type LeadRecord,
   type LeadStatus,
 } from '@/types/leads';
-import { canCreateAccessCodeForLead, accessCodeBlockReason } from '@/utils/leadAccessCodeUtils';
-import {
-  buildInitialWhatsAppMessage,
-  formatLeadRelativeTime,
-  getLeadFilterEmptyMessage,
-  LEAD_FILTER_DEFINITIONS,
-  type LeadQuickFilter,
-} from '@/utils/leadWorkflowUtils';
+import { useLeadAccessCodeDialog } from '@/hooks/useLeadAccessCodeDialog';
+import { buildInitialWhatsAppMessage, buildFollowUpWhatsAppMessage, formatLeadRelativeTime, getLeadFilterEmptyMessage, LEAD_FILTER_DEFINITIONS, type LeadQuickFilter } from '@/utils/leadWorkflowUtils';
 import { getMonthlyOrderLabel } from '@/data/leadFormOptions';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -76,8 +70,34 @@ const AdminLeads = () => {
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
   const [helpOpen, setHelpOpen] = useState(false);
-  const [codeLead, setCodeLead] = useState<LeadRecord | null>(null);
-  const [codeOpen, setCodeOpen] = useState(false);
+
+  const patchLeadRow = useCallback((leadId: string, patch: Partial<LeadRecord>) => {
+    setRows((prev) => prev.map((row) => (row.id === leadId ? { ...row, ...patch } : row)));
+  }, []);
+
+  const {
+    codeOpen,
+    setCodeOpen,
+    codeLead,
+    codes,
+    activeCodeRecord,
+    codeDialogDeliver,
+    openCodeDialog,
+    handleGenerated,
+    handleReissueCode,
+    handleReplaceCode,
+    replacingCode,
+  } = useLeadAccessCodeDialog({
+    onLeadPatch: patchLeadRow,
+  });
+
+  const activeCodesByLead = useMemo(() => {
+    const map = new Map<string, typeof activeCodeRecord>();
+    if (codeLead && activeCodeRecord) {
+      map.set(codeLead.id, activeCodeRecord);
+    }
+    return map;
+  }, [codeLead, activeCodeRecord]);
 
   const loadStats = useCallback(async () => {
     setStatsLoading(true);
@@ -157,25 +177,6 @@ const AdminLeads = () => {
   }, 60_000);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-
-  const openCodeDialog = (lead: LeadRecord) => {
-    const block = accessCodeBlockReason(lead);
-    if (block === 'converted') {
-      toast.info('العميل مُفعّل — راجع تفاصيل الطلب');
-      return;
-    }
-    if (block === 'pending') {
-      toast.info('يوجد رمز نشط لهذا العميل — بانتظار التفعيل');
-      return;
-    }
-    if (!canCreateAccessCodeForLead(lead)) {
-      toast.info('لا يمكن إنشاء رمز لهذا الطلب');
-      return;
-    }
-    setCodeLead(lead);
-    setCodeOpen(true);
-  };
-
   const copyNumber = (phone: string) => {
     void navigator.clipboard.writeText(phone);
     toast.success('تم نسخ الرقم');
@@ -185,17 +186,21 @@ const AdminLeads = () => {
     try {
       if (lead.status === 'new') {
         await markLeadContacted(lead.id);
-        setRows((prev) =>
-          prev.map((r) =>
-            r.id === lead.id ? { ...r, status: 'contacted', is_unread: false, admin_read_at: new Date().toISOString() } : r
-          )
-        );
+        patchLeadRow(lead.id, {
+          status: 'contacted',
+          is_unread: false,
+          admin_read_at: new Date().toISOString(),
+        });
         void loadStats();
       }
     } catch {
       /* still open WhatsApp */
     }
-    window.open(buildWhatsAppUrl(lead.whatsapp_number, buildInitialWhatsAppMessage(lead)), '_blank');
+    const message =
+      lead.status === 'contacted' || lead.status === 'interested'
+        ? buildFollowUpWhatsAppMessage(lead)
+        : buildInitialWhatsAppMessage(lead);
+    window.open(buildWhatsAppUrl(lead.whatsapp_number, message), '_blank');
   };
 
   const handleMarkContacted = async (lead: LeadRecord) => {
@@ -216,32 +221,15 @@ const AdminLeads = () => {
 
   const renderWorkflowBadge = (lead: LeadRecord) => <LeadWorkflowBadge lead={lead} />;
 
-  const renderCodeButton = (lead: LeadRecord, fullWidth = false) => {
-    if (lead.converted_user_id) {
-      return (
-        <Badge variant="outline" className="text-xs text-emerald-700 border-emerald-500/30">
-          مُفعّل
-        </Badge>
-      );
-    }
-    if (lead.has_pending_code) {
-      return (
-        <Badge variant="outline" className="text-xs text-amber-700 border-amber-500/30">
-          رمز مُرسَل
-        </Badge>
-      );
-    }
-    return (
-      <Button
-        size={fullWidth ? 'default' : 'sm'}
-        className={fullWidth ? 'w-full rounded-xl gap-2' : 'rounded-lg h-9 gap-1.5 text-xs sm:text-sm px-3'}
-        onClick={() => openCodeDialog(lead)}
-      >
-        <KeyRound className="w-4 h-4" />
-        إنشاء رمز
-      </Button>
-    );
-  };
+  const renderCodeButton = (lead: LeadRecord, fullWidth = false) => (
+    <LeadCodeActionButton
+      lead={lead}
+      activeCode={activeCodesByLead.get(lead.id) ?? null}
+      codes={codeLead?.id === lead.id ? codes : []}
+      fullWidth={fullWidth}
+      onClick={() => void openCodeDialog(lead)}
+    />
+  );
 
   return (
     <AdminLayout title="طلبات الاشتراك">
@@ -513,16 +501,14 @@ const AdminLeads = () => {
         lead={codeLead}
         open={codeOpen}
         onOpenChange={setCodeOpen}
-        onGenerated={() => {
-          if (codeLead) {
-            setRows((prev) =>
-              prev.map((row) =>
-                row.id === codeLead.id
-                  ? { ...row, has_pending_code: true, status: row.status === 'new' || row.status === 'contacted' ? 'interested' : row.status }
-                  : row
-              )
-            );
-          }
+        activeCode={activeCodeRecord}
+        codes={codes}
+        initialDeliver={codeDialogDeliver}
+        onReissue={handleReissueCode}
+        onReplace={handleReplaceCode}
+        replacing={replacingCode}
+        onGenerated={({ accessCode, codeId }) => {
+          handleGenerated({ accessCode, codeId });
           void load();
           void loadStats();
         }}

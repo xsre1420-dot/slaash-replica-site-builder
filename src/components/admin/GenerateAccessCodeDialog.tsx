@@ -23,6 +23,7 @@ import {
 import AccessCodeDeliverStep, { type AccessCodeDeliverMeta } from '@/components/admin/AccessCodeDeliverStep';
 import {
   generateAccessCode,
+  issueNewLoginCodeForConvertedLead,
   replaceLeadAccessCode,
   verifyLeadAccessCode,
 } from '@/services/leadAdminService';
@@ -34,7 +35,12 @@ import {
 import type { LeadRecord } from '@/types/leads';
 import { buildWhatsAppUrl } from '@/types/leads';
 import { buildInitialWhatsAppMessage } from '@/utils/leadWorkflowUtils';
-import { canCreateAccessCodeForLead } from '@/utils/leadAccessCodeUtils';
+import { canCreateAccessCodeForLead, canReissueAccessCodeForLead, getLastRedeemedAccessCode, getRawActiveAccessCode, isConvertedLead, resolveAccessCodeDialogMode } from '@/utils/leadAccessCodeUtils';
+import {
+  formatAccessCodeExpiryLabel,
+  getAccessCodeEffectiveEnd,
+  getRemainingSubscriptionMonths,
+} from '@/utils/accessCodeExpiryUtils';
 import { getStoredAccessCodeForLead, saveGeneratedAccessCode } from '@/utils/accessCodeSessionStore';
 import { PUBLIC_SUBSCRIPTION_PLANS } from '@/data/subscriptionPlans';
 import { cn } from '@/lib/utils';
@@ -45,7 +51,7 @@ const planLabelFor = (planId: string) =>
   (planId === 'yearly' ? 'باقة سنوية' : 'باقة 6 أشهر');
 
 type PlanId = 'annual' | 'yearly';
-type DialogStep = 'configure' | 'manage' | 'verify' | 'deliver';
+type DialogStep = 'configure' | 'manage' | 'verify' | 'deliver' | 'reissue';
 
 const defaultPlanForLead = (lead: LeadRecord): PlanId =>
   lead.selected_plan_id === 'yearly' ? 'yearly' : 'annual';
@@ -59,6 +65,7 @@ type GenerateAccessCodeDialogProps = {
   onOpenChange: (open: boolean) => void;
   onGenerated?: (payload: { accessCode: string; codeId: string }) => void;
   activeCode?: AccessCodeRecord | null;
+  codes?: AccessCodeRecord[];
   initialStep?: DialogStep;
   /** Open directly on deliver step with a freshly created/replaced code. */
   initialDeliver?: {
@@ -66,6 +73,10 @@ type GenerateAccessCodeDialogProps = {
     codeId: string;
     meta: AccessCodeDeliverMeta;
   } | null;
+  /** When set, reissue/replace delegate to hook (single source of truth). */
+  onReissue?: () => Promise<{ accessCode: string; codeId: string } | void>;
+  onReplace?: () => Promise<{ accessCode: string; codeId: string } | void>;
+  replacing?: boolean;
 };
 
 export const GenerateAccessCodeDialog = ({
@@ -74,8 +85,12 @@ export const GenerateAccessCodeDialog = ({
   onOpenChange,
   onGenerated,
   activeCode = null,
+  codes = [],
   initialStep,
   initialDeliver = null,
+  onReissue,
+  onReplace,
+  replacing: externalReplacing = false,
 }: GenerateAccessCodeDialogProps) => {
   const [step, setStep] = useState<DialogStep>('configure');
   const [planId, setPlanId] = useState<PlanId>('annual');
@@ -86,6 +101,7 @@ export const GenerateAccessCodeDialog = ({
   const [deliverMeta, setDeliverMeta] = useState<AccessCodeDeliverMeta | null>(null);
   const [generating, setGenerating] = useState(false);
   const [replacing, setReplacing] = useState(false);
+  const isReplacing = externalReplacing || replacing;
   const [verifyInput, setVerifyInput] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [confirmReplaceOpen, setConfirmReplaceOpen] = useState(false);
@@ -124,25 +140,47 @@ export const GenerateAccessCodeDialog = ({
         planId: activeCode.plan_id,
         durationMonths: activeCode.duration_months,
         agreedPrice: activeCode.agreed_price,
+        subscriptionStartAt: activeCode.subscription_start_at,
+        subscriptionEndAt: activeCode.subscription_end_at,
+        codeExpiresAt: activeCode.code_expires_at,
+        convertedCustomer: isConvertedLead(lead),
       });
-    } else if (activeCode) {
-      setStep('manage');
-      setCodeId(activeCode.id);
-      setDeliverMeta({
-        planId: activeCode.plan_id,
-        durationMonths: activeCode.duration_months,
-        agreedPrice: activeCode.agreed_price,
-      });
-      setGeneratedCode(null);
     } else {
-      setStep('configure');
+      const mode = resolveAccessCodeDialogMode(lead, codes);
+      if (mode === 'reissue') {
+        setStep('reissue');
+        setGeneratedCode(null);
+        const template = getLastRedeemedAccessCode(codes);
+        if (template) {
+          const tplPlan: PlanId = template.plan_id === 'yearly' ? 'yearly' : 'annual';
+          setPlanId(tplPlan);
+          setAgreedPrice(
+            String(template.agreed_price ?? defaultPriceForPlan(tplPlan))
+          );
+        }
+      } else if (mode === 'manage' && activeCode) {
+        setStep('manage');
+        setCodeId(activeCode.id);
+        setDeliverMeta({
+          planId: activeCode.plan_id,
+          durationMonths: activeCode.duration_months,
+          agreedPrice: activeCode.agreed_price,
+          subscriptionStartAt: activeCode.subscription_start_at,
+        subscriptionEndAt: activeCode.subscription_end_at,
+          codeExpiresAt: activeCode.code_expires_at,
+          convertedCustomer: isConvertedLead(lead),
+        });
+        setGeneratedCode(null);
+      } else {
+        setStep('configure');
+      }
     }
 
     const plan = defaultPlanForLead(lead);
     setPlanId(plan);
     setAgreedPrice(String(defaultPriceForPlan(plan)));
     setVerifyInput('');
-  }, [lead, open, activeCode, initialStep, initialDeliver]);
+  }, [lead, open, activeCode, codes, initialStep, initialDeliver]);
 
   const selectedPlan = useMemo(
     () => PUBLIC_SUBSCRIPTION_PLANS.find((p) => p.id === planId),
@@ -177,7 +215,11 @@ export const GenerateAccessCodeDialog = ({
 
   const handleGenerate = async () => {
     if (!lead) return;
-    if (!canCreateAccessCodeForLead(lead)) {
+    if (isConvertedLead(lead)) {
+      setStep('reissue');
+      return;
+    }
+    if (!canCreateAccessCodeForLead(lead, codes)) {
       toast.info('يوجد رمز نشط لهذا العميل — استخدم «إدارة الرمز» للاستبدال');
       return;
     }
@@ -194,10 +236,19 @@ export const GenerateAccessCodeDialog = ({
         planId: result.planId,
         durationMonths: result.durationMonths,
         agreedPrice: result.agreedPrice,
+        codeExpiresAt: result.codeExpiresAt,
+        subscriptionStartAt: result.subscriptionStartAt,
+        subscriptionEndAt: result.subscriptionEndAt,
+        convertedCustomer: false,
       });
       toast.success('تم إنشاء الرمز');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'generate_failed';
+      if (msg === 'lead_already_converted') {
+        toast.error('شغّل npm run db:deploy لتحديث نظام الرموز، ثم أعد المحاولة');
+        setStep('reissue');
+        return;
+      }
       toast.error(ACCESS_CODE_ERROR_MESSAGES[msg] || 'تعذر إنشاء الرمز');
     } finally {
       setGenerating(false);
@@ -229,9 +280,82 @@ export const GenerateAccessCodeDialog = ({
     }
   };
 
+  const handleReissue = async () => {
+    if (!lead) return;
+    if (onReissue) {
+      await onReissue();
+      return;
+    }
+    setReplacing(true);
+    try {
+      const template = getLastRedeemedAccessCode(codes);
+      const effectivePlan = (template?.plan_id ?? planId) as PlanId;
+      const rawActive = getRawActiveAccessCode(codes) ?? activeCode;
+
+      const result = isConvertedLead(lead)
+        ? await issueNewLoginCodeForConvertedLead(
+            lead.id,
+            {
+              planId: effectivePlan,
+              agreedPrice:
+                template?.agreed_price ??
+                (agreedPrice ? Number(agreedPrice) : defaultPriceForPlan(effectivePlan)),
+              storeName: template?.store_name ?? lead.full_name,
+              notes: rawActive ? 'replaced: customer lost login code' : undefined,
+            },
+            codes
+          )
+        : await generateAccessCode({
+            leadId: lead.id,
+            planId: effectivePlan,
+            agreedPrice:
+              template?.agreed_price ??
+              (agreedPrice ? Number(agreedPrice) : defaultPriceForPlan(effectivePlan)),
+            storeName: template?.store_name ?? lead.full_name,
+          }).then((generated) => ({
+            accessCode: generated.accessCode,
+            codeId: generated.codeId,
+            planId: generated.planId,
+            durationMonths: generated.durationMonths,
+            agreedPrice: generated.agreedPrice,
+            codeExpiresAt: generated.codeExpiresAt,
+            subscriptionStartAt: generated.subscriptionStartAt,
+            subscriptionEndAt: generated.subscriptionEndAt,
+          }));
+
+      persistCode(lead.id, result.codeId, result.accessCode);
+      goDeliver(result.accessCode, result.codeId, {
+        planId: result.planId,
+        durationMonths: result.durationMonths,
+        agreedPrice: result.agreedPrice,
+        codeExpiresAt: result.codeExpiresAt,
+        subscriptionStartAt: result.subscriptionStartAt,
+        subscriptionEndAt: result.subscriptionEndAt,
+        convertedCustomer: isConvertedLead(lead),
+      });
+      toast.success(
+        rawActive ? 'تم استبدال الرمز القديم وإنشاء رمز جديد' : 'تم إنشاء رمز جديد للعميل المُفعّل'
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'generate_failed';
+      if (msg === 'lead_already_converted') {
+        toast.error('شغّل npm run db:deploy لتحديث نظام الرموز، ثم أعد المحاولة');
+        setStep('reissue');
+        return;
+      }
+      toast.error(ACCESS_CODE_ERROR_MESSAGES[msg] || 'تعذر إنشاء الرمز');
+    } finally {
+      setReplacing(false);
+    }
+  };
+
   const handleReplace = async () => {
     if (!lead) return;
     setConfirmReplaceOpen(false);
+    if (onReplace) {
+      await onReplace();
+      return;
+    }
     setReplacing(true);
     try {
       const result = await replaceLeadAccessCode(lead.id, {
@@ -243,6 +367,10 @@ export const GenerateAccessCodeDialog = ({
         planId: result.planId,
         durationMonths: result.durationMonths,
         agreedPrice: result.agreedPrice,
+        codeExpiresAt: result.codeExpiresAt,
+        subscriptionStartAt: result.subscriptionStartAt,
+        subscriptionEndAt: result.subscriptionEndAt,
+        convertedCustomer: isConvertedLead(lead),
       });
       toast.success('تم إنشاء رمز جديد بنفس شروط الاشتراك');
     } catch (err) {
@@ -261,11 +389,19 @@ export const GenerateAccessCodeDialog = ({
 
   if (!lead) return null;
 
+  const reissueTemplate = getLastRedeemedAccessCode(codes);
+  const reissueEnd = reissueTemplate ? getAccessCodeEffectiveEnd(reissueTemplate) : null;
+  const reissueRemainingMonths = reissueEnd ? getRemainingSubscriptionMonths(reissueEnd) : null;
+  const reissueExpiryLabel = reissueTemplate
+    ? formatAccessCodeExpiryLabel(reissueTemplate, { converted: true })
+    : null;
+
   const titleByStep: Record<DialogStep, string> = {
     configure: `رمز دخول — ${lead.full_name}`,
     manage: `الرمز الحالي — ${lead.full_name}`,
     verify: `تحقق من الرمز — ${lead.full_name}`,
     deliver: `إرسال الرمز — ${lead.full_name}`,
+    reissue: `رمز جديد — ${lead.full_name}`,
   };
 
   return (
@@ -290,10 +426,41 @@ export const GenerateAccessCodeDialog = ({
               lead={lead}
               accessCode={generatedCode}
               meta={deliverMeta}
-              replacing={replacing}
+              replacing={isReplacing}
               onCopy={() => void copyCode()}
               onReplace={() => setConfirmReplaceOpen(true)}
             />
+          ) : step === 'reissue' ? (
+            <div className="space-y-4 py-1">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                العميل مُفعّل. الرمز الجديد ينتهي مع <strong>تاريخ الاشتراك الأصلي</strong>{' '}
+                (باقة 6 أو 12 شهر — لا يُمدَّد حتى لو استُبدل بعد شهر أو أكثر).
+              </p>
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm space-y-1">
+                <p className="font-medium text-emerald-800">
+                  الباقة: {selectedPlan?.name ?? planLabelFor(planId)}
+                </p>
+                <p className="text-muted-foreground">
+                  {reissueRemainingMonths
+                    ? `${reissueRemainingMonths} ${reissueRemainingMonths === 1 ? 'شهر متبقٍ' : 'أشهر متبقية'}`
+                    : planId === 'yearly'
+                      ? '12 شهر'
+                      : '6 أشهر'}
+                  {agreedPrice ? ` · ${Number(agreedPrice).toLocaleString('ar-IQ')} د.ع` : ''}
+                </p>
+                {reissueExpiryLabel && (
+                  <p className="text-xs text-emerald-700">{reissueExpiryLabel}</p>
+                )}
+              </div>
+              <Button
+                className="w-full rounded-xl gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+                disabled={isReplacing}
+                onClick={() => void handleReissue()}
+              >
+                <RefreshCw className={cn('h-4 w-4', isReplacing && 'animate-spin')} />
+                {isReplacing ? 'جاري إنشاء رمز جديد...' : 'إنشاء رمز جديد للعميل'}
+              </Button>
+            </div>
           ) : step === 'manage' && activeCode && deliverMeta ? (
             <div className="space-y-4 py-1">
               <p className="text-sm text-muted-foreground leading-relaxed">
@@ -326,11 +493,11 @@ export const GenerateAccessCodeDialog = ({
               </div>
               <Button
                 className="w-full rounded-xl gap-2 bg-amber-600 hover:bg-amber-700 text-white"
-                disabled={replacing}
+                disabled={isReplacing}
                 onClick={() => setConfirmReplaceOpen(true)}
               >
-                <RefreshCw className={cn('h-4 w-4', replacing && 'animate-spin')} />
-                {replacing ? 'جاري إنشاء رمز جديد...' : 'إنشاء رمز جديد للعميل'}
+                <RefreshCw className={cn('h-4 w-4', isReplacing && 'animate-spin')} />
+                {isReplacing ? 'جاري إنشاء رمز جديد...' : 'إنشاء رمز جديد للعميل'}
               </Button>
               <button
                 type="button"
@@ -454,6 +621,20 @@ export const GenerateAccessCodeDialog = ({
               <Button variant="outline" className="rounded-xl" onClick={() => onOpenChange(false)}>
                 إغلاق
               </Button>
+            ) : step === 'reissue' ? (
+              <>
+                <Button variant="outline" className="rounded-xl" onClick={() => onOpenChange(false)}>
+                  إغلاق
+                </Button>
+                <Button
+                  className="rounded-xl gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+                  disabled={isReplacing}
+                  onClick={() => void handleReissue()}
+                >
+                  <KeyRound className="h-4 w-4" />
+                  {isReplacing ? 'جاري الإنشاء...' : 'إنشاء رمز جديد للعميل'}
+                </Button>
+              </>
             ) : (
               <>
                 <Button variant="outline" className="rounded-xl" onClick={() => onOpenChange(false)}>

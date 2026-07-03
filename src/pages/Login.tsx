@@ -251,7 +251,7 @@ const Login = () => {
               </div>
             )}
             <Badge variant="outline" className="text-[10px] text-emerald-700 border-emerald-500/30">
-              نفس مدة الصلاحية تُفعَّل عند الدخول
+              الاشتراك يبدأ من تاريخ إنشاء الرمز — المتبقي يُحسب من ذلك التاريخ
             </Badge>
           </div>
 

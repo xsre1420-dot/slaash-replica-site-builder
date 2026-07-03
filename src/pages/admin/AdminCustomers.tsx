@@ -4,6 +4,8 @@ import { ar } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { Search, MessageCircle } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import GenerateAccessCodeDialog from '@/components/admin/GenerateAccessCodeDialog';
+import LeadCodeActionButton from '@/components/admin/LeadCodeActionButton';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,12 +19,24 @@ import {
 } from '@/components/ui/table';
 import { fetchLeads } from '@/services/leadAdminService';
 import { buildWhatsAppUrl, type LeadRecord } from '@/types/leads';
+import { useLeadAccessCodeDialog } from '@/hooks/useLeadAccessCodeDialog';
 import { toast } from 'sonner';
 
 const AdminCustomers = () => {
   const [rows, setRows] = useState<LeadRecord[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+
+  const {
+    codeOpen,
+    setCodeOpen,
+    codeLead,
+    codes,
+    activeCodeRecord,
+    codeDialogDeliver,
+    openCodeDialog,
+    handleGenerated,
+  } = useLeadAccessCodeDialog();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -88,7 +102,13 @@ const AdminCustomers = () => {
                         : '—'}
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-1">
+                      <div className="flex flex-wrap items-center gap-1">
+                        <LeadCodeActionButton
+                          lead={lead}
+                          activeCode={codeLead?.id === lead.id ? activeCodeRecord : null}
+                          codes={codeLead?.id === lead.id ? codes : []}
+                          onClick={() => void openCodeDialog(lead)}
+                        />
                         <a href={buildWhatsAppUrl(lead.whatsapp_number)} target="_blank" rel="noopener noreferrer">
                           <Button size="icon" variant="ghost" className="text-[#25D366]">
                             <MessageCircle className="w-4 h-4" />
@@ -108,6 +128,16 @@ const AdminCustomers = () => {
           </Table>
         </div>
       </div>
+
+      <GenerateAccessCodeDialog
+        lead={codeLead}
+        open={codeOpen}
+        onOpenChange={setCodeOpen}
+        activeCode={activeCodeRecord}
+        codes={codes}
+        initialDeliver={codeDialogDeliver}
+        onGenerated={handleGenerated}
+      />
     </AdminLayout>
   );
 };
