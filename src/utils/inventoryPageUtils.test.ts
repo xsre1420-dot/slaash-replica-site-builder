@@ -69,6 +69,32 @@ describe('inventoryPageUtils', () => {
     expect(lowOnly.map((p) => p.id)).toEqual(['1']);
   });
 
+  it('matches search by sku with fuzzy tolerance', () => {
+    const products = [
+      baseRow({ id: '1', name: 'قميص', sku: 'SHRT-001' }),
+      baseRow({ id: '2', name: 'بنطلون', sku: 'PNT-002' }),
+    ];
+    const filtered = filterInventoryProducts(products, {
+      search: 'shrt',
+      stockFilter: 'all',
+      category: 'all',
+      lifecycle: 'all',
+      lowStockOnly: false,
+    });
+    expect(filtered.map((p) => p.id)).toEqual(['1']);
+  });
+
+  it('computes extended stats with lifecycle and cost value', () => {
+    const stats = computeInventoryStats([
+      baseRow({ id: '1', stock_quantity: 2, price: 1000, cost: 600, lifecycle: 'published' }),
+      baseRow({ id: '2', stock_quantity: 1, price: 500, lifecycle: 'draft' }),
+    ]);
+    expect(stats.published).toBe(1);
+    expect(stats.draft).toBe(1);
+    expect(stats.costValue).toBe(1200);
+    expect(stats.expectedProfit).toBe(800);
+  });
+
   it('sorts by stock ascending', () => {
     const products = [
       baseRow({ id: 'a', stock_quantity: 20 }),

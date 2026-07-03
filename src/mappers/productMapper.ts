@@ -39,6 +39,7 @@ export const mapDbProduct = (
     discountEndDate: row.discount_end_date as string | undefined,
     originalPrice: row.original_price != null ? Number(row.original_price) : undefined,
     sku: (row.sku as string) || undefined,
+    barcode: (row.barcode as string) || undefined,
     shortDescription: (row.short_description as string) || undefined,
     seoTitle: (row.seo_title as string) || undefined,
     seoDescription: (row.seo_description as string) || undefined,

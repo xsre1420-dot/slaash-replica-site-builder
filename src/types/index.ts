@@ -26,6 +26,7 @@ export interface Product {
   brand?: string;
   productClassification?: string;
   sku?: string;
+  barcode?: string;
   shortDescription?: string;
   seoTitle?: string;
   seoDescription?: string;

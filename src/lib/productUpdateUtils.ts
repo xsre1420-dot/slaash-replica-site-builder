@@ -20,9 +20,9 @@ export const PRODUCT_INSERT_RETURN_SELECT =
 export const MERCHANT_PRODUCTS_GRID_SELECT =
   'id, name, category, price, original_price, image_url, stock_quantity, is_active, archived_at, min_stock_level, discount_type, discount_value, discount_start_date, discount_end_date, created_at, updated_at';
 
-/** Inventory list — stock/variant fields without description, cost, or gallery extras */
+/** Inventory list — stock/variant fields + sku/cost/barcode for merchant inventory hub */
 export const MERCHANT_PRODUCTS_INVENTORY_SELECT =
-  'id, name, category, price, image_url, stock_quantity, sizes, colors, variants, is_active, archived_at, min_stock_level, created_at, updated_at';
+  'id, name, category, price, cost, sku, barcode, image_url, stock_quantity, sizes, colors, variants, is_active, archived_at, min_stock_level, created_at, updated_at';
 
 /** Storefront list / preview — card-shaped columns (no description, variants, or gallery extras) */
 export const STOREFRONT_ACTIVE_LIST_SELECT =

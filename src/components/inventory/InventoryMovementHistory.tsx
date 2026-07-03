@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { Link } from 'react-router-dom';
 import { ArrowDownLeft, ArrowUpRight, History, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -138,9 +139,16 @@ const InventoryMovementHistory = ({ productId, active, refreshKey = 0 }: Invento
                     </span>
                     <div className="min-w-0 flex-1 text-right">
                       <p className="text-xs font-medium leading-snug">{formatMovementReason(m.reason)}</p>
-                      <p className="text-[10px] text-muted-foreground tabular-nums">
-                        {format(new Date(m.created_at), 'HH:mm', { locale: ar })}
-                      </p>
+                      <div className="flex flex-wrap gap-2 justify-end mt-0.5">
+                        {m.order_id && (
+                          <Link to={`/orders/${m.order_id}`} className="text-[10px] font-medium text-primary hover:underline">
+                            عرض الطلب
+                          </Link>
+                        )}
+                        <p className="text-[10px] text-muted-foreground tabular-nums">
+                          {format(new Date(m.created_at), 'HH:mm', { locale: ar })}
+                        </p>
+                      </div>
                     </div>
                     <span
                       className={cn(

@@ -1712,6 +1712,7 @@ export type Database = {
           status: string
           store_name: string | null
           subscription_end_at: string | null
+          subscription_start_at: string | null
           updated_at: string
           username: string | null
         }
@@ -1734,6 +1735,7 @@ export type Database = {
           status?: string
           store_name?: string | null
           subscription_end_at?: string | null
+          subscription_start_at?: string | null
           updated_at?: string
           username?: string | null
         }
@@ -1756,6 +1758,7 @@ export type Database = {
           status?: string
           store_name?: string | null
           subscription_end_at?: string | null
+          subscription_start_at?: string | null
           updated_at?: string
           username?: string | null
         }
@@ -4229,6 +4232,10 @@ export type Database = {
     }
     Functions: {
       _access_code_random_part: { Args: { p_len: number }; Returns: string }
+      _anchored_subscription_end_for_lead: {
+        Args: { p_lead_id: string }
+        Returns: string
+      }
       _dashboard_period_json: {
         Args: {
           p_completed_revenue: number
@@ -4238,6 +4245,13 @@ export type Database = {
           p_visits: number
         }
         Returns: Json
+      }
+      _lead_subscription_term: {
+        Args: { p_lead_id: string }
+        Returns: {
+          end_at: string
+          start_at: string
+        }[]
       }
       _platform_col_exists: {
         Args: { p_column: string; p_table: string }
@@ -4255,8 +4269,16 @@ export type Database = {
         Args: { p_sizes: unknown }
         Returns: string[]
       }
+      _remaining_subscription_months: {
+        Args: { p_end: string }
+        Returns: number
+      }
       _resolve_store_owner_by_slug: {
         Args: { p_slug: string }
+        Returns: string
+      }
+      _subscription_end_for_user: {
+        Args: { p_user_id: string }
         Returns: string
       }
       adjust_product_variants: {
@@ -4266,6 +4288,10 @@ export type Database = {
           p_size: string
           p_variants: Json
         }
+        Returns: Json
+      }
+      admin_extend_subscription: {
+        Args: { p_extra_months?: number; p_lead_id: string; p_reason?: string }
         Returns: Json
       }
       admin_generate_access_code: {
@@ -4482,6 +4508,7 @@ export type Database = {
         Returns: Json
       }
       expire_product_discounts: { Args: never; Returns: number }
+      expire_stale_merchant_access_codes: { Args: never; Returns: number }
       finalize_order_webhook_delivery: {
         Args: { p_error?: string; p_id: string; p_success: boolean }
         Returns: Json

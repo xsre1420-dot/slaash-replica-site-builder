@@ -67,7 +67,10 @@ const InventoryProductCard = ({ product, onRestock }: InventoryProductCardProps)
                 </Badge>
               </div>
               <h3 className="font-semibold text-sm truncate">{product.name}</h3>
-              <p className="text-xs text-muted-foreground">{product.category}</p>
+              <p className="text-xs text-muted-foreground">
+                {product.category}
+                {product.sku ? ` · ${product.sku}` : ''}
+              </p>
 
               <div className="mt-2 space-y-1">
                 <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
