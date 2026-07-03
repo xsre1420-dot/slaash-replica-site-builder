@@ -16,6 +16,7 @@ import { StoreCartHeaderButton, StoreFixedCheckoutBar } from "@/components/store
 import FavoritesDrawer from "@/components/store/FavoritesDrawer";
 import StoreFilterDrawer from "@/components/store/StoreFilterDrawer";
 import StoreThemeProvider from "@/components/StoreThemeProvider";
+import StoreCategoryChip from "@/components/store/StoreCategoryChip";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useToast } from "@/hooks/use-toast";
 import { useStoreDisplay } from "@/hooks/useStoreDisplay";
@@ -445,20 +446,17 @@ const Store = () => {
           onTouchStart={handleCategoryTouchStart}
           onTouchEnd={handleCategoryTouchEnd}
         >
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                className={`px-4 py-2 rounded-full transition-all duration-200 whitespace-nowrap text-xs font-semibold ${
-                  selectedCategory === cat.id
-                    ? "bg-primary text-primary-foreground scale-105"
-                    : "bg-card hover:bg-muted border border-border/60 text-muted-foreground hover:text-foreground"
-                }`}
-                onClick={() => setSelectedCategory(cat.id)}
-              >
-                {cat.name}
-              </button>
-            ))}
+          <div className="store-category-bar rounded-2xl border border-border/50 bg-[hsl(var(--store-accent-muted))] p-2.5">
+            <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide">
+              {categories.map((cat) => (
+                <StoreCategoryChip
+                  key={cat.id}
+                  label={cat.name}
+                  active={selectedCategory === cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                />
+              ))}
+            </div>
           </div>
         </div>
 

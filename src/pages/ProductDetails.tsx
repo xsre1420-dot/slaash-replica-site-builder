@@ -273,7 +273,8 @@ const ProductDetails = () => {
             <ScrollReveal delay={50}>
               <div className="space-y-3">
                 {product.category && (
-                  <span className="inline-block text-xs font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">
+                  <span className="inline-flex items-center gap-2 text-xs font-semibold text-primary bg-[hsl(var(--store-accent-muted))] border border-primary/15 px-3 py-1.5 rounded-full">
+                    <span className="h-2 w-2 rounded-full bg-primary shrink-0" aria-hidden />
                     {product.category}
                   </span>
                 )}

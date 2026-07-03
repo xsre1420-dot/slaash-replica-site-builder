@@ -1,6 +1,8 @@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Palette, Type, Check } from "lucide-react";
+import StoreThemeProvider from "@/components/StoreThemeProvider";
+import StoreCategoryChip from "@/components/store/StoreCategoryChip";
 
 interface DesignTabProps {
   settings: {
@@ -165,35 +167,42 @@ const DesignTab = ({ settings, setSettings }: DesignTabProps) => {
       {/* Live Preview */}
       <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 space-y-4">
         <h3 className="text-lg font-bold text-foreground text-right">معاينة المتجر</h3>
-        <div
-          className="p-5 rounded-xl border border-border overflow-hidden"
-          style={{
+        <StoreThemeProvider
+          colors={{
             backgroundColor: settings.menuBackgroundColor,
-            fontFamily: `'${currentFont}', sans-serif`,
+            textColor: settings.menuTextColor,
+            accentColor: settings.menuAccentColor,
+            font: currentFont,
           }}
+          className="rounded-xl border border-border overflow-hidden"
         >
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-8 h-8 rounded-full" style={{ backgroundColor: settings.menuAccentColor }} />
-            <h4 className="text-base font-bold" style={{ color: settings.menuTextColor }}>اسم المتجر</h4>
-          </div>
-          <p className="text-sm mb-4 text-right" style={{ color: settings.menuTextColor, opacity: 0.7 }}>
-            وصف المنتج يظهر هنا بالخط المختار
-          </p>
-          <div className="flex gap-2 justify-end">
-            <div
-              className="px-4 py-2 rounded-lg text-sm font-medium"
-              style={{ backgroundColor: settings.menuAccentColor, color: '#fff' }}
-            >
-              أضف للسلة
+          <div className="p-5 bg-background min-h-[220px]">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-8 h-8 rounded-full bg-primary shadow-sm ring-2 ring-primary/20" />
+              <h4 className="text-base font-bold text-foreground">اسم المتجر</h4>
             </div>
-            <div
-              className="px-4 py-2 rounded-lg text-sm font-medium border"
-              style={{ borderColor: settings.menuAccentColor, color: settings.menuTextColor }}
-            >
-              تفاصيل
+
+            <div className="store-category-bar rounded-2xl border border-border/50 bg-[hsl(var(--store-accent-muted))] p-2 mb-4">
+              <div className="flex gap-2 justify-end flex-wrap">
+                <StoreCategoryChip label="الكل" active />
+                <StoreCategoryChip label="ملابس" />
+                <StoreCategoryChip label="إكسسوارات" />
+              </div>
+            </div>
+
+            <p className="text-sm mb-4 text-right text-muted-foreground">
+              وصف المنتج يظهر هنا بالخط المختار
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button type="button" className="px-4 py-2 rounded-xl text-sm font-semibold bg-primary text-primary-foreground shadow-sm">
+                أضف للسلة
+              </button>
+              <button type="button" className="px-4 py-2 rounded-xl text-sm font-semibold border border-primary/30 text-foreground bg-card">
+                تفاصيل
+              </button>
             </div>
           </div>
-        </div>
+        </StoreThemeProvider>
       </div>
     </div>
   );

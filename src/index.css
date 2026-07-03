@@ -224,6 +224,23 @@
     @apply bg-primary text-primary-foreground;
   }
 
+  .store-theme-scope {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  .store-theme-scope .store-category-bar {
+    box-shadow: inset 0 1px 0 hsl(var(--primary) / 0.06);
+  }
+
+  .store-theme-scope .accent-gradient {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary)) 0%,
+      hsl(var(--primary) / 0.88) 100%
+    );
+  }
+
   .ds-table-wrap {
     @apply rounded-2xl border border-border/50 bg-card overflow-hidden shadow-sm;
   }
