@@ -25,7 +25,7 @@ const CartItemCard = memo(({ item, index, maxQuantity, onRemove, onUpdateQuantit
       className={`transition-all duration-300 ${removing ? "opacity-0 scale-95 -translate-x-4" : "opacity-100"}`}
       style={{ animationDelay: `${index * 80}ms` }}
     >
-      <div className="flex gap-2.5 p-2.5 rounded-xl bg-muted/30 border border-border/50">
+      <div className="flex gap-2.5 p-2.5 rounded-xl border border-border/50">
         <OptimizedImage
           src={item.product.image}
           alt={item.product.name}

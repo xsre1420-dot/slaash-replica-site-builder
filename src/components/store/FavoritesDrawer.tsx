@@ -45,7 +45,7 @@ export default function FavoritesDrawer({ favorites, count, onAddToCart, onRemov
           ) : (
             <div className="flex-1 overflow-y-auto space-y-3 pr-1">
               {favorites.map((product) => (
-                <div key={product.id} className="flex gap-3 bg-muted/50 rounded-xl p-3 cursor-pointer hover:bg-muted transition-colors" onClick={() => onViewProduct(product.id)}>
+                <div key={product.id} className="flex gap-3 rounded-xl border border-border/50 p-3 cursor-pointer hover:bg-accent/40 transition-colors" onClick={() => onViewProduct(product.id)}>
                   <img src={product.image} alt={product.name} className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <h4 className="text-sm font-medium text-foreground text-right truncate">{product.name}</h4>

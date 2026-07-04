@@ -30,7 +30,7 @@ const DeliveryForm = memo(function DeliveryForm({
 }: DeliveryFormProps) {
   const fieldClass = (field: string, padding?: string) =>
     cn(
-      "text-right border rounded-xl text-sm text-foreground bg-muted/30 h-10 transition-all duration-200",
+      "text-right border rounded-xl text-sm text-foreground bg-background h-10 transition-all duration-200",
       padding ?? "pr-9 pl-3",
       formErrors[field]
         ? "border-destructive focus:border-destructive animate-[shake_0.3s_ease-in-out]"
@@ -95,7 +95,7 @@ const DeliveryForm = memo(function DeliveryForm({
               id={fieldIds.governorate}
               dir="rtl"
               className={cn(
-                "h-10 text-right rounded-xl px-3 bg-muted/30",
+                "h-10 text-right rounded-xl px-3 bg-background",
                 formErrors.governorate ? "border-destructive" : "border-border"
               )}
               aria-invalid={!!formErrors.governorate}
@@ -150,7 +150,7 @@ const DeliveryForm = memo(function DeliveryForm({
           name="notes"
           value={customerInfo.notes}
           onChange={onInputChange}
-          className="text-right border border-border rounded-xl text-sm text-foreground bg-muted/30 pr-9 min-h-[72px] focus:border-primary transition-all duration-200"
+          className="text-right border border-border rounded-xl text-sm text-foreground bg-background pr-9 min-h-[72px] focus:border-primary transition-all duration-200"
           placeholder="أي ملاحظات خاصة بالطلب"
         />
       </IconField>

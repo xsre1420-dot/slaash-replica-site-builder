@@ -16,7 +16,7 @@ interface StorefrontTrustBarProps {
 const StorefrontTrustBar = ({ compact = false, fullWidth = false }: StorefrontTrustBarProps) => (
   <div
     className={cn(
-      "w-full border-b border-border/40 bg-muted/15",
+      "w-full border-b border-border/40 bg-background",
       fullWidth ? "px-3 sm:px-4" : "px-3",
       compact ? "py-2" : "py-3 sm:px-4"
     )}

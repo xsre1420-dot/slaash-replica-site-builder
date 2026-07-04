@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { Eye, ImageOff, TrendingUp } from 'lucide-react';
 import { formatDisplayPrice } from '@/lib/productFormUtils';
+import { cn } from '@/lib/utils';
 
 interface ProductPreviewCardProps {
   name: string;
@@ -85,10 +86,15 @@ const ProductPreviewCard = memo(function ProductPreviewCard({
               {displayPrice()} <span className="text-xs text-muted-foreground font-normal">د.ع</span>
             </p>
           </div>
-          {profitMargin != null && profitMargin > 0 && (
-            <p className="text-[11px] text-success flex items-center justify-end gap-1">
-              <TrendingUp className="w-3 h-3" />
-              هامش ربح {profitMargin}%
+          {profitMargin != null && profitMargin !== 0 && (
+            <p
+              className={cn(
+                'text-[11px] flex items-center justify-end gap-1',
+                profitMargin < 0 ? 'text-destructive' : 'text-success'
+              )}
+            >
+              <TrendingUp className={cn('w-3 h-3', profitMargin < 0 && 'rotate-180')} />
+              {profitMargin < 0 ? `خسارة ${Math.abs(profitMargin)}%` : `هامش ربح ${profitMargin}%`}
             </p>
           )}
         </div>

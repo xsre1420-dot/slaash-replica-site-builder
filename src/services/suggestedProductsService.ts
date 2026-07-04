@@ -7,6 +7,8 @@ export type SuggestedProductCard = {
   price: number;
   image_url?: string;
   category: string;
+  short_description?: string | null;
+  rating?: number | null;
 };
 
 export type MerchantSuggestedLink = {
@@ -16,7 +18,7 @@ export type MerchantSuggestedLink = {
   product: SuggestedProductCard;
 };
 
-const PRODUCT_CARD_SELECT = 'id, name, price, image_url, category';
+const PRODUCT_CARD_SELECT = 'id, name, price, image_url, category, short_description';
 
 async function fetchProductCards(
   ownerId: string,

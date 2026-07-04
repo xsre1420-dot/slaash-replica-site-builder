@@ -14,6 +14,13 @@ export const parseJsonField = <T>(value: unknown): T | undefined => {
   return undefined;
 };
 
+const parseAdditionalImages = (value: unknown): string[] | undefined => {
+  const parsed = parseJsonField<string[]>(value);
+  if (!Array.isArray(parsed)) return undefined;
+  const urls = parsed.map((url) => String(url).trim()).filter(Boolean);
+  return urls.length > 0 ? urls : undefined;
+};
+
 /** Maps a database/RPC product row to domain `Product`. */
 export const mapDbProduct = (
   row: Record<string, unknown>,
@@ -28,7 +35,7 @@ export const mapDbProduct = (
     price: Number(row.price),
     cost: row.cost != null ? Number(row.cost) : undefined,
     image: String(imageSource || ''),
-    additionalImages: (row.additional_images as string[]) || undefined,
+    additionalImages: parseAdditionalImages(row.additional_images),
     stockQuantity: row.stock_quantity != null ? Number(row.stock_quantity) : undefined,
     sizes: Array.isArray(row.sizes) ? (row.sizes as string[]) : undefined,
     colors: parseJsonField<ColorOption[]>(row.colors),
@@ -94,6 +101,14 @@ export const mapStorefrontProduct = (row: Record<string, unknown>): Product => {
         { applyDiscount: false }
       );
       return applyActiveDiscount(discounted);
+    }
+  }
+
+  if (row.original_price != null && row.price != null) {
+    const list = Number(row.original_price);
+    const sale = row.sale_price != null ? Number(row.sale_price) : Number(row.price);
+    if (Number.isFinite(list) && Number.isFinite(sale) && list > sale) {
+      return mapDbProduct({ ...row, original_price: list, price: sale }, { applyDiscount: false });
     }
   }
 

@@ -8,6 +8,7 @@ import { getAuthenticatedUserId } from '@/lib/authSession';
 import { enqueueCacheInvalidation, enqueueCacheInvalidationForOwner } from '@/background/enqueue';
 import { markLocalStorefrontMutation } from '@/lib/localMutationGuard';
 import { patchStorefrontProductFromOwner } from '@/services/storefrontCacheService';
+import { flushStorefrontProductDetail } from '@/services/storefrontCacheTiers';
 import { isStorefrontVisible } from '@/lib/productLifecycle';
 import { cache, CacheKeys, CacheTTL, dedup, clearInflight } from '@/lib/cache';
 import { mapDbProduct, safeMapDbProduct } from '@/mappers/productMapper';
@@ -21,6 +22,23 @@ import {
   isSchemaColumnError,
 } from '@/lib/productUpdateUtils';
 import { OWNER_PRODUCTS_PAGE_SIZE } from '@/constants/pagination';
+
+/** RPC grid profile omits short_description until DB migration; one batched backfill. */
+const enrichListingShortDescriptions = async (products: Product[]): Promise<Product[]> => {
+  if (products.length === 0 || products.every((p) => p.shortDescription?.trim())) {
+    return products;
+  }
+  const ids = products.map((p) => p.id);
+  const { data, error } = await supabase.from('products').select('id, short_description').in('id', ids);
+  if (error || !data?.length) return products;
+  const byId = new Map(
+    data.map((row) => [String(row.id), (row.short_description as string | null)?.trim() || ''])
+  );
+  return products.map((p) => {
+    const short = byId.get(p.id);
+    return short && !p.shortDescription?.trim() ? { ...p, shortDescription: short } : p;
+  });
+};
 
 // --- Internal owner / store helpers ---
 
@@ -61,6 +79,13 @@ export const syncMerchantProductCatalog = (
   const affectsStorefront = !row || isStorefrontVisible(mapDbProduct(row));
   if (affectsStorefront) {
     markLocalStorefrontMutation(ownerId);
+    if (row?.id) {
+      const store = cache.get<{ store_slug?: string }>(CacheKeys.store(ownerId));
+      const slug = store?.store_slug?.trim().toLowerCase();
+      if (slug) {
+        flushStorefrontProductDetail(slug, String(row.id));
+      }
+    }
     enqueueCacheInvalidationForOwner(ownerId);
   }
 
@@ -214,7 +239,9 @@ export const loadProductsPage = async (
         rpcTotal = rpcTotal ?? rpcProducts.length;
         const hasFilters = !!(search?.trim() || (category && category !== 'all'));
         if (rpcProducts.length > 0 || rpcTotal > 0 || page > 0 || hasFilters) {
-          return useRpcResult(rpcProducts, rpcTotal, !!rpcData.has_more, rpcData.next_cursor ?? null);
+          const enriched =
+            profile === 'grid' ? await enrichListingShortDescriptions(rpcProducts) : rpcProducts;
+          return useRpcResult(enriched, rpcTotal, !!rpcData.has_more, rpcData.next_cursor ?? null);
         }
         console.warn('[products] RPC returned empty list, falling back to direct query');
       } else if (rpcError) {

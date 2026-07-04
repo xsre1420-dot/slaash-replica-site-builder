@@ -31,7 +31,7 @@ const OrderSuccessModal = ({ orderId, storeSlug, whatsappNumber }: OrderSuccessM
           شكراً لثقتك. سنتواصل معك قريباً لتأكيد التوصيل.
         </p>
 
-        <div className="bg-muted/50 rounded-xl px-4 py-3 mb-6">
+        <div className="rounded-xl border border-border/50 px-4 py-3 mb-6">
           <span className="text-xs text-muted-foreground">رقم الطلب </span>
           <span className="text-sm font-bold text-foreground font-mono block mt-1">{orderId}</span>
         </div>

@@ -96,7 +96,12 @@ const StorefrontFooter = ({
                           <p className="text-xs font-semibold text-foreground line-clamp-2 text-right leading-snug">
                             {product.name}
                           </p>
-                          <p className="text-xs font-bold text-primary text-right">
+                          {product.short_description?.trim() && (
+                            <p className="text-[10px] text-muted-foreground line-clamp-2 text-right leading-snug">
+                              {product.short_description.trim()}
+                            </p>
+                          )}
+                          <p className="text-xs font-bold text-primary text-right tabular-nums">
                             {product.price.toLocaleString()} د.ع
                           </p>
                         </div>
@@ -112,13 +117,13 @@ const StorefrontFooter = ({
         {(returnPolicy || privacyPolicy) && (
           <div className="grid gap-3 sm:grid-cols-2">
             {returnPolicy && (
-              <div className="rounded-2xl border border-border/50 bg-muted/30 p-4 text-right">
+              <div className="rounded-2xl border border-border/50 p-4 text-right">
                 <h3 className="text-sm font-semibold text-foreground mb-2">سياسة الإرجاع</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed line-clamp-4">{returnPolicy}</p>
               </div>
             )}
             {privacyPolicy && (
-              <div className="rounded-2xl border border-border/50 bg-muted/30 p-4 text-right">
+              <div className="rounded-2xl border border-border/50 p-4 text-right">
                 <h3 className="text-sm font-semibold text-foreground mb-2">الخصوصية</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed line-clamp-4">{privacyPolicy}</p>
               </div>

@@ -1,33 +1,32 @@
 import { useMemo, useCallback, useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAuthenticatedUserId, ensureWritableSession } from '@/lib/authSession';
-import { createProductIdempotencyKey } from '@/lib/productCreateLock';
-import {
-  clearAddProductDraft,
-  hasMeaningfulAddProductDraft,
-  loadAddProductDraft,
-  saveAddProductDraft,
-} from '@/lib/addProductDraftStorage';
-import { addProduct, getCategories } from '@/services/productService';
+import { ensureWritableSession } from '@/lib/authSession';
+import { fetchProductById, getCategories, updateProduct } from '@/services/productService';
+import { useStoreHydration } from '@/context/StoreBootstrapContext';
 import { useToast } from '@/hooks/use-toast';
 import { Product, Category, ColorOption, ProductVariant } from '@/types';
 import { formatPriceInput, isValidPrice, convertArabicToEnglish } from '@/utils/numberUtils';
 import { validateProductImages } from '@/utils/imageValidator';
-import { computeProfit, formatDisplayPrice, parseTagsInput, slugifyProductName } from '@/lib/productFormUtils';
+import {
+  computeProfit,
+  formatDisplayPrice,
+  formatTagsForInput,
+  parseTagsInput,
+  slugifyProductName,
+} from '@/lib/productFormUtils';
 import { PRODUCT_SAVE_TOAST, type ProductSaveMode } from '@/lib/productFormLabels';
 import { toast as sonnerToast } from 'sonner';
 
 export type SaveMode = ProductSaveMode;
 
-export function useAddProductForm() {
+export function useEditProductForm(productId: string | undefined) {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { isReady, hydrationVersion } = useStoreHydration();
   const submitLockRef = useRef(false);
-  const idempotencyKeyRef = useRef(createProductIdempotencyKey());
-  const ownerIdRef = useRef<string | null>(null);
-  const draftReadyRef = useRef(false);
-  const skipNextDraftSaveRef = useRef(false);
+  const loadedProductRef = useRef<Product | null>(null);
 
+  const [loading, setLoading] = useState(true);
   const [mainImage, setMainImage] = useState<string | null>(null);
   const [additionalImages, setAdditionalImages] = useState<string[]>([]);
   const [name, setName] = useState('');
@@ -49,11 +48,11 @@ export function useAddProductForm() {
   const [seoDescription, setSeoDescription] = useState('');
   const [productSlug, setProductSlug] = useState('');
   const [slugTouched, setSlugTouched] = useState(false);
+  const [isActive, setIsActive] = useState(true);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingSaveMode, setPendingSaveMode] = useState<SaveMode | null>(null);
   const [isImagesUploading, setIsImagesUploading] = useState(false);
-  const [saveSucceeded, setSaveSucceeded] = useState(false);
 
   const profitInfo = useMemo(() => {
     const p = parseFloat(price.replace(/,/g, ''));
@@ -119,107 +118,56 @@ export function useAddProductForm() {
     loadCategories();
   }, [loadCategories]);
 
+  const hydrateFromProduct = useCallback((product: Product) => {
+    loadedProductRef.current = product;
+    setMainImage(product.image);
+    setAdditionalImages(product.additionalImages || []);
+    setName(product.name);
+    setDescription(product.description || '');
+    setShortDescription(product.shortDescription || '');
+    setCategory(product.category);
+    setPrice(product.price > 0 ? String(product.price) : '');
+    setCompareAtPrice(
+      product.originalPrice && product.originalPrice > product.price
+        ? String(product.originalPrice)
+        : ''
+    );
+    setCost(product.cost ? String(product.cost) : '');
+    setSku(product.sku || '');
+    setSizes(product.sizes || []);
+    setColors(product.colors || []);
+    setStockQuantity(product.stockQuantity != null ? String(product.stockQuantity) : '');
+    setLowStockThreshold(String(product.lowStockThreshold ?? 3));
+    setVariants(product.variants || []);
+    setTagsInput(formatTagsForInput(product.tags || []));
+    setSeoTitle(product.seoTitle || '');
+    setSeoDescription(product.seoDescription || '');
+    setProductSlug(product.productSlug || '');
+    setSlugTouched(!!product.productSlug);
+    setIsActive(product.isActive !== false);
+  }, []);
+
   useEffect(() => {
+    if (!productId || !isReady) return;
+
     let cancelled = false;
     void (async () => {
-      const userId = await getAuthenticatedUserId();
-      if (cancelled || !userId) {
-        draftReadyRef.current = true;
-        return;
+      setLoading(true);
+      const product = await fetchProductById(productId);
+      if (cancelled) return;
+      if (product) {
+        hydrateFromProduct(product);
+      } else {
+        toast({ title: 'خطأ', description: 'المنتج غير موجود', variant: 'destructive' });
+        navigate('/products');
       }
-      ownerIdRef.current = userId;
-      const draft = loadAddProductDraft(userId);
-      if (draft && hasMeaningfulAddProductDraft(draft)) {
-        skipNextDraftSaveRef.current = true;
-        setMainImage(draft.mainImage);
-        setAdditionalImages(draft.additionalImages);
-        setName(draft.name);
-        setDescription(draft.description);
-        setShortDescription(draft.shortDescription);
-        setCategory(draft.category);
-        setPrice(draft.price);
-        setCompareAtPrice(draft.compareAtPrice);
-        setCost(draft.cost);
-        setSku(draft.sku);
-        setSizes(draft.sizes);
-        setColors(draft.colors);
-        setStockQuantity(draft.stockQuantity);
-        setLowStockThreshold(draft.lowStockThreshold);
-        setVariants(draft.variants);
-        setTagsInput(draft.tagsInput);
-        setSeoTitle(draft.seoTitle);
-        setSeoDescription(draft.seoDescription);
-        setProductSlug(draft.productSlug);
-        setSlugTouched(draft.slugTouched);
-        sonnerToast.info('تم استعادة مسودة غير محفوظة', {
-          description: 'يمكنك متابعة التعديل أو الحفظ الآن',
-          duration: 4000,
-        });
-      }
-      draftReadyRef.current = true;
+      setLoading(false);
     })();
+
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  const persistDraft = useCallback(() => {
-    const userId = ownerIdRef.current;
-    if (!userId || !draftReadyRef.current) return;
-    if (skipNextDraftSaveRef.current) {
-      skipNextDraftSaveRef.current = false;
-      return;
-    }
-    saveAddProductDraft(userId, {
-      mainImage,
-      additionalImages,
-      name,
-      description,
-      shortDescription,
-      category,
-      price,
-      compareAtPrice,
-      cost,
-      sku,
-      sizes,
-      colors,
-      stockQuantity,
-      lowStockThreshold,
-      variants,
-      tagsInput,
-      seoTitle,
-      seoDescription,
-      productSlug,
-      slugTouched,
-    });
-  }, [
-    mainImage,
-    additionalImages,
-    name,
-    description,
-    shortDescription,
-    category,
-    price,
-    compareAtPrice,
-    cost,
-    sku,
-    sizes,
-    colors,
-    stockQuantity,
-    lowStockThreshold,
-    variants,
-    tagsInput,
-    seoTitle,
-    seoDescription,
-    productSlug,
-    slugTouched,
-  ]);
-
-  useEffect(() => {
-    if (!draftReadyRef.current) return;
-    const timer = window.setTimeout(persistDraft, 600);
-    return () => window.clearTimeout(timer);
-  }, [persistDraft]);
+  }, [productId, isReady, hydrationVersion, hydrateFromProduct, navigate, toast]);
 
   const validateField = useCallback((field: string, value: string) => {
     setFieldErrors((prev) => {
@@ -282,12 +230,49 @@ export function useAddProductForm() {
     document.getElementById(first === 'image' ? 'product-media' : first)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
+  const buildProductPayload = (publish: boolean): Product | null => {
+    if (!productId || !loadedProductRef.current) return null;
+
+    const numericPrice = parseFloat(price.replace(/,/g, ''));
+    const numericCost = cost ? parseFloat(cost.replace(/,/g, '')) : undefined;
+    const numericCompare = compareAtPrice ? parseFloat(compareAtPrice.replace(/,/g, '')) : undefined;
+    const originalPrice =
+      numericCompare && numericCompare > numericPrice ? numericCompare : undefined;
+
+    return {
+      ...loadedProductRef.current,
+      id: productId,
+      name: name.trim(),
+      description: description.trim(),
+      shortDescription: shortDescription.trim() || undefined,
+      category,
+      price: numericPrice,
+      cost: numericCost,
+      originalPrice,
+      image: mainImage!,
+      additionalImages,
+      sizes: sizes.length > 0 ? sizes : undefined,
+      colors: colors.length > 0 ? colors : undefined,
+      stockQuantity: stockQuantity ? parseInt(stockQuantity, 10) : undefined,
+      variants: variants.length > 0 ? variants : undefined,
+      sku: sku.trim() || undefined,
+      seoTitle: seoTitle.trim() || name.trim(),
+      seoDescription:
+        seoDescription.trim() || shortDescription.trim() || description.trim().slice(0, 160),
+      productSlug: productSlug.trim() || slugifyProductName(name),
+      tags: parseTagsInput(tagsInput),
+      lowStockThreshold: parseInt(lowStockThreshold) || 3,
+      isActive: publish,
+      archivedAt: publish ? undefined : loadedProductRef.current.archivedAt,
+    };
+  };
+
   const saveProduct = async (publish: boolean) => {
-    if (submitLockRef.current || isSubmitting || saveSucceeded) return;
+    if (!productId || submitLockRef.current || isSubmitting) return;
 
     const userId = await ensureWritableSession();
     if (!userId) {
-      toast({ title: 'خطأ', description: 'انتهت جلسة الدخول — سجّل الدخول مرة أخرى ثم حاول الحفظ', variant: 'destructive' });
+      toast({ title: 'خطأ', description: 'انتهت جلسة الدخول — سجّل الدخول مرة أخرى', variant: 'destructive' });
       return;
     }
 
@@ -305,7 +290,7 @@ export function useAddProductForm() {
     }
 
     if (isImagesUploading) {
-      toast({ title: 'انتظر اكتمال رفع الصور', description: 'جاري رفع الصور — لا يمكن الحفظ الآن', variant: 'destructive' });
+      toast({ title: 'انتظر اكتمال رفع الصور', variant: 'destructive' });
       return;
     }
 
@@ -321,76 +306,46 @@ export function useAddProductForm() {
       return;
     }
 
+    const payload = buildProductPayload(publish);
+    if (!payload) return;
+
     submitLockRef.current = true;
     setIsSubmitting(true);
     setPendingSaveMode(publish ? 'publish' : 'draft');
 
     try {
-      const numericPrice = parseFloat(price.replace(/,/g, ''));
-      const numericCost = cost ? parseFloat(cost.replace(/,/g, '')) : undefined;
-      const numericCompare = compareAtPrice ? parseFloat(compareAtPrice.replace(/,/g, '')) : undefined;
-      const originalPrice =
-        numericCompare && numericCompare > numericPrice ? numericCompare : undefined;
-
-      const newProduct: Product = {
-        id: '',
-        name: name.trim(),
-        description: description.trim(),
-        shortDescription: shortDescription.trim() || undefined,
-        category,
-        price: numericPrice,
-        cost: numericCost,
-        originalPrice,
-        image: mainImage!,
-        additionalImages,
-        sizes: sizes.length > 0 ? sizes : undefined,
-        colors: colors.length > 0 ? colors : undefined,
-        stockQuantity: stockQuantity ? parseInt(stockQuantity, 10) : undefined,
-        variants: variants.length > 0 ? variants : undefined,
-        sku: sku.trim() || undefined,
-        seoTitle: seoTitle.trim() || name.trim(),
-        seoDescription: seoDescription.trim() || shortDescription.trim() || description.trim().slice(0, 160),
-        productSlug: productSlug.trim() || slugifyProductName(name),
-        tags: parseTagsInput(tagsInput),
-        lowStockThreshold: parseInt(lowStockThreshold) || 3,
-        isActive: publish,
-      };
-
-      const result = await addProduct(newProduct, { idempotencyKey: idempotencyKeyRef.current });
+      const result = await updateProduct(productId, payload);
 
       if (result.success) {
-        setSaveSucceeded(true);
-        if (ownerIdRef.current) clearAddProductDraft(ownerIdRef.current);
+        loadedProductRef.current = payload;
+        setIsActive(publish);
 
-        const stockMsg = newProduct.stockQuantity ? ` · المخزون: ${newProduct.stockQuantity}` : '';
-        const saveMode: SaveMode = publish ? 'publish' : 'draft';
+        const stockMsg = payload.stockQuantity ? ` · المخزون: ${payload.stockQuantity}` : '';
         if (publish) {
           sonnerToast.success(PRODUCT_SAVE_TOAST.publishSuccess, {
-            description: `"${newProduct.name}" متاح الآن في متجرك${stockMsg}`,
+            description: `"${payload.name}" متاح الآن في متجرك${stockMsg}`,
             duration: 5000,
           });
         } else {
           sonnerToast.success(PRODUCT_SAVE_TOAST.draftSuccess, {
-            description: `"${newProduct.name}" يظهر في إدارة المنتجات والمخزون${stockMsg}`,
+            description: `"${payload.name}" محفوظ كمسودة${stockMsg}`,
             duration: 5000,
           });
         }
 
         navigate('/products', {
           replace: true,
-          state: { refreshProducts: true, createdProductId: result.productId, saveMode },
+          state: { refreshProducts: true, saveMode: publish ? 'publish' : 'draft' },
         });
         return;
       }
 
-      idempotencyKeyRef.current = createProductIdempotencyKey();
-      const message = result.error || 'فشل في إضافة المنتج';
+      const message = result.error || 'فشل في تحديث المنتج';
       toast({ title: 'لم يتم الحفظ', description: message, variant: 'destructive' });
       sonnerToast.error(message);
     } catch (err) {
-      idempotencyKeyRef.current = createProductIdempotencyKey();
-      console.error('[addProduct] submit failed:', err);
-      const message = err instanceof Error ? err.message : 'فشل في إضافة المنتج';
+      console.error('[editProduct] submit failed:', err);
+      const message = err instanceof Error ? err.message : 'فشل في تحديث المنتج';
       toast({ title: 'لم يتم الحفظ', description: message, variant: 'destructive' });
       sonnerToast.error(message);
     } finally {
@@ -407,10 +362,11 @@ export function useAddProductForm() {
     e?.preventDefault();
   };
 
-  const isSaveDisabled = isSubmitting || isImagesUploading || saveSucceeded;
+  const isSaveDisabled = isSubmitting || isImagesUploading;
 
   return {
     state: {
+      loading,
       mainImage,
       additionalImages,
       name,
@@ -436,11 +392,12 @@ export function useAddProductForm() {
       pendingSaveMode,
       isImagesUploading,
       isSaveDisabled,
-      saveSucceeded,
+      isActive,
       profitInfo,
       progressSteps,
       completionPercentage,
       totalVariantStock,
+      loadedProduct: loadedProductRef.current,
     },
     actions: {
       setName,

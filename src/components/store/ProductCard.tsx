@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Product } from "@/types";
 import { getAvailableQty, hasVariantOptions } from "@/utils/inventoryUtils";
 import OptimizedImage from "@/components/OptimizedImage";
+import ProductPriceDisplay from "@/components/storefront/ProductPriceDisplay";
+import { getProductListingBlurb, getProductOptionSummary, getDiscountBadgeLabel, hasPromotionalPricing } from "@/lib/storefrontProductDisplay";
 
 interface ProductCardProps {
   product: Product;
@@ -32,12 +34,15 @@ const ProductCard = memo(({
 }: ProductCardProps) => {
   const availableQty = useMemo(() => getAvailableQty(product), [product]);
 
-  const { isNew, isLowStock, isOutOfStock, hasDiscount, hasVariants } = useMemo(() => ({
+  const { isNew, isLowStock, isOutOfStock, onSale, discountLabel, hasVariants, blurb, optionSummary } = useMemo(() => ({
     isNew: (product as any).created_at ? (Date.now() - new Date((product as any).created_at).getTime()) < 7 * 86400000 : false,
     isLowStock: availableQty > 0 && availableQty <= 3,
     isOutOfStock: availableQty <= 0,
-    hasDiscount: product.discountType && product.discountType !== 'none',
+    onSale: hasPromotionalPricing(product),
+    discountLabel: getDiscountBadgeLabel(product),
     hasVariants: hasVariantOptions(product),
+    blurb: getProductListingBlurb(product, 90),
+    optionSummary: getProductOptionSummary(product),
   }), [product, availableQty]);
 
   const handleShare = (e: React.MouseEvent) => {
@@ -46,16 +51,7 @@ const ProductCard = memo(({
   };
 
   const PriceBlock = ({ size = "sm" }: { size?: "sm" | "md" }) => (
-    <div className="flex flex-col items-end leading-tight">
-      {hasDiscount && product.originalPrice ? (
-        <>
-          <span className="text-[10px] text-muted-foreground line-through">{product.originalPrice.toLocaleString()}</span>
-          <span className={`font-bold text-destructive ${size === "md" ? "text-base" : "text-sm"}`}>{product.price.toLocaleString()} د.ع</span>
-        </>
-      ) : (
-        <span className={`font-bold text-foreground ${size === "md" ? "text-base" : "text-sm"}`}>{product.price.toLocaleString()} د.ع</span>
-      )}
-    </div>
+    <ProductPriceDisplay product={product} size={size} align="end" showBadge={false} />
   );
 
   if (viewMode === "list") {
@@ -65,12 +61,12 @@ const ProductCard = memo(({
         style={{ animationDelay: `${index * 30}ms` }}
         onClick={() => onView(product.id)}
       >
-        <div className="relative w-28 h-28 rounded-xl overflow-hidden flex-shrink-0 bg-muted/40">
+        <div className="relative w-28 h-28 rounded-xl overflow-hidden flex-shrink-0 border border-border/20">
           <OptimizedImage src={product.image} alt={product.name} variant="thumbnail" className="w-full h-full group-hover:scale-105 transition-transform duration-500" loading="lazy" />
           <div className="absolute top-1.5 right-1.5 flex flex-col gap-1">
-            {hasDiscount && (
+            {onSale && discountLabel && (
               <span className="bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded-md text-[9px] font-bold shadow-sm">
-                {product.discountType === 'percentage' ? `${product.discountValue}%-` : `${product.discountValue?.toLocaleString()}-`}
+                {discountLabel}
               </span>
             )}
             {isNew && (
@@ -93,7 +89,14 @@ const ProductCard = memo(({
         <div className="flex-1 min-w-0 flex flex-col justify-between">
           <div>
             <h3 className="font-semibold text-sm text-right line-clamp-1 text-foreground">{product.name}</h3>
-            <p className="text-xs text-muted-foreground text-right line-clamp-1 mt-0.5">{product.description}</p>
+            {blurb ? (
+              <p className="text-xs text-muted-foreground text-right line-clamp-3 mt-0.5 leading-snug">{blurb}</p>
+            ) : product.category ? (
+              <p className="text-xs text-muted-foreground text-right line-clamp-1 mt-0.5">{product.category}</p>
+            ) : null}
+            {optionSummary && (
+              <p className="text-[10px] text-muted-foreground/80 text-right mt-0.5">{optionSummary}</p>
+            )}
             <div className="flex items-center justify-end gap-1 mt-1.5">
               {product.rating != null && product.rating > 0 && (
                 <>
@@ -135,11 +138,11 @@ const ProductCard = memo(({
   // Grid view — premium card
   return (
     <div
-      className="group relative bg-card rounded-2xl overflow-hidden border border-border/60 hover:border-primary/30 transition-colors duration-200 cursor-pointer animate-fade-in"
+      className="group relative bg-card rounded-2xl overflow-hidden border border-border/50 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 cursor-pointer animate-fade-in"
       style={{ animationDelay: `${index * 30}ms` }}
       onClick={() => onView(product.id)}
     >
-      <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-muted/40 to-muted/10">
+      <div className="relative aspect-[4/5] overflow-hidden bg-gradient-to-br from-[hsl(var(--store-accent-muted))]/40 to-muted/20">
         <OptimizedImage
           src={product.image}
           alt={product.name}
@@ -152,9 +155,9 @@ const ProductCard = memo(({
 
         {/* Badges */}
         <div className="absolute top-2 right-2 flex flex-col gap-1.5 z-10">
-          {hasDiscount && (
+          {onSale && discountLabel && (
             <span className="bg-destructive text-destructive-foreground px-2 py-0.5 rounded-lg shadow-md text-[10px] font-bold">
-              {product.discountType === 'percentage' ? `${product.discountValue}%-` : `${product.discountValue?.toLocaleString()}-`}
+              {discountLabel}
             </span>
           )}
           {isNew && (
@@ -195,8 +198,14 @@ const ProductCard = memo(({
         </div>
       </div>
 
-      <div className="p-3 space-y-2">
+      <div className="p-3 space-y-2 border-t border-border/40 bg-card/95">
         <h3 className="font-semibold text-sm text-right line-clamp-1 text-foreground">{product.name}</h3>
+        {blurb ? (
+          <p className="text-[11px] text-muted-foreground text-right line-clamp-3 leading-snug">{blurb}</p>
+        ) : null}
+        {optionSummary && (
+          <p className="text-[10px] text-muted-foreground/80 text-right">{optionSummary}</p>
+        )}
 
         <div className="flex items-center justify-between">
           {product.rating != null && product.rating > 0 ? (

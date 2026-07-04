@@ -11,7 +11,7 @@ import {
   rpcRecordProductIdempotency,
   rpcPublishOwnerProduct,
 } from '@/repositories/products/productRepository';
-import { getAuthenticatedUserId } from '@/lib/authSession';
+import { ensureWritableSession } from '@/lib/authSession';
 import { assertMerchantOwner } from '@/lib/tenantGuard';
 import { cache, CacheKeys } from '@/lib/cache';
 import { runOncePerKey, type AddProductResult } from '@/lib/productCreateLock';
@@ -24,6 +24,7 @@ import {
   buildProductLifecyclePatch,
   isSchemaColumnError,
   mapProductInsertError,
+  isRpcTransportError,
   mergeProductForUpdate,
   patchAffectsCatalogStats,
   type ProductLifecycleAction,
@@ -51,10 +52,14 @@ const SELECT_CHAIN = [
 ];
 
 async function requireOwnerId(): Promise<string | null> {
-  const ownerId = await getAuthenticatedUserId();
+  const ownerId = await ensureWritableSession();
   if (!ownerId) return null;
-  await assertMerchantOwner(ownerId);
-  return ownerId;
+  try {
+    await assertMerchantOwner(ownerId);
+    return ownerId;
+  } catch {
+    return null;
+  }
 }
 
 async function resolveStoreId(ownerId: string, bustCache = false): Promise<string | null> {
@@ -65,6 +70,13 @@ async function resolveStoreId(ownerId: string, bustCache = false): Promise<strin
   const store = await fetchStoreByUserId(ownerId);
   return store?.id ?? null;
 }
+
+const productFromCreateInput = (productId: string, product: Product): Product => ({
+  ...product,
+  id: productId,
+  isActive: product.isActive !== false,
+  additionalImages: product.additionalImages ?? [],
+});
 
 async function fetchRowById(
   productId: string,
@@ -91,7 +103,7 @@ const isRetriableStoreScopeError = (err: unknown): boolean => {
 /** Create a product row in Supabase. */
 export async function createProduct(product: Product): Promise<ProductsCrudResult<Product>> {
   const ownerId = await requireOwnerId();
-  if (!ownerId) return { success: false, error: 'يجب تسجيل الدخول أولاً' };
+  if (!ownerId) return { success: false, error: 'يجب تسجيل الدخول أولاً — أعد تسجيل الدخول' };
 
   if (!product.name?.trim()) {
     return { success: false, error: 'اسم المنتج مطلوب' };
@@ -106,8 +118,54 @@ export async function createProduct(product: Product): Promise<ProductsCrudResul
     product.stockQuantity != null && Number.isFinite(product.stockQuantity);
   const stockQty = hasExplicitStock ? Math.max(product.stockQuantity!, 0) : null;
 
-  const atomicPayloads = [payloads.full, payloads.extended, payloads.standard, payloads.minimal];
-  for (const row of atomicPayloads) {
+  const payloadAttempts = [payloads.full, payloads.extended, payloads.standard, payloads.minimal];
+  let lastError: string | null = null;
+
+  const safeSync = () => {
+    try {
+      syncProductCachesAfterMutation(ownerId);
+    } catch {
+      /* cache sync must not block save */
+    }
+  };
+
+  const finalizeCreated = async (mapped: Product): Promise<ProductsCrudResult<Product>> => {
+    if (hasExplicitStock && stockQty! > 0) {
+      const { data: stockData, error: stockError } = await rpcRecordProductInitialStock({
+        p_product_id: mapped.id,
+        p_owner_id: ownerId,
+        p_quantity: stockQty!,
+      });
+      if (stockError || !stockData?.success) {
+        await productsTable().delete().eq('id', mapped.id).eq('owner_id', ownerId);
+        return {
+          success: false,
+          error: 'فشل تسجيل المخزون الافتتاحي — لم يتم إنشاء المنتج. حاول مرة أخرى.',
+        };
+      }
+    }
+    safeSync();
+    return { success: true, data: mapped };
+  };
+
+  for (const row of payloadAttempts) {
+    const { data, error } = await productsTable()
+      .insert(row)
+      .select(PRODUCT_INSERT_RETURN_MINIMAL)
+      .single();
+
+    if (!error && data) {
+      return finalizeCreated(mapDbProduct(data as Record<string, unknown>));
+    }
+
+    if (error) lastError = error.message;
+    if (error && isRetriableStoreScopeError(error.message) && 'store_id' in row) continue;
+    if (error && isSchemaColumnError(error.message)) continue;
+    if (error && isRpcTransportError(error.message)) continue;
+    if (error) return { success: false, error: mapProductInsertError(error.message) };
+  }
+
+  for (const row of payloadAttempts) {
     const rpcArgs: Record<string, unknown> = {
       p_owner_id: ownerId,
       p_payload: row,
@@ -118,19 +176,24 @@ export async function createProduct(product: Product): Promise<ProductsCrudResul
     const { data: atomicData, error: atomicError } = await rpcCreateMerchantProductWithStock(rpcArgs);
 
     if (!atomicError && atomicData?.success && atomicData.product_id) {
-      const fetched = await fetchRowById(atomicData.product_id, ownerId);
-      if (fetched) {
-        syncProductCachesAfterMutation(ownerId);
-        return { success: true, data: mapDbProduct(fetched) };
-      }
+      const productId = String(atomicData.product_id);
+      const fetched = await fetchRowById(productId, ownerId);
+      const mapped = fetched
+        ? mapDbProduct(fetched)
+        : productFromCreateInput(productId, product);
+      return finalizeCreated(mapped);
     }
 
-    const rpcCode = atomicData?.error ?? (atomicError ? String(atomicError.message ?? atomicError) : null);
+    const rpcCode = atomicData?.error ?? (atomicError ? String(atomicError) : null);
+    if (rpcCode) lastError = rpcCode;
+
+    if (isRpcTransportError(rpcCode) || isRpcTransportError(String(atomicError ?? ''))) continue;
+
     if (isRetriableStoreScopeError(rpcCode) && 'store_id' in row) {
       continue;
     }
 
-    if (atomicError && !isSchemaColumnError(atomicError)) {
+    if (atomicError && !isSchemaColumnError(String(atomicError))) {
       const rpcErr = atomicData?.error ?? atomicError;
       if (rpcErr && rpcErr !== 'product_create_failed') {
         return { success: false, error: mapProductInsertError(String(rpcErr)) };
@@ -145,43 +208,12 @@ export async function createProduct(product: Product): Promise<ProductsCrudResul
     if (atomicData?.detail && isSchemaColumnError(atomicData.detail)) break;
   }
 
-  const attempts = [payloads.full, payloads.extended, payloads.standard, payloads.minimal];
-  for (const row of attempts) {
-    const { data, error } = await productsTable()
-      .insert(row)
-      .select(PRODUCT_INSERT_RETURN_MINIMAL)
-      .single();
-
-    if (!error && data) {
-      syncProductCachesAfterMutation(ownerId);
-      const mapped = mapDbProduct(data as Record<string, unknown>);
-
-      if (hasExplicitStock && stockQty! > 0) {
-        const { data: stockData, error: stockError } = await rpcRecordProductInitialStock({
-          p_product_id: mapped.id,
-          p_owner_id: ownerId,
-          p_quantity: stockQty!,
-        });
-        if (stockError || !stockData?.success) {
-          await productsTable().delete().eq('id', mapped.id).eq('owner_id', ownerId);
-          return {
-            success: false,
-            error: 'فشل تسجيل المخزون الافتتاحي — لم يتم إنشاء المنتج. حاول مرة أخرى.',
-          };
-        }
-      }
-
-      return { success: true, data: mapped };
-    }
-    if (error && isRetriableStoreScopeError(error.message) && 'store_id' in row) {
-      continue;
-    }
-    if (error && !isSchemaColumnError(error.message)) {
-      return { success: false, error: mapProductInsertError(error.message) };
-    }
-  }
-
-  return { success: false, error: 'فشل في إضافة المنتج — تحقق من migrations' };
+  return {
+    success: false,
+    error: lastError
+      ? mapProductInsertError(lastError)
+      : 'فشل في إضافة المنتج — تحقق من migrations',
+  };
 }
 
 /** Update a product (partial patch supported). */
@@ -246,8 +278,8 @@ export async function updateProduct(
       }
     }
 
-    if (rpcError && !/function|schema cache|does not exist/i.test(rpcError.message)) {
-      return { success: false, error: rpcError.message };
+    if (rpcError && !/function|schema cache|does not exist/i.test(String(rpcError))) {
+      return { success: false, error: String(rpcError) };
     }
 
     for (const select of [PRODUCT_DETAIL_SELECT, PRODUCT_INSERT_RETURN_MINIMAL]) {
@@ -397,8 +429,8 @@ export async function addProduct(
   product: Product,
   options?: { idempotencyKey?: string }
 ): Promise<AddProductResult> {
-  const userId = await getAuthenticatedUserId();
-  if (!userId) return { success: false, error: 'يجب تسجيل الدخول أولاً' };
+  const userId = await ensureWritableSession();
+  if (!userId) return { success: false, error: 'انتهت جلسة الدخول — سجّل الدخول مرة أخرى ثم حاول الحفظ' };
 
   if (!product.image?.trim() || product.image.startsWith('blob:')) {
     return { success: false, error: 'انتظر اكتمال رفع الصورة قبل الحفظ' };
@@ -409,8 +441,10 @@ export async function addProduct(
   return runOncePerKey(lockKey, async () => {
     try {
       if (options?.idempotencyKey) {
-        const { data: existingId, error: lookupError } = await rpcLookupProductIdempotency({ p_owner_id: userId, p_key: options.idempotencyKey }
-        );
+        const { data: existingId, error: lookupError } = await rpcLookupProductIdempotency({
+          p_owner_id: userId,
+          p_key: options.idempotencyKey,
+        });
         if (!lookupError && existingId) {
           return { success: true, productId: existingId };
         }
@@ -428,16 +462,20 @@ export async function addProduct(
       const productId = created.data.id;
 
       if (options?.idempotencyKey) {
-        await rpcRecordProductIdempotency({
-          p_owner_id: userId,
-          p_key: options.idempotencyKey,
-          p_product_id: productId,
-        });
+        try {
+          await rpcRecordProductIdempotency({
+            p_owner_id: userId,
+            p_key: options.idempotencyKey,
+            p_product_id: productId,
+          });
+        } catch {
+          /* idempotency record is best-effort */
+        }
       }
 
       if (publishIntent) {
         const published = await publishProduct(productId);
-        if (!published.success && published.error) {
+        if (!published.success && published.error && !isRpcTransportError(published.error)) {
           return { success: true, productId, error: published.error };
         }
       }

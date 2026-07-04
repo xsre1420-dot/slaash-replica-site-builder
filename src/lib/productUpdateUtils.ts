@@ -18,7 +18,7 @@ export const PRODUCT_INSERT_RETURN_SELECT =
 
 /** Products grid — no description, cost, or variant JSON (largest list payload savings) */
 export const MERCHANT_PRODUCTS_GRID_SELECT =
-  'id, name, category, price, original_price, image_url, stock_quantity, is_active, archived_at, min_stock_level, discount_type, discount_value, discount_start_date, discount_end_date, created_at, updated_at';
+  'id, name, short_description, category, price, original_price, image_url, stock_quantity, is_active, archived_at, min_stock_level, discount_type, discount_value, discount_start_date, discount_end_date, created_at, updated_at';
 
 /** Inventory list — stock/variant fields + sku/cost/barcode for merchant inventory hub */
 export const MERCHANT_PRODUCTS_INVENTORY_SELECT =
@@ -26,11 +26,11 @@ export const MERCHANT_PRODUCTS_INVENTORY_SELECT =
 
 /** Storefront list / preview — card-shaped columns (no description, variants, or gallery extras) */
 export const STOREFRONT_ACTIVE_LIST_SELECT =
-  'id, name, category, price, original_price, image_url, stock_quantity, discount_type, discount_value, discount_start_date, discount_end_date, is_active, archived_at, product_slug, created_at';
+  'id, name, short_description, category, price, original_price, image_url, stock_quantity, discount_type, discount_value, discount_start_date, discount_end_date, is_active, archived_at, product_slug, created_at';
 
-/** Storefront product detail fallback — full gallery, no cost */
+/** Storefront product detail fallback — full gallery + merchant copy fields */
 export const STOREFRONT_DETAIL_SELECT =
-  'id, name, description, category, price, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, is_active, archived_at, created_at';
+  'id, name, description, short_description, category, price, original_price, image_url, additional_images, stock_quantity, sizes, colors, variants, discount_type, discount_value, discount_start_date, discount_end_date, is_active, archived_at, sku, tags, product_slug, created_at';
 
 /** Merchant list/load — full columns (detail-adjacent fallbacks) */
 export const MERCHANT_PRODUCTS_LIST_SELECT =
@@ -50,6 +50,13 @@ export const MERCHANT_PRODUCTS_STANDARD_SELECT =
 
 export const isSchemaColumnError = (message: string): boolean =>
   /column|schema cache|does not exist/i.test(message);
+
+/** Browser/network failures talking to PostgREST — fall back to direct client insert. */
+export const isRpcTransportError = (message: string | null | undefined): boolean =>
+  message != null &&
+  /failed to fetch|networkerror|network request failed|load failed|aborterror|circuit_open/i.test(
+    message.toLowerCase()
+  );
 
 export type ProductInsertPayloads = {
   minimal: Record<string, unknown>;
@@ -136,8 +143,20 @@ export const mapProductInsertError = (message: string): string => {
   if (isSchemaColumnError(message)) {
     return 'تعذر الحفظ — حدّث قاعدة البيانات عبر: supabase db push (المنتجات لم تُحذف، المشكلة في المزامنة)';
   }
-  if (m.includes('duplicate') || m.includes('unique')) {
+  if (m.includes('duplicate') || m.includes('unique') || m === 'duplicate_product') {
     return 'SKU أو رابط المنتج مستخدم مسبقاً';
+  }
+  if (m === 'image_required') {
+    return 'أضف صورة رئيسية للمنتج';
+  }
+  if (m === 'name_required') {
+    return 'اسم المنتج مطلوب';
+  }
+  if (m === 'invalid_payload') {
+    return 'بيانات المنتج غير صالحة — حدّث الصفحة وحاول مرة أخرى';
+  }
+  if (isRpcTransportError(message)) {
+    return 'تعذر الاتصال بالخادم — تحقق من الإنترنت أو أعد تحميل الصفحة ثم حاول مرة أخرى';
   }
   return message;
 };

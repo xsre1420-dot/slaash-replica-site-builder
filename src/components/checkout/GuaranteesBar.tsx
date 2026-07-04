@@ -16,7 +16,7 @@ const GuaranteesBar = ({ compact = false }: GuaranteesBarProps) => (
   <ScrollReveal delay={100} animation="slide-up">
     <div
       className={cn(
-        "flex justify-around bg-muted/40 rounded-lg border border-border/50",
+        "flex justify-around rounded-lg border border-border/50",
         compact ? "py-2 px-3" : "py-3 px-4 rounded-xl"
       )}
     >

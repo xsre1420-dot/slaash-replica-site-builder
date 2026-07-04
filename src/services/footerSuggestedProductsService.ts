@@ -8,6 +8,7 @@ export interface FooterSuggestedProduct {
   price: number;
   image_url?: string | null;
   category?: string;
+  short_description?: string | null;
 }
 
 export interface FooterSuggestedRow {
@@ -62,7 +63,7 @@ export async function fetchFooterSuggestedForStorefront(
   const productIds = rows.map((r: { product_id: string }) => r.product_id);
   const { data: products, error: productsError } = await supabase
     .from('products')
-    .select('id, name, price, image_url, category, is_active, archived_at')
+    .select('id, name, price, image_url, category, short_description, is_active, archived_at')
     .eq('owner_id', ownerId)
     .in('id', productIds);
 
@@ -78,6 +79,7 @@ export async function fetchFooterSuggestedForStorefront(
       price: p.price,
       image_url: p.image_url,
       category: p.category,
+      short_description: (p as { short_description?: string }).short_description ?? null,
     }));
 }
 

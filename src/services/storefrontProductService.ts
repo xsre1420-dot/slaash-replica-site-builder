@@ -3,7 +3,7 @@
  */
 import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/types';
-import { mapStorefrontProduct, safeMapStorefrontProduct } from '@/mappers/productMapper';
+import { mapStorefrontProduct, safeMapStorefrontProduct, mapDbProduct } from '@/mappers/productMapper';
 import {
   MERCHANT_PRODUCTS_LIST_SELECT,
   STOREFRONT_ACTIVE_LIST_SELECT,
@@ -23,7 +23,7 @@ import {
   setStorefrontCached,
   StorefrontCacheKeys,
 } from '@/services/storefrontCacheService';
-import { ProductCacheKeys } from '@/services/storefrontCacheTiers';
+import { ProductCacheKeys, flushStorefrontProductDetail } from '@/services/storefrontCacheTiers';
 import type { StorefrontInvalidationScope } from '@/services/storefrontCacheTiers';
 import type { StorefrontBundleCache, StorefrontProductsPage } from '@/types/storefrontCache';
 import { traceCriticalFlow } from '@/lib/tracing';
@@ -59,6 +59,53 @@ export async function fetchStorePolicies(
 export const STOREFRONT_PRODUCTS_CHANGED = 'storefront:products-changed';
 
 const ACTIVE_PRODUCTS_FILTER = 'is_active.eq.true,is_active.is.null';
+
+const GALLERY_FALLBACK_SELECT = 'image_url, additional_images, is_active, archived_at, owner_id';
+
+const countGalleryUrls = (product: Pick<Product, 'image' | 'additionalImages'>): number => {
+  const seen = new Set<string>();
+  const main = product.image?.trim();
+  if (main) seen.add(main);
+  for (const url of product.additionalImages ?? []) {
+    const trimmed = url?.trim();
+    if (trimmed) seen.add(trimmed);
+  }
+  return seen.size;
+};
+
+/** Load gallery fields directly from DB — source of truth for product detail pages. */
+async function enrichStorefrontProductGallery(
+  slug: string,
+  productId: string,
+  product: Product
+): Promise<Product> {
+  const ownerId = await resolveStoreOwnerBySlug(slug);
+  if (!ownerId) return product;
+
+  const { data: row, error } = await supabase
+    .from('products')
+    .select(GALLERY_FALLBACK_SELECT)
+    .eq('id', productId)
+    .eq('owner_id', ownerId)
+    .maybeSingle();
+
+  if (error || !row || row.is_active === false || row.archived_at) return product;
+
+  const fromDb = mapDbProduct({
+    id: productId,
+    name: product.name,
+    image_url: row.image_url,
+    additional_images: row.additional_images,
+  });
+
+  if (countGalleryUrls(fromDb) === 0) return product;
+
+  return {
+    ...product,
+    image: fromDb.image || product.image,
+    additionalImages: fromDb.additionalImages ?? product.additionalImages,
+  };
+}
 
 const bundleMemoryKey = (slug: string) => StorefrontCacheKeys.bundle(slug);
 
@@ -538,13 +585,23 @@ export async function fetchStorefrontProductsPage(
 /** Single product for storefront detail page — RPC + slug catalog fallback (works for anon). */
 export async function fetchStorefrontProductById(
   slug: string,
-  productId: string
+  productId: string,
+  options?: { bypassCache?: boolean }
 ): Promise<Product | null> {
   const normalized = slug.trim().toLowerCase();
   const id = productId.trim();
   if (!/^[a-z0-9-]+$/.test(normalized) || !id) return null;
 
   const productCacheKey = StorefrontCacheKeys.product(normalized, id);
+  if (options?.bypassCache) {
+    flushStorefrontProductDetail(normalized, id);
+    const product = await fetchStorefrontProductByIdUncached(normalized, id);
+    if (product) {
+      setStorefrontCached(productCacheKey, product);
+    }
+    return product;
+  }
+
   const cachedProduct = getStorefrontCached<Product>(productCacheKey);
   if (cachedProduct) return cachedProduct;
 
@@ -555,6 +612,15 @@ export async function fetchStorefrontProductById(
     }
     return product;
   });
+}
+
+async function finalizeStorefrontProduct(
+  slug: string,
+  productId: string,
+  product: Product | null
+): Promise<Product | null> {
+  if (!product || !isStorefrontVisible(product)) return null;
+  return enrichStorefrontProductGallery(slug, productId, product);
 }
 
 async function fetchStorefrontProductByIdUncached(
@@ -568,8 +634,8 @@ async function fetchStorefrontProductByIdUncached(
     });
 
     if (!error && data) {
-      const mapped = safeMapStorefrontProduct(data);
-      if (mapped && isStorefrontVisible(mapped)) return mapped;
+      const mapped = await finalizeStorefrontProduct(normalized, id, safeMapStorefrontProduct(data));
+      if (mapped) return mapped;
     }
 
     if (error) {
@@ -578,33 +644,27 @@ async function fetchStorefrontProductByIdUncached(
 
     const ownerId = await resolveStoreOwnerBySlug(normalized);
     if (ownerId) {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      let { data: row, error: queryError } = await supabase
+        .from('products')
+        .select(STOREFRONT_DETAIL_SELECT)
+        .eq('id', id)
+        .eq('owner_id', ownerId)
+        .or(ACTIVE_PRODUCTS_FILTER)
+        .maybeSingle();
 
-      if (user?.id === ownerId) {
-        let { data: row, error: queryError } = await supabase
+      if (queryError && isSchemaColumnError(queryError.message)) {
+        ({ data: row, error: queryError } = await supabase
           .from('products')
-          .select(STOREFRONT_DETAIL_SELECT)
+          .select(MINIMAL_STOREFRONT_SELECT)
           .eq('id', id)
           .eq('owner_id', ownerId)
           .or(ACTIVE_PRODUCTS_FILTER)
-          .maybeSingle();
+          .maybeSingle());
+      }
 
-        if (queryError && isSchemaColumnError(queryError.message)) {
-          ({ data: row, error: queryError } = await supabase
-            .from('products')
-            .select(MINIMAL_STOREFRONT_SELECT)
-            .eq('id', id)
-            .eq('owner_id', ownerId)
-            .or(ACTIVE_PRODUCTS_FILTER)
-            .maybeSingle());
-        }
-
-        if (row) {
-          const mapped = safeMapStorefrontProduct(row);
-          if (mapped) return mapped;
-        }
+      if (row) {
+        const mapped = await finalizeStorefrontProduct(normalized, id, safeMapStorefrontProduct(row));
+        if (mapped) return mapped;
       }
     }
 

@@ -1,20 +1,19 @@
-
-import { useNavigate } from "react-router-dom";
-import { RtlHeaderBar } from "@/components/layout/RtlHeaderBar";
+import { useNavigate } from 'react-router-dom';
+import { RtlHeaderBar } from '@/components/layout/RtlHeaderBar';
 
 const ProductHeader = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="bg-card p-3 sm:p-4 sticky top-0 z-20 border-b border-border/50 font-arabic">
-      <div className="max-w-6xl mx-auto px-1 sm:px-2">
+    <header className="sticky top-0 z-30 border-b border-border/40 bg-card/85 backdrop-blur-xl supports-[backdrop-filter]:bg-card/70">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 py-2.5">
         <RtlHeaderBar
           title="تفاصيل المنتج"
-          titleClassName="text-base"
+          titleClassName="text-sm font-bold"
           onBack={() => navigate(-1)}
         />
       </div>
-    </div>
+    </header>
   );
 };
 

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import MarketingScripts from "@/components/MarketingScripts";
 import OptimizedImage from "@/components/OptimizedImage";
+import { getProductListingBlurb } from "@/lib/storefrontProductDisplay";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 const PreviewStore = () => {
@@ -63,6 +64,11 @@ const PreviewStore = () => {
     window.addEventListener(STOREFRONT_PRODUCTS_CHANGED, onChanged);
     return () => window.removeEventListener(STOREFRONT_PRODUCTS_CHANGED, onChanged);
   }, [user?.id, catalog.reload]);
+
+  useEffect(() => {
+    if (!isReady || !user?.id) return;
+    void catalog.reload();
+  }, [isReady, user?.id, catalog.reload]);
 
   useEffect(() => {
     if (user?.id) setStoreOwner(user.id);
@@ -303,7 +309,9 @@ const PreviewStore = () => {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {products.map((product) => (
+            {products.map((product) => {
+              const blurb = getProductListingBlurb(product, 90);
+              return (
               <div 
                 key={product.id} 
                 className="bg-card rounded-xl overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
@@ -327,11 +335,16 @@ const PreviewStore = () => {
                   )}
                 </div>
                 
-                <div className="p-3">
-                  <div className="text-sm font-medium text-foreground mb-1 text-right line-clamp-2">
+                <div className="p-3 space-y-1">
+                  <div className="text-sm font-semibold text-foreground text-right line-clamp-1">
                     {product.name}
                   </div>
-                  <div className="text-right">
+                  {blurb && (
+                    <p className="text-[11px] text-muted-foreground text-right line-clamp-2 leading-snug">
+                      {blurb}
+                    </p>
+                  )}
+                  <div className="text-right pt-0.5">
                     {product.discountType && product.discountType !== 'none' && product.originalPrice ? (
                       <div className="flex flex-col items-end gap-0.5">
                         <span className="text-xs text-muted-foreground line-through">
@@ -349,7 +362,8 @@ const PreviewStore = () => {
                   </div>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>
