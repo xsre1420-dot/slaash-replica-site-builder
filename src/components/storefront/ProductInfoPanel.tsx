@@ -1,4 +1,4 @@
-import { Check, Heart, Package, ShoppingBag, Star, Truck, Zap } from 'lucide-react';
+import { Check, ShoppingBag, Star, Zap } from 'lucide-react';
 
 import { Link } from 'react-router-dom';
 
@@ -9,20 +9,14 @@ import ProductPriceDisplay from '@/components/storefront/ProductPriceDisplay';
 import ProductQuantity from '@/components/product-details/ProductQuantity';
 
 import {
-
-  getDiscountBadgeLabel,
-
   getProductHighlight,
-
+  getProductOptionSummary,
+  getDiscountBadgeLabel,
   getVariantOptionQty,
-
   hasPromotionalPricing,
-
 } from '@/lib/storefrontProductDisplay';
 
 import { getStoreHomePath } from '@/lib/storefrontPaths';
-
-import { useFavorites } from '@/hooks/useFavorites';
 
 import { cn } from '@/lib/utils';
 
@@ -203,37 +197,21 @@ const ProductInfoPanel = ({
 }: ProductInfoPanelProps) => {
 
   const highlight = getProductHighlight(product);
-  const fullDescription = product.description?.trim() ?? '';
-  const detailBelowHighlight =
-    fullDescription && (!highlight || fullDescription !== highlight) ? fullDescription : '';
 
   const discountLabel = hasPromotionalPricing(displayProduct) ? getDiscountBadgeLabel(displayProduct) : null;
 
   const storeHome = getStoreHomePath(isTenantMode ? storeSlug : null);
 
-  const { isFavorite, toggleFavorite } = useFavorites(storeSlug);
-
-
-
-  const selectedColorName =
-
-    product.colors?.find((c) => c.value === selectedColor)?.name || selectedColor;
-
-
+  const selectedColorOption = product.colors?.find((c) => c.value === selectedColor);
+  const selectedColorName = selectedColorOption?.name?.trim() || null;
 
   const sizeInStock = (size: string) =>
-
     getVariantOptionQty(displayProduct, { size, color: selectedColor || undefined }) > 0;
 
-
-
   const colorInStock = (colorValue: string) =>
-
     getVariantOptionQty(displayProduct, { color: colorValue }) > 0;
 
-
-
-  const favorited = isFavorite(product.id);
+  const optionSummary = getProductOptionSummary(product);
 
 
 
@@ -401,153 +379,114 @@ const ProductInfoPanel = ({
 
         </div>
 
+        {optionSummary && (
+          <p className="text-xs text-muted-foreground text-right">{optionSummary} متاح للاختيار</p>
+        )}
 
-
-        {/* 6. Short blurb + full description */}
-
-        {(highlight || detailBelowHighlight) && (
-          <div className="space-y-2">
-            {highlight && (
-              <p className="text-sm text-muted-foreground leading-relaxed text-right line-clamp-3 border-r-2 border-primary/30 pr-3">
-                {highlight}
-              </p>
-            )}
-            {detailBelowHighlight && (
-              <p className="text-sm text-muted-foreground leading-relaxed text-right whitespace-pre-wrap border-r-2 border-border/30 pr-3">
-                {detailBelowHighlight}
-              </p>
-            )}
-          </div>
+        {/* 6. Short blurb only — full description lives in ProductDescriptionBlock below */}
+        {highlight && (
+          <p className="text-sm text-muted-foreground leading-relaxed text-right line-clamp-3 border-r-2 border-primary/30 pr-3">
+            {highlight}
+          </p>
         )}
 
       </div>
 
 
 
-      {/* 7. Color selector */}
-
+      {/* 7. Color selector — image + name (no hex codes) */}
       {product.colors && product.colors.length > 0 && (
-
         <div className="space-y-3 pt-1 border-t border-border/10">
+          <p className="text-sm font-medium text-foreground text-right">
+            اللون <span className="text-destructive">*</span>
+            {selectedColorName && (
+              <span className="text-muted-foreground font-normal mr-1.5">· {selectedColorName}</span>
+            )}
+          </p>
 
-          <div className="flex items-center justify-between gap-2">
-
-            <p className="text-sm font-medium text-foreground text-right">
-
-              اللون
-
-              {selectedColorName && (
-
-                <span className="text-muted-foreground font-normal mr-1.5">· {selectedColorName}</span>
-
-              )}
-
-            </p>
-
-          </div>
-
-          <div className="flex flex-wrap gap-2.5 justify-end">
-
+          <div className="flex flex-wrap gap-3 justify-end">
             {product.colors.map((color, index) => {
-
               const available = colorInStock(color.value);
-
               const selected = selectedColor === color.value;
+              const label = color.name?.trim();
 
               return (
-
                 <button
-
                   key={`${color.value}-${index}`}
-
                   type="button"
-
                   disabled={!available}
-
                   onClick={() => onSelectColor(selected ? '' : color.value)}
-
                   className={cn(
-
-                    'relative w-12 h-12 rounded-xl overflow-hidden transition-all duration-200 border-2',
-
-                    selected
-
-                      ? 'border-primary scale-105 shadow-md shadow-primary/15'
-
-                      : 'border-transparent hover:border-primary/40 hover:scale-[1.03]',
-
-                    !available && 'opacity-35 cursor-not-allowed grayscale'
-
+                    'flex flex-col items-center gap-1.5 w-[4.5rem] sm:w-20 transition-opacity',
+                    !available && 'opacity-40 cursor-not-allowed'
                   )}
-
-                  aria-label={color.name || 'لون'}
-
+                  aria-label={label || 'لون'}
                   aria-pressed={selected}
-
-                  title={available ? color.name || color.value : `${color.name || 'لون'} — غير متوفر`}
-
+                  title={available ? label || 'لون' : `${label || 'لون'} — غير متوفر`}
                 >
+                  <div
+                    className={cn(
+                      'relative w-[4.5rem] h-[4.5rem] sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 transition-all duration-200',
+                      selected
+                        ? 'border-primary scale-105 shadow-md shadow-primary/15'
+                        : 'border-border/40 hover:border-primary/40 hover:scale-[1.02]'
+                    )}
+                  >
+                    {color.image ? (
+                      <img
+                        src={color.image}
+                        alt={label || ''}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-muted/50 flex items-center justify-center">
+                        <span
+                          className="w-8 h-8 rounded-full border-2 border-background shadow-sm"
+                          style={{ backgroundColor: color.value.startsWith('#') ? color.value : '#d4d4d4' }}
+                        />
+                      </div>
+                    )}
 
-                  {color.image ? (
+                    {selected && (
+                      <span className="absolute inset-0 flex items-center justify-center bg-primary/15">
+                        <Check className="w-5 h-5 text-primary drop-shadow-sm" strokeWidth={2.5} />
+                      </span>
+                    )}
 
-                    <img src={color.image} alt="" className="w-full h-full object-cover" />
+                    {!available && (
+                      <span className="absolute inset-0 flex items-center justify-center pointer-events-none bg-background/40">
+                        <span className="w-[120%] h-px bg-foreground/50 rotate-45 absolute" />
+                      </span>
+                    )}
+                  </div>
 
-                  ) : (
-
-                    <span className="block w-full h-full" style={{ backgroundColor: color.value }} />
-
-                  )}
-
-                  {selected && (
-
-                    <span className="absolute inset-0 flex items-center justify-center bg-primary/15">
-
-                      <Check className="w-4 h-4 text-primary drop-shadow-sm" strokeWidth={2.5} />
-
+                  {label && (
+                    <span
+                      className={cn(
+                        'text-[11px] max-w-full truncate text-center',
+                        selected ? 'text-primary font-semibold' : 'text-muted-foreground'
+                      )}
+                    >
+                      {label}
                     </span>
-
                   )}
-
-                  {!available && (
-
-                    <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
-
-                      <span className="w-[120%] h-px bg-foreground/50 rotate-45 absolute" />
-
-                    </span>
-
-                  )}
-
                 </button>
-
               );
-
             })}
-
           </div>
-
         </div>
-
       )}
 
 
 
       {/* 8. Size selector */}
-
       {product.sizes && product.sizes.length > 0 && (
-
         <div className="space-y-3">
-
           <p className="text-sm font-medium text-foreground text-right">
-
-            المقاس
-
+            القياس <span className="text-destructive">*</span>
             {selectedSize && (
-
               <span className="text-muted-foreground font-normal mr-1.5">· {selectedSize}</span>
-
             )}
-
           </p>
 
           <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
@@ -630,126 +569,31 @@ const ProductInfoPanel = ({
 
 
 
-      {/* 10. Add to Cart + Buy Now — desktop */}
-
-      <div className="hidden sm:flex flex-col gap-2.5">
-
-        <button
-
-          type="button"
-
-          onClick={onAddToCart}
-
-          disabled={isAdding || isOutOfStock}
-
-          className="w-full h-13 min-h-[52px] inline-flex items-center justify-center gap-2.5 rounded-xl bg-primary text-primary-foreground font-bold text-base hover:bg-primary/90 disabled:opacity-50 transition-all duration-200 shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/25 active:scale-[0.99]"
-
-        >
-
-          <ShoppingBag className="w-5 h-5" />
-
-          {isAdding ? 'جاري الإضافة…' : isOutOfStock ? 'غير متوفر' : 'أضف للسلة'}
-
-        </button>
-
-        <button
-
-          type="button"
-
-          onClick={onBuyNow}
-
-          disabled={isAdding || isOutOfStock}
-
-          className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-primary/25 text-primary font-semibold hover:bg-primary/5 disabled:opacity-50 transition-all duration-200"
-
-        >
-
-          <Zap className="w-4 h-4" />
-
-          اشتري الآن
-
-        </button>
-
-      </div>
-
-
-
-      {/* 11. Wishlist */}
-
-      <button
-
-        type="button"
-
-        onClick={() => toggleFavorite(product.id)}
-
-        aria-label={favorited ? 'إزالة من المفضلة' : 'أضف للمفضلة'}
-
-        aria-pressed={favorited}
-
-        className={cn(
-
-          'hidden sm:flex w-full h-11 items-center justify-center gap-2 rounded-xl text-sm font-medium transition-all duration-200 border',
-
-          favorited
-
-            ? 'bg-destructive/8 text-destructive border-destructive/20 hover:bg-destructive/12'
-
-            : 'bg-background text-muted-foreground border-border/20 hover:text-primary hover:border-primary/30 hover:bg-primary/5'
-
-        )}
-
-      >
-
-        <Heart className={cn('w-4 h-4', favorited && 'fill-current')} />
-
-        {favorited ? 'في قائمة المفضلة' : 'أضف للمفضلة'}
-
-      </button>
-
-
-
-      {/* 12. Shipping & trust */}
-
-      <div className="rounded-xl px-4 py-3.5 space-y-2.5 border border-border/10">
-
-        <p className="text-xs font-semibold text-foreground text-right">الشحن والتوصيل</p>
-
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-muted-foreground">
-
-          <span className="inline-flex items-center gap-1.5">
-
-            <Truck className="w-3.5 h-3.5 shrink-0 text-primary" />
-
-            توصيل سريع
-
-          </span>
-
-          <span className="inline-flex items-center gap-1.5">
-
-            <Package className="w-3.5 h-3.5 shrink-0 text-primary" />
-
-            {returnPolicy ? 'إرجاع متاح' : 'جودة مضمونة'}
-
-          </span>
-
-          {isTenantMode && (
-
-            <span className="inline-flex items-center gap-1.5 text-primary/80 font-medium">
-
-              الدفع عند الاستلام
-
-            </span>
-
-          )}
-
+      {/* 10. Add to Cart + Buy Now */}
+      <div className="flex flex-col gap-2.5 pt-1">
+        <div className="flex gap-2.5 sm:flex-col sm:gap-2.5">
+          <button
+            type="button"
+            onClick={onAddToCart}
+            disabled={isAdding || isOutOfStock}
+            className="flex-1 sm:w-full h-12 sm:min-h-[52px] inline-flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground font-bold text-sm sm:text-base hover:bg-primary/90 disabled:opacity-50 transition-all duration-200 shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/25 active:scale-[0.99]"
+          >
+            <ShoppingBag className="w-5 h-5" />
+            {isAdding ? 'جاري الإضافة…' : isOutOfStock ? 'غير متوفر' : 'أضف للسلة'}
+          </button>
+          <button
+            type="button"
+            onClick={onBuyNow}
+            disabled={isAdding || isOutOfStock}
+            className="flex-1 sm:w-full h-12 inline-flex items-center justify-center gap-2 rounded-xl border-2 border-primary/25 text-primary font-semibold hover:bg-primary/5 disabled:opacity-50 transition-all duration-200"
+          >
+            <Zap className="w-4 h-4" />
+            اشتري الآن
+          </button>
         </div>
-
       </div>
-
     </div>
-
   );
-
 };
 
 

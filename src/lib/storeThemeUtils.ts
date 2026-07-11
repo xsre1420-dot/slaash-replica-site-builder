@@ -56,6 +56,24 @@ export function getContrastColor(bgHex: string): string {
   return getLuminance(bgHex) > 0.5 ? '#1a1a1a' : '#ffffff';
 }
 
+/** WCAG contrast ratio between two sRGB hex colors. */
+export function getContrastRatio(fgHex: string, bgHex: string): number {
+  const fg = getLuminance(fgHex) + 0.05;
+  const bg = getLuminance(bgHex) + 0.05;
+  return fg > bg ? fg / bg : bg / fg;
+}
+
+/** Nudge foreground toward readable contrast on a given background. */
+export function ensureMinContrast(fgHex: string, bgHex: string, minRatio = 3): string {
+  if (getContrastRatio(fgHex, bgHex) >= minRatio) return fgHex;
+  const target = getContrastColor(bgHex);
+  for (let step = 1; step <= 10; step++) {
+    const candidate = mixHex(fgHex, target, step / 10);
+    if (getContrastRatio(candidate, bgHex) >= minRatio) return candidate;
+  }
+  return target;
+}
+
 export function adjustBrightness(hex: string, amount: number): string {
   let r = parseInt(hex.slice(1, 3), 16);
   let g = parseInt(hex.slice(3, 5), 16);
@@ -104,9 +122,11 @@ export function buildStoreThemePalette(
   const accent = accentColor || '#6366f1';
   const isDarkBg = getLuminance(bg) < 0.5;
 
-  const muted = isDarkBg ? adjustBrightness(bg, 18) : mixHex(bg, text, 0.06);
+  const muted = isDarkBg ? adjustBrightness(bg, 18) : mixHex(bg, '#f9fafb', 0.72);
   const borderColor = isDarkBg ? adjustBrightness(bg, 28) : mixHex(bg, text, 0.12);
-  const mutedText = isDarkBg ? adjustBrightness(text, -50) : mixHex(text, bg, 0.45);
+  let mutedText = isDarkBg ? adjustBrightness(text, -50) : mixHex(text, bg, 0.55);
+  mutedText = ensureMinContrast(mutedText, muted, 4.5);
+  mutedText = ensureMinContrast(mutedText, bg, 3);
   const card = isDarkBg ? adjustBrightness(bg, 10) : mixHex(bg, '#ffffff', 0.72);
   const accentSoft = isDarkBg ? mixHex(accent, bg, 0.22) : mixHex(accent, bg, 0.1);
   const accentMuted = isDarkBg ? mixHex(accent, bg, 0.14) : mixHex(accent, bg, 0.06);

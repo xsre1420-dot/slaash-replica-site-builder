@@ -3,6 +3,91 @@ import { Product, ProductVariant, ColorOption } from '@/types';
 export const variantStockSum = (variants?: ProductVariant[]) =>
   (variants ?? []).reduce((sum, v) => sum + (v.quantity || 0), 0);
 
+export const getVariantDisplayLabel = (
+  variant: ProductVariant,
+  colors?: ColorOption[]
+): string => {
+  const parts: string[] = [];
+  if (variant.size) parts.push(variant.size);
+  if (variant.color) {
+    const match = colors?.find(
+      (c) =>
+        c.value === variant.color ||
+        c.name === variant.color ||
+        c.value.toLowerCase() === variant.color?.toLowerCase()
+    );
+    if (match?.name) parts.push(match.name);
+  }
+  return parts.join(' · ') || 'افتراضي';
+};
+
+export const hasEditableVariants = (product: Pick<Product, 'variants' | 'sizes' | 'colors' | 'hasOptions'>) =>
+  hasVariantOptions(product);
+
+/** Build size/color combo rows without rescaling quantities. */
+export const buildVariantCombosFromOptions = (
+  product: Pick<Product, 'sizes' | 'colors' | 'variants'>
+): ProductVariant[] => {
+  const sizes = product.sizes ?? [];
+  const colors = product.colors ?? [];
+
+  if (sizes.length === 0 && colors.length === 0) {
+    return (product.variants ?? []).map((variant) => ({
+      ...variant,
+      quantity: Math.max(0, Number(variant.quantity) || 0),
+    }));
+  }
+
+  const combos: ProductVariant[] = [];
+
+  if (sizes.length > 0 && colors.length > 0) {
+    for (const color of colors) {
+      for (const size of sizes) {
+        const existing = product.variants?.find(
+          (v) => v.size === size && colorMatches(v.color, color.value, [color])
+        );
+        combos.push({
+          size,
+          color: color.value,
+          quantity: Math.max(0, Number(existing?.quantity) || 0),
+        });
+      }
+    }
+  } else if (colors.length > 0) {
+    for (const color of colors) {
+      const existing = product.variants?.find(
+        (v) => !v.size && colorMatches(v.color, color.value, [color])
+      );
+      combos.push({
+        color: color.value,
+        quantity: Math.max(0, Number(existing?.quantity) || 0),
+      });
+    }
+  } else {
+    for (const size of sizes) {
+      const existing = product.variants?.find((v) => v.size === size && !v.color);
+      combos.push({
+        size,
+        quantity: Math.max(0, Number(existing?.quantity) || 0),
+      });
+    }
+  }
+
+  return combos;
+};
+
+/** Resolve variant rows for merchant stock editing (preserves per-combo quantities). */
+export const resolveProductVariantsForEdit = (product: Product): ProductVariant[] => {
+  const hydrated = hydrateProductVariantOptions(product);
+  if (hasVariantOptions(hydrated)) {
+    return buildVariantCombosFromOptions(hydrated);
+  }
+  return (hydrated.variants ?? []).map((variant) => ({
+    ...variant,
+    quantity: Math.max(0, Number(variant.quantity) || 0),
+  }));
+};
+
 /**
  * Align stock_quantity and variants so storefront/checkout match inventory management.
  * - Aggregate-only: drop zero-qty variant rows when stock_quantity holds the truth.
@@ -14,7 +99,13 @@ export const normalizeProductStock = (product: Product): Product => {
   const aggregate = product.stockQuantity;
 
   if ((aggregate ?? 0) > 0 && sum <= 0 && variants?.length) {
-    return { ...product, variants: undefined };
+    const hasOptions =
+      product.hasOptions === true ||
+      (product.sizes?.length ?? 0) > 0 ||
+      (product.colors?.length ?? 0) > 0;
+    if (!hasOptions) {
+      return { ...product, variants: undefined };
+    }
   }
 
   if ((aggregate ?? 0) <= 0 && sum > 0) {
@@ -47,6 +138,53 @@ export const requiresSizeSelection = (product: Product): boolean =>
 export const requiresColorSelection = (product: Product): boolean =>
   (product.colors?.length ?? 0) > 0;
 
+/** Ensures sizes/colors arrays exist — derives from variants when DB/RPC omits option lists. */
+export const hydrateProductVariantOptions = (product: Product): Product => {
+  const variants =
+    product.variants?.map((variant) => ({
+      ...variant,
+      size: variant.size?.trim() || undefined,
+      color: variant.color?.trim() || undefined,
+      quantity: Number(variant.quantity) || 0,
+    })) ?? [];
+
+  let sizes = product.sizes?.map((s) => s.trim()).filter(Boolean) ?? [];
+  let colors =
+    product.colors
+      ?.filter((color) => color?.value?.trim())
+      .map((color) => ({
+        ...color,
+        value: color.value.trim(),
+        name: color.name?.trim() || color.value.trim(),
+      })) ?? [];
+
+  if (!sizes.length && variants.length) {
+    sizes = [...new Set(variants.map((v) => v.size).filter((s): s is string => !!s))];
+  }
+
+  if (!colors.length && variants.length) {
+    const values = [...new Set(variants.map((v) => v.color).filter((c): c is string => !!c))];
+    colors = values.map((value) => {
+      const existing = product.colors?.find(
+        (c) => c.value === value || c.name === value
+      );
+      return existing ?? { value, name: value };
+    });
+  }
+
+  return {
+    ...product,
+    sizes: sizes.length ? sizes : undefined,
+    colors: colors.length ? colors : undefined,
+    variants: variants.length ? variants : product.variants,
+    hasOptions:
+      product.hasOptions === true ||
+      sizes.length > 0 ||
+      colors.length > 0 ||
+      variants.length > 0,
+  };
+};
+
 const colorMatches = (
   variantColor: string | undefined,
   selected: string | undefined,
@@ -70,6 +208,32 @@ const colorMatches = (
     variantColor === option.name ||
     (option.name != null && variantColor.toLowerCase() === option.name.toLowerCase())
   );
+};
+
+/** Match a variant color key to its ColorOption (name, value, or legacy hex). */
+export const findVariantColorOption = (
+  colors: ColorOption[] | undefined,
+  variantColor?: string
+): ColorOption | undefined => {
+  if (!variantColor?.trim() || !colors?.length) return undefined;
+  return colors.find((c) => colorMatches(variantColor, c.value, colors));
+};
+
+export const isHexColorValue = (value: string) => /^#[0-9a-f]{3,8}$/i.test(value.trim());
+
+/** Visual color chip for a variant — swatch from hex, label from color name (not product photo). */
+export const resolveVariantColorSwatch = (
+  colors: ColorOption[] | undefined,
+  variantColor?: string
+): { name?: string; swatch?: string } => {
+  const option = findVariantColorOption(colors, variantColor);
+  const rawName =
+    option?.name?.trim() ||
+    (variantColor && !isHexColorValue(variantColor) ? variantColor.trim() : undefined);
+  const name = rawName && !isHexColorValue(rawName) ? rawName : undefined;
+  const candidate = option?.value?.trim() || variantColor?.trim();
+  const swatch = candidate && isHexColorValue(candidate) ? candidate : undefined;
+  return { name, swatch };
 };
 
 const variantMatches = (
@@ -190,9 +354,6 @@ export const getServerUnitPrice = (product: Product): number => {
 
 export const applyActiveDiscount = (product: Product): Product => {
   if (!isProductDiscountActive(product)) {
-    if (product.originalPrice && product.originalPrice !== product.price) {
-      return { ...product, price: product.originalPrice, discountType: 'none' as const };
-    }
     return product;
   }
 
@@ -239,44 +400,8 @@ export const buildVariantsForStock = (
   product: Pick<Product, 'sizes' | 'colors' | 'variants'>,
   totalQty: number
 ): ProductVariant[] | undefined => {
-  const sizes = product.sizes ?? [];
-  const colors = product.colors ?? [];
-
-  if (sizes.length === 0 && colors.length === 0) {
-    return product.variants?.length
-      ? scaleVariantsToTotal(product.variants, totalQty)
-      : undefined;
-  }
-
-  const combos: ProductVariant[] = [];
-
-  if (sizes.length > 0 && colors.length > 0) {
-    for (const color of colors) {
-      for (const size of sizes) {
-        const existing = product.variants?.find(
-          (v) => v.size === size && colorMatches(v.color, color.value, [color])
-        );
-        combos.push({
-          size,
-          color: color.value,
-          quantity: existing?.quantity ?? 0,
-        });
-      }
-    }
-  } else if (colors.length > 0) {
-    for (const color of colors) {
-      const existing = product.variants?.find(
-        (v) => !v.size && colorMatches(v.color, color.value, [color])
-      );
-      combos.push({ color: color.value, quantity: existing?.quantity ?? 0 });
-    }
-  } else {
-    for (const size of sizes) {
-      const existing = product.variants?.find((v) => v.size === size && !v.color);
-      combos.push({ size, quantity: existing?.quantity ?? 0 });
-    }
-  }
-
+  const combos = buildVariantCombosFromOptions(product);
+  if (combos.length === 0) return undefined;
   return scaleVariantsToTotal(combos, totalQty);
 };
 
@@ -286,7 +411,7 @@ export const validateVariantSelection = (
   color?: string
 ): { valid: boolean; message?: string } => {
   if (requiresSizeSelection(product) && !size) {
-    return { valid: false, message: 'يرجى اختيار المقاس' };
+    return { valid: false, message: 'يرجى اختيار القياس' };
   }
   if (requiresColorSelection(product) && !color) {
     return { valid: false, message: 'يرجى اختيار اللون' };

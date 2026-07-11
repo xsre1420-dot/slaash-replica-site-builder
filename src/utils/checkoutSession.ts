@@ -134,6 +134,11 @@ export const markCheckoutCompleted = (ownerId: string, orderId: string): void =>
 export const loadCompletedCheckoutOrderId = (ownerId: string): string | null =>
   readSession(completedKey(ownerId));
 
+/** Clears the completed marker so a new checkout can start in the same session. */
+export const clearCheckoutCompletedMarker = (ownerId: string): void => {
+  removeSession(completedKey(ownerId));
+};
+
 export const clearCheckoutIdempotencyKey = (ownerId: string) => {
   removeSession(idempotencyKey(ownerId));
   removeSession(fingerprintKey(ownerId));

@@ -15,7 +15,6 @@ import {
   MessageSquare,
   GripVertical,
   Copy,
-  Zap,
   Eye,
   Archive,
   ArchiveRestore,
@@ -49,7 +48,6 @@ interface ProductsListProps {
   onToggleSelect?: (id: string) => void;
   onToggleSelectAll?: () => void;
   selectionEnabled?: boolean;
-  onQuickEdit?: (product: Product) => void;
   onPublish?: (product: Product) => void;
   onArchive?: (product: Product) => void;
   onRestore?: (product: Product) => void;
@@ -81,7 +79,6 @@ export const ProductsList = ({
   onToggleSelect,
   onToggleSelectAll,
   selectionEnabled = false,
-  onQuickEdit,
   onPublish,
   onArchive,
   onRestore,
@@ -254,17 +251,6 @@ export const ProductsList = ({
                   <Edit className="w-3.5 h-3.5" />
                 </Button>
               </Link>
-              {onQuickEdit && (
-                <Button
-                  size="icon"
-                  variant="outline"
-                  className="h-9 w-9 rounded-lg"
-                  onClick={() => onQuickEdit(product)}
-                  aria-label="تعديل سريع"
-                >
-                  <Zap className="w-3.5 h-3.5" />
-                </Button>
-              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button size="icon" variant="outline" className="h-9 w-9 rounded-lg">

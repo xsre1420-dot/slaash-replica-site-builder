@@ -7,6 +7,7 @@ import {
   persistCheckoutFingerprint,
   markCheckoutCompleted,
   loadCompletedCheckoutOrderId,
+  clearCheckoutCompletedMarker,
   clearCheckoutSession,
   hasPendingCheckoutAttempt,
   pinCheckoutAttempt,
@@ -65,6 +66,13 @@ describe('checkoutSession', () => {
     const second = pinCheckoutAttempt('owner-1');
     expect(second.idempotencyKey).toBe(first.idempotencyKey);
     expect(second.orderId).toBe(first.orderId);
+  });
+
+  it('clears completed marker for a fresh checkout', () => {
+    markCheckoutCompleted('owner-1', 'order-99');
+    expect(loadCompletedCheckoutOrderId('owner-1')).toBe('order-99');
+    clearCheckoutCompletedMarker('owner-1');
+    expect(loadCompletedCheckoutOrderId('owner-1')).toBeNull();
   });
 
   it('marks completed order and clears pending session keys', () => {

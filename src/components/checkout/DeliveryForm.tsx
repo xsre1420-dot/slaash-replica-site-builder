@@ -30,11 +30,11 @@ const DeliveryForm = memo(function DeliveryForm({
 }: DeliveryFormProps) {
   const fieldClass = (field: string, padding?: string) =>
     cn(
-      "text-right border rounded-xl text-sm text-foreground bg-background h-10 transition-all duration-200",
+      "text-right rounded-xl text-sm text-gray-900 bg-white h-10 transition-all duration-200 border-gray-200",
       padding ?? "pr-9 pl-3",
       formErrors[field]
         ? "border-destructive focus:border-destructive animate-[shake_0.3s_ease-in-out]"
-        : "border-border focus:border-primary"
+        : "border focus:border-primary focus-visible:ring-primary/20"
     );
 
   return (
@@ -95,8 +95,8 @@ const DeliveryForm = memo(function DeliveryForm({
               id={fieldIds.governorate}
               dir="rtl"
               className={cn(
-                "h-10 text-right rounded-xl px-3 bg-background",
-                formErrors.governorate ? "border-destructive" : "border-border"
+                "h-10 text-right rounded-xl px-3 bg-white border-gray-200",
+                formErrors.governorate ? "border-destructive" : "border"
               )}
               aria-invalid={!!formErrors.governorate}
               aria-describedby={formErrors.governorate ? `${fieldIds.governorate}-error` : undefined}
@@ -150,7 +150,7 @@ const DeliveryForm = memo(function DeliveryForm({
           name="notes"
           value={customerInfo.notes}
           onChange={onInputChange}
-          className="text-right border border-border rounded-xl text-sm text-foreground bg-background pr-9 min-h-[72px] focus:border-primary transition-all duration-200"
+          className="text-right border border-gray-200 rounded-xl text-sm text-gray-900 bg-white pr-9 min-h-[72px] focus:border-primary focus-visible:ring-primary/20 transition-all duration-200"
           placeholder="أي ملاحظات خاصة بالطلب"
         />
       </IconField>
@@ -176,11 +176,11 @@ const IconField = ({
     <div className="relative">
       <div
         className={cn(
-          "absolute top-1/2 -translate-y-1/2 text-muted-foreground z-10 pointer-events-none",
+          "absolute top-1/2 -translate-y-1/2 text-primary z-10 pointer-events-none",
           iconPosition === "left" ? "left-3" : "right-3"
         )}
       >
-        <Icon className="w-4 h-4" />
+        <Icon className="w-4 h-4" strokeWidth={2.25} />
       </div>
       {children}
     </div>

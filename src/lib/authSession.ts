@@ -13,3 +13,18 @@ export async function getAuthenticatedUserId(): Promise<string | null> {
   }
   return user?.id ?? null;
 }
+
+/** Refresh JWT if close to expiry — returns owner id when session is writable. */
+export async function ensureWritableSession(): Promise<string | null> {
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error || !session?.user?.id) return null;
+
+  const expiresAtMs = (session.expires_at ?? 0) * 1000;
+  if (expiresAtMs - Date.now() < 120_000) {
+    const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError || !refreshed.session?.user?.id) return null;
+    return refreshed.session.user.id;
+  }
+
+  return session.user.id;
+}

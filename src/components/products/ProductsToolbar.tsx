@@ -1,4 +1,5 @@
-import { Search, LayoutGrid, List, SlidersHorizontal } from 'lucide-react';
+import { useRef } from 'react';
+import { Search, SlidersHorizontal } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,19 +12,14 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import {
-  PRODUCT_SORT_OPTIONS,
   type ProductCatalogFilters,
   type ProductStockFilter,
 } from '@/utils/productCatalogPageUtils';
-
-export type ProductViewMode = 'grid' | 'table';
 
 type ProductsToolbarProps = {
   filters: ProductCatalogFilters;
   onChange: (patch: Partial<ProductCatalogFilters>) => void;
   categories: string[];
-  viewMode: ProductViewMode;
-  onViewModeChange: (mode: ProductViewMode) => void;
   resultCount: number;
   totalCount: number;
   embedded?: boolean;
@@ -36,20 +32,20 @@ const stockOptions: { value: ProductStockFilter; label: string }[] = [
   { value: 'in_stock', label: 'متوفر' },
   { value: 'low', label: 'منخفض' },
   { value: 'out', label: 'نفد' },
+  { value: 'unlimited', label: 'غير محدود' },
 ];
 
 const ProductsToolbar = ({
   filters,
   onChange,
   categories,
-  viewMode,
-  onViewModeChange,
   resultCount,
   totalCount,
   embedded = false,
   onClearFilters,
   filtersActive = false,
 }: ProductsToolbarProps) => {
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const shellClass = embedded
     ? 'min-w-0'
     : 'rounded-2xl border border-border/50 bg-card shadow-sm overflow-hidden min-w-0';
@@ -67,6 +63,7 @@ const ProductsToolbar = ({
           <div className="relative flex-1 min-w-0">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4 pointer-events-none" />
             <Input
+              ref={searchInputRef}
               placeholder="بحث بالاسم أو التصنيف..."
               value={filters.search}
               onChange={(e) => onChange({ search: e.target.value })}
@@ -75,33 +72,6 @@ const ProductsToolbar = ({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <div
-              className="inline-flex rounded-xl border border-border/60 bg-muted/30 p-0.5"
-              role="group"
-              aria-label="طريقة العرض"
-            >
-              <Button
-                type="button"
-                variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                size="sm"
-                className="h-9 px-3 rounded-lg gap-1.5 text-xs"
-                onClick={() => onViewModeChange('grid')}
-              >
-                <LayoutGrid className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">شبكة</span>
-              </Button>
-              <Button
-                type="button"
-                variant={viewMode === 'table' ? 'default' : 'ghost'}
-                size="sm"
-                className="h-9 px-3 rounded-lg gap-1.5 text-xs hidden sm:inline-flex"
-                onClick={() => onViewModeChange('table')}
-              >
-                <List className="h-3.5 w-3.5" />
-                جدول
-              </Button>
-            </div>
-
             <Badge
               variant="secondary"
               className={cn(
@@ -130,7 +100,7 @@ const ProductsToolbar = ({
             )}
           </div>
 
-          <div className="grid grid-cols-1 min-[400px]:grid-cols-2 lg:grid-cols-3 gap-2 min-w-0">
+          <div className="grid grid-cols-1 min-[400px]:grid-cols-[1fr_1fr_auto] gap-2 min-w-0">
             <Select value={filters.category} onValueChange={(v) => onChange({ category: v })}>
               <SelectTrigger className="rounded-xl min-h-[42px] w-full bg-background/50 border-border/60 text-sm">
                 <SelectValue placeholder="الفئة" />
@@ -147,7 +117,7 @@ const ProductsToolbar = ({
 
             <Select value={filters.stock} onValueChange={(v) => onChange({ stock: v as ProductStockFilter })}>
               <SelectTrigger className="rounded-xl min-h-[42px] w-full bg-background/50 border-border/60 text-sm">
-                <SelectValue placeholder="المخزون" />
+                <SelectValue placeholder="حالة المخزون" />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
                 {stockOptions.map((opt) => (
@@ -158,21 +128,19 @@ const ProductsToolbar = ({
               </SelectContent>
             </Select>
 
-            <Select
-              value={filters.sort}
-              onValueChange={(v) => onChange({ sort: v as ProductCatalogFilters['sort'] })}
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="rounded-xl min-h-[42px] w-full min-[400px]:w-[42px] shrink-0 border-border/60 bg-background/50"
+              aria-label="بحث"
+              onClick={() => {
+                searchInputRef.current?.focus();
+                searchInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              }}
             >
-              <SelectTrigger className="rounded-xl min-h-[42px] w-full bg-background/50 border-border/60 text-sm min-[400px]:col-span-2 lg:col-span-1">
-                <SelectValue placeholder="الترتيب" />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl">
-                {PRODUCT_SORT_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <Search className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </div>

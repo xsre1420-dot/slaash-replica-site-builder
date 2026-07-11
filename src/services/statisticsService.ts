@@ -5,6 +5,8 @@ import { DatabaseData } from '@/types/statistics';
 import { cache, CacheKeys, clearInflight } from '@/lib/cache';
 import { cachedFetch } from '@/lib/cache/enterpriseCache';
 import { assertMerchantOwner } from '@/lib/tenantGuard';
+import { fetchCustomerMetricsForPeriod } from '@/services/customerService';
+import { flushMerchantAnalyticsBuffer } from '@/services/analyticsTrackingService';
 
 const withTimeout = <T>(promise: Promise<T>, ms = 12000): Promise<T> => {
   return Promise.race([
@@ -12,6 +14,9 @@ const withTimeout = <T>(promise: Promise<T>, ms = 12000): Promise<T> => {
     new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Request timeout')), ms)),
   ]);
 };
+
+const num = (value: unknown): number | null =>
+  value != null && value !== '' ? Number(value) : null;
 
 /** Order columns needed for chart, payment mix, peak hours, and client KPI fallback. */
 const CHART_ORDER_COLUMNS =
@@ -241,8 +246,6 @@ const fetchOrderItemsForStatistics = async (
   return data || [];
 };
 
-import { fetchCustomerMetricsForPeriod } from '@/services/customerService';
-
 export const fetchStatisticsData = async (
   dateRange: string,
   customStart?: string,
@@ -273,6 +276,7 @@ export const fetchStatisticsData = async (
     skipCache: options?.skipCache,
     ttlPolicyPath: 'medium.statistics',
     fetchFn: async () => {
+    await flushMerchantAnalyticsBuffer();
     const periodStart = bounds.start.toISOString();
     const periodEnd = bounds.end.toISOString();
     const previousEnd = new Date(bounds.start.getTime() - 1);
@@ -302,7 +306,10 @@ export const fetchStatisticsData = async (
       const visitsCap = rpcReady ? VISITS_CAP : FALLBACK_VISITS_CAP;
       const ordersFrom = rpcReady ? periodStart : fallbackFrom;
       const visitsFrom = rpcReady ? periodStart : fallbackFrom;
-      const skipVisits = rpcReady && hasUsableStatisticsKpis(previousKpis);
+      const skipVisits =
+        rpcReady &&
+        hasUsableStatisticsKpis(previousKpis) &&
+        ((num(kpis?.unique_visitors) ?? 0) > 0 || (num(kpis?.visit_count) ?? 0) > 0);
       const skipOrderItems = rpcReady && hasTopSellingProductsKpi(kpis);
       const includeChartOrders = options?.includeChartOrders !== false;
       const skipOrders = rpcReady && !includeChartOrders;

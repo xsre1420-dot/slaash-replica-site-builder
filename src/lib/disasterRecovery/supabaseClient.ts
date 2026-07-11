@@ -5,14 +5,17 @@ import { createAuthStorage } from '@/lib/authUtils';
 import { env } from '@/lib/env';
 
 let client: SupabaseClient<Database> | null = null;
+let clientBaseUrl: string | null = null;
 
-const sharedFetch: typeof fetch = (input, init) =>
-  fetch(input, { ...init, keepalive: true });
+const sharedFetch: typeof fetch = (input, init) => fetch(input, init);
 
 export const getSupabaseClient = (): SupabaseClient<Database> => {
-  if (client) return client;
-
   const cfg = resolveSupabaseConfig();
+  if (client && clientBaseUrl !== cfg.url) {
+    client = null;
+    clientBaseUrl = null;
+  }
+  if (client) return client;
   const usesPooler = Boolean(env.VITE_SUPABASE_POOLER_URL?.trim()) && cfg.label === 'primary';
   const clientOptions: Parameters<typeof createClient<Database>>[2] = {
     auth: {
@@ -33,6 +36,7 @@ export const getSupabaseClient = (): SupabaseClient<Database> => {
   };
 
   client = createClient<Database>(cfg.url, cfg.key, clientOptions);
+  clientBaseUrl = cfg.url;
 
   return client;
 };
@@ -40,4 +44,5 @@ export const getSupabaseClient = (): SupabaseClient<Database> => {
 export const resetSupabaseClient = (): void => {
   void import('@/lib/merchantRealtimeHub').then((m) => m.teardownMerchantRealtimeHub());
   client = null;
+  clientBaseUrl = null;
 };

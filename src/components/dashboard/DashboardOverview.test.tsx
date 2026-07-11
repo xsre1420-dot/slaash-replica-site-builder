@@ -96,6 +96,6 @@ describe('DashboardOverview', () => {
     expect(screen.getByText('مبيعات اليوم (د.ع)')).toBeInTheDocument();
     expect(screen.getByText('زوار اليوم')).toBeInTheDocument();
     expect(screen.getAllByText(/طلبات تحتاج المعالجة/).length).toBe(1);
-    expect(screen.getByText('آخر الطلبات')).toBeInTheDocument();
+    expect(screen.getByText('الطلبات الجديدة')).toBeInTheDocument();
   });
 });

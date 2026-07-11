@@ -1,18 +1,16 @@
 import { memo, useMemo } from "react";
-import { Heart, Plus, Minus, Star, Share2, Flame, Sparkles } from "lucide-react";
+import { Plus, Minus, Star, Share2, Flame, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Product } from "@/types";
 import { getAvailableQty, hasVariantOptions } from "@/utils/inventoryUtils";
 import OptimizedImage from "@/components/OptimizedImage";
 import ProductPriceDisplay from "@/components/storefront/ProductPriceDisplay";
-import { getProductListingBlurb, getProductOptionSummary, getDiscountBadgeLabel, hasPromotionalPricing } from "@/lib/storefrontProductDisplay";
+import { getProductListingBlurb, getProductOptionSummary } from "@/lib/storefrontProductDisplay";
 
 interface ProductCardProps {
   product: Product;
   viewMode: "grid" | "list";
-  isFavorite: boolean;
   cartQuantity: number;
-  onToggleFavorite: (id: string) => void;
   onAddToCart: (product: Product) => void;
   onUpdateQuantity: (productId: string, quantity: number) => void;
   onView: (id: string) => void;
@@ -23,9 +21,7 @@ interface ProductCardProps {
 const ProductCard = memo(({
   product,
   viewMode,
-  isFavorite,
   cartQuantity,
-  onToggleFavorite,
   onAddToCart,
   onUpdateQuantity,
   onView,
@@ -34,12 +30,10 @@ const ProductCard = memo(({
 }: ProductCardProps) => {
   const availableQty = useMemo(() => getAvailableQty(product), [product]);
 
-  const { isNew, isLowStock, isOutOfStock, onSale, discountLabel, hasVariants, blurb, optionSummary } = useMemo(() => ({
+  const { isNew, isLowStock, isOutOfStock, hasVariants, blurb, optionSummary } = useMemo(() => ({
     isNew: (product as any).created_at ? (Date.now() - new Date((product as any).created_at).getTime()) < 7 * 86400000 : false,
     isLowStock: availableQty > 0 && availableQty <= 3,
     isOutOfStock: availableQty <= 0,
-    onSale: hasPromotionalPricing(product),
-    discountLabel: getDiscountBadgeLabel(product),
     hasVariants: hasVariantOptions(product),
     blurb: getProductListingBlurb(product, 90),
     optionSummary: getProductOptionSummary(product),
@@ -51,7 +45,7 @@ const ProductCard = memo(({
   };
 
   const PriceBlock = ({ size = "sm" }: { size?: "sm" | "md" }) => (
-    <ProductPriceDisplay product={product} size={size} align="end" showBadge={false} />
+    <ProductPriceDisplay product={product} size={size} align="end" showBadge />
   );
 
   if (viewMode === "list") {
@@ -64,26 +58,12 @@ const ProductCard = memo(({
         <div className="relative w-28 h-28 rounded-xl overflow-hidden flex-shrink-0 border border-border/20">
           <OptimizedImage src={product.image} alt={product.name} variant="thumbnail" className="w-full h-full group-hover:scale-105 transition-transform duration-500" loading="lazy" />
           <div className="absolute top-1.5 right-1.5 flex flex-col gap-1">
-            {onSale && discountLabel && (
-              <span className="bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded-md text-[9px] font-bold shadow-sm">
-                {discountLabel}
-              </span>
-            )}
             {isNew && (
               <span className="bg-primary text-primary-foreground px-1.5 py-0.5 rounded-md text-[9px] font-bold flex items-center gap-0.5">
                 <Sparkles className="w-2.5 h-2.5" /> جديد
               </span>
             )}
           </div>
-          <button
-            className={`absolute top-1.5 left-1.5 min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center backdrop-blur-md transition-all ${
-              isFavorite ? 'bg-destructive text-destructive-foreground scale-110' : 'bg-card/80 text-muted-foreground hover:text-destructive'
-            }`}
-            onClick={(e) => { e.stopPropagation(); onToggleFavorite(product.id); }}
-            aria-label={isFavorite ? "إزالة من المفضلة" : "إضافة للمفضلة"}
-          >
-            <Heart className={`w-3.5 h-3.5 ${isFavorite ? 'fill-current' : ''}`} />
-          </button>
         </div>
 
         <div className="flex-1 min-w-0 flex flex-col justify-between">
@@ -108,8 +88,8 @@ const ProductCard = memo(({
           </div>
           <div className="flex items-center justify-between mt-2">
             <div className="flex items-center gap-1.5">
-              <button onClick={handleShare} aria-label="مشاركة المنتج" className="min-h-[44px] min-w-[44px] rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
-                <Share2 className="w-3 h-3" />
+              <button onClick={handleShare} aria-label="مشاركة المنتج" className="icon-circle-btn min-h-[44px] min-w-[44px]">
+                <Share2 className="w-4 h-4" />
               </button>
               {cartQuantity > 0 && !hasVariants ? (
                 <div className="flex items-center gap-1 bg-primary/10 rounded-xl px-1.5">
@@ -155,11 +135,6 @@ const ProductCard = memo(({
 
         {/* Badges */}
         <div className="absolute top-2 right-2 flex flex-col gap-1.5 z-10">
-          {onSale && discountLabel && (
-            <span className="bg-destructive text-destructive-foreground px-2 py-0.5 rounded-lg shadow-md text-[10px] font-bold">
-              {discountLabel}
-            </span>
-          )}
           {isNew && (
             <span className="bg-primary text-primary-foreground px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center gap-0.5">
               <Sparkles className="w-3 h-3" /> جديد
@@ -177,19 +152,10 @@ const ProductCard = memo(({
           )}
         </div>
 
-        {/* Favorite & Share */}
-        <div className="absolute top-2 left-2 flex flex-col gap-1.5 z-10">
+        {/* Share */}
+        <div className="absolute top-2 left-2 z-10">
           <button
-            className={`min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center backdrop-blur-md transition-all shadow-sm ${
-              isFavorite ? 'bg-destructive text-destructive-foreground scale-110' : 'bg-card/85 text-muted-foreground hover:text-destructive hover:scale-110'
-            }`}
-            onClick={(e) => { e.stopPropagation(); onToggleFavorite(product.id); }}
-            aria-label={isFavorite ? "إزالة من المفضلة" : "إضافة للمفضلة"}
-          >
-            <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
-          </button>
-          <button
-            className="min-h-[44px] min-w-[44px] rounded-full bg-card/85 backdrop-blur-md text-muted-foreground hover:text-primary flex items-center justify-center transition-all shadow-sm sm:opacity-0 sm:group-hover:opacity-100 opacity-100"
+            className="icon-circle-btn min-h-[44px] min-w-[44px] bg-card/90 backdrop-blur-md sm:opacity-0 sm:group-hover:opacity-100 opacity-100"
             onClick={handleShare}
             aria-label="مشاركة المنتج"
           >

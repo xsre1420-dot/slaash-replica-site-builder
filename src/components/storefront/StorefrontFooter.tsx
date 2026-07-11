@@ -1,15 +1,5 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, MessageCircle, Package } from "lucide-react";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-} from "@/components/ui/carousel";
-import {
-  fetchFooterSuggestedForStorefront,
-  type FooterSuggestedProduct,
-} from "@/services/footerSuggestedProductsService";
+import { MapPin, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StorefrontFooterProps {
@@ -26,7 +16,6 @@ interface StorefrontFooterProps {
 const StorefrontFooter = ({
   storeName,
   storeSlug,
-  ownerId,
   governorate,
   whatsappNumber,
   returnPolicy,
@@ -34,22 +23,6 @@ const StorefrontFooter = ({
   fullWidth = false,
 }: StorefrontFooterProps) => {
   const home = storeSlug ? `/store/${storeSlug}` : '/preview';
-  const [suggestedProducts, setSuggestedProducts] = useState<FooterSuggestedProduct[]>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    void fetchFooterSuggestedForStorefront(storeSlug, ownerId).then((items) => {
-      if (!cancelled) setSuggestedProducts(items);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [storeSlug, ownerId]);
-
-  const productLink = (id: string) =>
-    storeSlug ? `/store/${storeSlug}/product/${id}` : `/product-details/${id}`;
 
   return (
     <footer className="mt-auto w-full border-t border-border/60 bg-card/50">
@@ -68,51 +41,6 @@ const StorefrontFooter = ({
             </p>
           )}
         </div>
-
-        {suggestedProducts.length > 0 && (
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-foreground text-right">منتجات مقترحة</h3>
-            <Carousel className="w-full" opts={{ align: "start", direction: "rtl" }}>
-              <CarouselContent className="-mr-2">
-                {suggestedProducts.map((product) => (
-                  <CarouselItem key={product.id} className="pr-2 basis-[42%] sm:basis-[32%]">
-                    <Link to={productLink(product.id)} className="block group">
-                      <div className="rounded-2xl border border-border/50 bg-card overflow-hidden transition-shadow hover:shadow-md">
-                        <div className="aspect-square bg-muted relative overflow-hidden">
-                          {product.image_url ? (
-                            <img
-                              src={product.image_url}
-                              alt={product.name}
-                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center">
-                              <Package className="w-8 h-8 text-muted-foreground/50" />
-                            </div>
-                          )}
-                        </div>
-                        <div className="p-2.5 space-y-1">
-                          <p className="text-xs font-semibold text-foreground line-clamp-2 text-right leading-snug">
-                            {product.name}
-                          </p>
-                          {product.short_description?.trim() && (
-                            <p className="text-[10px] text-muted-foreground line-clamp-2 text-right leading-snug">
-                              {product.short_description.trim()}
-                            </p>
-                          )}
-                          <p className="text-xs font-bold text-primary text-right tabular-nums">
-                            {product.price.toLocaleString()} د.ع
-                          </p>
-                        </div>
-                      </div>
-                    </Link>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-            </Carousel>
-          </div>
-        )}
 
         {(returnPolicy || privacyPolicy) && (
           <div className="grid gap-3 sm:grid-cols-2">

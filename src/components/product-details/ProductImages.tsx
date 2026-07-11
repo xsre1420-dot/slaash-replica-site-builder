@@ -1,19 +1,19 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { resolveMediaDeliveryUrl } from "@/utils/cdnMediaUtils";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
-import { Sparkles, Flame, Tag, ChevronLeft, ChevronRight } from "lucide-react";
+import { Sparkles, Flame, ChevronLeft, ChevronRight } from "lucide-react";
 import ProductImageLightbox from "@/components/storefront/ProductImageLightbox";
 import { cn } from "@/lib/utils";
 
 interface ProductImagesProps {
   images: string[];
   productName: string;
+  tags?: string[];
   isLarge?: boolean;
   isNew?: boolean;
   isLowStock?: boolean;
   stockQuantity?: number;
   isOutOfStock?: boolean;
-  discountPercent?: number;
   galleryKey?: string;
 }
 
@@ -74,12 +74,12 @@ const GallerySlideImage = ({
 const ProductImages = ({
   images,
   productName,
+  tags,
   isLarge = false,
   isNew,
   isLowStock,
   stockQuantity,
   isOutOfStock,
-  discountPercent,
   galleryKey = "default",
 }: ProductImagesProps) => {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -133,13 +133,10 @@ const ProductImages = ({
   const handlePrev = () => api?.scrollPrev();
   const handleNext = () => api?.scrollNext();
 
+  const keywordTags = tags?.map((t) => t.trim()).filter(Boolean) ?? [];
+
   const badges = (
     <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-20 pointer-events-none">
-      {discountPercent != null && discountPercent > 0 && (
-        <span className="bg-destructive text-destructive-foreground px-2 py-0.5 rounded-md text-[11px] font-bold flex items-center gap-1 shadow-sm">
-          <Tag className="w-3 h-3" /> -{discountPercent}%
-        </span>
-      )}
       {isNew && (
         <span className="bg-primary text-primary-foreground px-2 py-0.5 rounded-md text-[11px] font-bold flex items-center gap-1 shadow-sm">
           <Sparkles className="w-3 h-3" /> جديد
@@ -157,6 +154,20 @@ const ProductImages = ({
       )}
     </div>
   );
+
+  const keywordOverlay =
+    keywordTags.length > 0 ? (
+      <div className="absolute top-0 inset-x-0 z-20 pointer-events-none px-3 pt-3 pb-6 bg-gradient-to-b from-black/45 via-black/15 to-transparent flex flex-wrap gap-1.5 justify-end">
+        {keywordTags.map((tag) => (
+          <span
+            key={tag}
+            className="inline-flex items-center rounded-full bg-background/95 text-foreground text-[11px] font-semibold px-2.5 py-0.5 shadow-sm backdrop-blur-sm border border-white/20"
+          >
+            {tag}
+          </span>
+        ))}
+      </div>
+    ) : null;
 
   const aspectClass = isLarge
     ? "aspect-[4/3] sm:aspect-square lg:aspect-[4/5] w-full"
@@ -246,6 +257,7 @@ const ProductImages = ({
               </CarouselContent>
             </Carousel>
 
+            {keywordOverlay}
             {badges}
 
             {hasMultiple && (

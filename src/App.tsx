@@ -42,9 +42,10 @@ const PreviewStore = lazy(() => import("./pages/PreviewStore"));
 const Store = lazy(() => import("./pages/Store"));
 const ProductDetails = lazy(() => import("./pages/ProductDetails"));
 const Products = lazy(() => import("./pages/Products"));
+const ProductReviewsPage = lazy(() => import("./pages/ProductReviewsPage"));
+const ProductSuggestionsPage = lazy(() => import("./pages/ProductSuggestionsPage"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const Orders = lazy(() => import("./pages/Orders"));
-const OrderDetails = lazy(() => import("./pages/OrderDetails"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Statistics = lazy(() => import("./pages/Statistics"));
 const Marketing = lazy(() => import("./pages/Marketing"));
@@ -119,9 +120,11 @@ const App = () => (
                     <Route path="/statistics" element={withRouteBoundary(<ProtectedRoute><Statistics /></ProtectedRoute>)} />
                     <Route path="/add-product" element={withRouteBoundary(<ProtectedRoute><AddProduct /></ProtectedRoute>)} />
                     <Route path="/edit-product/:productId" element={withRouteBoundary(<ProtectedRoute><EditProduct /></ProtectedRoute>)} />
+                    <Route path="/products/reviews/:productId" element={withRouteBoundary(<ProtectedRoute><ProductReviewsPage /></ProtectedRoute>)} />
+                    <Route path="/products/suggestions/:productId" element={withRouteBoundary(<ProtectedRoute><ProductSuggestionsPage /></ProtectedRoute>)} />
                     <Route path="/products" element={withRouteBoundary(<ProtectedRoute><Products /></ProtectedRoute>)} />
                     <Route path="/orders" element={withRouteBoundary(<ProtectedRoute><Orders /></ProtectedRoute>)} />
-                    <Route path="/orders/:orderId" element={withRouteBoundary(<ProtectedRoute><OrderDetails /></ProtectedRoute>)} />
+                    <Route path="/orders/:orderId" element={<Navigate to="/orders" replace />} />
                     <Route path="/marketing" element={withRouteBoundary(<ProtectedRoute><Marketing /></ProtectedRoute>)} />
                     <Route path="/inventory" element={withRouteBoundary(<ProtectedRoute><Inventory /></ProtectedRoute>)} />
                     <Route path="/admin/login" element={<AdminLogin />} />

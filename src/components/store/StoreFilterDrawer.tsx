@@ -54,10 +54,8 @@ export default function StoreFilterDrawer({
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         {children || (
-          <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-            activeFilterCount > 0 ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-          }`}>
-            <SlidersHorizontal className="w-3 h-3" />
+          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors bg-primary/10 text-primary">
+            <SlidersHorizontal className="w-3.5 h-3.5" strokeWidth={2.25} />
             فلتر {activeFilterCount > 0 && `(${activeFilterCount})`}
           </button>
         )}

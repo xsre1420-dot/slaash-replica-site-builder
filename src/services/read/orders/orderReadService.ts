@@ -7,8 +7,10 @@ import { productsTable } from '@/repositories/products/productRepository';
 import { callReadRpc } from '@/lib/readWrite/readClient';
 import { Order } from '@/types';
 import { mapDbOrder } from '@/mappers/orderMapper';
+import { parseJsonField } from '@/mappers/productMapper';
+import type { ColorOption } from '@/types';
 import { mapOrderError } from '@/utils/orderErrors';
-import { computeOrderStats, normalizeOrderPhone, type OrderListFilters, type OrderWorkflowTab } from '@/utils/orderWorkflowUtils';
+import { computeOrderStats, normalizeOrderPhone, normalizeWorkflowTabCounts, type OrderListFilters, type OrderWorkflowTab } from '@/utils/orderWorkflowUtils';
 import { DEFAULT_ORDER_FILTERS } from '@/utils/orderWorkflowUtils';
 import { filtersToRpcParams, filtersToRpcParamsWithoutWorkflow, serializeOrderFilters } from '@/utils/orderQueryBuilder';
 import { cache, CacheKeys, CacheTTL, dedup } from '@/lib/cache';
@@ -24,11 +26,21 @@ import type { DashboardBatchPayload } from '@/services/dashboardStatsService';
 
 export const ORDERS_PER_PAGE = 50;
 
-export const ORDER_DETAIL_SELECT =
-  'id, status, total_amount, created_at, customer_name, customer_phone, customer_address, customer_governorate, notes, coupon_code, discount_amount, payment_method, payment_status, delivery_fee, delivery_status, order_items(id, product_id, product_name, product_price, quantity, subtotal, variant_metadata)';
-
 export const ORDER_LIST_SELECT =
-  'id, status, total_amount, created_at, customer_name, customer_phone, customer_address, customer_governorate, delivery_fee, delivery_status, payment_method, payment_status, coupon_code, discount_amount, order_items(id, product_id)';
+  'id, status, total_amount, created_at, customer_name, customer_phone, customer_address, customer_governorate, notes, delivery_fee, delivery_status, payment_method, payment_status, coupon_code, discount_amount, order_items(id, product_id, product_name, product_price, quantity, subtotal, variant_metadata)';
+
+const parseProductColors = (value: unknown): ColorOption[] | undefined => {
+  const parsed = parseJsonField<Array<Record<string, unknown>>>(value);
+  if (!parsed?.length) return undefined;
+  const colors = parsed
+    .map((entry) => ({
+      name: entry.name != null ? String(entry.name) : undefined,
+      value: String(entry.value ?? entry.hex ?? entry.name ?? '').trim(),
+      image: entry.image != null ? String(entry.image) : undefined,
+    }))
+    .filter((entry) => entry.value);
+  return colors.length ? colors : undefined;
+};
 
 const enrichOrdersWithProductImages = async (
   orders: Order[],
@@ -37,17 +49,19 @@ const enrichOrdersWithProductImages = async (
 ): Promise<Order[]> => {
   if (options?.skip || orders.length === 0) return orders;
 
-  const missingImage = orders.some((order) =>
-    order.items.some((item) => item.product.id && !item.product.image)
+  const needsEnrichment = orders.some((order) =>
+    order.items.some(
+      (item) =>
+        item.product.id &&
+        (!item.product.image || (item.selectedColor && !item.product.colors?.length))
+    )
   );
-  if (!missingImage) return orders;
+  if (!needsEnrichment) return orders;
 
   const productIds = [
     ...new Set(
       orders.flatMap((order) =>
-        order.items
-          .filter((item) => item.product.id && !item.product.image)
-          .map((item) => item.product.id)
+        order.items.filter((item) => item.product.id).map((item) => item.product.id)
       )
     ),
   ];
@@ -55,53 +69,38 @@ const enrichOrdersWithProductImages = async (
   if (productIds.length === 0) return orders;
 
   const { data, error } = await productsTable()
-    .select('id, image_url')
+    .select('id, image_url, colors')
     .eq('owner_id', ownerId)
     .in('id', productIds);
 
   if (error || !data?.length) return orders;
 
-  const imageByProductId = new Map(
-    data.map((row) => [String(row.id), String(row.image_url || '')])
+  const catalogByProductId = new Map(
+    data.map((row) => [
+      String(row.id),
+      {
+        image: String(row.image_url || ''),
+        colors: parseProductColors(row.colors),
+      },
+    ])
   );
 
   return orders.map((order) => ({
     ...order,
     items: order.items.map((item) => {
+      const catalog = catalogByProductId.get(item.product.id);
       const image =
-        item.product.image ||
-        imageByProductId.get(item.product.id) ||
-        '/placeholder.svg';
+        item.product.image || catalog?.image || '/placeholder.svg';
       return {
         ...item,
-        product: { ...item.product, image },
+        product: {
+          ...item.product,
+          image,
+          colors: item.product.colors?.length ? item.product.colors : catalog?.colors,
+        },
       };
     }),
   }));
-};
-
-export const fetchOrderById = async (
-  orderId: string,
-  ownerId: string
-): Promise<Order | null> => {
-  await assertMerchantOwner(ownerId);
-  return instrumentQuery(
-    'orders.fetchById',
-    async () => {
-      const { data, error } = await ordersTable()
-        .select(ORDER_DETAIL_SELECT)
-        .eq('id', orderId)
-        .eq('owner_id', ownerId)
-        .maybeSingle();
-      if (error) return { data: null, error };
-      if (!data) return { data: null, error: null };
-      const mapped = mapDbOrder(data as Record<string, unknown>);
-      const [enriched] = await enrichOrdersWithProductImages([mapped], ownerId);
-      return { data: enriched ?? null, error: null };
-
-    },
-    { orderId, ownerId }
-  );
 };
 
 export const fetchOrdersPage = async (
@@ -116,11 +115,26 @@ export const fetchOrdersPage = async (
 
 const DEFAULT_LIST_FILTERS: OrderListFilters = {
   search: '',
-  workflowTab: 'all',
+  workflowTab: 'new',
   orderStatus: 'all',
   paymentStatus: 'all',
   deliveryStatus: 'all',
   datePreset: 'all',
+};
+
+const RECENT_ORDERS_FILTERS: OrderListFilters = {
+  ...DEFAULT_LIST_FILTERS,
+  workflowTab: 'new',
+};
+
+const applyWorkflowTabFilter = (
+  query: ReturnType<typeof ordersTable>,
+  workflowTab: OrderWorkflowTab
+) => {
+  if (workflowTab === 'new') return query.eq('status', 'pending');
+  if (workflowTab === 'completed') return query.eq('status', 'completed');
+  if (workflowTab === 'cancelled') return query.eq('status', 'cancelled');
+  return query;
 };
 
 export type OrdersPageResult = {
@@ -204,14 +218,11 @@ const fetchOrdersFilteredFallback = async (
   pageSize: number,
   filterKey: string
 ): Promise<OrdersPageResult> => {
-  if (filters.workflowTab !== 'all') {
-    logger.warn('orders.fetchFiltered.fallback_unsupported', { workflowTab: filters.workflowTab });
-    return { orders: [], total: 0, page, pageSize, totalPages: 1 };
-  }
-
   let query = ordersTable()
     .select(ORDER_LIST_SELECT, { count: 'exact' })
     .eq('owner_id', ownerId);
+
+  query = applyWorkflowTabFilter(query, filters.workflowTab);
 
   if (filters.orderStatus !== 'all') query = query.eq('status', filters.orderStatus);
   if (filters.paymentStatus !== 'all') query = query.eq('payment_status', filters.paymentStatus);
@@ -263,14 +274,9 @@ const fetchOrdersFilteredFallback = async (
 };
 
 const EMPTY_WORKFLOW_COUNTS: WorkflowTabCounts = {
-  all: 0,
   new: 0,
-  processing: 0,
-  paid: 0,
-  shipped: 0,
-  delivered: 0,
+  completed: 0,
   cancelled: 0,
-  refunded: 0,
 };
 
 export const fetchWorkflowTabCounts = async (
@@ -278,12 +284,12 @@ export const fetchWorkflowTabCounts = async (
   filters: OrderListFilters
 ): Promise<WorkflowTabCounts> => {
   await assertMerchantOwner(ownerId);
-  const baseKey = serializeOrderFilters({ ...filters, workflowTab: 'all' });
+  const baseKey = serializeOrderFilters({ ...filters, workflowTab: 'new' });
   const cacheKey = CacheKeys.ordersWorkflowCounts(ownerId, baseKey);
   const cached = cache.get<WorkflowTabCounts>(cacheKey);
   if (cached) return cached;
 
-  const defaultKey = serializeOrderFilters({ ...DEFAULT_ORDER_FILTERS, workflowTab: 'all' });
+  const defaultKey = serializeOrderFilters({ ...DEFAULT_ORDER_FILTERS, workflowTab: 'new' });
   if (baseKey === defaultKey) {
     const batch = cache.get<DashboardBatchPayload>(CacheKeys.dashboardBatch(ownerId));
     if (batch?.workflowCounts) {
@@ -300,7 +306,7 @@ export const fetchWorkflowTabCounts = async (
   const { data, error } = await rpcCountMerchantOrdersByWorkflow(params);
 
   if (!error && data) {
-    const counts = data as WorkflowTabCounts;
+    const counts = normalizeWorkflowTabCounts(data as Record<string, number>);
     cache.set(cacheKey, counts, CacheTTL.SHORT, CacheTTL.STALE);
     return counts;
   }
@@ -341,7 +347,7 @@ export const fetchWorkflowTabCounts = async (
   }
 
   const allMapped = fallbackRows.map((row) => mapDbOrder(row as Record<string, unknown>));
-  const baseFiltered = filterOrdersList(allMapped, { ...filters, workflowTab: 'all' });
+  const baseFiltered = filterOrdersList(allMapped, filters, { skipWorkflow: true });
   const counts = countOrdersByWorkflowTab(baseFiltered);
   cache.set(cacheKey, counts, CacheTTL.SHORT, CacheTTL.STALE);
   return counts;
@@ -351,18 +357,19 @@ export const fetchRecentOrders = async (ownerId: string, limit = 5): Promise<Ord
   await assertMerchantOwner(ownerId);
   const cacheKey = CacheKeys.ordersRecent(ownerId);
   const cached = cache.get<Order[]>(cacheKey);
-  if (cached) return cached;
+  if (cached) return cached.filter((order) => order.status === 'pending');
 
   const { data, error } = await rpcListMerchantOrders({
     p_owner_id: ownerId,
-    ...filtersToRpcParams(DEFAULT_ORDER_FILTERS, 0, limit),
+    ...filtersToRpcParams(RECENT_ORDERS_FILTERS, 0, limit),
   });
 
   if (!error && data?.orders) {
     const mapped = (data.orders as unknown[]).map((row) =>
       mapDbOrder(row as Record<string, unknown>)
     );
-    const enriched = await enrichOrdersWithProductImages(mapped, ownerId, { skip: true });
+    const newOrders = mapped.filter((order) => order.status === 'pending');
+    const enriched = await enrichOrdersWithProductImages(newOrders, ownerId, { skip: true });
     cache.set(cacheKey, enriched, CacheTTL.MEDIUM, CacheTTL.STALE);
     return enriched;
   }
@@ -370,6 +377,7 @@ export const fetchRecentOrders = async (ownerId: string, limit = 5): Promise<Ord
   const { data: rows, error: queryError } = await ordersTable()
     .select(ORDER_LIST_SELECT)
     .eq('owner_id', ownerId)
+    .eq('status', 'pending')
     .order('created_at', { ascending: false })
     .limit(limit);
 

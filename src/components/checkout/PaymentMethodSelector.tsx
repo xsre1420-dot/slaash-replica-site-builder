@@ -23,7 +23,7 @@ const PaymentMethodSelector = ({ methods, selected, onSelect }: PaymentMethodSel
   }
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       {methods.map((method) => {
         const Icon = ICONS[method.id];
         const isSelected = selected === method.id;
@@ -35,25 +35,25 @@ const PaymentMethodSelector = ({ methods, selected, onSelect }: PaymentMethodSel
             type="button"
             disabled={disabled}
             onClick={() => method.available && onSelect(method.id)}
-            className={`w-full flex items-center justify-between p-2.5 rounded-lg border transition-all text-right ${
+            className={`w-full flex items-center justify-between p-3.5 rounded-xl transition-all text-right ${
               isSelected
-                ? 'border-primary bg-primary/5'
-                : 'border-border/50 bg-card hover:border-primary/30'
+                ? 'bg-primary/5 ring-1 ring-primary/25'
+                : 'bg-[#F9FAFB] hover:bg-gray-100'
             } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
           >
             <div className="flex items-center gap-2">
-              {isSelected && <Check className="w-4 h-4 text-primary" />}
+              {isSelected && <Check className="w-4 h-4 text-primary" strokeWidth={2.5} />}
               {disabled && (
                 <span className="text-[10px] text-muted-foreground">قريباً</span>
               )}
             </div>
             <div className="flex items-center gap-3">
               <div>
-                <p className="text-sm font-semibold text-foreground">{method.label}</p>
-                <p className="text-xs text-muted-foreground">{method.description}</p>
+                <p className="text-sm font-bold text-foreground">{method.label}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{method.description}</p>
               </div>
-              <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                <Icon className="w-3.5 h-3.5 text-foreground" />
+              <div className="w-9 h-9 rounded-xl bg-primary/12 flex items-center justify-center shrink-0">
+                <Icon className="w-4 h-4 text-primary" strokeWidth={2.25} />
               </div>
             </div>
           </button>

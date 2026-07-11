@@ -56,6 +56,9 @@ export interface CartItem {
   quantity: number;
   selectedSize?: string;
   selectedColor?: string;
+  /** Snapshot at checkout — optional, from variant_metadata */
+  selectedColorName?: string;
+  selectedColorImage?: string;
 }
 
 export type { StoreSettings, StoreProfile } from './store';

@@ -1,10 +1,8 @@
-import { useState, useEffect, useMemo, useCallback, lazy, Suspense, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import {
   MessageSquare,
-  Lightbulb,
   Plus,
-  ArrowRight,
   Package,
   XCircle,
   FileEdit,
@@ -16,15 +14,13 @@ import {
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
-import { ProductsList } from '@/components/ProductsList';
 import StatCard from '@/components/ui/StatCard';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ProductsWorkflowTabs from '@/components/products/ProductsWorkflowTabs';
-import ProductsToolbar, { type ProductViewMode } from '@/components/products/ProductsToolbar';
+import ProductsToolbar from '@/components/products/ProductsToolbar';
 import ProductsBulkBar from '@/components/products/ProductsBulkBar';
 import ProductsDataTable from '@/components/products/ProductsDataTable';
 import { BulkUpload } from '@/components/product-management/BulkUpload';
-import { QuickEditDialog } from '@/components/product-management/QuickEditDialog';
+import InventoryStockDialog from '@/components/inventory/InventoryStockDialog';
 import { Product } from '@/types';
 import { toast } from 'sonner';
 import {
@@ -32,7 +28,15 @@ import {
   publishProduct,
   setProductLifecycle,
   addProduct,
+  patchMerchantStockInCache,
+  updateProduct,
+  fetchProductById,
 } from '@/services/productService';
+import { restockProduct } from '@/services/write/inventory/inventoryWriteService';
+import { InventoryRestockError } from '@/services/read/inventory/inventoryReadService';
+import { productToInventoryRow, type InventoryProductRow } from '@/utils/inventoryPageUtils';
+import { variantStockSum } from '@/utils/inventoryUtils';
+import type { ProductVariant } from '@/types';
 import { useMerchantProductsPage } from '@/hooks/useMerchantProductsPage';
 import { useProgressiveRender } from '@/hooks/useProgressiveRender';
 import { getFirstPendingReviewTarget, countPendingReviewsForOwner } from '@/services/reviewService';
@@ -41,7 +45,6 @@ import type { ProductSaveMode } from '@/lib/productFormLabels';
 import { useAuth } from '@/context/AuthContext';
 import { useRealtimeProducts } from '@/hooks/useRealtimeProducts';
 import { useScrollPersistence, saveFilters, loadFilters } from '@/hooks/useScrollPersistence';
-import { useStoreHydration } from '@/context/StoreBootstrapContext';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import AttentionStrip from '@/components/ui/AttentionStrip';
 import { ATTENTION_PARAM } from '@/lib/attentionHighlight';
@@ -62,36 +65,20 @@ import {
 import { runWithConcurrency } from '@/utils/runWithConcurrency';
 import { generateUUID } from '@/lib/uuid';
 
-const ProductReviewsManager = lazy(() => import('@/components/product-management/ProductReviewsManager'));
-const SuggestedProductsManager = lazy(() => import('@/components/product-management/SuggestedProductsManager'));
-const FooterSuggestedProductsManager = lazy(
-  () => import('@/components/product-management/FooterSuggestedProductsManager')
-);
-
-const VIEW_MODE_KEY = 'products_view_mode';
-
 const Products = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { isReady, hydrationVersion } = useStoreHydration();
   const { user } = useAuth();
-  const [selectedProduct, setSelectedProduct] = useState<{ id: string; name: string } | null>(null);
   const [catalogFilters, setCatalogFilters] = useState<ProductCatalogFilters>(DEFAULT_PRODUCT_CATALOG_FILTERS);
   const debouncedSearch = useDebouncedValue(catalogFilters.search, 350);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [pendingReviewsCount, setPendingReviewsCount] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkProcessing, setBulkProcessing] = useState(false);
-  const [viewMode, setViewMode] = useState<ProductViewMode>(() => {
-    try {
-      return (localStorage.getItem(VIEW_MODE_KEY) as ProductViewMode) || 'grid';
-    } catch {
-      return 'grid';
-    }
-  });
-  const [quickEditProduct, setQuickEditProduct] = useState<Product | null>(null);
-  const [quickEditOpen, setQuickEditOpen] = useState(false);
+  const [stockDialogOpen, setStockDialogOpen] = useState(false);
+  const [stockDialogProduct, setStockDialogProduct] = useState<InventoryProductRow | null>(null);
+  const [stockSaving, setStockSaving] = useState(false);
   const attentionApplied = useRef(false);
 
   useScrollPersistence('products');
@@ -101,7 +88,9 @@ const Products = () => {
     [catalogFilters, debouncedSearch]
   );
 
-  const catalog = useMerchantProductsPage(debouncedSearch, catalogFilters.category, { profile: 'grid' });
+  const catalog = useMerchantProductsPage(debouncedSearch, catalogFilters.category, {
+    profile: 'inventory',
+  });
 
   const syncFromCacheRef = useRef(catalog.syncFromCache);
   syncFromCacheRef.current = catalog.syncFromCache;
@@ -119,10 +108,13 @@ const Products = () => {
   const productNameParam = searchParams.get('productName');
 
   useEffect(() => {
-    if (productIdParam && productNameParam) {
-      setSelectedProduct({ id: productIdParam, name: decodeURIComponent(productNameParam) });
-    }
-  }, [productIdParam, productNameParam]);
+    if (!productIdParam) return;
+    const name = productNameParam ? decodeURIComponent(productNameParam) : 'المنتج';
+    navigate(`/products/reviews/${productIdParam}`, {
+      replace: true,
+      state: { productName: name },
+    });
+  }, [productIdParam, productNameParam, navigate]);
 
   useEffect(() => {
     const attention = searchParams.get(ATTENTION_PARAM);
@@ -138,15 +130,12 @@ const Products = () => {
       attentionApplied.current = true;
       void getFirstPendingReviewTarget(user.id).then((target) => {
         if (!target) return;
-        setSelectedProduct({ id: target.productId, name: target.productName });
-        setSearchParams({
-          productId: target.productId,
-          productName: encodeURIComponent(target.productName),
-          [ATTENTION_PARAM]: 'pending-reviews',
+        navigate(`/products/reviews/${target.productId}`, {
+          state: { productName: target.productName },
         });
       });
     }
-  }, [searchParams, user?.id, setSearchParams]);
+  }, [searchParams, user?.id, navigate]);
 
   useEffect(() => {
     getCategories().then((cats) => setCategories(cats));
@@ -197,24 +186,6 @@ const Products = () => {
       sort: catalogFilters.sort,
     });
   }, [catalogFilters]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(VIEW_MODE_KEY, viewMode);
-    } catch {
-      /* ignore */
-    }
-  }, [viewMode]);
-
-  const handleProductSelect = (product: { id: string; name: string }) => {
-    setSelectedProduct(product);
-    setSearchParams({ productId: product.id, productName: encodeURIComponent(product.name) });
-  };
-
-  const handleBackToList = () => {
-    setSelectedProduct(null);
-    setSearchParams({});
-  };
 
   const stats = useMemo(
     () => computeProductCatalogStats(loadedProducts),
@@ -380,6 +351,89 @@ const Products = () => {
     toast.success(`تم تصدير ${products.length} منتج`);
   };
 
+  const inventoryRowsById = useMemo(() => {
+    const map = new Map<string, InventoryProductRow>();
+    for (const product of loadedProducts) {
+      map.set(product.id, productToInventoryRow(product));
+    }
+    return map;
+  }, [loadedProducts]);
+
+  const openStockDialog = useCallback(async (product: Product) => {
+    const fresh = await fetchProductById(product.id);
+    setStockDialogProduct(
+      fresh ? productToInventoryRow(fresh) : inventoryRowsById.get(product.id) ?? productToInventoryRow(product)
+    );
+    setStockDialogOpen(true);
+  }, [inventoryRowsById]);
+
+  const handleStockRestock = useCallback(
+    async (productId: string, addAmount: number, minLevel: number) => {
+      if (!user?.id) return;
+
+      const current = inventoryRowsById.get(productId);
+      if (!current) {
+        toast.error('المنتج غير موجود');
+        return;
+      }
+
+      setStockSaving(true);
+      try {
+        const { added, newQuantity } = await restockProduct({
+          product: current,
+          ownerId: user.id,
+          addAmount,
+          minLevel,
+        });
+
+        toast.success(
+          added > 0 ? `تمت إضافة ${added} وحدة للمخزون` : 'تم تحديث الحد الأدنى للتنبيه'
+        );
+        patchMerchantStockInCache(user.id, productId, newQuantity);
+        catalog.syncFromCache();
+        setStockDialogOpen(false);
+        setStockDialogProduct(null);
+      } catch (error) {
+        console.error('Error restocking:', error);
+        toast.error(
+          error instanceof InventoryRestockError ? error.message : 'خطأ في تحديث المخزون'
+        );
+      } finally {
+        setStockSaving(false);
+      }
+    },
+    [user?.id, inventoryRowsById, catalog]
+  );
+
+  const handleSaveVariantStock = useCallback(
+    async (productId: string, variants: ProductVariant[], minLevel: number) => {
+      setStockSaving(true);
+      try {
+        const result = await updateProduct(productId, {
+          variants,
+          stockQuantity: variantStockSum(variants),
+          lowStockThreshold: minLevel,
+        });
+
+        if (!result.success) {
+          toast.error(result.error || 'فشل تحديث مخزون التركيبات');
+          return;
+        }
+
+        toast.success('تم تحديث مخزون كل تركيبة');
+        await reloadCatalog();
+        setStockDialogOpen(false);
+        setStockDialogProduct(null);
+      } catch (error) {
+        console.error('Error saving variant stock:', error);
+        toast.error('خطأ في تحديث مخزون التركيبات');
+      } finally {
+        setStockSaving(false);
+      }
+    },
+    [reloadCatalog]
+  );
+
   const headerActions = (
     <div className="flex items-center gap-2 flex-wrap justify-end">
       <BulkUpload onComplete={() => void reloadCatalog()} />
@@ -412,67 +466,13 @@ const Products = () => {
     <DashboardLayout>
       <PageHeader
         title="إدارة المنتجات"
-        description="أضف وعدّل وتابع منتجات متجرك"
+        description="أضف وعدّل منتجات متجرك وتابع المخزون من مكان واحد"
         hideBack
         breadcrumbs={[{ label: 'لوحة التحكم', href: '/builder' }, { label: 'المنتجات' }]}
         actions={headerActions}
       />
 
       <div className="ds-page max-w-6xl min-w-0">
-        {selectedProduct ? (
-          <div className="ds-card p-4 sm:p-8 space-y-6">
-            <div className="flex justify-end items-center" dir="rtl">
-              <Button
-                variant="outline"
-                onClick={handleBackToList}
-                className="flex items-center gap-2 rounded-xl border-border/60 hover:bg-primary/5 hover:text-primary hover:border-primary/30"
-              >
-                <ArrowRight className="w-4 h-4" />
-                العودة
-              </Button>
-            </div>
-
-            <AttentionStrip
-              attentionKey="pending-reviews"
-              visible={pendingReviewsCount > 0}
-              icon={MessageSquare}
-              message={`${pendingReviewsCount} ${
-                pendingReviewsCount === 1 ? 'تقييم' : 'تقييمات'
-              } بانتظار المعالجة — اختر منتجاً لمراجعة التعليقات`}
-            />
-
-            <Tabs defaultValue="reviews" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="reviews" className="flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4" />
-                  إدارة التعليقات
-                </TabsTrigger>
-                <TabsTrigger value="suggestions" className="flex items-center gap-2">
-                  <Lightbulb className="w-4 h-4" />
-                  المنتجات المقترحة
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="reviews" className="mt-6">
-                <Suspense fallback={<div className="py-8 text-center text-muted-foreground">جاري التحميل...</div>}>
-                  <ProductReviewsManager
-                    productId={selectedProduct.id}
-                    productName={selectedProduct.name}
-                  />
-                </Suspense>
-              </TabsContent>
-
-              <TabsContent value="suggestions" className="mt-6">
-                <Suspense fallback={<div className="py-8 text-center text-muted-foreground">جاري التحميل...</div>}>
-                  <SuggestedProductsManager
-                    productId={selectedProduct.id}
-                    productName={selectedProduct.name}
-                  />
-                </Suspense>
-              </TabsContent>
-            </Tabs>
-          </div>
-        ) : (
           <div className="space-y-5 sm:space-y-6 min-w-0 pb-24 sm:pb-6">
             {/* Primary stats — lifecycle */}
             <section className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 min-w-0">
@@ -510,7 +510,16 @@ const Products = () => {
             </section>
 
             {/* Secondary stats — inventory */}
-            <section className="grid grid-cols-3 gap-2 sm:gap-3 min-w-0">
+            <section className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 min-w-0">
+              <StatCard
+                label="متوفر"
+                value={stats.inStock}
+                icon={Package}
+                iconClassName="bg-emerald-500/10 ring-emerald-500/15 [&_svg]:text-emerald-600"
+                className="p-3 sm:p-5"
+                onClick={() => updateFilters({ stock: 'in_stock', lifecycle: 'all' })}
+                active={catalogFilters.stock === 'in_stock'}
+              />
               <StatCard
                 label="مخزون منخفض"
                 value={stats.lowStock}
@@ -535,13 +544,8 @@ const Products = () => {
                 icon={Wallet}
                 iconClassName="bg-violet-500/10 ring-violet-500/15 [&_svg]:text-violet-600"
                 className="p-3 sm:p-5"
-                onClick={() => navigate('/inventory')}
               />
             </section>
-
-            <Suspense fallback={null}>
-              <FooterSuggestedProductsManager />
-            </Suspense>
 
             {stats.drafts > 0 && (
               <AttentionStrip
@@ -578,8 +582,6 @@ const Products = () => {
                 filters={catalogFilters}
                 onChange={updateFilters}
                 categories={categoryNames}
-                viewMode={viewMode}
-                onViewModeChange={setViewMode}
                 resultCount={visibleProducts.length}
                 totalCount={loadedProducts.length}
                 embedded
@@ -600,10 +602,12 @@ const Products = () => {
             )}
 
             {catalogLoading && loadedProducts.length === 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} className="h-64 rounded-2xl bg-muted animate-pulse" />
-                ))}
+              <div className="rounded-2xl border border-border/60 overflow-hidden bg-card">
+                <div className="space-y-0">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="h-16 border-b border-border/30 bg-muted/30 animate-pulse" />
+                  ))}
+                </div>
               </div>
             ) : visibleProducts.length === 0 && !filtersActive ? (
               <EmptyState
@@ -615,55 +619,20 @@ const Products = () => {
               />
             ) : (
               <div className="space-y-3 min-w-0">
-                {viewMode === 'table' && (
-                  <ProductsDataTable
-                    products={pagedVisibleProducts}
-                    selectedIds={selectedIds}
-                    onToggleSelect={toggleSelect}
-                    onToggleSelectAll={toggleSelectAll}
-                    allSelected={
-                      selectedIds.size === visibleProducts.length && visibleProducts.length > 0
-                    }
-                    onQuickEdit={(p) => {
-                      setQuickEditProduct(p);
-                      setQuickEditOpen(true);
-                    }}
-                    onDuplicate={handleDuplicate}
-                    onPublish={handlePublish}
-                    onArchive={handleArchive}
-                    onRestore={handleRestore}
-                    onProductSelect={handleProductSelect}
-                  />
-                )}
-
-                {(viewMode === 'grid' || visibleProducts.length > 0) && (
-                  <div className={viewMode === 'table' ? 'sm:hidden' : ''}>
-                    <div className="ds-card p-4 sm:p-6">
-                      <ProductsList
-                        onProductSelect={handleProductSelect}
-                        products={loadedProducts}
-                        filteredProducts={pagedVisibleProducts}
-                        filtersActive
-                        onProductsChange={() => void reloadCatalog()}
-                        onClearFilters={clearFilters}
-                        isLoading={!isReady || catalogLoading}
-                        reloadToken={hydrationVersion}
-                        selectedIds={selectedIds}
-                        onToggleSelect={toggleSelect}
-                        onToggleSelectAll={toggleSelectAll}
-                        selectionEnabled
-                        onQuickEdit={(p) => {
-                          setQuickEditProduct(p);
-                          setQuickEditOpen(true);
-                        }}
-                        onPublish={handlePublish}
-                        onArchive={handleArchive}
-                        onRestore={handleRestore}
-                        onDuplicate={handleDuplicate}
-                      />
-                    </div>
-                  </div>
-                )}
+                <ProductsDataTable
+                  products={pagedVisibleProducts}
+                  selectedIds={selectedIds}
+                  onToggleSelect={toggleSelect}
+                  onToggleSelectAll={toggleSelectAll}
+                  allSelected={
+                    selectedIds.size === visibleProducts.length && visibleProducts.length > 0
+                  }
+                  onDuplicate={handleDuplicate}
+                  onPublish={handlePublish}
+                  onArchive={handleArchive}
+                  onRestore={handleRestore}
+                  onRestock={openStockDialog}
+                />
 
                 <ProductsBulkBar
                   selectedCount={selectedIds.size}
@@ -700,14 +669,18 @@ const Products = () => {
               </div>
             )}
           </div>
-        )}
       </div>
 
-      <QuickEditDialog
-        product={quickEditProduct}
-        open={quickEditOpen}
-        onOpenChange={setQuickEditOpen}
-        onSaved={() => void reloadCatalog()}
+      <InventoryStockDialog
+        open={stockDialogOpen}
+        product={stockDialogProduct}
+        saving={stockSaving}
+        onOpenChange={(open) => {
+          setStockDialogOpen(open);
+          if (!open) setStockDialogProduct(null);
+        }}
+        onRestock={handleStockRestock}
+        onSaveVariants={handleSaveVariantStock}
       />
     </DashboardLayout>
   );

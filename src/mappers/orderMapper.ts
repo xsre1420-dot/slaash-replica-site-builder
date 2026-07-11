@@ -21,6 +21,8 @@ export const mapDbOrder = (row: Record<string, unknown>): Order => {
           quantity: Number(item.quantity) || 1,
           selectedSize: (variantMeta.selected_size as string) || (item.selectedSize as string),
           selectedColor: (variantMeta.selected_color as string) || (item.selectedColor as string),
+          selectedColorName: (variantMeta.color_name as string) || undefined,
+          selectedColorImage: (variantMeta.color_image as string) || undefined,
         };
       })
     : [];

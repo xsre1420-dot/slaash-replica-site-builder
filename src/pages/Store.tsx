@@ -13,11 +13,8 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import StoreProductGrid from "@/components/store/StoreProductGrid";
 import { StoreCartHeaderButton, StoreFixedCheckoutBar } from "@/components/store/StoreCartChrome";
-import FavoritesDrawer from "@/components/store/FavoritesDrawer";
-import StoreFilterDrawer from "@/components/store/StoreFilterDrawer";
 import StoreThemeProvider from "@/components/StoreThemeProvider";
 import StoreCategoryChip from "@/components/store/StoreCategoryChip";
-import { useFavorites } from "@/hooks/useFavorites";
 import { useToast } from "@/hooks/use-toast";
 import { useStoreDisplay } from "@/hooks/useStoreDisplay";
 import { STORE_PRODUCTS_PAGE_SIZE } from "@/constants/pagination";
@@ -84,7 +81,6 @@ const Store = () => {
 
   const { addToCart, setStoreOwner } = useCartActions();
   const { trackAddToCart } = useMetaPixel();
-  const { favorites, toggleFavorite, isFavorite, count: favCount } = useFavorites(storeSlug);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -297,9 +293,6 @@ const Store = () => {
   const cycleSortBy = () => setSortBy(prev => prev === "default" ? "price-asc" : prev === "price-asc" ? "price-desc" : "default");
   const sortLabel = sortBy === "price-asc" ? "الأقل سعراً" : sortBy === "price-desc" ? "الأعلى سعراً" : "ترتيب";
 
-  // Favorite products
-  const favoriteProducts = useMemo(() => allProducts.filter(p => favorites.includes(p.id)), [allProducts, favorites]);
-
   // Active filter count
   const activeFilterCount = (filterPriceRange[0] > 0 || (filterPriceRange[1] > 0 && filterPriceRange[1] < maxPrice) ? 1 : 0) + (filterSizes.length > 0 ? 1 : 0);
 
@@ -356,13 +349,6 @@ const Store = () => {
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center gap-1">
               <StoreCartHeaderButton storeSlug={isTenantMode ? storeSlug : undefined} />
-              <FavoritesDrawer
-                favorites={favoriteProducts}
-                count={favCount}
-                onAddToCart={handleAddToCart}
-                onRemoveFavorite={toggleFavorite}
-                onViewProduct={handleViewProduct}
-              />
             </div>
             <div className="text-center flex-1 flex items-center justify-center gap-2.5 min-w-0">
               {storeLogo && (
@@ -393,7 +379,7 @@ const Store = () => {
               onClick={toggleVoiceSearch}
               type="button"
               aria-label={isListening ? "إيقاف البحث الصوتي" : "البحث الصوتي"}
-              className={`absolute left-1 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full transition-colors ${isListening ? 'text-destructive animate-pulse bg-destructive/10' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+              className={`absolute left-1 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full transition-colors ${isListening ? 'text-destructive animate-pulse bg-destructive/10' : 'text-foreground hover:text-primary hover:bg-primary/10'}`}
             >
               {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             </button>
@@ -516,8 +502,6 @@ const Store = () => {
           totalCount={displayProducts.length}
           isTenantMode={isTenantMode}
           storeSlug={storeSlug}
-          isFavorite={isFavorite}
-          onToggleFavorite={toggleFavorite}
           onAddToCart={handleAddToCart}
           onShare={handleShare}
           sentinelRef={sentinelRef}

@@ -3,15 +3,7 @@ import { getDeliveryStatusLabel, DeliveryStatus } from '@/utils/deliveryUtils';
 import { getPaymentStatusLabel, PaymentStatus } from '@/utils/paymentUtils';
 import { isToday, isYesterday, isThisWeek, isThisMonth } from 'date-fns';
 
-export type OrderWorkflowTab =
-  | 'all'
-  | 'new'
-  | 'processing'
-  | 'paid'
-  | 'shipped'
-  | 'delivered'
-  | 'cancelled'
-  | 'refunded';
+export type OrderWorkflowTab = 'new' | 'completed' | 'cancelled';
 
 export type OrderDatePreset = 'all' | 'today' | 'yesterday' | 'week' | 'month';
 
@@ -28,7 +20,7 @@ export interface OrderListFilters {
 
 export const DEFAULT_ORDER_FILTERS: OrderListFilters = {
   search: '',
-  workflowTab: 'all',
+  workflowTab: 'new',
   orderStatus: 'all',
   paymentStatus: 'all',
   deliveryStatus: 'all',
@@ -36,15 +28,33 @@ export const DEFAULT_ORDER_FILTERS: OrderListFilters = {
 };
 
 export const WORKFLOW_TABS: { id: OrderWorkflowTab; label: string }[] = [
-  { id: 'all', label: 'الكل' },
-  { id: 'new', label: 'جديدة' },
-  { id: 'processing', label: 'قيد المعالجة' },
-  { id: 'paid', label: 'مدفوعة' },
-  { id: 'shipped', label: 'مشحونة' },
-  { id: 'delivered', label: 'مُسلّمة' },
-  { id: 'cancelled', label: 'ملغاة' },
-  { id: 'refunded', label: 'مستردة' },
+  { id: 'new', label: 'جديد' },
+  { id: 'completed', label: 'مكتمل' },
+  { id: 'cancelled', label: 'ملغي' },
 ];
+
+/** Maps legacy RPC workflow keys to the simplified 3-tab model. */
+export const normalizeWorkflowTabCounts = (
+  raw: Partial<Record<string, number>> | null | undefined
+): Record<OrderWorkflowTab, number> => {
+  if (!raw) {
+    return { new: 0, completed: 0, cancelled: 0 };
+  }
+
+  if ('completed' in raw && !('delivered' in raw) && !('processing' in raw)) {
+    return {
+      new: raw.new ?? 0,
+      completed: raw.completed ?? 0,
+      cancelled: raw.cancelled ?? 0,
+    };
+  }
+
+  return {
+    new: (raw.new ?? 0) + (raw.processing ?? 0) + (raw.paid ?? 0) + (raw.shipped ?? 0),
+    completed: raw.completed ?? raw.delivered ?? 0,
+    cancelled: (raw.cancelled ?? 0) + (raw.refunded ?? 0),
+  };
+};
 
 export const formatOrderNumber = (orderId: string): string =>
   `#${orderId.replace(/-/g, '').slice(0, 8).toUpperCase()}`;
@@ -59,27 +69,20 @@ export const getEffectiveDeliveryStatus = (order: Order): string =>
   order.deliveryStatus || 'pending';
 
 export const getOrderWorkflowCategory = (order: Order): OrderWorkflowTab => {
-  const paymentStatus = getEffectivePaymentStatus(order);
-  const deliveryStatus = getEffectiveDeliveryStatus(order);
-
   if (order.status === 'cancelled') return 'cancelled';
+
+  const paymentStatus = getEffectivePaymentStatus(order);
   if (paymentStatus === 'refunded' || paymentStatus === 'partially_refunded') {
-    return 'refunded';
+    return 'cancelled';
   }
-  if (deliveryStatus === 'delivered' || order.status === 'completed') return 'delivered';
-  if (deliveryStatus === 'shipped' || deliveryStatus === 'out_for_delivery') {
-    return 'shipped';
-  }
-  if (paymentStatus === 'paid' || paymentStatus === 'collected') return 'paid';
-  if (deliveryStatus === 'preparing') return 'processing';
-  if (order.status === 'pending') return 'new';
+
+  if (order.status === 'completed') return 'completed';
+
   return 'new';
 };
 
-export const matchesWorkflowTab = (order: Order, tab: OrderWorkflowTab): boolean => {
-  if (tab === 'all') return true;
-  return getOrderWorkflowCategory(order) === tab;
-};
+export const matchesWorkflowTab = (order: Order, tab: OrderWorkflowTab): boolean =>
+  getOrderWorkflowCategory(order) === tab;
 
 const matchesDatePreset = (orderDate: string, preset: OrderDatePreset): boolean => {
   if (preset === 'all') return true;
@@ -98,7 +101,11 @@ const matchesDatePreset = (orderDate: string, preset: OrderDatePreset): boolean 
   }
 };
 
-export const filterOrdersList = (orders: Order[], filters: OrderListFilters): Order[] => {
+export const filterOrdersList = (
+  orders: Order[],
+  filters: OrderListFilters,
+  options?: { skipWorkflow?: boolean }
+): Order[] => {
   const q = filters.search.trim().toLowerCase();
   const qDigits = normalizeOrderPhone(filters.search);
 
@@ -113,7 +120,7 @@ export const filterOrdersList = (orders: Order[], filters: OrderListFilters): Or
       if (!matchesSearch) return false;
     }
 
-    if (!matchesWorkflowTab(order, filters.workflowTab)) return false;
+    if (!options?.skipWorkflow && !matchesWorkflowTab(order, filters.workflowTab)) return false;
 
     if (filters.orderStatus !== 'all' && order.status !== filters.orderStatus) return false;
 
@@ -142,14 +149,9 @@ export const filterOrdersList = (orders: Order[], filters: OrderListFilters): Or
 
 export const countOrdersByWorkflowTab = (orders: Order[]): Record<OrderWorkflowTab, number> => {
   const counts: Record<OrderWorkflowTab, number> = {
-    all: orders.length,
     new: 0,
-    processing: 0,
-    paid: 0,
-    shipped: 0,
-    delivered: 0,
+    completed: 0,
     cancelled: 0,
-    refunded: 0,
   };
 
   orders.forEach((order) => {
@@ -163,7 +165,7 @@ export const countOrdersByWorkflowTab = (orders: Order[]): Record<OrderWorkflowT
 export const getOrderStatusLabel = (status: Order['status']): string => {
   switch (status) {
     case 'pending':
-      return 'قيد الانتظار';
+      return 'جديد';
     case 'completed':
       return 'مكتمل';
     case 'cancelled':
@@ -176,13 +178,7 @@ export const getOrderStatusLabel = (status: Order['status']): string => {
 export const getWorkflowTabLabel = (tab: OrderWorkflowTab): string =>
   WORKFLOW_TABS.find((t) => t.id === tab)?.label ?? tab;
 
-export type SimplifiedOrderStatusKey =
-  | 'new'
-  | 'processing'
-  | 'shipping'
-  | 'completed'
-  | 'cancelled'
-  | 'refunded';
+export type SimplifiedOrderStatusKey = OrderWorkflowTab;
 
 /** Single merchant-facing status for list cards (one badge instead of order/payment/delivery). */
 export const getSimplifiedOrderDisplayStatus = (
@@ -192,21 +188,13 @@ export const getSimplifiedOrderDisplayStatus = (
 
   switch (workflow) {
     case 'new':
-      return { label: 'طلب جديد', key: 'new' };
-    case 'processing':
-      return { label: 'قيد المعالجة', key: 'processing' };
-    case 'paid':
-      return { label: 'قيد التجهيز', key: 'processing' };
-    case 'shipped':
-      return { label: 'جاري التوصيل', key: 'shipping' };
-    case 'delivered':
+      return { label: 'جديد', key: 'new' };
+    case 'completed':
       return { label: 'مكتمل', key: 'completed' };
     case 'cancelled':
       return { label: 'ملغي', key: 'cancelled' };
-    case 'refunded':
-      return { label: 'مسترد', key: 'refunded' };
     default:
-      return { label: 'طلب جديد', key: 'new' };
+      return { label: 'جديد', key: 'new' };
   }
 };
 
@@ -267,10 +255,7 @@ export const buildOrderTimelineEvents = (
 
 export const computeOrderStats = (orders: Order[]) => {
   const workflowCounts = countOrdersByWorkflowTab(orders);
-  const completedOrders = orders.filter((o) => {
-    const payment = getEffectivePaymentStatus(o);
-    return o.status === 'completed' && payment !== 'refunded';
-  });
+  const completedOrders = orders.filter((o) => getOrderWorkflowCategory(o) === 'completed');
 
   const revenue = completedOrders.reduce((sum, o) => sum + o.total, 0);
 
@@ -280,7 +265,7 @@ export const computeOrderStats = (orders: Order[]) => {
       .reduce((sum, o) => sum + o.total, 0);
 
   const pendingRevenue = orders
-    .filter((o) => o.status === 'pending')
+    .filter((o) => getOrderWorkflowCategory(o) === 'new')
     .reduce((sum, o) => sum + o.total, 0);
 
   const todayOrders = orders.filter((o) => isToday(new Date(o.date))).length;
@@ -290,8 +275,8 @@ export const computeOrderStats = (orders: Order[]) => {
   return {
     total: orders.length,
     newOrders: workflowCounts.new,
-    pendingFulfillment: workflowCounts.new + workflowCounts.processing + workflowCounts.paid,
-    delivered: workflowCounts.delivered,
+    pendingFulfillment: workflowCounts.new,
+    delivered: workflowCounts.completed,
     revenue,
     todayRevenue: revenueInPeriod((d) => isToday(d)),
     weekRevenue: revenueInPeriod((d) => isThisWeek(d, { weekStartsOn: 6 })),

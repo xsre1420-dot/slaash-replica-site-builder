@@ -1,86 +1,162 @@
-import { Fragment } from "react";
-import { ShoppingBag, MapPin, Check } from "lucide-react";
+import { ShoppingBag, ClipboardList, CircleCheckBig, Check } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
+
+
 interface ProgressStepsProps {
+
+  /** Active step: 0=cart, 1=details, 2=ready to confirm */
+
   currentStep: number;
-  fullWidth?: boolean;
+
 }
 
-const steps = [
-  { icon: ShoppingBag, label: "السلة" },
-  { icon: MapPin, label: "التوصيل" },
-  { icon: Check, label: "التأكيد" },
-];
 
-const ProgressSteps = ({ currentStep, fullWidth = false }: ProgressStepsProps) => (
+
+const steps = [
+
+  { icon: ShoppingBag, label: "السلة" },
+
+  { icon: ClipboardList, label: "البيانات" },
+
+  { icon: CircleCheckBig, label: "تأكيد" },
+
+] as const;
+
+
+
+const ProgressSteps = ({ currentStep }: ProgressStepsProps) => (
+
   <div
-    className={cn(
-      "w-full",
-      fullWidth
-        ? "border-b border-border/40 bg-card/40 px-3 py-2.5 sm:px-4"
-        : "flex items-center justify-center gap-0 px-2 py-2.5"
-    )}
+
+    className="w-full px-4 sm:px-6 pb-3 md:max-w-2xl md:mx-auto"
+
     dir="rtl"
+
+    aria-label="مراحل إتمام الطلب"
+
   >
-    <div className={cn("flex w-full items-start", !fullWidth && "w-auto justify-center")}>
+
+    <div className="flex w-full items-center">
+
       {steps.map((step, index) => {
+
         const Icon = step.icon;
-        const isActive = index <= currentStep;
+
         const isCompleted = index < currentStep;
 
+        const isCurrent = index === currentStep;
+
+
+
         return (
-          <Fragment key={step.label}>
-            <div
-              className={cn(
-                "flex shrink-0 flex-col items-center gap-1",
-                fullWidth ? "w-[4.5rem] sm:w-20" : "gap-0.5"
-              )}
-            >
+
+          <div key={step.label} className="contents">
+
+            <div className="flex min-w-[3.75rem] shrink-0 flex-col items-center gap-1.5">
+
               <div
+
                 className={cn(
-                  "flex items-center justify-center rounded-full transition-all duration-500",
-                  fullWidth ? "h-9 w-9 sm:h-10 sm:w-10" : "h-8 w-8",
-                  isCompleted
-                    ? "bg-primary text-primary-foreground"
-                    : isActive
-                      ? "border-2 border-primary bg-primary/15 text-primary"
-                      : "bg-muted text-muted-foreground"
+
+                  "relative flex h-9 w-9 items-center justify-center rounded-full transition-all duration-300",
+
+                  isCompleted &&
+
+                    "bg-primary text-primary-foreground shadow-[0_2px_8px_-2px_hsl(var(--primary)/0.45)]",
+
+                  isCurrent &&
+
+                    !isCompleted &&
+
+                    "bg-primary/12 text-primary ring-2 ring-primary/40 shadow-sm",
+
+                  !isCompleted &&
+
+                    !isCurrent &&
+
+                    "bg-gray-100 text-gray-400 border border-gray-200/80"
+
                 )}
+
               >
+
                 {isCompleted ? (
-                  <Check className={cn("animate-scale-in", fullWidth ? "h-4 w-4" : "h-3.5 w-3.5")} />
+
+                  <Check className="h-4 w-4" strokeWidth={2.75} />
+
                 ) : (
-                  <Icon className={fullWidth ? "h-4 w-4" : "h-3.5 w-3.5"} />
+
+                  <Icon className="h-4 w-4" strokeWidth={2.35} />
+
                 )}
+
+                {isCurrent && !isCompleted && (
+
+                  <span
+
+                    className="absolute -bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-primary"
+
+                    aria-hidden
+
+                  />
+
+                )}
+
               </div>
+
               <span
+
                 className={cn(
-                  "font-medium transition-colors",
-                  fullWidth ? "text-[11px] sm:text-xs" : "text-[10px]",
-                  isActive ? "text-primary" : "text-muted-foreground"
+
+                  "text-[10px] font-bold leading-none whitespace-nowrap",
+
+                  isCurrent ? "text-primary" : isCompleted ? "text-gray-800" : "text-gray-400"
+
                 )}
+
               >
+
                 {step.label}
+
               </span>
+
             </div>
 
+
+
             {index < steps.length - 1 && (
+
               <div
+
                 className={cn(
-                  "rounded-full transition-all duration-500",
-                  fullWidth
-                    ? "mx-0.5 mt-[18px] h-0.5 flex-1 sm:mx-1 sm:mt-5"
-                    : "mx-1 mb-3.5 h-0.5 w-10 sm:w-12",
-                  isCompleted ? "bg-primary" : "bg-border"
+
+                  "mx-2 mb-5 h-[2px] flex-1 rounded-full transition-colors duration-300",
+
+                  index < currentStep ? "bg-primary/70" : "bg-gray-200"
+
                 )}
+
+                aria-hidden
+
               />
+
             )}
-          </Fragment>
+
+          </div>
+
         );
+
       })}
+
     </div>
+
   </div>
+
 );
 
+
+
 export default ProgressSteps;
+

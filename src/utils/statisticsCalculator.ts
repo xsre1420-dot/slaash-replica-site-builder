@@ -75,6 +75,7 @@ export const calculateStatistics = (
   const kpiRevenue = num(kpis?.completed_revenue);
   const kpiRefunds = num(kpis?.refund_total) ?? 0;
   const kpiUniqueVisitors = num(kpis?.unique_visitors);
+  const kpiVisitCount = num(kpis?.visit_count);
   const kpiProductCount = num(kpis?.product_count);
   const kpiNewCustomers = num(kpis?.new_customers);
   const kpiReturningCustomers = num(kpis?.returning_customers);
@@ -88,10 +89,18 @@ export const calculateStatistics = (
     periodVisits.map(v => v.visitor_ip).filter(Boolean)
   ).size;
 
+  const resolvedKpiVisitors =
+    kpiUniqueVisitors != null && kpiUniqueVisitors > 0
+      ? kpiUniqueVisitors
+      : kpiVisitCount;
+
   const totalOrders = mergeMetric(kpiOrderCount, clientOrderCount);
   const grossRevenue = mergeMetric(kpiRevenue, clientRevenue);
   const totalRevenue = Math.max(0, grossRevenue - kpiRefunds);
-  const totalVisitors = mergeMetric(kpiUniqueVisitors, clientUniqueVisitors);
+  const totalVisitors = mergeMetric(
+    resolvedKpiVisitors,
+    Math.max(clientUniqueVisitors, periodVisits.length)
+  );
   const totalProducts = mergeMetric(kpiProductCount, products.length);
   const completedCount = completedOrders.length;
   const kpiCompletedOrderCount = num(kpis?.completed_order_count);

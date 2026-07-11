@@ -27,8 +27,7 @@ export function RtlHeaderBar({
   balanceWidth = 'w-10',
   hideBack = false,
 }: RtlHeaderBarProps) {
-  const backClassName =
-    'w-10 h-10 shrink-0 rounded-full bg-muted hover:bg-muted/70 flex items-center justify-center text-muted-foreground hover:text-foreground transition-all';
+  const backClassName = 'icon-circle-btn';
 
   const backControl = hideBack ? (
     <div className={cn(balanceWidth, 'shrink-0')} aria-hidden />
@@ -36,11 +35,11 @@ export function RtlHeaderBar({
     startSlot ??
     (backTo ? (
       <Link to={backTo} aria-label={backLabel} className={backClassName}>
-        <ArrowRight className="w-5 h-5" />
+        <ArrowRight className="w-5 h-5 text-primary" strokeWidth={2.25} />
       </Link>
     ) : onBack ? (
       <button type="button" onClick={onBack} aria-label={backLabel} className={backClassName}>
-        <ArrowRight className="w-5 h-5" />
+        <ArrowRight className="w-5 h-5 text-primary" strokeWidth={2.25} />
       </button>
     ) : (
       <div className={cn(balanceWidth, 'shrink-0')} aria-hidden />

@@ -70,13 +70,20 @@ const buildRecoveredOrderResult = (
   wasIdempotent: true,
 });
 
+import { findProductColorOption } from '@/utils/orderItemDisplayUtils';
+
 const normalizeOrderRpcItems = (items: CartItem[]) =>
-  items.map((item) => ({
-    product_id: item.product.id,
-    quantity: item.quantity,
-    selected_size: item.selectedSize?.trim() || null,
-    selected_color: item.selectedColor?.trim() || null,
-  }));
+  items.map((item) => {
+    const colorOpt = findProductColorOption(item.product.colors, item.selectedColor);
+    return {
+      product_id: item.product.id,
+      quantity: item.quantity,
+      selected_size: item.selectedSize?.trim() || null,
+      selected_color: item.selectedColor?.trim() || null,
+      color_name: item.selectedColorName ?? colorOpt?.name ?? null,
+      color_image: item.selectedColorImage ?? colorOpt?.image ?? null,
+    };
+  });
 
 export const updateOrderStatus = async (
   orderId: string,

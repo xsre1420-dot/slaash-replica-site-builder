@@ -33,3 +33,22 @@ export async function trackProductViewBySlug(
   if (error) throw new Error(error);
   return (data ?? {}) as { success?: boolean; deduped?: boolean };
 }
+
+/** Drain buffered storefront analytics so dashboard visitor counts stay accurate. */
+export async function flushMerchantAnalyticsBuffer(
+  limit = 200
+): Promise<{ success?: boolean; processed?: number }> {
+  try {
+    const { data, error } = await callSupabaseRpc<Record<string, unknown>>(
+      'flush_merchant_analytics_buffer',
+      { p_limit: limit }
+    );
+    if (error) return { success: false };
+    return {
+      success: data?.success === true,
+      processed: Number(data?.processed ?? 0),
+    };
+  } catch {
+    return { success: false };
+  }
+}

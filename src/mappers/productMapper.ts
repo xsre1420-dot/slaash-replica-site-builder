@@ -1,5 +1,5 @@
 import { Product, ColorOption, ProductVariant } from '@/types';
-import { applyActiveDiscount, normalizeProductStock } from '@/utils/inventoryUtils';
+import { applyActiveDiscount, normalizeProductStock, hydrateProductVariantOptions } from '@/utils/inventoryUtils';
 
 export const parseJsonField = <T>(value: unknown): T | undefined => {
   if (value == null) return undefined;
@@ -21,6 +21,46 @@ const parseAdditionalImages = (value: unknown): string[] | undefined => {
   return urls.length > 0 ? urls : undefined;
 };
 
+const parseSizesField = (value: unknown): string[] | undefined => {
+  if (Array.isArray(value)) {
+    const sizes = value.map((entry) => String(entry).trim()).filter(Boolean);
+    return sizes.length ? sizes : undefined;
+  }
+  const parsed = parseJsonField<string[]>(value);
+  if (!parsed?.length) return undefined;
+  const sizes = parsed.map((entry) => String(entry).trim()).filter(Boolean);
+  return sizes.length ? sizes : undefined;
+};
+
+const parseColorsField = (value: unknown): ColorOption[] | undefined => {
+  const parsed = parseJsonField<Array<Record<string, unknown>>>(value);
+  if (!parsed?.length) return undefined;
+  const colors = parsed
+    .map((entry) => ({
+      name: entry.name != null ? String(entry.name) : undefined,
+      value: String(entry.value ?? entry.hex ?? entry.name ?? '').trim(),
+      image:
+        entry.image != null
+          ? String(entry.image)
+          : entry.image_url != null
+            ? String(entry.image_url)
+            : undefined,
+    }))
+    .filter((entry) => entry.value);
+  return colors.length ? colors : undefined;
+};
+
+const parseVariantsField = (value: unknown): ProductVariant[] | undefined => {
+  const parsed = parseJsonField<Array<Record<string, unknown>>>(value);
+  if (!parsed?.length) return undefined;
+  const variants = parsed.map((entry) => ({
+    size: entry.size != null ? String(entry.size).trim() : undefined,
+    color: entry.color != null ? String(entry.color).trim() : undefined,
+    quantity: Number(entry.quantity) || 0,
+  }));
+  return variants.length ? variants : undefined;
+};
+
 /** Maps a database/RPC product row to domain `Product`. */
 export const mapDbProduct = (
   row: Record<string, unknown>,
@@ -37,9 +77,9 @@ export const mapDbProduct = (
     image: String(imageSource || ''),
     additionalImages: parseAdditionalImages(row.additional_images),
     stockQuantity: row.stock_quantity != null ? Number(row.stock_quantity) : undefined,
-    sizes: Array.isArray(row.sizes) ? (row.sizes as string[]) : undefined,
-    colors: parseJsonField<ColorOption[]>(row.colors),
-    variants: parseJsonField<ProductVariant[]>(row.variants),
+    sizes: parseSizesField(row.sizes),
+    colors: parseColorsField(row.colors),
+    variants: parseVariantsField(row.variants),
     discountType: row.discount_type as Product['discountType'],
     discountValue: row.discount_value != null ? Number(row.discount_value) : undefined,
     discountStartDate: row.discount_start_date as string | undefined,
@@ -64,7 +104,8 @@ export const mapDbProduct = (
   };
 
   const normalized = normalizeProductStock(product);
-  return options.applyDiscount ? applyActiveDiscount(normalized) : normalized;
+  const hydrated = hydrateProductVariantOptions(normalized);
+  return options.applyDiscount ? applyActiveDiscount(hydrated) : hydrated;
 };
 export const safeMapDbProduct = (
   row: unknown,

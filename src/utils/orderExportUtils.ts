@@ -3,69 +3,13 @@ import { Order } from '@/types';
 import { escapeHtml } from '@/lib/security/sanitize';
 import {
   formatOrderNumber,
-  getEffectiveDeliveryStatus,
-  getEffectivePaymentStatus,
-  getOrderStatusLabel,
+  getSimplifiedOrderDisplayStatus,
 } from '@/utils/orderWorkflowUtils';
-import { getDeliveryStatusLabel } from '@/utils/deliveryUtils';
-import { getPaymentStatusLabel, getPaymentMethodLabel } from '@/utils/paymentUtils';
-
-const escapeCsv = (value: string | number) => {
-  const str = String(value ?? '');
-  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-    return `"${str.replace(/"/g, '""')}"`;
-  }
-  return str;
-};
-
-export const exportOrdersToCsv = (orders: Order[], filename = 'orders.csv') => {
-  const headers = [
-    'رقم الطلب',
-    'التاريخ',
-    'اسم العميل',
-    'الهاتف',
-    'المحافظة',
-    'العنوان',
-    'المنتجات',
-    'المبلغ',
-    'حالة الطلب',
-    'حالة الدفع',
-    'حالة الشحن',
-    'طريقة الدفع',
-  ];
-
-  const rows = orders.map((order) => {
-    const itemsSummary = order.items
-      .map((i) => `${i.product.name} (${i.quantity})`)
-      .join(' | ');
-    return [
-      formatOrderNumber(order.id),
-      format(new Date(order.date), 'yyyy-MM-dd HH:mm'),
-      order.customerInfo.name,
-      order.customerInfo.phone,
-      order.customerInfo.governorate ?? '',
-      order.customerInfo.address,
-      itemsSummary,
-      order.total,
-      getOrderStatusLabel(order.status),
-      getPaymentStatusLabel(getEffectivePaymentStatus(order)),
-      getDeliveryStatusLabel(getEffectiveDeliveryStatus(order)),
-      getPaymentMethodLabel(order.paymentMethod),
-    ];
-  });
-
-  const csv = '\uFEFF' + [headers, ...rows].map((r) => r.map(escapeCsv).join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-};
+import { getPaymentMethodLabel } from '@/utils/paymentUtils';
 
 export const printOrderInvoice = (order: Order) => {
   const e = escapeHtml;
+  const { label: statusLabel } = getSimplifiedOrderDisplayStatus(order);
   const itemsHtml = order.items
     .map(
       (item) => `
@@ -96,7 +40,7 @@ export const printOrderInvoice = (order: Order) => {
 </head>
 <body>
   <h1>فاتورة طلب ${e(formatOrderNumber(order.id))}</h1>
-  <p class="meta">${format(new Date(order.date), 'yyyy-MM-dd HH:mm')} · ${e(getPaymentMethodLabel(order.paymentMethod))}</p>
+  <p class="meta">${format(new Date(order.date), 'yyyy-MM-dd HH:mm')} · ${e(getPaymentMethodLabel(order.paymentMethod))} · <strong>${e(statusLabel)}</strong></p>
 
   <div class="section">
     <div class="label">العميل</div>

@@ -3,9 +3,7 @@
  */
 export {
   ORDERS_PER_PAGE,
-  ORDER_DETAIL_SELECT,
   ORDER_LIST_SELECT,
-  fetchOrderById,
   fetchOrdersPage,
   fetchOrdersFiltered,
   fetchWorkflowTabCounts,

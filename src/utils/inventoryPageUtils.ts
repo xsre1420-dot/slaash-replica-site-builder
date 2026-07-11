@@ -49,6 +49,26 @@ export type InventoryProductRow = {
   lifecycle: ReturnType<typeof getProductLifecycleStatus>;
 };
 
+export const productToInventoryRow = (p: Product): InventoryProductRow => ({
+  id: p.id,
+  name: p.name,
+  price: p.price,
+  cost: p.cost,
+  sku: p.sku,
+  barcode: p.barcode,
+  category: p.category,
+  image_url: p.image,
+  stock_quantity: p.stockQuantity,
+  min_stock_level: p.lowStockThreshold,
+  sizes: p.sizes,
+  colors: p.colors,
+  variants: p.variants,
+  created_at: (p as Product & { created_at?: string }).created_at || new Date().toISOString(),
+  updated_at: (p as Product & { updated_at?: string }).updated_at,
+  archived_at: p.archivedAt,
+  lifecycle: getProductLifecycleStatus(p),
+});
+
 export const toInventoryProduct = (row: InventoryProductRow): Product => ({
   id: row.id,
   name: row.name,

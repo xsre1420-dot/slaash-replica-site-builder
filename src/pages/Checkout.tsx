@@ -5,23 +5,22 @@ import { useCartActions } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
 import ScrollReveal from "@/components/product-details/ScrollReveal";
 import CheckoutHeader from "@/components/checkout/CheckoutHeader";
-import ProgressSteps from "@/components/checkout/ProgressSteps";
 import CheckoutCartSection from "@/components/checkout/CheckoutCartSection";
 import DeliveryForm from "@/components/checkout/DeliveryForm";
-import GuaranteesBar from "@/components/checkout/GuaranteesBar";
 import OrderSuccessModal from "@/components/checkout/OrderSuccessModal";
+import CheckoutStickyBar from "@/components/checkout/CheckoutStickyBar";
+import CheckoutValidationAlert from "@/components/checkout/CheckoutValidationAlert";
 import PaymentMethodSelector from "@/components/checkout/PaymentMethodSelector";
 import { useCheckoutFlow } from "@/hooks/useCheckoutFlow";
 import MarketingScripts from "@/components/MarketingScripts";
 import { useStoreVisitTracking } from "@/hooks/useStoreVisitTracking";
 import StoreThemeProvider from "@/components/StoreThemeProvider";
-import StorefrontTrustBar from "@/components/storefront/StorefrontTrustBar";
 import { useStoreDisplay } from "@/hooks/useStoreDisplay";
 
 const Checkout = () => {
   const { removeFromCart, updateQuantity, getMaxQuantity } = useCartActions();
   const formRef = useRef<HTMLDivElement>(null);
-  const prevStepRef = useRef(0);
+  const prevStepRef = useRef<number | null>(null);
 
   const {
     isTenantMode,
@@ -33,9 +32,12 @@ const Checkout = () => {
     storeHomePath,
     orderCompleted,
     completedOrderId,
+    dismissOrderSuccess,
     isSubmitting,
     submitPhase,
     formErrors,
+    checkoutAlert,
+    clearCheckoutAlert,
     customerInfo,
     selectedGovernorate,
     appliedCoupon,
@@ -52,6 +54,7 @@ const Checkout = () => {
     handleInputChange,
     handleGovernorateChange,
     handleSubmitOrder,
+    trySubmitCheckout,
   } = useCheckoutFlow();
 
   const display = useStoreDisplay(storeSlug);
@@ -73,7 +76,7 @@ const Checkout = () => {
   useStoreVisitTracking(isTenantMode ? storeSlug : undefined);
 
   useEffect(() => {
-    if (currentStep > prevStepRef.current && formRef.current) {
+    if (prevStepRef.current !== null && currentStep > prevStepRef.current && formRef.current) {
       formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
     prevStepRef.current = currentStep;
@@ -97,21 +100,29 @@ const Checkout = () => {
   }
 
   return (
-    <StoreThemeProvider colors={themeColors} className="min-h-dvh flex flex-col">
-    <div className="flex flex-col flex-1 min-h-dvh w-full bg-background font-arabic" dir="rtl">
+    <StoreThemeProvider colors={themeColors} className="min-h-dvh flex flex-col bg-white">
+    <div className="flex flex-col flex-1 min-h-dvh w-full bg-white font-arabic" dir="rtl">
       <MarketingScripts
         storeSlug={isTenantMode ? storeSlug : undefined}
         storeOwnerId={ownerId}
         disabled={!isTenantMode}
       />
-      <CheckoutHeader cartCount={cartCount} backTo={storeHomePath} />
-      <StorefrontTrustBar compact fullWidth />
+      <CheckoutHeader
+        cartCount={cartCount}
+        backTo={storeHomePath}
+        storeName={display.storeName}
+        storeLogo={display.storeLogo}
+        currentStep={currentStep}
+        showProgress={cartItems.length > 0}
+      />
 
-      {cartItems.length > 0 && (
-        <ProgressSteps currentStep={currentStep} fullWidth />
-      )}
-
-      <div className="flex-1 w-full px-4 sm:px-5 pt-2 pb-36 space-y-3 md:pb-10">
+      <div className="flex-1 w-full px-4 sm:px-6 pt-4 pb-36 space-y-6 md:pb-10 md:max-w-2xl md:mx-auto">
+        {checkoutAlert && cartItems.length > 0 && (
+          <CheckoutValidationAlert
+            message={checkoutAlert}
+            onDismiss={clearCheckoutAlert}
+          />
+        )}
         {cartItems.length === 0 ? (
           <ScrollReveal>
             <div className="text-center py-16 mt-8">
@@ -129,7 +140,7 @@ const Checkout = () => {
           <form
             id="checkout-form"
             onSubmit={handleSubmitOrder}
-            className={`space-y-3 ${isCheckoutLocked ? 'pointer-events-none opacity-90' : ''}`}
+            className={`space-y-6 ${isCheckoutLocked ? 'pointer-events-none opacity-90' : ''}`}
             aria-busy={isCheckoutLocked}
           >
 
@@ -151,8 +162,8 @@ const Checkout = () => {
             />
 
             <ScrollReveal delay={150}>
-              <section className="bg-card rounded-xl border border-border/50 p-3.5 sm:p-4">
-                <h2 className="text-base font-semibold mb-2.5 text-right text-foreground">طريقة الدفع</h2>
+              <section className="pb-6 border-b border-gray-100">
+                <h2 className="text-base font-bold mb-4 text-right text-gray-900">طريقة الدفع</h2>
                 <PaymentMethodSelector
                   methods={paymentMethodOptions}
                   selected={selectedPaymentMethod}
@@ -162,8 +173,8 @@ const Checkout = () => {
             </ScrollReveal>
 
             <ScrollReveal delay={200}>
-              <section className="bg-card rounded-xl border border-border/50 p-3.5 sm:p-4" ref={formRef}>
-                <h2 className="text-base font-semibold mb-2.5 text-right text-foreground">معلومات التوصيل</h2>
+              <section id="delivery-section" className="pb-6 border-b border-gray-100" ref={formRef}>
+                <h2 className="text-base font-bold mb-4 text-right text-gray-900">معلومات التوصيل</h2>
                 <DeliveryForm
                   customerInfo={customerInfo}
                   onInputChange={handleInputChange}
@@ -178,11 +189,8 @@ const Checkout = () => {
 
             {selectedGovernorate && (
               <ScrollReveal delay={300}>
-                <section
-                  dir="rtl"
-                  className="rounded-xl border border-primary/25 bg-primary/[0.04] p-3.5 sm:p-4 space-y-2.5"
-                >
-                  <h3 className="text-base font-semibold text-right text-foreground">ملخص الدفع</h3>
+                <section dir="rtl" className="pb-6 border-b border-gray-100 space-y-3">
+                  <h3 className="text-base font-bold text-right text-gray-900">ملخص الدفع</h3>
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-4">
@@ -213,7 +221,7 @@ const Checkout = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between gap-4 pt-2.5 border-t border-primary/20">
+                  <div className="flex items-center justify-between gap-4 pt-3 border-t border-gray-100">
                     <span className="text-sm font-bold text-foreground">المجموع النهائي</span>
                     <span className="text-lg font-bold tabular-nums text-primary">
                       {totalWithDelivery.toLocaleString()} د.ع
@@ -223,13 +231,12 @@ const Checkout = () => {
               </ScrollReveal>
             )}
 
-            <GuaranteesBar compact />
-
-            <ScrollReveal delay={400}>
+            <div className="hidden md:block">
               <Button
-                type="submit"
+                type="button"
                 disabled={isCheckoutLocked}
-                className="w-full rounded-xl py-2.5 text-sm font-bold h-12 bg-primary hover:bg-primary/90 transition-colors"
+                onClick={trySubmitCheckout}
+                className="w-full rounded-xl py-3 text-sm font-bold h-12 bg-primary hover:bg-primary/90 shadow-[0_4px_14px_-2px_rgba(0,0,0,0.12)] transition-colors"
               >
                 {isCheckoutLocked ? (
                   <span className="inline-flex items-center gap-2">
@@ -245,47 +252,23 @@ const Checkout = () => {
                   لا تغلق الصفحة — يتم معالجة طلبك بأمان
                 </p>
               )}
-            </ScrollReveal>
+            </div>
           </form>
         )}
-        <div className="h-5 shrink-0 bg-background md:h-8" aria-hidden />
+        <div className="h-5 shrink-0 bg-white md:h-8" aria-hidden />
       </div>
 
       {cartItems.length > 0 && !orderCompleted && (
-        <div
-          className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t border-border/50 px-3 py-2.5 z-30 md:hidden safe-area-bottom"
-          dir="rtl"
-        >
-          <div className="w-full flex items-center gap-2">
-            <div className="text-right flex-1 min-w-0">
-              <span className="text-[11px] text-muted-foreground">{cartCount} منتج</span>
-              <p className="text-sm font-bold text-foreground leading-tight">
-                {deliveryPrices.length > 0 && !selectedGovernorate
-                  ? `${cartTotal.toLocaleString()} د.ع`
-                  : `${totalWithDelivery.toLocaleString()} د.ع`}
-              </p>
-              {deliveryPrices.length > 0 && !selectedGovernorate && (
-                <span className="text-[10px] text-muted-foreground">+ التوصيل بعد اختيار المحافظة</span>
-              )}
-            </div>
-            <Button
-              type="button"
-              onClick={() => formRef.current?.scrollIntoView({ behavior: "smooth" })}
-              variant="outline"
-              className="h-10 min-h-0 min-w-0 rounded-xl px-3 text-xs font-semibold shrink-0 border-primary/30 text-primary hover:bg-primary/5 hover:text-primary hover:border-primary/40"
-            >
-              التوصيل
-            </Button>
-            <Button
-              type="button"
-              disabled={isCheckoutLocked}
-              onClick={() => document.getElementById('checkout-form')?.requestSubmit()}
-              className="h-10 min-h-0 min-w-0 rounded-xl px-3 text-xs font-semibold shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground"
-            >
-              {isCheckoutLocked ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'تأكيد'}
-            </Button>
-          </div>
-        </div>
+        <CheckoutStickyBar
+          cartCount={cartCount}
+          displayTotal={
+            deliveryPrices.length > 0 && !selectedGovernorate ? cartTotal : totalWithDelivery
+          }
+          deliveryPending={deliveryPrices.length > 0 && !selectedGovernorate}
+          isSubmitting={isCheckoutLocked}
+          alertMessage={checkoutAlert}
+          onConfirm={trySubmitCheckout}
+        />
       )}
 
       {orderCompleted && (
@@ -293,6 +276,7 @@ const Checkout = () => {
           orderId={completedOrderId}
           storeSlug={storeSlug}
           whatsappNumber={display.storeSettings.whatsappNumber}
+          onDismiss={dismissOrderSuccess}
         />
       )}
     </div>

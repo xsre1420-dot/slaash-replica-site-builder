@@ -141,7 +141,7 @@ const InventoryMovementHistory = ({ productId, active, refreshKey = 0 }: Invento
                       <p className="text-xs font-medium leading-snug">{formatMovementReason(m.reason)}</p>
                       <div className="flex flex-wrap gap-2 justify-end mt-0.5">
                         {m.order_id && (
-                          <Link to={`/orders/${m.order_id}`} className="text-[10px] font-medium text-primary hover:underline">
+                          <Link to="/orders" className="text-[10px] font-medium text-primary hover:underline">
                             عرض الطلب
                           </Link>
                         )}

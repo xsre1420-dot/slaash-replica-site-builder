@@ -81,9 +81,9 @@ const CouponInput = ({ ownerId, storeSlug, subtotal, appliedCoupon, onApply }: C
 
   if (appliedCoupon) {
     return (
-      <div className="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-lg p-2.5">
-        <Button type="button" variant="ghost" size="icon" onClick={handleRemove} aria-label="إزالة كود الخصم" className="h-8 w-8 min-h-0 min-w-0 shrink-0">
-          <X className="w-4 h-4" />
+      <div className="flex items-center justify-between bg-primary/5 rounded-xl p-3 ring-1 ring-primary/15">
+        <Button type="button" variant="ghost" size="icon" onClick={handleRemove} aria-label="إزالة كود الخصم" className="h-8 w-8 min-h-0 min-w-0 shrink-0 hover:bg-primary/10">
+          <X className="w-4 h-4 text-primary" />
         </Button>
         <div className="text-right flex-1 mr-2">
           <p className="text-sm font-bold text-primary">{appliedCoupon.code}</p>
@@ -91,20 +91,22 @@ const CouponInput = ({ ownerId, storeSlug, subtotal, appliedCoupon, onApply }: C
             خصم {appliedCoupon.discountAmount.toLocaleString()} د.ع
           </p>
         </div>
-        <Tag className="w-4 h-4 text-primary" />
+        <div className="w-8 h-8 rounded-lg bg-primary/12 flex items-center justify-center shrink-0">
+          <Tag className="w-4 h-4 text-primary" strokeWidth={2.25} />
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-2">
-      <div className="flex gap-1.5">
+      <div className="flex gap-2">
         <Button
           type="button"
           variant="outline"
           onClick={handleApply}
           disabled={loading || !code.trim()}
-          className="rounded-lg shrink-0 h-9 px-3 text-xs"
+          className="rounded-xl shrink-0 h-10 px-4 text-xs font-semibold border-primary/20 text-primary hover:bg-primary/8 hover:text-primary"
         >
           {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "تطبيق"}
         </Button>
@@ -116,7 +118,7 @@ const CouponInput = ({ ownerId, storeSlug, subtotal, appliedCoupon, onApply }: C
             setError("");
           }}
           onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleApply())}
-          className="text-right rounded-lg h-9 text-sm"
+          className="text-right rounded-xl h-10 text-sm bg-white border-gray-200 focus-visible:ring-primary/30"
         />
       </div>
       {error && <p className="text-xs text-destructive text-right">{error}</p>}

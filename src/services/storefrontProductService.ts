@@ -14,6 +14,7 @@ import { cache, CacheKeys, CacheTTL, dedup } from '@/lib/cache';
 import { cachedFetchNullable } from '@/lib/cache/enterpriseCache';
 import { callReadRpc } from '@/lib/readWrite/readClient';
 import { isStorefrontVisible } from '@/lib/productLifecycle';
+import { hydrateProductVariantOptions } from '@/utils/inventoryUtils';
 import {
   fetchStorefrontBundleViaEdge,
   fetchStorefrontPageViaEdge,
@@ -60,7 +61,8 @@ export const STOREFRONT_PRODUCTS_CHANGED = 'storefront:products-changed';
 
 const ACTIVE_PRODUCTS_FILTER = 'is_active.eq.true,is_active.is.null';
 
-const GALLERY_FALLBACK_SELECT = 'image_url, additional_images, is_active, archived_at, owner_id';
+const DETAIL_ENRICH_SELECT =
+  'image_url, additional_images, tags, sku, short_description, description, sizes, colors, variants, stock_quantity, is_active, archived_at, owner_id';
 
 const countGalleryUrls = (product: Pick<Product, 'image' | 'additionalImages'>): number => {
   const seen = new Set<string>();
@@ -73,8 +75,8 @@ const countGalleryUrls = (product: Pick<Product, 'image' | 'additionalImages'>):
   return seen.size;
 };
 
-/** Load gallery fields directly from DB — source of truth for product detail pages. */
-async function enrichStorefrontProductGallery(
+/** Load detail fields from DB — source of truth when RPC payload omits tags/gallery. */
+async function enrichStorefrontProductDetail(
   slug: string,
   productId: string,
   product: Product
@@ -84,7 +86,7 @@ async function enrichStorefrontProductGallery(
 
   const { data: row, error } = await supabase
     .from('products')
-    .select(GALLERY_FALLBACK_SELECT)
+    .select(DETAIL_ENRICH_SELECT)
     .eq('id', productId)
     .eq('owner_id', ownerId)
     .maybeSingle();
@@ -94,17 +96,43 @@ async function enrichStorefrontProductGallery(
   const fromDb = mapDbProduct({
     id: productId,
     name: product.name,
+    price: product.price,
+    category: product.category,
+    description: row.description,
     image_url: row.image_url,
     additional_images: row.additional_images,
+    tags: row.tags,
+    sku: row.sku,
+    short_description: row.short_description,
+    sizes: row.sizes,
+    colors: row.colors,
+    variants: row.variants,
+    stock_quantity: row.stock_quantity,
   });
 
-  if (countGalleryUrls(fromDb) === 0) return product;
+  const freshGalleryCount = countGalleryUrls(fromDb);
+  const cachedGalleryCount = countGalleryUrls(product);
+  const useFreshGallery = freshGalleryCount >= cachedGalleryCount;
 
-  return {
+  const merged: Product = {
     ...product,
-    image: fromDb.image || product.image,
-    additionalImages: fromDb.additionalImages ?? product.additionalImages,
+    description: fromDb.description?.trim() || product.description,
+    image: useFreshGallery ? fromDb.image || product.image : product.image?.trim() || fromDb.image,
+    additionalImages: useFreshGallery
+      ? fromDb.additionalImages ?? product.additionalImages
+      : product.additionalImages?.length
+        ? product.additionalImages
+        : fromDb.additionalImages,
+    tags: row.tags != null ? (fromDb.tags ?? []) : product.tags,
+    sku: fromDb.sku || product.sku,
+    shortDescription: fromDb.shortDescription?.trim() || product.shortDescription,
+    sizes: fromDb.sizes?.length ? fromDb.sizes : product.sizes,
+    colors: fromDb.colors?.length ? fromDb.colors : product.colors,
+    variants: fromDb.variants?.length ? fromDb.variants : product.variants,
+    stockQuantity: fromDb.stockQuantity ?? product.stockQuantity,
   };
+
+  return hydrateProductVariantOptions(merged);
 }
 
 const bundleMemoryKey = (slug: string) => StorefrontCacheKeys.bundle(slug);
@@ -620,7 +648,7 @@ async function finalizeStorefrontProduct(
   product: Product | null
 ): Promise<Product | null> {
   if (!product || !isStorefrontVisible(product)) return null;
-  return enrichStorefrontProductGallery(slug, productId, product);
+  return enrichStorefrontProductDetail(slug, productId, product);
 }
 
 async function fetchStorefrontProductByIdUncached(

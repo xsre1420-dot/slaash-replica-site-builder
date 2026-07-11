@@ -13,6 +13,8 @@ import {
   getStableCheckoutOrderId,
   loadCompletedCheckoutOrderId,
   markCheckoutCompleted,
+  clearCheckoutCompletedMarker,
+  clearCheckoutSession,
   persistCheckoutFingerprint,
   pinCheckoutAttempt,
   hasPendingCheckoutAttempt,
@@ -80,6 +82,7 @@ export const useCheckoutFlow = () => {
   } = useCart();
   const { storeSettings } = useStore();
 
+  const [checkoutAlert, setCheckoutAlert] = useState<string | null>(null);
   const [orderCompleted, setOrderCompleted] = useState(false);
   const [completedOrderId, setCompletedOrderId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -217,10 +220,24 @@ export const useCheckoutFlow = () => {
   const totalWithDelivery = computeOrderTotal(cartTotal, deliveryFee, discountAmount);
 
   const currentStep = useMemo(() => {
-    if (!customerInfo.name.trim() || !customerInfo.phone.trim()) return 0;
-    if (!selectedGovernorate && deliveryPrices.length > 0) return 1;
+    if (cartItems.length === 0) return 0;
+
+    const detailsComplete =
+      customerInfo.name.trim() &&
+      customerInfo.phone.trim() &&
+      customerInfo.address.trim() &&
+      (deliveryPrices.length === 0 || selectedGovernorate);
+
+    if (!detailsComplete) return 1;
     return 2;
-  }, [customerInfo.name, customerInfo.phone, selectedGovernorate, deliveryPrices.length]);
+  }, [
+    cartItems.length,
+    customerInfo.name,
+    customerInfo.phone,
+    customerInfo.address,
+    selectedGovernorate,
+    deliveryPrices.length,
+  ]);
 
   const storeHomePath = isTenantMode ? `/store/${storeSlug}` : "/preview";
   const { trackInitiateCheckout, trackPurchase } = useMetaPixel();
@@ -241,10 +258,24 @@ export const useCheckoutFlow = () => {
 
   useEffect(() => {
     if (!ownerId) return;
+
+    // Items in cart = new checkout; don't block with a completed marker from a prior order.
+    if (cartItems.length > 0) {
+      if (loadCompletedCheckoutOrderId(ownerId)) {
+        clearCheckoutCompletedMarker(ownerId);
+        clearCheckoutSession(ownerId);
+        submitSucceededRef.current = false;
+        setSubmitPhase('idle');
+        setOrderCompleted(false);
+        setCompletedOrderId('');
+      }
+      return;
+    }
+
     const recoveredOrderId = loadCompletedCheckoutOrderId(ownerId);
     if (recoveredOrderId) {
-      setCompletedOrderId(recoveredOrderId);
-      setOrderCompleted(true);
+      // Block duplicate submit on revisit with empty cart — do not re-show the success modal.
+      submitSucceededRef.current = true;
       setSubmitPhase('success');
       return;
     }
@@ -258,7 +289,6 @@ export const useCheckoutFlow = () => {
 
       submitSucceededRef.current = true;
       setCompletedOrderId(recovered.orderId);
-      setOrderCompleted(true);
       setSubmitPhase('success');
       markCheckoutCompleted(ownerId, recovered.orderId);
       clearCart();
@@ -268,7 +298,7 @@ export const useCheckoutFlow = () => {
     return () => {
       cancelled = true;
     };
-  }, [ownerId, checkoutStoreSlug, clearCart]);
+  }, [ownerId, checkoutStoreSlug, clearCart, cartItems.length]);
 
   useEffect(() => {
     if (!isSubmitting) return;
@@ -339,14 +369,16 @@ export const useCheckoutFlow = () => {
     const { name, value } = e.target;
     setCustomerInfo((prev) => ({ ...prev, [name]: value }));
     if (formErrors[name]) setFormErrors((prev) => ({ ...prev, [name]: "" }));
+    if (checkoutAlert) setCheckoutAlert(null);
   };
 
   const handleGovernorateChange = (v: string) => {
     setSelectedGovernorate(v);
     if (formErrors.governorate) setFormErrors((prev) => ({ ...prev, governorate: "" }));
+    if (checkoutAlert) setCheckoutAlert(null);
   };
 
-  const validateForm = (): boolean => {
+  const validateForm = useCallback((): boolean => {
     const errors: Record<string, string> = {};
     const name = customerInfo.name.trim();
     const phone = customerInfo.phone.trim();
@@ -360,12 +392,22 @@ export const useCheckoutFlow = () => {
     setFormErrors(errors);
     const firstKey = Object.keys(errors)[0];
     if (firstKey) {
-      toast.error(errors[firstKey]);
+      const message = errors[firstKey];
+      setCheckoutAlert(message);
+      toast.error("أكمل بيانات الطلب", {
+        id: "checkout-validation",
+        description: message,
+        duration: 6000,
+      });
       focusCheckoutField(firstKey);
+      document.getElementById("delivery-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
       return false;
     }
+    setCheckoutAlert(null);
     return true;
-  };
+  }, [customerInfo, deliveryPrices.length, selectedGovernorate]);
+
+  const clearCheckoutAlert = useCallback(() => setCheckoutAlert(null), []);
 
   const finalizeSuccessfulOrder = useCallback(
     (orderId: string, computedTotal: number, validationItems: typeof cartItems, idempotent = false) => {
@@ -408,13 +450,6 @@ export const useCheckoutFlow = () => {
           ? 'تم استلام طلبك مسبقاً — لا حاجة لإعادة الإرسال.'
           : 'تم استلام طلبك بنجاح! سنتواصل معك قريباً.'
       );
-
-      if (finalizeNavigateTimerRef.current) clearTimeout(finalizeNavigateTimerRef.current);
-      finalizeNavigateTimerRef.current = setTimeout(() => {
-        finalizeNavigateTimerRef.current = null;
-        setOrderCompleted(false);
-        navigate(storeHomePath);
-      }, 3000);
     },
     [
       checkoutStoreSlug,
@@ -431,12 +466,15 @@ export const useCheckoutFlow = () => {
 
   const handleSubmitOrder = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (submitSucceededRef.current) return;
     if (submitLockRef.current || isSubmitting) {
       toast.info('جاري معالجة طلبك — انتظر قليلاً');
       return;
     }
     if (!validateForm()) return;
+    if (submitSucceededRef.current) {
+      toast.info("تم إرسال طلبك مسبقاً");
+      return;
+    }
 
     if (!ownerId) {
       toast.error("تعذر تحديد المتجر. يرجى المحاولة مرة أخرى.");
@@ -705,7 +743,25 @@ export const useCheckoutFlow = () => {
     replaceCartItems,
     finalizeSuccessfulOrder,
     submitPhase,
+    validateForm,
   ]);
+
+  const trySubmitCheckout = useCallback(() => {
+    void handleSubmitOrder({ preventDefault: () => {} } as React.FormEvent);
+  }, [handleSubmitOrder]);
+
+  const dismissOrderSuccess = useCallback(() => {
+    if (finalizeNavigateTimerRef.current) {
+      clearTimeout(finalizeNavigateTimerRef.current);
+      finalizeNavigateTimerRef.current = null;
+    }
+    setOrderCompleted(false);
+    submitSucceededRef.current = false;
+    if (ownerId) {
+      clearCheckoutCompletedMarker(ownerId);
+      clearCheckoutSession(ownerId);
+    }
+  }, [ownerId]);
 
   return {
     isTenantMode,
@@ -718,9 +774,12 @@ export const useCheckoutFlow = () => {
     storeHomePath,
     orderCompleted,
     completedOrderId,
+    dismissOrderSuccess,
     isSubmitting,
     submitPhase,
     formErrors,
+    checkoutAlert,
+    clearCheckoutAlert,
     customerInfo,
     selectedGovernorate,
     appliedCoupon,
@@ -736,5 +795,6 @@ export const useCheckoutFlow = () => {
     handleInputChange,
     handleGovernorateChange,
     handleSubmitOrder,
+    trySubmitCheckout,
   };
 };

@@ -31,12 +31,12 @@ import { useInventoryKeyboardShortcuts } from '@/hooks/useInventoryKeyboardShort
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { Product } from '@/types';
+import { variantStockSum } from '@/utils/inventoryUtils';
+import type { Product, ProductVariant } from '@/types';
 import { restockProduct, InventoryRestockError, auditInventoryIntegrity, fetchMerchantInventorySummary } from '@/services/inventoryService';
-import { getProductLifecycleStatus } from '@/lib/productLifecycle';
 import { useMerchantProductsPage } from '@/hooks/useMerchantProductsPage';
 import { useProgressiveRender } from '@/hooks/useProgressiveRender';
-import { patchMerchantStockInCache } from '@/services/productService';
+import { patchMerchantStockInCache, updateProduct } from '@/services/productService';
 import { useRealtimeProducts } from '@/hooks/useRealtimeProducts';
 import AttentionStrip from '@/components/ui/AttentionStrip';
 import { ATTENTION_PARAM } from '@/lib/attentionHighlight';
@@ -51,6 +51,7 @@ import {
   getUniqueCategories,
   loadFilterPresets,
   loadRecentSearches,
+  productToInventoryRow,
   saveFilterPreset,
   saveRecentSearch,
   sortInventoryProducts,
@@ -66,25 +67,7 @@ import {
 } from '@/utils/inventoryPageUtils';
 
 const mapCatalogToInventoryRows = (catalog: Product[]): InventoryProductRow[] =>
-  catalog.map((p) => ({
-    id: p.id,
-    name: p.name,
-    price: p.price,
-    cost: p.cost,
-    sku: p.sku,
-    barcode: p.barcode,
-    category: p.category,
-    image_url: p.image,
-    stock_quantity: p.stockQuantity,
-    min_stock_level: p.lowStockThreshold,
-    sizes: p.sizes,
-    colors: p.colors,
-    variants: p.variants,
-    created_at: (p as Product & { created_at?: string }).created_at || new Date().toISOString(),
-    updated_at: (p as Product & { updated_at?: string }).updated_at,
-    archived_at: p.archivedAt,
-    lifecycle: getProductLifecycleStatus(p),
-  }));
+  catalog.map(productToInventoryRow);
 
 const DEFAULT_ADVANCED: InventoryAdvancedFilters = {
   hasImage: null,
@@ -226,6 +209,36 @@ function Inventory() {
       toast.error(
         error instanceof InventoryRestockError ? error.message : 'خطأ في إعادة التعبئة'
       );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveVariantStock = async (
+    productId: string,
+    variants: ProductVariant[],
+    minLevel: number
+  ) => {
+    setSaving(true);
+    try {
+      const result = await updateProduct(productId, {
+        variants,
+        stockQuantity: variantStockSum(variants),
+        lowStockThreshold: minLevel,
+      });
+
+      if (!result.success) {
+        toast.error(result.error || 'فشل تحديث مخزون التركيبات');
+        return;
+      }
+
+      toast.success('تم تحديث مخزون كل تركيبة');
+      await catalog.reload();
+      setDialogOpen(false);
+      setSelectedProduct(null);
+    } catch (error) {
+      console.error('Error saving variant stock:', error);
+      toast.error('خطأ في تحديث مخزون التركيبات');
     } finally {
       setSaving(false);
     }
@@ -748,6 +761,7 @@ function Inventory() {
           if (!open) setSelectedProduct(null);
         }}
         onRestock={handleDialogRestock}
+        onSaveVariants={handleSaveVariantStock}
       />
     </DashboardLayout>
   );

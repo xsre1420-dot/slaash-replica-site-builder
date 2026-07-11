@@ -8,11 +8,8 @@ import {
 
 const simplifiedStatusStyles: Record<SimplifiedOrderStatusKey, string> = {
   new: 'bg-warning/15 text-warning border-warning/30',
-  processing: 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/20',
-  shipping: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20',
   completed: 'bg-success/15 text-success border-success/30',
   cancelled: 'bg-destructive/15 text-destructive border-destructive/30',
-  refunded: 'bg-destructive/15 text-destructive border-destructive/30',
 };
 
 interface OrderStatusBadgesProps {

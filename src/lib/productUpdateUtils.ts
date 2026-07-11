@@ -166,6 +166,7 @@ export type ProductLifecycleAction = 'publish' | 'draft' | 'archive' | 'restore'
 /** Whether a product patch changes dashboard catalog KPIs (product/low-stock counts). */
 export const patchAffectsCatalogStats = (patch: Partial<Product>): boolean =>
   'stockQuantity' in patch ||
+  'variants' in patch ||
   'isActive' in patch ||
   'archivedAt' in patch ||
   'lowStockThreshold' in patch;

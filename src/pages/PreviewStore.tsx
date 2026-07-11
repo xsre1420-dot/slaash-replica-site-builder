@@ -14,6 +14,7 @@ import { useAuth } from "@/context/AuthContext";
 import MarketingScripts from "@/components/MarketingScripts";
 import OptimizedImage from "@/components/OptimizedImage";
 import { getProductListingBlurb } from "@/lib/storefrontProductDisplay";
+import ProductPriceDisplay from "@/components/storefront/ProductPriceDisplay";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 const PreviewStore = () => {
@@ -21,7 +22,6 @@ const PreviewStore = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [favorites, setFavorites] = useState<string[]>([]);
   const { user } = useAuth();
   const { isReady, hydrationVersion } = useStoreHydration();
   const { addToCart, cartItems, setStoreOwner } = useCart();
@@ -118,14 +118,6 @@ const PreviewStore = () => {
     });
   };
 
-  const toggleFavorite = (productId: string) => {
-    setFavorites(prev => 
-      prev.includes(productId) 
-        ? prev.filter(id => id !== productId)
-        : [...prev, productId]
-    );
-  };
-
   useEffect(() => {
     if (bannerImages.length <= 1) return;
     let transitionTimer: ReturnType<typeof setTimeout> | null = null;
@@ -174,7 +166,7 @@ const PreviewStore = () => {
               <Link
                 to="/builder"
                 aria-label="العودة للوحة التحكم"
-                className="w-10 h-10 shrink-0 rounded-full bg-muted/80 border border-border/60 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                className="icon-circle-btn"
               >
                 <ArrowRight className="w-5 h-5" />
               </Link>
@@ -192,11 +184,11 @@ const PreviewStore = () => {
             <button
               type="button"
               onClick={() => setShowSearch((v) => !v)}
-              className="w-10 h-10 shrink-0 flex items-center justify-center rounded-full bg-muted/80 border border-border/60 hover:bg-muted transition-colors"
+              className="icon-circle-btn"
               aria-label={showSearch ? "إخفاء البحث" : "البحث عن منتج"}
               aria-expanded={showSearch}
             >
-              <Search className="w-5 h-5 text-muted-foreground" />
+              <Search className="w-5 h-5" />
             </button>
           </div>
 
@@ -324,15 +316,6 @@ const PreviewStore = () => {
                     className="w-full h-full object-contain p-4"
                     loading="lazy"
                   />
-                  
-                  {/* Discount Badge */}
-                  {product.discountType && product.discountType !== 'none' && (
-                    <div className="absolute top-2 right-2 bg-gradient-to-r from-red-500 to-red-600 text-white px-2 py-1 rounded-full shadow-lg">
-                      <span className="text-[10px] font-bold">
-                        -{product.discountType === 'percentage' ? `${product.discountValue}%` : `${product.discountValue?.toLocaleString()}`}
-                      </span>
-                    </div>
-                  )}
                 </div>
                 
                 <div className="p-3 space-y-1">
@@ -345,20 +328,7 @@ const PreviewStore = () => {
                     </p>
                   )}
                   <div className="text-right pt-0.5">
-                    {product.discountType && product.discountType !== 'none' && product.originalPrice ? (
-                      <div className="flex flex-col items-end gap-0.5">
-                        <span className="text-xs text-muted-foreground line-through">
-                          {product.originalPrice.toLocaleString()} د.ع
-                        </span>
-                        <span className="text-sm font-bold text-red-600">
-                          {product.price.toLocaleString()} د.ع
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="text-sm font-bold text-foreground">
-                        {product.price.toLocaleString()} د.ع
-                      </div>
-                    )}
+                    <ProductPriceDisplay product={product} size="sm" align="end" showBadge />
                   </div>
                 </div>
               </div>

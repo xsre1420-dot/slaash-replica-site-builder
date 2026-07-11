@@ -26,14 +26,9 @@ vi.mock('@/lib/tenantGuard', () => ({
 import { fetchOrderStatsSummary } from '@/services/orderService';
 
 const workflowCounts = {
-  all: 2,
   new: 1,
-  processing: 0,
-  paid: 0,
-  shipped: 0,
-  delivered: 1,
+  completed: 1,
   cancelled: 0,
-  refunded: 0,
 };
 
 describe('fetchOrderStatsSummary', () => {

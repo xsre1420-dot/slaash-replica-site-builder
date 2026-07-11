@@ -4,18 +4,21 @@ import { fetchRecentOrders } from '@/services/orderService';
 import { useAuth } from '@/context/AuthContext';
 import { useStoreHydration } from '@/context/StoreBootstrapContext';
 import { cache, CacheKeys } from '@/lib/cache';
-import { DEFAULT_ORDER_FILTERS } from '@/utils/orderWorkflowUtils';
+import { DEFAULT_ORDER_FILTERS, getOrderWorkflowCategory } from '@/utils/orderWorkflowUtils';
 import { serializeOrderFilters } from '@/utils/orderQueryBuilder';
 import type { OrdersPageResult } from '@/services/orderService';
+
+const filterNewOrders = (orders: Order[]) =>
+  orders.filter((order) => getOrderWorkflowCategory(order) === 'new');
 
 const readCachedRecent = (ownerId: string | undefined, limit: number): Order[] => {
   if (!ownerId) return [];
   const recent = cache.get<Order[]>(CacheKeys.ordersRecent(ownerId));
-  if (recent?.length) return recent.slice(0, limit);
+  if (recent?.length) return filterNewOrders(recent).slice(0, limit);
 
-  const filterKey = serializeOrderFilters(DEFAULT_ORDER_FILTERS);
+  const filterKey = serializeOrderFilters({ ...DEFAULT_ORDER_FILTERS, workflowTab: 'new' });
   const page0 = cache.get<OrdersPageResult>(CacheKeys.ordersFiltered(ownerId, filterKey, 0));
-  if (page0?.orders?.length) return page0.orders.slice(0, limit);
+  if (page0?.orders?.length) return filterNewOrders(page0.orders).slice(0, limit);
 
   return [];
 };

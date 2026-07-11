@@ -2,9 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ShoppingBag,
-  Bell,
   Loader2,
-  Download,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/layout/PageHeader';
@@ -25,7 +23,6 @@ import {
   OrderListFilters,
   formatOrderNumber,
 } from '@/utils/orderWorkflowUtils';
-import { exportOrdersToCsv } from '@/utils/orderExportUtils';
 import { useOrderDashboardStats } from '@/hooks/useOrderDashboardStats';
 import { isLocalOrderMutationEcho } from '@/lib/localMutationGuard';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
@@ -85,7 +82,7 @@ const Orders = () => {
     attentionApplied.current = true;
     setFilters((prev) => ({
       ...prev,
-      workflowTab: stats.newOrders > 0 ? 'new' : 'processing',
+      workflowTab: 'new',
     }));
   }, [searchParams, stats.newOrders]);
 
@@ -105,7 +102,7 @@ const Orders = () => {
           duration: 8000,
           action: {
             label: 'عرض',
-            onClick: () => navigate(`/orders/${event.orderId}`),
+            onClick: () => navigate('/orders'),
           },
         });
       } else if (event.type === 'update') {
@@ -120,7 +117,7 @@ const Orders = () => {
             duration: 5000,
             action: {
               label: 'عرض',
-              onClick: () => navigate(`/orders/${event.orderId}`),
+              onClick: () => navigate('/orders'),
             },
           });
         } else if (event.paymentStatus === 'paid' || event.paymentStatus === 'collected') {
@@ -198,18 +195,6 @@ const Orders = () => {
     }
   };
 
-  const handleExport = () => {
-    const toExport = selectedIds.size > 0
-      ? orders.filter((o) => selectedIds.has(o.id))
-      : orders;
-    if (toExport.length === 0) {
-      toast.error('لا توجد طلبات للتصدير');
-      return;
-    }
-    exportOrdersToCsv(toExport, `orders-${new Date().toISOString().slice(0, 10)}.csv`);
-    toast.success(`تم تصدير ${toExport.length} طلب`);
-  };
-
   const toggleSelect = (orderId: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -248,7 +233,7 @@ const Orders = () => {
 
   const hasActiveFilters =
     filters.search ||
-    filters.workflowTab !== 'all' ||
+    filters.workflowTab !== DEFAULT_ORDER_FILTERS.workflowTab ||
     filters.datePreset !== 'all';
 
   const headerActions = (
@@ -256,31 +241,11 @@ const Orders = () => {
       <OrderNotificationsCenter
         notifications={notifications}
         unreadCount={unreadCount}
+        newOrdersCount={tabCounts.new ?? stats.newOrders}
         onOpen={openOrder}
         onMarkAllRead={markAllRead}
         onClear={clearAll}
       />
-      {stats.newOrders > 0 && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="rounded-xl gap-2 border-warning/40 text-warning min-h-[40px]"
-          onClick={() => updateFilters({ workflowTab: 'new' })}
-        >
-          <Bell className="w-4 h-4" />
-          {stats.newOrders} جديد
-        </Button>
-      )}
-      <Button
-        variant="outline"
-        size="sm"
-        className="rounded-xl gap-2 min-h-[40px]"
-        onClick={handleExport}
-        disabled={orders.length === 0}
-      >
-        <Download className="w-4 h-4" />
-        <span className="hidden sm:inline">تصدير</span>
-      </Button>
     </div>
   );
 
@@ -337,8 +302,6 @@ const Orders = () => {
               onUpdateStatus={handleStatusChange}
               selectedIds={selectedIds}
               onToggleSelect={toggleSelect}
-              onToggleSelectAll={toggleSelectAll}
-              allSelected={selectedIds.size === orders.length && orders.length > 0}
             />
 
             <OrdersBulkBar

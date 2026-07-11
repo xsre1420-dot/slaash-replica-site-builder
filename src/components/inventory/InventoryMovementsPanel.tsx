@@ -97,7 +97,7 @@ const InventoryMovementsPanel = ({ ownerId }: InventoryMovementsPanelProps) => {
                         )}
                         {global.order_id && (
                           <Link
-                            to={`/orders/${global.order_id}`}
+                            to="/orders"
                             className="text-[10px] font-medium text-primary hover:underline"
                           >
                             عرض الطلب

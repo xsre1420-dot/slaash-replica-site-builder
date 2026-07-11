@@ -1,12 +1,23 @@
 import { Product } from '@/types';
-import { isProductLowStock } from '@/lib/productUpdateUtils';
 import {
   getProductLifecycleStatus,
   matchesLifecycleFilter,
   type ProductLifecycleFilter,
 } from '@/lib/productLifecycle';
+import { getAvailableQty, normalizeProductStock } from '@/utils/inventoryUtils';
 
-export type ProductStockFilter = 'all' | 'in_stock' | 'low' | 'out';
+export type ProductStockFilter = 'all' | 'in_stock' | 'low' | 'out' | 'unlimited';
+export type ProductCatalogStockStatus = 'unlimited' | 'good' | 'low' | 'out';
+
+export const getProductCatalogStockStatus = (product: Product): ProductCatalogStockStatus => {
+  const normalized = normalizeProductStock(product);
+  if (normalized.stockQuantity == null && !(normalized.variants?.length)) return 'unlimited';
+  const qty = getAvailableQty(normalized);
+  const minLevel = normalized.lowStockThreshold ?? 5;
+  if (qty === 0) return 'out';
+  if (qty <= minLevel) return 'low';
+  return 'good';
+};
 export type ProductCatalogSort =
   | 'recent'
   | 'name'
@@ -48,12 +59,15 @@ export const computeProductCatalogStats = (products: Product[]) => {
     else if (lifecycle === 'draft') drafts += 1;
     else archived += 1;
 
-    const qty = p.stockQuantity ?? 0;
-    if (p.stockQuantity !== undefined && qty === 0) outOfStock += 1;
-    else if (isProductLowStock(p)) lowStock += 1;
-    else if (qty > 0) inStock += 1;
+    const status = getProductCatalogStockStatus(p);
+    if (status === 'out') outOfStock += 1;
+    else if (status === 'low') lowStock += 1;
+    else if (status === 'good') inStock += 1;
 
-    inventoryValue += p.price * Math.max(qty, 0);
+    const qty = getAvailableQty(normalizeProductStock(p));
+    if (status !== 'unlimited') {
+      inventoryValue += p.price * Math.max(qty, 0);
+    }
   }
 
   return {
@@ -77,9 +91,11 @@ export const countProductsByLifecycle = (products: Product[]): ProductLifecycleC
 
 const matchesStockFilter = (product: Product, stock: ProductStockFilter): boolean => {
   if (stock === 'all') return true;
-  if (stock === 'in_stock') return !isProductLowStock(product) && (product.stockQuantity ?? 0) > 0;
-  if (stock === 'low') return isProductLowStock(product);
-  return product.stockQuantity !== undefined && product.stockQuantity === 0;
+  const status = getProductCatalogStockStatus(product);
+  if (stock === 'unlimited') return status === 'unlimited';
+  if (stock === 'in_stock') return status === 'good' || status === 'unlimited';
+  if (stock === 'low') return status === 'low';
+  return status === 'out';
 };
 
 export const filterProductCatalog = (

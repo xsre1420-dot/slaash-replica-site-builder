@@ -398,13 +398,17 @@ const ProductFormEditor = ({
             <p className="text-destructive text-xs text-right">{state.fieldErrors.category}</p>
           )}
           <div>
-            <Label className="text-right block mb-1.5 text-sm text-muted-foreground">الوسوم</Label>
+            <Label className="text-right block mb-1.5 text-sm">كلمات مفتاحية للمنتج</Label>
             <Input
               value={state.tagsInput}
               onChange={(e) => actions.setTagsInput(e.target.value)}
               placeholder="صيف، هدايا، الأكثر مبيعاً"
               className="text-right rounded-xl text-sm"
             />
+            <p className="text-xs text-muted-foreground text-right mt-1.5 leading-relaxed">
+              اكتب كلمات تصف منتجك (مثل الموسم أو الاستخدام). تظهر للعملاء أعلى صورة المنتج
+              وتساعدهم على فهم المنتج بسرعة — افصل بين الكلمات بفاصلة.
+            </p>
           </div>
         </section>
 

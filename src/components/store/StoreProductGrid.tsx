@@ -16,8 +16,6 @@ export interface StoreProductGridProps {
   totalCount: number;
   isTenantMode: boolean;
   storeSlug?: string;
-  isFavorite: (id: string) => boolean;
-  onToggleFavorite: (id: string) => void;
   onAddToCart: (product: Product) => void;
   onShare: (product: Product) => void;
   sentinelRef: RefObject<HTMLDivElement | null>;
@@ -32,8 +30,6 @@ const StoreProductGrid = memo(function StoreProductGrid({
   totalCount,
   isTenantMode,
   storeSlug,
-  isFavorite,
-  onToggleFavorite,
   onAddToCart,
   onShare,
   sentinelRef,
@@ -114,9 +110,7 @@ const StoreProductGrid = memo(function StoreProductGrid({
             key={product.id}
             product={product}
             viewMode={viewMode}
-            isFavorite={isFavorite(product.id)}
             cartQuantity={cartQuantityById.get(product.id) ?? 0}
-            onToggleFavorite={onToggleFavorite}
             onAddToCart={onAddToCart}
             onUpdateQuantity={handleUpdateQuantity}
             onView={handleViewProduct}

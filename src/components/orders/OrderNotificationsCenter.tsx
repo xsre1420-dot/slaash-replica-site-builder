@@ -22,6 +22,7 @@ const typeIcons = {
 interface OrderNotificationsCenterProps {
   notifications: OrderNotification[];
   unreadCount: number;
+  newOrdersCount?: number;
   onOpen: (orderId: string, notificationId: string) => void;
   onMarkAllRead: () => void;
   onClear: () => void;
@@ -31,11 +32,15 @@ interface OrderNotificationsCenterProps {
 const OrderNotificationsCenter = ({
   notifications,
   unreadCount,
+  newOrdersCount = 0,
   onOpen,
   onMarkAllRead,
   onClear,
   className,
-}: OrderNotificationsCenterProps) => (
+}: OrderNotificationsCenterProps) => {
+  const badgeCount = newOrdersCount > 0 ? newOrdersCount : 0;
+
+  return (
   <Popover>
     <PopoverTrigger asChild>
       <Button
@@ -45,9 +50,9 @@ const OrderNotificationsCenter = ({
         aria-label="إشعارات الطلبات"
       >
         <Bell className="h-4 w-4" />
-        {unreadCount > 0 && (
+        {badgeCount > 0 && (
           <span className="absolute -top-1 -left-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
-            {unreadCount > 9 ? '9+' : unreadCount}
+            {badgeCount > 9 ? '9+' : badgeCount}
           </span>
         )}
       </Button>
@@ -117,6 +122,7 @@ const OrderNotificationsCenter = ({
       </div>
     </PopoverContent>
   </Popover>
-);
+  );
+};
 
 export default OrderNotificationsCenter;

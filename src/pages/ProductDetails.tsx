@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import StoreThemeProvider from "@/components/StoreThemeProvider";
 import StorefrontFooter from "@/components/storefront/StorefrontFooter";
-import ProductPurchaseBar from "@/components/storefront/ProductPurchaseBar";
+import { StoreFixedCheckoutBar } from "@/components/store/StoreCartChrome";
 import ProductInfoPanel from "@/components/storefront/ProductInfoPanel";
 import ProductDescriptionBlock from "@/components/storefront/ProductDescriptionBlock";
 import { getCheckoutPath, getStoreHomePath } from "@/lib/storefrontPaths";
@@ -21,10 +21,9 @@ import {
   validateVariantSelection,
   applyActiveDiscount,
 } from "@/utils/inventoryUtils";
-import { getDiscountBadgeLabel, getProductGalleryImages, hasPromotionalPricing } from "@/lib/storefrontProductDisplay";
+import { getProductGalleryImages } from "@/lib/storefrontProductDisplay";
 import ProductHeader from "@/components/product-details/ProductHeader";
 import ProductImages from "@/components/product-details/ProductImages";
-import CartButton from "@/components/product-details/CartButton";
 import ProductData, { type ProductLoadStatus } from "@/components/product-details/ProductData";
 import ExpandableSection from "@/components/product-details/ExpandableSection";
 import RatingSection from "@/components/product-details/RatingSection";
@@ -68,7 +67,7 @@ const ProductDetails = () => {
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
   const [isAdding, setIsAdding] = useState(false);
-  const { addToCart, cartCount, cartItems, setStoreOwner } = useCart();
+  const { addToCart, setStoreOwner } = useCart();
   const { storeSettings, storeName, storeGovernorate } = useStore();
 
   const themeColors = {
@@ -108,11 +107,6 @@ const ProductDetails = () => {
     if (status === "success" && p) setProduct(p);
     if (status === "not_found") setProduct(null);
   }, []);
-
-  const totalAmount = useMemo(
-    () => cartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
-    [cartItems]
-  );
 
   const activeProduct = product ? applyActiveDiscount(product) : null;
 
@@ -162,9 +156,6 @@ const ProductDetails = () => {
     : false;
   const isLowStock = activeProduct ? variantAvailable > 0 && variantAvailable <= 3 : false;
   const isOutOfStock = activeProduct ? variantAvailable <= 0 : false;
-  const discountLabel = activeProduct && hasPromotionalPricing(activeProduct)
-    ? getDiscountBadgeLabel(activeProduct)
-    : null;
 
   const galleryImages = useMemo(
     () => (product ? getProductGalleryImages(product, selectedColor || undefined) : []),
@@ -215,23 +206,27 @@ const ProductDetails = () => {
         <ProductHeader />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 lg:pt-6">
-          <div className="grid lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,440px)] lg:gap-10 xl:gap-14 lg:items-start">
-            <ScrollReveal delay={0} className="lg:sticky lg:top-[4.5rem] lg:self-start pt-4 lg:pt-0">
+          {/* Desktop: info left, gallery right (physical columns — grid lines ignore dir) */}
+          <div className="grid lg:grid-cols-[minmax(360px,440px)_minmax(0,1.15fr)] lg:gap-10 xl:gap-14 lg:items-start">
+            <ScrollReveal
+              delay={0}
+              className="order-1 lg:order-2 lg:col-start-2 pt-4 lg:pt-0 lg:sticky lg:top-[4.5rem] lg:self-start"
+            >
               <ProductImages
                 key={`${selectedColor || "default"}-${galleryImages.join("|")}`}
                 images={galleryImages}
                 productName={product.name}
+                tags={product.tags}
                 galleryKey={selectedColor || "default"}
                 isLarge
                 isNew={isNew}
                 isLowStock={isLowStock}
                 stockQuantity={variantAvailable}
                 isOutOfStock={isOutOfStock}
-                discountPercent={discountLabel ? parseInt(discountLabel.replace(/\D/g, ""), 10) || undefined : undefined}
               />
             </ScrollReveal>
 
-            <div className="pt-6 lg:pt-0 lg:sticky lg:top-[4.5rem] lg:self-start">
+            <div className="order-2 lg:order-1 lg:col-start-1 lg:row-start-1 pt-6 lg:pt-0 lg:sticky lg:top-[4.5rem] lg:self-start">
               <ScrollReveal delay={50}>
                 <ProductInfoPanel
                   product={product}
@@ -255,7 +250,6 @@ const ProductDetails = () => {
                   onBuyNow={handleBuyNow}
                 />
               </ScrollReveal>
-
             </div>
           </div>
 
@@ -294,22 +288,7 @@ const ProductDetails = () => {
           </div>
         </div>
 
-        <ProductPurchaseBar
-          product={activeProduct}
-          quantity={quantity}
-          isOutOfStock={isOutOfStock}
-          isAdding={isAdding}
-          onAddToCart={handleAddToCart}
-          onBuyNow={handleBuyNow}
-          className="sm:hidden"
-        />
-
-        {cartCount > 0 && (
-          <div className="hidden sm:block">
-            <div className="h-24" />
-            <CartButton cartCount={cartCount} totalAmount={totalAmount} checkoutPath={checkoutPath} storeSlug={storeSlug} />
-          </div>
-        )}
+        <StoreFixedCheckoutBar isTenantMode={isTenantMode} storeSlug={storeSlug} />
       </div>
     </StoreThemeProvider>
   );

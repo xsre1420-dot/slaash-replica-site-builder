@@ -40,11 +40,17 @@ export const resolveSupabaseConfig = (): SupabaseEndpointConfig => {
   const failoverUrl = env.VITE_FAILOVER_SUPABASE_URL;
   const failoverKey = env.VITE_FAILOVER_SUPABASE_PUBLISHABLE_KEY || env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+  if (isFailoverActive() && !failoverUrl) {
+    deactivateFailover();
+  }
+
   if (isFailoverActive() && failoverUrl) {
     return { url: failoverUrl, key: failoverKey, label: 'failover' };
   }
 
-  const primaryUrl = env.VITE_SUPABASE_POOLER_URL?.trim() || env.VITE_SUPABASE_URL;
+  // PostgREST + Storage live on the project URL. Pooler hostname is Postgres-only —
+  // using it as REST base causes "TypeError: Failed to fetch" on mutations.
+  const primaryUrl = env.VITE_SUPABASE_URL;
 
   return {
     url: primaryUrl,
@@ -67,7 +73,7 @@ export const checkEndpointHealth = async (baseUrl: string): Promise<boolean> => 
       },
     });
     clearTimeout(timeout);
-    return res.ok || res.status === 404;
+    return res.ok || res.status === 401 || res.status === 403 || res.status === 404;
   } catch {
     return false;
   }

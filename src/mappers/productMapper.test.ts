@@ -56,7 +56,32 @@ describe('productMapper', () => {
     expect(product.originalPrice).toBe(5000);
   });
 
-  it('returns undefined for invalid JSON', () => {
-    expect(parseJsonField('not-json')).toBeUndefined();
+  it('parses JSON string sizes', () => {
+    const product = mapDbProduct({
+      id: 'p3',
+      name: 'Sized',
+      category: 'cat',
+      price: 100,
+      image_url: 'https://img.test/a.png',
+      sizes: '["S","M","L"]',
+    });
+    expect(product.sizes).toEqual(['S', 'M', 'L']);
+  });
+
+  it('derives sizes and colors from variants when lists are missing', () => {
+    const product = mapDbProduct({
+      id: 'p4',
+      name: 'Varianted',
+      category: 'cat',
+      price: 100,
+      image_url: 'https://img.test/a.png',
+      variants: [
+        { size: 'M', color: '#ff0000', quantity: 2 },
+        { size: 'L', color: '#ff0000', quantity: 1 },
+        { size: 'M', color: '#0000ff', quantity: 3 },
+      ],
+    });
+    expect(product.sizes).toEqual(['M', 'L']);
+    expect(product.colors?.map((c) => c.value)).toEqual(['#ff0000', '#0000ff']);
   });
 });

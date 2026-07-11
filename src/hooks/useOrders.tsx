@@ -16,6 +16,7 @@ import {
 } from '@/services/orderService';
 import {
   DEFAULT_ORDER_FILTERS,
+  matchesWorkflowTab,
   OrderListFilters,
   OrderWorkflowTab,
 } from '@/utils/orderWorkflowUtils';
@@ -23,14 +24,9 @@ import { serializeOrderFilters } from '@/utils/orderQueryBuilder';
 import { markLocalOrderMutation } from '@/lib/localMutationGuard';
 
 const EMPTY_TAB_COUNTS: WorkflowTabCounts = {
-  all: 0,
   new: 0,
-  processing: 0,
-  paid: 0,
-  shipped: 0,
-  delivered: 0,
+  completed: 0,
   cancelled: 0,
-  refunded: 0,
 };
 
 const VISIBILITY_REFETCH_MS = 60_000;
@@ -180,17 +176,23 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
 
     if (result.success) {
       markLocalOrderMutation(orderId);
-      setOrders((prev) =>
-        prev.map((o) =>
-          o.id === orderId
-            ? {
-                ...o,
-                status: newStatus,
-                ...(newStatus === 'completed' ? { deliveryStatus: 'delivered' } : {}),
-              }
-            : o
-        )
-      );
+      setOrders((prev) => {
+        const current = prev.find((o) => o.id === orderId);
+        if (!current) return prev;
+
+        const updated: Order = {
+          ...current,
+          status: newStatus,
+          ...(newStatus === 'completed' ? { deliveryStatus: 'delivered' } : {}),
+        };
+
+        if (!matchesWorkflowTab(updated, listFilters.workflowTab)) {
+          setTotal((count) => Math.max(0, count - 1));
+          return prev.filter((o) => o.id !== orderId);
+        }
+
+        return prev.map((o) => (o.id === orderId ? updated : o));
+      });
       flushOrderCache(ownerId);
       void loadTabCounts();
       return true;

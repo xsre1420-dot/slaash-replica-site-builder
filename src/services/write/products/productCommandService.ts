@@ -42,6 +42,7 @@ import {
 import { enqueueImageCleanup, enqueueImageDelete } from '@/background/enqueue';
 import { applyStockQuantityPatch } from '@/services/write/inventory/inventoryWriteService';
 import { InventoryRestockError } from '@/services/read/inventory/inventoryReadService';
+import { variantStockSum } from '@/utils/inventoryUtils';
 import type { Product } from '@/types';
 import type { ProductsCrudResult } from '@/services/read/products/productQueryService';
 
@@ -230,8 +231,11 @@ export async function updateProduct(
   const existing = mapDbProduct(existingRow);
   let workingProduct = existing;
   const patchForMerge = { ...patch };
+  const hasVariantPatch = 'variants' in patch && patch.variants !== undefined;
 
-  if ('stockQuantity' in patch && patch.stockQuantity !== undefined) {
+  if (hasVariantPatch) {
+    patchForMerge.stockQuantity = variantStockSum(patch.variants);
+  } else if ('stockQuantity' in patch && patch.stockQuantity !== undefined) {
     try {
       const newQty = await applyStockQuantityPatch(
         productId,

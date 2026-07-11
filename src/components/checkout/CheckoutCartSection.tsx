@@ -49,11 +49,11 @@ const CheckoutCartSection = memo(function CheckoutCartSection({
 }: CheckoutCartSectionProps) {
   return (
     <ScrollReveal delay={100}>
-      <section className="bg-card rounded-xl border border-border/50 p-3.5 sm:p-4">
-        <h2 className="text-base font-semibold mb-2.5 text-right text-foreground">
+      <section className="pb-6 border-b border-gray-100">
+        <h2 className="text-base font-bold mb-4 text-right text-gray-900">
           طلبك ({cartCount})
         </h2>
-        <div className="space-y-2">
+        <div className="space-y-3">
           {cartItems.map((item, index) => (
             <CartItemCard
               key={`${item.product.id}-${item.selectedSize || ''}-${item.selectedColor || ''}-${index}`}
@@ -65,14 +65,15 @@ const CheckoutCartSection = memo(function CheckoutCartSection({
             />
           ))}
         </div>
-        <div className="flex justify-between items-center mt-3 pt-2.5 border-t border-border/50">
-          <span className="font-semibold text-base text-foreground">{cartTotal.toLocaleString()} د.ع</span>
-          <span className="text-sm font-medium text-muted-foreground">المجموع</span>
+
+        <div className="flex justify-between items-center mt-5 pt-4 border-t border-gray-100">
+          <span className="font-bold text-lg tabular-nums text-gray-900">{cartTotal.toLocaleString()} د.ع</span>
+          <span className="text-sm font-medium text-gray-500">المجموع</span>
         </div>
 
         {ownerId && (
-          <div className="mt-3 pt-2.5 border-t border-border/50">
-            <p className="text-xs font-medium text-muted-foreground mb-2 text-right">كود الخصم</p>
+          <div className="mt-5 pt-4 border-t border-gray-100">
+            <p className="text-xs font-semibold text-gray-500 mb-2.5 text-right">كود الخصم</p>
             <CouponInput
               ownerId={ownerId}
               storeSlug={isTenantMode ? storeSlug : undefined}
@@ -84,14 +85,14 @@ const CheckoutCartSection = memo(function CheckoutCartSection({
         )}
 
         {discountAmount > 0 && (
-          <div className="flex justify-between mt-2 text-xs text-primary">
-            <span>-{discountAmount.toLocaleString()} د.ع</span>
+          <div className="flex justify-between mt-3 text-sm text-primary font-medium">
+            <span className="tabular-nums">-{discountAmount.toLocaleString()} د.ع</span>
             <span>الخصم ({appliedCoupon?.code})</span>
           </div>
         )}
 
         {deliveryPrices.length > 0 && !selectedGovernorate && (
-          <p className="text-[11px] text-muted-foreground mt-2.5 text-right leading-relaxed">
+          <p className="text-[11px] text-muted-foreground mt-3 text-right leading-relaxed">
             اختر المحافظة لعرض رسوم التوصيل والمجموع النهائي
           </p>
         )}

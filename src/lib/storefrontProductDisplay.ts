@@ -94,7 +94,7 @@ export const formatStorePrice = (amount: number): string =>
 
 export const getProductOptionSummary = (product: Product): string | null => {
   const parts: string[] = [];
-  if (product.sizes?.length) parts.push(`${product.sizes.length} مقاس`);
+  if (product.sizes?.length) parts.push(`${product.sizes.length} قياس`);
   if (product.colors?.length) parts.push(`${product.colors.length} لون`);
   if (product.variants?.length) parts.push(`${product.variants.length} تركيبة`);
   return parts.length ? parts.join(' · ') : null;

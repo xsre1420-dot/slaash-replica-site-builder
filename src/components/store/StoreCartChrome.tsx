@@ -16,8 +16,8 @@ export const StoreCartHeaderButton = memo(function StoreCartHeaderButton({
 
   return (
     <CartDrawer storeSlug={storeSlug}>
-      <button className="relative p-2 rounded-full hover:bg-muted transition-colors">
-        <ShoppingCart className="w-5 h-5 text-foreground" />
+      <button className="icon-circle-btn relative min-h-[44px] min-w-[44px]">
+        <ShoppingCart className="w-5 h-5" strokeWidth={2.25} />
         {cartCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold animate-scale-in">
             {cartCount}

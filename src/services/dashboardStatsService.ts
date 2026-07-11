@@ -1,4 +1,5 @@
 import { callReadRpc } from '@/lib/readWrite/readClient';
+import { flushMerchantAnalyticsBuffer } from '@/services/analyticsTrackingService';
 import {
   fetchDashboardBatchCached,
   fetchDashboardKpisLightCached,
@@ -11,6 +12,7 @@ import {
 } from '@/utils/dashboardInsightsUtils';
 import { netRevenueFromRpc } from '@/utils/analyticsMetrics';
 import type { OrderDashboardStats, WorkflowTabCounts } from '@/types/orders';
+import { normalizeWorkflowTabCounts } from '@/utils/orderWorkflowUtils';
 import { traceCriticalFlow } from '@/lib/tracing';
 
 export type DashboardCatalogKpis = {
@@ -110,6 +112,7 @@ export const fetchDashboardStatisticsBatch = async (
   return traceCriticalFlow('dashboard.load', 'rpc', 'statisticsBatch', async () =>
     fetchDashboardBatchCached(ownerId, async () => {
     try {
+      await flushMerchantAnalyticsBuffer();
       const { data, error } = await callReadRpc<Record<string, unknown>>(
         'get_dashboard_statistics_batch',
         { p_owner_id: ownerId }
@@ -127,7 +130,9 @@ export const fetchDashboardStatisticsBatch = async (
         previousWeek: parsePeriod(payload.previous_week),
         month: parsePeriod(payload.month),
         allTime: (payload.all_time as Record<string, unknown>) ?? null,
-        workflowCounts: (payload.workflow_counts as WorkflowTabCounts) ?? null,
+        workflowCounts: normalizeWorkflowTabCounts(
+          payload.workflow_counts as Record<string, number> | null
+        ),
         catalogKpis: parseCatalogKpis(payload),
       };
     } catch {
@@ -159,26 +164,26 @@ export const fetchStoreStatisticsPeriod = async (
 export const buildOrderDashboardStatsFromBatch = (
   batch: DashboardBatchPayload
 ): OrderDashboardStats => {
-  const counts = batch.workflowCounts;
+  const counts = normalizeWorkflowTabCounts(batch.workflowCounts as Record<string, number> | null);
   const month = batch.month;
   const today = batch.today;
   const week = batch.week;
   const allTime = batch.allTime;
 
   const totalRevenue = netRevenueFromRpc(allTime) || month?.revenue || 0;
-  const deliveredCount = counts?.delivered ?? 0;
+  const completedCount = counts.completed;
 
   return {
-    total: counts?.all ?? month?.orders ?? 0,
-    newOrders: counts?.new ?? 0,
-    pendingFulfillment: (counts?.new ?? 0) + (counts?.processing ?? 0) + (counts?.paid ?? 0),
-    delivered: deliveredCount,
+    total: counts.new + counts.completed + counts.cancelled || month?.orders || 0,
+    newOrders: counts.new,
+    pendingFulfillment: counts.new,
+    delivered: completedCount,
     revenue: totalRevenue,
     todayRevenue: today?.revenue ?? 0,
     weekRevenue: week?.revenue ?? 0,
     monthRevenue: month?.revenue ?? 0,
     pendingRevenue: 0,
-    avgOrderValue: deliveredCount > 0 ? Math.round(totalRevenue / deliveredCount) : 0,
+    avgOrderValue: completedCount > 0 ? Math.round(totalRevenue / completedCount) : 0,
     todayOrders: today?.orders ?? 0,
     weekOrders: week?.orders ?? 0,
     monthOrders: month?.orders ?? 0,

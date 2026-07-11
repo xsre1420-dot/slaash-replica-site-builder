@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils';
 import { OrderWorkflowTab, WORKFLOW_TABS } from '@/utils/orderWorkflowUtils';
 import type { WorkflowTabCounts } from '@/types/orders';
 
-const PRIMARY_TAB_IDS: OrderWorkflowTab[] = ['all', 'new', 'processing', 'delivered', 'cancelled'];
+const PRIMARY_TAB_IDS: OrderWorkflowTab[] = ['new', 'completed', 'cancelled'];
 
 interface OrdersWorkflowTabsProps {
   tabCounts: WorkflowTabCounts;

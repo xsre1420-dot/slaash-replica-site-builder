@@ -27,11 +27,9 @@ const OrdersSummaryStrip = ({
     value: string | number;
     emphasis?: boolean;
   }[] = [
-    { tab: 'all', label: 'الكل', value: tabCounts.all ?? stats.total },
-    { tab: 'new', label: 'جديدة', value: tabCounts.new ?? stats.newOrders, emphasis: (tabCounts.new ?? 0) > 0 },
-    { tab: 'processing', label: 'قيد المعالجة', value: tabCounts.processing ?? stats.pendingFulfillment, emphasis: (tabCounts.processing ?? 0) > 0 },
-    { tab: 'delivered', label: 'مكتملة', value: tabCounts.delivered ?? stats.delivered },
-    { tab: 'cancelled', label: 'ملغاة', value: tabCounts.cancelled ?? 0 },
+    { tab: 'new', label: 'جديد', value: tabCounts.new ?? stats.newOrders, emphasis: (tabCounts.new ?? 0) > 0 },
+    { tab: 'completed', label: 'مكتمل', value: tabCounts.completed ?? stats.delivered },
+    { tab: 'cancelled', label: 'ملغي', value: tabCounts.cancelled ?? 0 },
   ];
 
   const revenueItems = [
@@ -86,10 +84,10 @@ const OrdersSummaryStrip = ({
           </div>
           <button
             type="button"
-            onClick={() => onFilter({ workflowTab: 'delivered', datePreset: 'all' })}
+            onClick={() => onFilter({ workflowTab: 'completed', datePreset: 'all' })}
             className={cn(
               'text-[11px] font-medium text-primary hover:underline shrink-0',
-              activeTab === 'delivered' && 'underline'
+              activeTab === 'completed' && 'underline'
             )}
           >
             عرض المكتملة

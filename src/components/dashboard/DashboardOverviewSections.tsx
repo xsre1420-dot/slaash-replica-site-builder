@@ -19,7 +19,7 @@ import type { Order } from '@/types';
 
 const statusConfig = {
   completed: { label: 'مكتمل', icon: CheckCircle, className: 'bg-success/10 text-success' },
-  pending: { label: 'قيد الانتظار', icon: Clock, className: 'bg-warning/10 text-warning' },
+  pending: { label: 'جديد', icon: Clock, className: 'bg-warning/10 text-warning' },
   cancelled: { label: 'ملغي', icon: XCircle, className: 'bg-destructive/10 text-destructive' },
 };
 
@@ -96,9 +96,9 @@ export const DashboardRecentOrdersSection = memo(function DashboardRecentOrdersS
   return (
     <div>
       <div className="flex items-center justify-between mb-4 px-1">
-        <h3 className="ds-section-title">آخر الطلبات</h3>
+        <h3 className="ds-section-title">الطلبات الجديدة</h3>
         {orders.length > 0 && (
-          <Link to="/orders" className="text-xs text-primary hover:text-primary/80 font-medium">
+          <Link to="/orders?attention=pending-orders" className="text-xs text-primary hover:text-primary/80 font-medium">
             عرض الكل
           </Link>
         )}
@@ -113,7 +113,7 @@ export const DashboardRecentOrdersSection = memo(function DashboardRecentOrdersS
             return (
               <Link
                 key={order.id}
-                to={`/orders/${order.id}`}
+                to="/orders?attention=pending-orders"
                 className="flex items-center gap-3 p-4 hover:bg-muted/30 transition-colors group"
               >
                 <div className="flex-1 min-w-0 text-right">
@@ -137,7 +137,7 @@ export const DashboardRecentOrdersSection = memo(function DashboardRecentOrdersS
       ) : (
         <div className="ds-card p-6 text-center">
           <ShoppingBag className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">لا توجد طلبات بعد — شارك رابط متجرك مع عملائك</p>
+          <p className="text-sm text-muted-foreground">لا توجد طلبات جديدة — شارك رابط متجرك مع عملائك</p>
         </div>
       )}
     </div>

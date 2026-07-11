@@ -163,9 +163,9 @@ export const useOrderNotifications = (ownerId?: string) => {
   }, [ownerId]);
 
   const openOrder = useCallback(
-    (orderId: string, notificationId?: string) => {
+    (_orderId: string, notificationId?: string) => {
       if (notificationId) markRead(notificationId);
-      navigate(`/orders/${orderId}`);
+      navigate('/orders');
     },
     [markRead, navigate]
   );
