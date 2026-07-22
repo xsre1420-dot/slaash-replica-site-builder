@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { Product } from "@/types";
 import { getProductById, fetchProductById } from "@/services/productService";
 import { fetchStorefrontProductById } from "@/services/storefrontProductService";
+import { StorefrontCacheKeys, getStorefrontCached } from "@/services/storefrontCacheService";
 
 export type ProductLoadStatus = "loading" | "success" | "not_found";
 
@@ -72,13 +73,21 @@ const ProductData = ({ productId, initialProduct, onProductLoaded }: ProductData
 
     try {
       if (storeSlug) {
-        const fresh = await fetchStorefrontProductById(storeSlug, productId, { bypassCache: true });
+        const normalizedSlug = storeSlug.trim().toLowerCase();
+        const productCacheKey = StorefrontCacheKeys.product(normalizedSlug, productId);
+        const cachedProduct =
+          initialProduct?.id === productId
+            ? initialProduct
+            : getStorefrontCached<Product>(productCacheKey);
+
+        if (cachedProduct && !signal.aborted) {
+          onLoadedRef.current(cachedProduct, "success");
+        }
+
+        const fresh = await fetchStorefrontProductById(storeSlug, productId, { revalidate: true });
         if (signal.aborted) return;
         if (fresh) {
-          const merged =
-            initialProduct?.id === productId
-              ? mergeFreshStock(initialProduct, fresh)
-              : fresh;
+          const merged = cachedProduct ? mergeFreshStock(cachedProduct, fresh) : fresh;
           onLoadedRef.current(merged, "success");
           return;
         }

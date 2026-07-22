@@ -54,14 +54,15 @@ const fetchStatisticsPageBundleRpc = async (
   try {
     const { data, error } = await callReadRpc<Record<string, unknown>>(
       'get_statistics_page_bundle',
-      {
-        p_owner_id: ownerId,
-        p_current_start: periodStart,
-        p_current_end: periodEnd,
-        p_previous_start: previousStart,
-        p_previous_end: previousEnd,
-      }
-    );
+    {
+      p_owner_id: ownerId,
+      p_current_start: periodStart,
+      p_current_end: periodEnd,
+      p_previous_start: previousStart,
+      p_previous_end: previousEnd,
+    },
+    { forcePrimary: true }
+  );
     if (!error && data && typeof data === 'object') {
       const payload = data;
       return {
@@ -70,7 +71,7 @@ const fetchStatisticsPageBundleRpc = async (
       };
     }
     if (error) {
-      console.warn('[statistics] get_statistics_page_bundle unavailable, using single-period RPC:', error.message);
+      console.warn('[statistics] get_statistics_page_bundle unavailable, using single-period RPC:', error);
     }
     return undefined;
   } catch (err) {
@@ -111,17 +112,21 @@ const fetchStoreStatisticsRpc = async (
   periodEnd: string
 ): Promise<Record<string, unknown> | undefined> => {
   try {
-    const { data, error } = await callReadRpc<Record<string, unknown>>('get_store_statistics', {
-      p_owner_id: ownerId,
-      p_start: periodStart,
-      p_end: periodEnd,
-    });
+    const { data, error } = await callReadRpc<Record<string, unknown>>(
+      'get_store_statistics',
+      {
+        p_owner_id: ownerId,
+        p_start: periodStart,
+        p_end: periodEnd,
+      },
+      { forcePrimary: true }
+    );
     if (!error && data) {
       return data as Record<string, unknown>;
     }
 
     if (error) {
-      console.warn('[statistics] get_store_statistics unavailable, using client fallback:', error.message);
+      console.warn('[statistics] get_store_statistics unavailable, using client fallback:', error);
     }
     return undefined;
   } catch (err) {

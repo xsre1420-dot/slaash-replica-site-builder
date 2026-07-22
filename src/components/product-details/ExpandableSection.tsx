@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
-import { ChevronDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useState, useRef, useEffect } from 'react';
+import { ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ExpandableSectionProps {
   title: string;
@@ -28,29 +28,29 @@ const ExpandableSection = ({
   }, [isOpen]);
 
   return (
-    <div className={cn("rounded-xl overflow-hidden border border-border/10", className)}>
+    <div className={cn('sf-card overflow-hidden', className)}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between py-3.5 px-4 text-right hover:bg-accent/40 transition-colors"
+        className="w-full flex items-center justify-between gap-4 px-6 py-5 text-right hover:bg-muted/20 transition-colors"
       >
         <ChevronDown
           className={cn(
-            "h-4 w-4 text-muted-foreground transition-transform duration-300",
-            isOpen && "rotate-180"
+            'h-5 w-5 text-muted-foreground shrink-0 transition-transform duration-300',
+            isOpen && 'rotate-180'
           )}
         />
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        <div className="flex items-center gap-3 min-w-0">
           {icon}
+          <h3 className="text-base font-bold text-foreground">{title}</h3>
         </div>
       </button>
       <div
         ref={contentRef}
         className="overflow-hidden transition-all duration-300 ease-in-out"
-        style={{ height: height !== undefined ? `${height}px` : "auto" }}
+        style={{ height: height !== undefined ? `${height}px` : 'auto' }}
       >
-        <div className="pb-4 px-4 text-right">{children}</div>
+        <div className="px-6 pb-6 pt-0 text-right border-t border-border/20">{children}</div>
       </div>
     </div>
   );

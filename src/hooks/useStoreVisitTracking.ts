@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { scheduleIdle } from '@/utils/scheduleIdle';
+import { scheduleAnalyticsTask } from '@/utils/scheduleAnalytics';
 import { trackStoreVisitBySlug } from '@/services/analyticsTrackingService';
 import { raceWithTimeout } from '@/lib/memory/asyncGuards';
 
@@ -24,7 +24,10 @@ export function useStoreVisitTracking(storeSlug?: string) {
     const pagePath = location.pathname + location.search;
     const key = dedupeKey(normalized, pagePath);
     const slugKey = slugDedupeKey(normalized);
-    const isStoreHome = pagePath === `/store/${normalized}` || pagePath === `/store/${normalized}/`;
+    const isStoreHome =
+      pagePath === `/store/${normalized}` ||
+      pagePath === `/store/${normalized}/` ||
+      pagePath === '/preview';
 
     try {
       const lastPath = sessionStorage.getItem(key);
@@ -43,8 +46,8 @@ export function useStoreVisitTracking(storeSlug?: string) {
     let cancelled = false;
     let timeoutClear: (() => void) | null = null;
 
-    const cancelIdle = scheduleIdle(() => {
-      if (cancelled || (typeof document !== 'undefined' && document.visibilityState === 'hidden')) return;
+    const cancelDeferred = scheduleAnalyticsTask(() => {
+      if (cancelled) return;
       inflightRef.current = key;
 
       const visitPromise = trackStoreVisitBySlug(
@@ -81,7 +84,7 @@ export function useStoreVisitTracking(storeSlug?: string) {
     return () => {
       cancelled = true;
       timeoutClear?.();
-      cancelIdle();
+      cancelDeferred();
       if (inflightRef.current === key) inflightRef.current = null;
     };
   }, [storeSlug, location.pathname, location.search]);

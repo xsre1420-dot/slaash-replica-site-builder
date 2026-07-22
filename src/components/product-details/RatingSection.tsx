@@ -210,7 +210,7 @@ const RatingSection = ({ productId, storeSlug, reviews = [] }: RatingSectionProp
   );
 
   return (
-    <section ref={sectionRef} className="rounded-2xl border border-border/[0.07] bg-transparent overflow-hidden">
+    <section ref={sectionRef} className="sf-card overflow-hidden" dir="rtl">
       {/* Header */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-5 py-5 sm:px-6 border-b border-border/[0.07]">
         <div className="text-right space-y-0.5">

@@ -7,13 +7,13 @@ import { Product } from "@/types";
 import { useCart } from "@/context/CartContext";
 import { useStore } from "@/context/StoreContext";
 import { useTenantStore } from "@/context/TenantStoreContext";
-import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import StoreThemeProvider from "@/components/StoreThemeProvider";
 import StorefrontFooter from "@/components/storefront/StorefrontFooter";
 import { StoreFixedCheckoutBar } from "@/components/store/StoreCartChrome";
 import ProductInfoPanel from "@/components/storefront/ProductInfoPanel";
 import ProductDescriptionBlock from "@/components/storefront/ProductDescriptionBlock";
+import ProductSpecifications from "@/components/product-details/ProductSpecifications";
 import { getCheckoutPath, getStoreHomePath } from "@/lib/storefrontPaths";
 import { resolveStoreOwnerBySlug } from "@/services/storefrontProductService";
 import {
@@ -33,15 +33,18 @@ import { useStoreVisitTracking } from "@/hooks/useStoreVisitTracking";
 import { useProductViewTracking } from "@/hooks/useProductViewTracking";
 
 const ProductDetailsSkeleton = () => (
-  <div className="min-h-screen bg-background">
-    <div className="h-14 border-b border-border/40 bg-card/80" />
-    <div className="max-w-6xl mx-auto">
-      <Skeleton className="aspect-[4/3] max-h-[360px] w-full rounded-none lg:rounded-2xl lg:m-6" />
-      <div className="p-4 space-y-4 -mt-4 rounded-t-3xl bg-card border-t border-border/50">
-        <Skeleton className="h-8 w-3/4 ms-auto" />
-        <Skeleton className="h-10 w-1/2 ms-auto" />
-        <Skeleton className="h-24 w-full rounded-2xl" />
-        <Skeleton className="h-24 w-full rounded-2xl" />
+  <div className="sf-page">
+    <ProductHeader />
+    <div className="sf-container py-8 lg:py-12">
+      <div className="grid lg:grid-cols-2 gap-10 xl:gap-16">
+        <div className="aspect-[4/5] sf-skeleton rounded-3xl" />
+        <div className="space-y-6">
+          <div className="h-6 sf-skeleton w-1/3 mr-auto rounded-lg" />
+          <div className="h-10 sf-skeleton w-full rounded-xl" />
+          <div className="h-16 sf-skeleton w-2/3 mr-auto rounded-2xl" />
+          <div className="h-32 sf-skeleton w-full rounded-2xl" />
+          <div className="h-14 sf-skeleton w-full rounded-2xl" />
+        </div>
       </div>
     </div>
   </div>
@@ -173,11 +176,11 @@ const ProductDetails = () => {
   if (productLoadStatus === "not_found") {
     const storeHome = getStoreHomePath(isTenantMode ? storeSlug : null);
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-20 h-20 mb-4 rounded-full bg-muted flex items-center justify-center text-3xl">📦</div>
-        <h1 className="text-lg font-bold text-foreground mb-2">المنتج غير موجود</h1>
-        <p className="text-sm text-muted-foreground mb-6">ربما تم حذف المنتج أو أن الرابط غير صحيح</p>
-        <button type="button" onClick={() => navigate(storeHome)} className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium">
+      <div className="sf-page flex flex-col items-center justify-center p-8 text-center min-h-[70vh]">
+        <div className="w-24 h-24 mb-6 rounded-3xl bg-muted/50 flex items-center justify-center text-4xl">📦</div>
+        <h1 className="text-xl font-bold text-foreground mb-2">المنتج غير موجود</h1>
+        <p className="text-sm text-muted-foreground mb-8 max-w-sm">ربما تم حذف المنتج أو أن الرابط غير صحيح</p>
+        <button type="button" onClick={() => navigate(storeHome)} className="sf-btn-primary px-8">
           العودة للمتجر
         </button>
       </div>
@@ -201,17 +204,13 @@ const ProductDetails = () => {
   return (
     <StoreThemeProvider colors={themeColors}>
       {productDataLoader}
-      <div className="min-h-screen bg-background pb-28 lg:pb-12">
+      <div className="sf-page pb-28 lg:pb-16">
         <MarketingScripts storeSlug={isTenantMode ? storeSlug : undefined} storeOwnerId={isTenantMode ? tenant.storeInfo?.ownerId : user?.id} disabled={!isTenantMode} />
         <ProductHeader />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 lg:pt-6">
-          {/* Desktop: info left, gallery right (physical columns — grid lines ignore dir) */}
-          <div className="grid lg:grid-cols-[minmax(360px,440px)_minmax(0,1.15fr)] lg:gap-10 xl:gap-14 lg:items-start">
-            <ScrollReveal
-              delay={0}
-              className="order-1 lg:order-2 lg:col-start-2 pt-4 lg:pt-0 lg:sticky lg:top-[4.5rem] lg:self-start"
-            >
+        <div className="sf-container py-6 lg:py-10">
+          <div className="grid lg:grid-cols-2 xl:grid-cols-[1.08fr_0.92fr] gap-8 xl:gap-16 items-start">
+            <ScrollReveal delay={0} className="lg:sticky lg:top-24 lg:self-start">
               <ProductImages
                 key={`${selectedColor || "default"}-${galleryImages.join("|")}`}
                 images={galleryImages}
@@ -226,66 +225,69 @@ const ProductDetails = () => {
               />
             </ScrollReveal>
 
-            <div className="order-2 lg:order-1 lg:col-start-1 lg:row-start-1 pt-6 lg:pt-0 lg:sticky lg:top-[4.5rem] lg:self-start">
-              <ScrollReveal delay={50}>
-                <ProductInfoPanel
-                  product={product}
-                  displayProduct={activeProduct}
-                  variantAvailable={variantAvailable}
-                  isOutOfStock={isOutOfStock}
-                  isLowStock={isLowStock}
-                  isNew={isNew}
-                  selectedSize={selectedSize}
-                  selectedColor={selectedColor}
-                  quantity={quantity}
-                  isAdding={isAdding}
-                  returnPolicy={returnPolicy}
-                  isTenantMode={isTenantMode}
-                  storeSlug={storeSlug}
-                  onSelectSize={setSelectedSize}
-                  onSelectColor={setSelectedColor}
-                  onIncrementQty={() => setQuantity((p) => Math.min(p + 1, Math.max(variantAvailable, 1)))}
-                  onDecrementQty={() => setQuantity((p) => Math.max(1, p - 1))}
-                  onAddToCart={handleAddToCart}
-                  onBuyNow={handleBuyNow}
-                />
-              </ScrollReveal>
-            </div>
+            <ScrollReveal delay={80} className="lg:sticky lg:top-24 lg:self-start">
+              <ProductInfoPanel
+                product={product}
+                displayProduct={activeProduct}
+                variantAvailable={variantAvailable}
+                isOutOfStock={isOutOfStock}
+                isLowStock={isLowStock}
+                isNew={isNew}
+                selectedSize={selectedSize}
+                selectedColor={selectedColor}
+                quantity={quantity}
+                isAdding={isAdding}
+                returnPolicy={returnPolicy}
+                isTenantMode={isTenantMode}
+                storeSlug={storeSlug}
+                onSelectSize={setSelectedSize}
+                onSelectColor={setSelectedColor}
+                onIncrementQty={() => setQuantity((p) => Math.min(p + 1, Math.max(variantAvailable, 1)))}
+                onDecrementQty={() => setQuantity((p) => Math.max(1, p - 1))}
+                onAddToCart={handleAddToCart}
+                onBuyNow={handleBuyNow}
+              />
+            </ScrollReveal>
           </div>
 
-          <div className="mt-12 lg:mt-16 space-y-10 lg:space-y-12 pb-8">
+          <div className="mt-16 lg:mt-24 space-y-8 lg:space-y-12 max-w-4xl mr-auto ml-0">
+            <ScrollReveal delay={120}>
+              <ProductSpecifications product={product} />
+            </ScrollReveal>
+
+            <ScrollReveal delay={160}>
+              <ProductDescriptionBlock product={product} />
+            </ScrollReveal>
+
             {returnPolicy && (
               <ScrollReveal delay={200}>
                 <ExpandableSection title="سياسة الإرجاع والشحن" defaultOpen={false}>
-                  <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{returnPolicy}</p>
+                  <p className="text-sm text-muted-foreground leading-[1.85] whitespace-pre-wrap">{returnPolicy}</p>
                 </ExpandableSection>
               </ScrollReveal>
             )}
 
-            <ScrollReveal delay={250}>
-              <ProductDescriptionBlock product={product} />
-            </ScrollReveal>
-
-            <ScrollReveal delay={300}>
+            <ScrollReveal delay={240}>
               <div id="product-reviews">
                 <RatingSection productId={productId || ""} storeSlug={storeSlug} />
               </div>
             </ScrollReveal>
 
-            <ScrollReveal delay={350}>
+            <ScrollReveal delay={280}>
               <SuggestedProducts currentProductId={productId || ""} storeSlug={storeSlug} category={product.category} />
             </ScrollReveal>
-
-            <StorefrontFooter
-              storeName={displayStoreName || "المتجر"}
-              storeSlug={storeSlug}
-              ownerId={isTenantMode ? tenant.storeInfo?.ownerId : user?.id}
-              governorate={storeGovernorate}
-              whatsappNumber={whatsappNumber}
-              returnPolicy={returnPolicy}
-              privacyPolicy={privacyPolicy}
-            />
           </div>
+
+          <StorefrontFooter
+            storeName={displayStoreName || "المتجر"}
+            storeSlug={storeSlug}
+            ownerId={isTenantMode ? tenant.storeInfo?.ownerId : user?.id}
+            governorate={storeGovernorate}
+            whatsappNumber={whatsappNumber}
+            returnPolicy={returnPolicy}
+            privacyPolicy={privacyPolicy}
+            fullWidth
+          />
         </div>
 
         <StoreFixedCheckoutBar isTenantMode={isTenantMode} storeSlug={storeSlug} />

@@ -1,21 +1,33 @@
-import { ArrowRight, ShoppingCart, Plus, Search } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { getCategories } from "@/services/productService";
+import { ArrowRight, RefreshCw, Plus, PackageSearch } from "lucide-react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { getCategories, getCategoriesSync } from "@/services/productService";
 import { useStoreHydration } from "@/context/StoreBootstrapContext";
 import { useMerchantProductsPage } from "@/hooks/useMerchantProductsPage";
 import { getProductLifecycleStatus } from "@/lib/productLifecycle";
-import { STOREFRONT_PRODUCTS_CHANGED } from "@/services/storefrontProductService";
+import { STOREFRONT_PRODUCTS_CHANGED, resolveStoreSlugByOwnerId } from "@/services/storefrontProductService";
 import { Product, Category } from "@/types";
-import { useCart } from "@/context/CartContext";
+import { useCartActions } from "@/context/CartContext";
 import { useStore } from "@/context/StoreContext";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import MarketingScripts from "@/components/MarketingScripts";
-import OptimizedImage from "@/components/OptimizedImage";
-import { getProductListingBlurb } from "@/lib/storefrontProductDisplay";
-import ProductPriceDisplay from "@/components/storefront/ProductPriceDisplay";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import StoreThemeProvider from "@/components/StoreThemeProvider";
+import StoreProductGrid from "@/components/store/StoreProductGrid";
+import { StoreCartHeaderButton, StoreFixedCheckoutBar } from "@/components/store/StoreCartChrome";
+import StoreCategoryChip from "@/components/store/StoreCategoryChip";
+import StorefrontHeader from "@/components/storefront/layout/StorefrontHeader";
+import StorefrontHero from "@/components/storefront/layout/StorefrontHero";
+import StorefrontBenefits from "@/components/storefront/layout/StorefrontBenefits";
+import StorefrontToolbar from "@/components/storefront/layout/StorefrontToolbar";
+import StorefrontNewsletter from "@/components/storefront/layout/StorefrontNewsletter";
+import StorefrontFooter from "@/components/storefront/StorefrontFooter";
+import WhatsAppButton from "@/components/WhatsAppButton";
+import { useToast } from "@/hooks/use-toast";
+import { STORE_PRODUCTS_PAGE_SIZE } from "@/constants/pagination";
+import { getProductPath } from "@/lib/storefrontPaths";
+import { useStoreVisitTracking } from "@/hooks/useStoreVisitTracking";
 
 const PreviewStore = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -24,35 +36,58 @@ const PreviewStore = () => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const { user } = useAuth();
   const { isReady, hydrationVersion } = useStoreHydration();
-  const { addToCart, cartItems, setStoreOwner } = useCart();
+  const { addToCart, setStoreOwner } = useCartActions();
   const { storeName, storeLogo, storeSettings } = useStore();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const cartTotal = useMemo(
-    () => cartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
-    [cartItems]
-  );
   const [searchQuery, setSearchQuery] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
   const debouncedSearch = useDebouncedValue(searchQuery, 300);
+  const [sortBy, setSortBy] = useState<"default" | "price-asc" | "price-desc">("default");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [isLoading, setIsLoading] = useState(true);
+  const [visibleCount, setVisibleCount] = useState(STORE_PRODUCTS_PAGE_SIZE);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [filterPriceRange, setFilterPriceRange] = useState<[number, number]>([0, 0]);
+  const [filterSizes, setFilterSizes] = useState<string[]>([]);
+  const [headerScrolled, setHeaderScrolled] = useState(false);
+  const [publicStoreSlug, setPublicStoreSlug] = useState<string | undefined>();
+
+  useEffect(() => {
+    if (!user?.id) {
+      setPublicStoreSlug(undefined);
+      return;
+    }
+    void resolveStoreSlugByOwnerId(user.id).then((slug) => {
+      setPublicStoreSlug(slug ?? undefined);
+    });
+  }, [user?.id]);
+
+  useStoreVisitTracking(publicStoreSlug);
+
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const bannerDotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pullStartY = useRef(0);
+  const categoriesRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef(0);
 
   const ownerCategoryFilter = useMemo(() => {
-    if (selectedCategory === 'all') return 'all';
+    if (selectedCategory === "all") return "all";
     const cat = categories.find((c) => c.id === selectedCategory);
     return cat?.name ?? selectedCategory;
   }, [selectedCategory, categories]);
 
   const catalog = useMerchantProductsPage(debouncedSearch, ownerCategoryFilter);
 
-  const publishedProducts = useMemo(
-    () => catalog.products.filter((p) => getProductLifecycleStatus(p) === 'published'),
+  const allProducts = useMemo(
+    () => catalog.products.filter((p) => getProductLifecycleStatus(p) === "published"),
     [catalog.products]
   );
 
-  const products = publishedProducts;
-
-  const productsLoading = catalog.loading;
+  useEffect(() => {
+    setIsLoading(catalog.loading);
+    setVisibleCount(STORE_PRODUCTS_PAGE_SIZE);
+  }, [selectedCategory, catalog.loading]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -74,49 +109,31 @@ const PreviewStore = () => {
     if (user?.id) setStoreOwner(user.id);
   }, [user?.id, setStoreOwner]);
 
-  // Load categories from Supabase
+  const loadCategories = useCallback(async (force = false) => {
+    try {
+      const categoriesData = await getCategories(force);
+      setCategories([{ id: "all", name: "الكل", order: -1 }, ...categoriesData]);
+    } catch {
+      setCategories([{ id: "all", name: "الكل", order: -1 }, ...getCategoriesSync()]);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isReady) return;
+    void loadCategories(true);
+  }, [isReady, hydrationVersion, loadCategories]);
 
-    const loadCategoriesData = async () => {
-      try {
-        const categoriesData = await getCategories(true);
-        const allCategories = [
-          { id: "all", name: "الكل", order: -1 },
-          ...categoriesData
-        ];
-        setCategories(allCategories);
-      } catch (error) {
-        console.error('Error loading categories:', error);
-        setCategories([{ id: "all", name: "الكل", order: -1 }]);
-      }
-    };
-    loadCategoriesData();
-
-    let lastFocusRefresh = 0;
-    const handleFocus = () => {
-      const now = Date.now();
-      if (now - lastFocusRefresh < 60_000) return;
-      lastFocusRefresh = now;
-      loadCategoriesData();
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [isReady, hydrationVersion]);
+  const loadData = useCallback(async (force = false) => {
+    setIsLoading(true);
+    try {
+      await loadCategories(force);
+      if (force) await catalog.reload();
+    } finally {
+      setIsLoading(false);
+    }
+  }, [loadCategories, catalog]);
 
   const bannerImages = storeSettings.bannerImages || [];
-
-  const handleAddToCart = (product: Product) => {
-    addToCart(product);
-  };
-
-  const handleViewProduct = (productId: string) => {
-    const previewProduct = products.find((p) => p.id === productId);
-    navigate(`/product-details/${productId}`, {
-      state: previewProduct ? { previewProduct } : undefined,
-    });
-  };
 
   useEffect(() => {
     if (bannerImages.length <= 1) return;
@@ -127,246 +144,330 @@ const PreviewStore = () => {
         setCurrentImageIndex((prev) => (prev + 1) % bannerImages.length);
         setIsTransitioning(false);
         transitionTimer = null;
-      }, 150);
-    }, 2500);
+      }, 200);
+    }, 3500);
     return () => {
       clearInterval(interval);
       if (transitionTimer) clearTimeout(transitionTimer);
+      if (bannerDotTimerRef.current) clearTimeout(bannerDotTimerRef.current);
     };
   }, [bannerImages.length]);
 
-  const handleImageNavigation = (index: number) => {
-    if (index !== currentImageIndex) {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setCurrentImageIndex(index);
-        setIsTransitioning(false);
-      }, 150);
+  const maxPrice = useMemo(() => Math.max(...allProducts.map((p) => p.price), 100000), [allProducts]);
+  const availableSizes = useMemo(() => {
+    const sizes = new Set<string>();
+    allProducts.forEach((p) => p.sizes?.forEach((s) => sizes.add(s)));
+    return Array.from(sizes);
+  }, [allProducts]);
+
+  useEffect(() => {
+    setFilterPriceRange((prev) => (prev[1] === 0 && maxPrice > 0 ? [0, maxPrice] : prev));
+  }, [maxPrice]);
+
+  const displayProducts = useMemo(() => {
+    let filtered = allProducts;
+    if (searchQuery.trim()) {
+      const q = debouncedSearch.trim().toLowerCase();
+      filtered = filtered.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.description?.toLowerCase().includes(q)
+      );
+    }
+    if (filterPriceRange[0] > 0 || (filterPriceRange[1] > 0 && filterPriceRange[1] < maxPrice)) {
+      filtered = filtered.filter(
+        (p) => p.price >= filterPriceRange[0] && p.price <= filterPriceRange[1]
+      );
+    }
+    if (filterSizes.length > 0) {
+      filtered = filtered.filter((p) => p.sizes?.some((s) => filterSizes.includes(s)));
+    }
+    if (sortBy === "price-asc") filtered = [...filtered].sort((a, b) => a.price - b.price);
+    if (sortBy === "price-desc") filtered = [...filtered].sort((a, b) => b.price - a.price);
+    return filtered;
+  }, [allProducts, debouncedSearch, searchQuery, sortBy, filterPriceRange, filterSizes, maxPrice]);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      if (catalog.hasMore) {
+        void catalog.loadMore();
+        return;
+      }
+      if (visibleCount < displayProducts.length) {
+        setVisibleCount((prev) =>
+          Math.min(prev + STORE_PRODUCTS_PAGE_SIZE, displayProducts.length)
+        );
+      }
+    }, { threshold: 0.1 });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [displayProducts.length, visibleCount, catalog.hasMore, catalog.loadMore]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    pullStartY.current = e.touches[0].clientY;
+  };
+  const handleTouchEnd = async (e: React.TouchEvent) => {
+    const diff = e.changedTouches[0].clientY - pullStartY.current;
+    if (diff > 100 && window.scrollY === 0) {
+      setIsRefreshing(true);
+      await loadData(true);
+      setIsRefreshing(false);
     }
   };
 
-  const handleImageHover = () => {
-    if (bannerImages.length > 1) {
-      const nextIndex = (currentImageIndex + 1) % bannerImages.length;
-      handleImageNavigation(nextIndex);
+  const handleCategoryTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleCategoryTouchEnd = (e: React.TouchEvent) => {
+    const diff = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(diff) > 60) {
+      const currentIdx = categories.findIndex((c) => c.id === selectedCategory);
+      if (diff < 0 && currentIdx < categories.length - 1) {
+        setSelectedCategory(categories[currentIdx + 1].id);
+      }
+      if (diff > 0 && currentIdx > 0) {
+        setSelectedCategory(categories[currentIdx - 1].id);
+      }
     }
   };
 
-  const isStoreOwnerView = Boolean(user?.id);
+  const handleViewProduct = useCallback(
+    (productId: string) => {
+      const previewProduct =
+        displayProducts.find((p) => p.id === productId) ??
+        allProducts.find((p) => p.id === productId);
+      navigate(getProductPath(productId, publicStoreSlug ?? null), {
+        state: previewProduct ? { previewProduct } : undefined,
+      });
+    },
+    [navigate, displayProducts, allProducts, publicStoreSlug]
+  );
+
+  const handleAddToCart = useCallback(
+    (product: Product) => {
+      const needsVariants = (product.sizes?.length ?? 0) > 0 || (product.colors?.length ?? 0) > 0;
+      if (needsVariants) {
+        toast({
+          title: "اختر الخيارات أولاً",
+          description: "يرجى اختيار المقاس أو اللون من صفحة المنتج",
+        });
+        handleViewProduct(product.id);
+        return;
+      }
+      addToCart(product);
+      toast({
+        title: "✅ تمت الإضافة",
+        description: `${product.name} أُضيف إلى السلة`,
+      });
+    },
+    [addToCart, toast, handleViewProduct]
+  );
+
+  const handleShare = useCallback(
+    async (product: Product) => {
+      const productUrl = publicStoreSlug
+        ? `${window.location.origin}${getProductPath(product.id, publicStoreSlug)}`
+        : `${window.location.origin}/product-details/${product.id}`;
+      try {
+        if (navigator.share) {
+          await navigator.share({
+            title: product.name,
+            text: `${product.name} - ${product.price.toLocaleString()} د.ع`,
+            url: productUrl,
+          });
+        } else {
+          await navigator.clipboard.writeText(productUrl);
+          toast({ title: "تم النسخ", description: "تم نسخ رابط المنتج" });
+        }
+      } catch {
+        /* cancelled */
+      }
+    },
+    [toast, publicStoreSlug]
+  );
+
+  const cycleSortBy = () =>
+    setSortBy((prev) =>
+      prev === "default" ? "price-asc" : prev === "price-asc" ? "price-desc" : "default"
+    );
+  const sortLabel =
+    sortBy === "price-asc" ? "الأقل سعراً" : sortBy === "price-desc" ? "الأعلى سعراً" : "ترتيب";
+  const activeFilterCount =
+    (filterPriceRange[0] > 0 ||
+    (filterPriceRange[1] > 0 && filterPriceRange[1] < maxPrice)
+      ? 1
+      : 0) + (filterSizes.length > 0 ? 1 : 0);
+
+  const themeColors = useMemo(
+    () => ({
+      backgroundColor: storeSettings.menuBackgroundColor,
+      textColor: storeSettings.menuTextColor,
+      accentColor: storeSettings.menuAccentColor,
+      font: storeSettings.storeFont || "Tajawal",
+    }),
+    [
+      storeSettings.menuBackgroundColor,
+      storeSettings.menuTextColor,
+      storeSettings.menuAccentColor,
+      storeSettings.storeFont,
+    ]
+  );
+
+  const handleFilterApply = useCallback((range: [number, number], sizes: string[]) => {
+    setFilterPriceRange(range);
+    setFilterSizes(sizes);
+  }, []);
+
+  const handleFilterReset = useCallback(() => {
+    setFilterPriceRange([0, maxPrice]);
+    setFilterSizes([]);
+  }, [maxPrice]);
+
+  useEffect(() => {
+    const onScroll = () => setHeaderScrolled(window.scrollY > 8);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const handleBannerDotClick = useCallback((i: number) => {
+    if (bannerDotTimerRef.current) clearTimeout(bannerDotTimerRef.current);
+    setIsTransitioning(true);
+    bannerDotTimerRef.current = setTimeout(() => {
+      bannerDotTimerRef.current = null;
+      setCurrentImageIndex(i);
+      setIsTransitioning(false);
+    }, 200);
+  }, []);
+
+  const showOwnerEmpty = !isLoading && displayProducts.length === 0 && !searchQuery.trim();
 
   return (
-    <div className="min-h-screen bg-background font-arabic" dir="rtl">
-      <MarketingScripts storeOwnerId={user?.id} disabled />
-      
-      {/* Header with Logo and Store Name */}
-      <div className="bg-background sticky top-0 z-40 border-b border-border">
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between gap-3">
-            {isStoreOwnerView ? (
-              <Link
-                to="/builder"
-                aria-label="العودة للوحة التحكم"
-                className="icon-circle-btn"
-              >
-                <ArrowRight className="w-5 h-5" />
+    <StoreThemeProvider colors={themeColors}>
+      <div className="sf-page" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+        <MarketingScripts storeOwnerId={user?.id} disabled />
+
+        {isRefreshing && (
+          <div className="fixed top-0 left-0 right-0 z-[60] flex justify-center py-3 bg-primary/10 backdrop-blur-sm">
+            <RefreshCw className="w-5 h-5 text-primary animate-spin" />
+          </div>
+        )}
+
+        <div className="bg-primary/10 border-b border-primary/15 text-center py-2 px-4 text-xs font-medium text-primary">
+          معاينة المتجر — هكذا يراه عملاؤك
+        </div>
+
+        <StorefrontHeader
+          storeName={storeName || "المتجر"}
+          storeLogo={storeLogo}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          scrolled={headerScrolled}
+          startAction={
+            user?.id ? (
+              <Link to="/builder" aria-label="العودة للوحة التحكم" className="sf-icon-btn">
+                <ArrowRight className="w-5 h-5" strokeWidth={2} />
               </Link>
             ) : (
-              <div className="w-10 shrink-0" aria-hidden />
-            )}
+              <div className="w-11 shrink-0" aria-hidden />
+            )
+          }
+          endAction={<StoreCartHeaderButton />}
+        />
 
-            <div className="flex items-center justify-center gap-2 min-w-0 flex-1">
-              {storeLogo && (
-                <img src={storeLogo} alt={storeName} className="w-9 h-9 rounded-full object-cover shrink-0" />
-              )}
-              <span className="font-bold text-foreground text-base truncate">{storeName}</span>
-            </div>
+        <StorefrontHero
+          storeName={storeName || "المتجر"}
+          bannerImages={bannerImages}
+          currentIndex={currentImageIndex}
+          isTransitioning={isTransitioning}
+          onDotClick={handleBannerDotClick}
+        />
 
-            <button
-              type="button"
-              onClick={() => setShowSearch((v) => !v)}
-              className="icon-circle-btn"
-              aria-label={showSearch ? "إخفاء البحث" : "البحث عن منتج"}
-              aria-expanded={showSearch}
-            >
-              <Search className="w-5 h-5" />
-            </button>
-          </div>
+        <StorefrontBenefits />
 
-          {showSearch && (
-            <div className="relative mt-3">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="ابحث عن منتج..."
-                className="w-full h-11 pr-10 pl-4 rounded-xl bg-muted/70 border border-transparent text-right text-sm placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 focus:bg-card focus:border-primary/30 transition-all text-foreground"
-                autoFocus
-              />
-            </div>
-          )}
-        </div>
-        
-        {/* Categories Row */}
-        <div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-hide items-center">
-          {categories.map((category) => (
-            <button 
-              key={category.id}
-              className={`whitespace-nowrap text-sm font-medium transition-all duration-200 px-4 py-2 rounded-full ${
-                selectedCategory === category.id 
-                  ? "bg-primary text-primary-foreground" 
-                  : "bg-muted text-muted-foreground"
-              }`}
-              onClick={() => setSelectedCategory(category.id)}
-            >
-              {category.name}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Banner */}
-      {bannerImages.length > 0 && (
-        <div className="px-4 pt-4 pb-2">
-          <div 
-            className="relative h-44 overflow-hidden rounded-3xl cursor-pointer"
-            onMouseEnter={handleImageHover}
+        <section className="sf-container pb-2">
+          <p className="text-xs font-semibold text-muted-foreground mb-2 text-right px-1">الأقسام</p>
+          <div
+            ref={categoriesRef}
+            onTouchStart={handleCategoryTouchStart}
+            onTouchEnd={handleCategoryTouchEnd}
+            className="overflow-x-auto scrollbar-hide -mx-1 px-1 pb-2"
           >
-            <img
-              src={bannerImages[currentImageIndex]}
-              alt="بانر المتجر"
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-            
-            {bannerImages.length > 1 && (
-              <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex gap-2">
-                {bannerImages.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleImageNavigation(index)}
-                    className={`transition-all duration-200 rounded-full ${
-                      currentImageIndex === index 
-                        ? "bg-white w-6 h-2" 
-                        : "bg-white/60 w-2 h-2"
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Product Count */}
-      <div className="px-4 py-4">
-        <span className="text-sm font-medium text-foreground">
-          {productsLoading ? 'جاري التحميل...' : `${products.length} منتجات`}
-        </span>
-      </div>
-
-      {/* Products Grid */}
-      <div className="px-4 pb-28">
-        {!isReady || productsLoading ? (
-          <div className="grid grid-cols-2 gap-3">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-card rounded-xl overflow-hidden animate-pulse">
-                <div className="aspect-square bg-muted" />
-                <div className="p-3 space-y-2">
-                  <div className="h-4 bg-muted rounded" />
-                  <div className="h-4 bg-muted rounded w-2/3 mr-auto" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : products.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="w-20 h-20 mx-auto mb-6 bg-muted rounded-full flex items-center justify-center">
-              <div className="text-4xl">🛍️</div>
+            <div className="flex gap-2 min-w-min">
+              {categories.map((cat) => (
+                <StoreCategoryChip
+                  key={cat.id}
+                  label={cat.name}
+                  active={selectedCategory === cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                />
+              ))}
             </div>
-            <h3 className="text-xl font-bold mb-2 text-foreground">
-              {searchQuery.trim() ? 'لا توجد نتائج للبحث' : 'لا توجد منتجات بعد'}
-            </h3>
-            <p className="text-muted-foreground mb-6">
-              {searchQuery.trim() ? 'جرّب كلمة بحث أخرى' : 'ابدأ بإضافة منتجاتك من قسم المنتجات'}
-            </p>
-            {!searchQuery.trim() && (
+          </div>
+        </section>
+
+        <StorefrontToolbar
+          sortLabel={sortLabel}
+          sortActive={sortBy !== "default"}
+          onCycleSort={cycleSortBy}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          maxPrice={maxPrice}
+          filterPriceRange={filterPriceRange}
+          availableSizes={availableSizes}
+          filterSizes={filterSizes}
+          onFilterApply={handleFilterApply}
+          onFilterReset={handleFilterReset}
+          activeFilterCount={activeFilterCount}
+          productCount={displayProducts.length}
+          sectionTitle={searchQuery ? `نتائج "${searchQuery}"` : "تسوق الآن"}
+        />
+
+        <div className="sf-container pb-32 lg:pb-16 pt-2">
+          {showOwnerEmpty ? (
+            <div className="text-center py-24 px-4">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-primary/10 flex items-center justify-center">
+                <PackageSearch className="w-9 h-9 text-primary" strokeWidth={1.75} />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-2">لا توجد منتجات بعد</h3>
+              <p className="text-muted-foreground text-sm mb-8 max-w-sm mx-auto">
+                ابدأ بإضافة منتجاتك من لوحة التحكم ليراها عملاؤك في متجرك
+              </p>
               <Link to="/add-product">
-                <Button className="rounded-full px-8 min-h-[44px]">
+                <Button className="sf-btn-primary rounded-2xl px-8 h-12">
                   <Plus className="w-4 h-4 ml-2" />
                   إضافة أول منتج
                 </Button>
               </Link>
-            )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {products.map((product) => {
-              const blurb = getProductListingBlurb(product, 90);
-              return (
-              <div 
-                key={product.id} 
-                className="bg-card rounded-xl overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => handleViewProduct(product.id)}
-              >
-                <div className="relative bg-muted aspect-square">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-full object-contain p-4"
-                    loading="lazy"
-                  />
-                </div>
-                
-                <div className="p-3 space-y-1">
-                  <div className="text-sm font-semibold text-foreground text-right line-clamp-1">
-                    {product.name}
-                  </div>
-                  {blurb && (
-                    <p className="text-[11px] text-muted-foreground text-right line-clamp-2 leading-snug">
-                      {blurb}
-                    </p>
-                  )}
-                  <div className="text-right pt-0.5">
-                    <ProductPriceDisplay product={product} size="sm" align="end" showBadge />
-                  </div>
-                </div>
-              </div>
-            );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Cart bar */}
-      {cartCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background/95 to-transparent safe-area-bottom">
-          <Link to="/checkout" className="block w-full max-w-3xl mx-auto">
-            <div className="rounded-2xl bg-primary shadow-md shadow-primary/15">
-              <div className="flex items-center justify-between gap-3 px-4 py-3" dir="rtl">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-foreground/15">
-                    <ShoppingCart className="h-4 w-4 text-primary-foreground" />
-                    <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-card text-[10px] font-bold text-primary ring-2 ring-primary">
-                      {cartCount}
-                    </span>
-                  </div>
-                  <div className="min-w-0 text-right">
-                    <p className="text-sm font-bold tabular-nums text-primary-foreground leading-tight">
-                      {cartTotal.toLocaleString()} د.ع
-                    </p>
-                    <p className="text-[10px] text-primary-foreground/75">
-                      {cartCount} {cartCount === 1 ? "منتج" : "منتجات"}
-                    </p>
-                  </div>
-                </div>
-                <span className="shrink-0 text-xs font-semibold text-primary-foreground">عرض السلة</span>
-              </div>
             </div>
-          </Link>
+          ) : (
+            <StoreProductGrid
+              products={displayProducts}
+              viewMode={viewMode}
+              isLoading={isLoading || !isReady}
+              searchQuery={searchQuery}
+              visibleCount={visibleCount}
+              totalCount={displayProducts.length}
+              isTenantMode={false}
+              storeSlug={publicStoreSlug}
+              onAddToCart={handleAddToCart}
+              onShare={handleShare}
+              sentinelRef={sentinelRef}
+            />
+          )}
         </div>
-      )}
-    </div>
+
+        <StorefrontNewsletter storeName={storeName || "المتجر"} />
+
+        <StorefrontFooter storeName={storeName || "المتجر"} whatsappNumber={storeSettings.whatsappNumber} />
+
+        <WhatsAppButton phoneNumber={storeSettings.whatsappNumber || ""} />
+
+        <StoreFixedCheckoutBar isTenantMode={false} />
+      </div>
+    </StoreThemeProvider>
   );
 };
 

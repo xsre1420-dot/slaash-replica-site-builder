@@ -1,11 +1,11 @@
 import { memo, useMemo } from "react";
-import { Plus, Minus, Star, Share2, Flame, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Plus, Minus, Star, ShoppingBag, Sparkles, Flame } from "lucide-react";
 import { Product } from "@/types";
 import { getAvailableQty, hasVariantOptions } from "@/utils/inventoryUtils";
 import OptimizedImage from "@/components/OptimizedImage";
 import ProductPriceDisplay from "@/components/storefront/ProductPriceDisplay";
 import { getProductListingBlurb, getProductOptionSummary } from "@/lib/storefrontProductDisplay";
+import { cn } from "@/lib/utils";
 
 interface ProductCardProps {
   product: Product;
@@ -25,10 +25,11 @@ const ProductCard = memo(({
   onAddToCart,
   onUpdateQuantity,
   onView,
-  onShare,
   index,
 }: ProductCardProps) => {
   const availableQty = useMemo(() => getAvailableQty(product), [product]);
+  const isAboveFold = index < 4;
+  const isLcpCandidate = index === 0;
 
   const { isNew, isLowStock, isOutOfStock, hasVariants, blurb, optionSummary } = useMemo(() => ({
     isNew: (product as any).created_at ? (Date.now() - new Date((product as any).created_at).getTime()) < 7 * 86400000 : false,
@@ -39,183 +40,166 @@ const ProductCard = memo(({
     optionSummary: getProductOptionSummary(product),
   }), [product, availableQty]);
 
-  const handleShare = (e: React.MouseEvent) => {
+  const handleQuickAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onShare(product);
+    if (hasVariants) {
+      onView(product.id);
+      return;
+    }
+    onAddToCart(product);
   };
-
-  const PriceBlock = ({ size = "sm" }: { size?: "sm" | "md" }) => (
-    <ProductPriceDisplay product={product} size={size} align="end" showBadge />
-  );
 
   if (viewMode === "list") {
     return (
-      <div
-        className="group bg-card rounded-2xl overflow-hidden border border-border/60 hover:border-primary/30 transition-all duration-300 cursor-pointer animate-fade-in flex gap-3 p-3"
-        style={{ animationDelay: `${index * 30}ms` }}
+      <article
+        className="sf-card sf-card-hover group flex gap-4 p-4 cursor-pointer animate-fade-in"
+        style={{ animationDelay: `${index * 40}ms` }}
         onClick={() => onView(product.id)}
       >
-        <div className="relative w-28 h-28 rounded-xl overflow-hidden flex-shrink-0 border border-border/20">
-          <OptimizedImage src={product.image} alt={product.name} variant="thumbnail" className="w-full h-full group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-          <div className="absolute top-1.5 right-1.5 flex flex-col gap-1">
-            {isNew && (
-              <span className="bg-primary text-primary-foreground px-1.5 py-0.5 rounded-md text-[9px] font-bold flex items-center gap-0.5">
-                <Sparkles className="w-2.5 h-2.5" /> جديد
-              </span>
-            )}
-          </div>
+        <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-xl overflow-hidden shrink-0 sf-surface">
+          <OptimizedImage
+            src={product.image}
+            alt={product.name}
+            variant="thumbnail"
+            className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500 ease-out"
+            loading={isAboveFold ? "eager" : "lazy"}
+            fetchPriority={isLcpCandidate ? "high" : undefined}
+            sizes="128px"
+          />
+          {isOutOfStock && (
+            <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] flex items-center justify-center">
+              <span className="text-[10px] font-bold text-muted-foreground">نفذ</span>
+            </div>
+          )}
         </div>
 
-        <div className="flex-1 min-w-0 flex flex-col justify-between">
-          <div>
-            <h3 className="font-semibold text-sm text-right line-clamp-1 text-foreground">{product.name}</h3>
-            {blurb ? (
-              <p className="text-xs text-muted-foreground text-right line-clamp-3 mt-0.5 leading-snug">{blurb}</p>
-            ) : product.category ? (
-              <p className="text-xs text-muted-foreground text-right line-clamp-1 mt-0.5">{product.category}</p>
-            ) : null}
-            {optionSummary && (
-              <p className="text-[10px] text-muted-foreground/80 text-right mt-0.5">{optionSummary}</p>
+        <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+          <div className="space-y-1.5">
+            <h3 className="font-semibold text-sm sm:text-base text-foreground text-right line-clamp-2 leading-snug">
+              {product.name}
+            </h3>
+            {blurb && (
+              <p className="text-xs text-muted-foreground text-right line-clamp-2 leading-relaxed">{blurb}</p>
             )}
-            <div className="flex items-center justify-end gap-1 mt-1.5">
-              {product.rating != null && product.rating > 0 && (
-                <>
-                  <span className="text-[10px] text-muted-foreground">{product.rating.toFixed(1)}</span>
-                  <Star className="w-3 h-3 text-amber-400 fill-current" />
-                </>
-              )}
-            </div>
+            {optionSummary && (
+              <p className="text-[10px] text-muted-foreground/80 text-right">{optionSummary}</p>
+            )}
+            {product.rating != null && product.rating > 0 && (
+              <div className="flex items-center justify-end gap-1">
+                <span className="text-xs font-medium text-foreground">{product.rating.toFixed(1)}</span>
+                <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+              </div>
+            )}
           </div>
-          <div className="flex items-center justify-between mt-2">
-            <div className="flex items-center gap-1.5">
-              <button onClick={handleShare} aria-label="مشاركة المنتج" className="icon-circle-btn min-h-[44px] min-w-[44px]">
-                <Share2 className="w-4 h-4" />
+
+          <div className="flex items-center justify-between gap-3 mt-3" dir="rtl">
+            <ProductPriceDisplay product={product} size="md" align="right" showBadge />
+            {cartQuantity > 0 && !hasVariants ? (
+              <div className="flex items-center gap-1 bg-primary/8 rounded-xl h-10 px-2 border border-primary/10">
+                <button onClick={(e) => { e.stopPropagation(); onUpdateQuantity(product.id, cartQuantity - 1); }} className="p-1.5 text-primary rounded-lg hover:bg-primary/15 transition-colors">
+                  <Minus className="w-4 h-4" />
+                </button>
+                <span className="text-sm font-bold text-primary w-6 text-center tabular-nums">{cartQuantity}</span>
+                <button onClick={(e) => { e.stopPropagation(); onUpdateQuantity(product.id, cartQuantity + 1); }} className="p-1.5 text-primary rounded-lg hover:bg-primary/15 transition-colors">
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleQuickAdd}
+                disabled={isOutOfStock}
+                className="sf-btn-primary h-10 px-4 text-xs disabled:opacity-50"
+              >
+                <ShoppingBag className="w-3.5 h-3.5" />
+                {isOutOfStock ? "نفذ" : hasVariants ? "اختر" : "أضف"}
               </button>
-              {cartQuantity > 0 && !hasVariants ? (
-                <div className="flex items-center gap-1 bg-primary/10 rounded-xl px-1.5">
-                  <button onClick={(e) => { e.stopPropagation(); onUpdateQuantity(product.id, cartQuantity + 1); }} className="p-1 text-primary"><Plus className="w-3.5 h-3.5" /></button>
-                  <span className="text-xs font-bold text-primary w-5 text-center">{cartQuantity}</span>
-                  <button onClick={(e) => { e.stopPropagation(); onUpdateQuantity(product.id, cartQuantity - 1); }} className="p-1 text-primary"><Minus className="w-3.5 h-3.5" /></button>
-                </div>
-              ) : cartQuantity > 0 && hasVariants ? (
-                <Button size="sm" variant="outline" className="h-7 text-[10px] rounded-xl" onClick={(e) => { e.stopPropagation(); onView(product.id); }}>
-                  في السلة ({cartQuantity})
-                </Button>
-              ) : (
-                <Button size="sm" className="h-7 text-[10px] rounded-xl bg-primary text-primary-foreground hover:bg-primary/90" onClick={(e) => { e.stopPropagation(); onAddToCart(product); }} disabled={isOutOfStock}>
-                  <Plus className="w-3 h-3 ml-0.5" />
-                  {isOutOfStock ? "نفذ" : "أضف"}
-                </Button>
-              )}
-            </div>
-            <PriceBlock />
+            )}
           </div>
         </div>
-      </div>
+      </article>
     );
   }
 
-  // Grid view — premium card
   return (
-    <div
-      className="group relative bg-card rounded-2xl overflow-hidden border border-border/50 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 cursor-pointer animate-fade-in"
-      style={{ animationDelay: `${index * 30}ms` }}
+    <article
+      className="sf-product-card sf-card-hover group animate-fade-in"
+      style={{ animationDelay: `${index * 40}ms` }}
       onClick={() => onView(product.id)}
     >
-      <div className="relative aspect-[4/5] overflow-hidden bg-gradient-to-br from-[hsl(var(--store-accent-muted))]/40 to-muted/20">
+      <div className="sf-product-image-wrap">
         <OptimizedImage
           src={product.image}
           alt={product.name}
           variant="thumbnail"
-          className="w-full h-full group-hover:scale-110 transition-transform duration-700"
-          loading="lazy"
+          className="sf-product-image"
+          loading={isAboveFold ? "eager" : "lazy"}
+          fetchPriority={isLcpCandidate ? "high" : undefined}
+          sizes="(max-width: 640px) 45vw, 280px"
         />
-        {/* Soft gradient overlay on hover */}
-        <div className="absolute inset-0 bg-gradient-to-t from-foreground/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-        {/* Badges */}
-        <div className="absolute top-2 right-2 flex flex-col gap-1.5 z-10">
+        <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
           {isNew && (
-            <span className="bg-primary text-primary-foreground px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center gap-0.5">
-              <Sparkles className="w-3 h-3" /> جديد
+            <span className="sf-badge bg-primary text-primary-foreground shadow-sm">
+              <Sparkles className="w-3 h-3 ml-0.5" /> جديد
             </span>
           )}
           {isLowStock && (
-            <span className="bg-warning text-warning-foreground px-2 py-0.5 rounded-lg shadow-md text-[10px] font-bold flex items-center gap-0.5">
-              <Flame className="w-3 h-3" /> آخر {availableQty}
+            <span className="sf-badge bg-warning/90 text-warning-foreground">
+              <Flame className="w-3 h-3 ml-0.5" /> {availableQty}
             </span>
           )}
           {isOutOfStock && (
-            <span className="bg-foreground/80 text-background px-2 py-0.5 rounded-lg shadow-md text-[10px] font-bold backdrop-blur-sm">
-              نفذ المخزون
-            </span>
+            <span className="sf-badge bg-foreground/75 text-background">نفذ</span>
           )}
         </div>
+      </div>
 
-        {/* Share */}
-        <div className="absolute top-2 left-2 z-10">
+      <div className="sf-product-body">
+        <h3 className="sf-product-name">{product.name}</h3>
+        <div className="flex items-center justify-between gap-2 w-full" dir="rtl">
+          <ProductPriceDisplay product={product} size="md" align="right" showBadge />
+          {product.rating != null && product.rating > 0 ? (
+            <div className="flex items-center gap-1 shrink-0">
+              <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+              <span className="text-xs font-medium text-muted-foreground">{product.rating.toFixed(1)}</span>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {cartQuantity > 0 && !hasVariants ? (
+        <div
+          className="flex items-center justify-between border-t border-border/40 px-3 py-2.5"
+          onClick={(e) => e.stopPropagation()}
+        >
           <button
-            className="icon-circle-btn min-h-[44px] min-w-[44px] bg-card/90 backdrop-blur-md sm:opacity-0 sm:group-hover:opacity-100 opacity-100"
-            onClick={handleShare}
-            aria-label="مشاركة المنتج"
+            onClick={() => onUpdateQuantity(product.id, cartQuantity - 1)}
+            className="p-2 text-primary rounded-lg hover:bg-primary/10 transition-colors"
+            aria-label="تقليل الكمية"
           >
-            <Share2 className="w-3.5 h-3.5" />
+            <Minus className="w-4 h-4" />
+          </button>
+          <span className="text-sm font-semibold text-primary tabular-nums">{cartQuantity} في السلة</span>
+          <button
+            onClick={() => onUpdateQuantity(product.id, cartQuantity + 1)}
+            className="p-2 text-primary rounded-lg hover:bg-primary/10 transition-colors"
+            aria-label="زيادة الكمية"
+          >
+            <Plus className="w-4 h-4" />
           </button>
         </div>
-      </div>
-
-      <div className="p-3 space-y-2 border-t border-border/40 bg-card/95">
-        <h3 className="font-semibold text-sm text-right line-clamp-1 text-foreground">{product.name}</h3>
-        {blurb ? (
-          <p className="text-[11px] text-muted-foreground text-right line-clamp-3 leading-snug">{blurb}</p>
-        ) : null}
-        {optionSummary && (
-          <p className="text-[10px] text-muted-foreground/80 text-right">{optionSummary}</p>
-        )}
-
-        <div className="flex items-center justify-between">
-          {product.rating != null && product.rating > 0 ? (
-            <div className="flex items-center gap-0.5 bg-amber-50 dark:bg-amber-500/10 px-1.5 py-0.5 rounded-md">
-              <Star className="w-3 h-3 text-amber-500 fill-current" />
-              <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-400">{product.rating.toFixed(1)}</span>
-            </div>
-          ) : (
-            <span />
-          )}
-          <PriceBlock size="md" />
-        </div>
-
-        {cartQuantity > 0 && !hasVariants ? (
-          <div className="flex items-center justify-between bg-primary/10 rounded-xl h-9 px-2">
-            <button onClick={(e) => { e.stopPropagation(); onUpdateQuantity(product.id, cartQuantity + 1); }} className="p-1 text-primary hover:bg-primary/20 rounded-lg transition-colors">
-              <Plus className="w-4 h-4" />
-            </button>
-            <span className="text-sm font-bold text-primary">{cartQuantity}</span>
-            <button onClick={(e) => { e.stopPropagation(); onUpdateQuantity(product.id, cartQuantity - 1); }} className="p-1 text-primary hover:bg-primary/20 rounded-lg transition-colors">
-              <Minus className="w-4 h-4" />
-            </button>
-          </div>
-        ) : cartQuantity > 0 && hasVariants ? (
-          <Button
-            size="sm"
-            variant="outline"
-            className="w-full h-9 text-xs rounded-xl"
-            onClick={(e) => { e.stopPropagation(); onView(product.id); }}
-          >
-            في السلة ({cartQuantity}) — عرض الخيارات
-          </Button>
-        ) : (
-          <Button
-            size="sm"
-            className="w-full h-9 text-xs rounded-xl border-0 bg-primary hover:bg-primary/90 text-primary-foreground transition-all font-semibold"
-            onClick={(e) => { e.stopPropagation(); onAddToCart(product); }}
-            disabled={isOutOfStock}
-          >
-            {isOutOfStock ? "نفذ المخزون" : (<><Plus className="w-3.5 h-3.5 ml-1" /> أضف للسلة</>)}
-          </Button>
-        )}
-      </div>
-    </div>
+      ) : (
+        <button
+          type="button"
+          onClick={handleQuickAdd}
+          disabled={isOutOfStock}
+          className="sf-product-cta"
+        >
+          <ShoppingBag className="w-4 h-4" strokeWidth={2} />
+          {isOutOfStock ? "نفذ المخزون" : hasVariants ? "عرض الخيارات" : "أضف إلى السلة"}
+        </button>
+      )}
+    </article>
   );
 });
 

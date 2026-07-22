@@ -20,23 +20,12 @@ const StoreCategoryChip = ({
       type={onClick ? 'button' : undefined}
       onClick={onClick}
       className={cn(
-        'group relative inline-flex items-center gap-2 rounded-full whitespace-nowrap text-xs font-semibold transition-all duration-200',
-        active
-          ? 'bg-primary text-primary-foreground px-4 py-2 shadow-md shadow-primary/20 ring-2 ring-primary/15 scale-[1.02]'
-          : 'bg-card/90 text-muted-foreground hover:text-foreground border border-border/70 hover:border-primary/25 px-3.5 py-2 hover:bg-[hsl(var(--store-accent-muted))]',
+        'sf-pill text-sm',
+        active ? 'sf-pill-active' : 'sf-pill-inactive',
         className
       )}
     >
-      <span
-        aria-hidden
-        className={cn(
-          'h-2 w-2 shrink-0 rounded-full transition-all duration-200',
-          active
-            ? 'bg-primary-foreground shadow-[0_0_0_2px_hsl(var(--primary)/0.35)]'
-            : 'bg-primary/70 group-hover:bg-primary group-hover:scale-110'
-        )}
-      />
-      <span>{label}</span>
+      {label}
     </Tag>
   );
 };

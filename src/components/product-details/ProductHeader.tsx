@@ -1,17 +1,25 @@
 import { useNavigate } from 'react-router-dom';
-import { RtlHeaderBar } from '@/components/layout/RtlHeaderBar';
+import { ArrowRight, ShoppingBag } from 'lucide-react';
 
 const ProductHeader = () => {
   const navigate = useNavigate();
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border/40 bg-card/85 backdrop-blur-xl supports-[backdrop-filter]:bg-card/70">
-      <div className="max-w-6xl mx-auto px-3 sm:px-4 py-2.5">
-        <RtlHeaderBar
-          title="تفاصيل المنتج"
-          titleClassName="text-sm font-bold"
-          onBack={() => navigate(-1)}
-        />
+    <header className="sf-header">
+      <div className="sf-container flex items-center justify-between h-14 sm:h-16">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="sf-icon-btn"
+          aria-label="رجوع"
+        >
+          <ArrowRight className="w-5 h-5" strokeWidth={2} />
+        </button>
+        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <ShoppingBag className="w-4 h-4 text-primary" strokeWidth={2} />
+          تفاصيل المنتج
+        </div>
+        <div className="w-11" aria-hidden />
       </div>
     </header>
   );

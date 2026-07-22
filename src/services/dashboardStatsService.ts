@@ -115,7 +115,8 @@ export const fetchDashboardStatisticsBatch = async (
       await flushMerchantAnalyticsBuffer();
       const { data, error } = await callReadRpc<Record<string, unknown>>(
         'get_dashboard_statistics_batch',
-        { p_owner_id: ownerId }
+        { p_owner_id: ownerId },
+        { forcePrimary: true }
       );
 
       if (error || !data) {

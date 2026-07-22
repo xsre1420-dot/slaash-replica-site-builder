@@ -1,4 +1,4 @@
-import { Search, ArrowUpDown, Grid3X3, List, Mic, MicOff, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { getCategories, getCategoriesSync } from "@/services/productService";
@@ -12,19 +12,21 @@ import { useMerchantProductsPage } from "@/hooks/useMerchantProductsPage";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import StoreProductGrid from "@/components/store/StoreProductGrid";
-import { StoreCartHeaderButton, StoreFixedCheckoutBar } from "@/components/store/StoreCartChrome";
+import { StoreFixedCheckoutBar } from "@/components/store/StoreCartChrome";
 import StoreThemeProvider from "@/components/StoreThemeProvider";
 import StoreCategoryChip from "@/components/store/StoreCategoryChip";
 import { useToast } from "@/hooks/use-toast";
 import { useStoreDisplay } from "@/hooks/useStoreDisplay";
 import { STORE_PRODUCTS_PAGE_SIZE } from "@/constants/pagination";
-import { resolveMediaDeliveryUrl } from "@/utils/cdnMediaUtils";
-import StorefrontTrustBar from "@/components/storefront/StorefrontTrustBar";
 import StorefrontFooter from "@/components/storefront/StorefrontFooter";
+import StorefrontHeader from "@/components/storefront/layout/StorefrontHeader";
+import StorefrontHero from "@/components/storefront/layout/StorefrontHero";
+import StorefrontBenefits from "@/components/storefront/layout/StorefrontBenefits";
+import StorefrontToolbar from "@/components/storefront/layout/StorefrontToolbar";
+import StorefrontNewsletter from "@/components/storefront/layout/StorefrontNewsletter";
 import SEOHead from "@/components/seo/SEOHead";
 import { getProductPath } from "@/lib/storefrontPaths";
 import { persistCheckoutStoreSlug } from "@/lib/checkoutStoreContext";
-import { BadgeCheck } from "lucide-react";
 
 const Store = () => {
   const { username: storeSlug } = useParams();
@@ -75,16 +77,16 @@ const Store = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(STORE_PRODUCTS_PAGE_SIZE);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isListening, setIsListening] = useState(false);
   const [filterPriceRange, setFilterPriceRange] = useState<[number, number]>([0, 0]);
   const [filterSizes, setFilterSizes] = useState<string[]>([]);
 
   const { addToCart, setStoreOwner } = useCartActions();
-  const { trackAddToCart } = useMetaPixel();
+  const { trackAddToCart, trackSearch } = useMetaPixel();
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const [headerScrolled, setHeaderScrolled] = useState(false);
   const bannerDotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pullStartY = useRef(0);
   const categoriesRef = useRef<HTMLDivElement>(null);
@@ -97,6 +99,11 @@ const Store = () => {
       if (storeSlug) persistCheckoutStoreSlug(displayOwnerId, storeSlug);
     }
   }, [isTenantMode, displayOwnerId, storeSlug, setStoreOwner]);
+
+  useEffect(() => {
+    if (!isTenantMode || !debouncedSearch.trim()) return;
+    trackSearch(debouncedSearch.trim());
+  }, [debouncedSearch, isTenantMode, trackSearch]);
 
   const allProducts = useMemo(
     () => (isTenantMode ? tenantProducts.products : ownerCatalog.products),
@@ -272,23 +279,6 @@ const Store = () => {
     } catch {}
   }, [isTenantMode, storeSlug, toast]);
 
-  // --- Voice search ---
-  const toggleVoiceSearch = () => {
-    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      toast({ title: "غير مدعوم", description: "البحث الصوتي غير مدعوم في هذا المتصفح", variant: "destructive" });
-      return;
-    }
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (isListening) { setIsListening(false); return; }
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'ar-SA';
-    recognition.onresult = (e: any) => { setSearchQuery(e.results[0][0].transcript); setIsListening(false); };
-    recognition.onerror = () => setIsListening(false);
-    recognition.onend = () => setIsListening(false);
-    recognition.start();
-    setIsListening(true);
-  };
-
   // --- Sort ---
   const cycleSortBy = () => setSortBy(prev => prev === "default" ? "price-asc" : prev === "price-asc" ? "price-desc" : "default");
   const sortLabel = sortBy === "price-asc" ? "الأقل سعراً" : sortBy === "price-desc" ? "الأعلى سعراً" : "ترتيب";
@@ -321,6 +311,22 @@ const Store = () => {
     setFilterSizes([]);
   }, [maxPrice]);
 
+  useEffect(() => {
+    const onScroll = () => setHeaderScrolled(window.scrollY > 8);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const handleBannerDotClick = useCallback((i: number) => {
+    if (bannerDotTimerRef.current) clearTimeout(bannerDotTimerRef.current);
+    setIsTransitioning(true);
+    bannerDotTimerRef.current = setTimeout(() => {
+      bannerDotTimerRef.current = null;
+      setCurrentImageIndex(i);
+      setIsTransitioning(false);
+    }, 200);
+  }, []);
+
   return (
     <>
       <SEOHead
@@ -330,169 +336,77 @@ const Store = () => {
         storeName={storeName}
       />
     <StoreThemeProvider colors={themeColors}>
-    <div className="min-h-screen bg-background" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+    <div className="sf-page" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <MarketingScripts
         storeSlug={isTenantMode ? storeSlug : undefined}
         storeOwnerId={isTenantMode ? displayOwnerId : undefined}
       />
 
-      {/* Pull to refresh indicator */}
       {isRefreshing && (
-        <div className="fixed top-0 left-0 right-0 z-50 flex justify-center py-3 bg-primary/10 backdrop-blur-sm">
+        <div className="fixed top-0 left-0 right-0 z-[60] flex justify-center py-3 bg-primary/10 backdrop-blur-sm">
           <RefreshCw className="w-5 h-5 text-primary animate-spin" />
         </div>
       )}
 
-      {/* Header */}
-      <div className="bg-card/90 backdrop-blur-xl border-b border-border/60 sticky top-0 z-40">
-        <div className="px-4 py-3 max-w-3xl mx-auto">
-          <div className="flex justify-between items-center mb-3">
-            <div className="flex items-center gap-1">
-              <StoreCartHeaderButton storeSlug={isTenantMode ? storeSlug : undefined} />
-            </div>
-            <div className="text-center flex-1 flex items-center justify-center gap-2.5 min-w-0">
-              {storeLogo && (
-                <div className="relative">
-                  <div className="absolute inset-0 bg-primary/20 rounded-full blur-md" />
-                  <img src={resolveMediaDeliveryUrl(storeLogo, { variant: 'thumbnail' })} alt="" className="relative w-9 h-9 rounded-full object-cover ring-2 ring-primary/20" />
-                </div>
-              )}
-              <p className="font-bold text-base text-foreground truncate flex items-center gap-1 justify-center">
-                {storeName}
-                {isTenantMode && <BadgeCheck className="w-4 h-4 text-primary shrink-0" />}
-              </p>
-            </div>
-            <div className="w-10" />
-          </div>
+      <StorefrontHeader
+        storeName={storeName || 'المتجر'}
+        storeLogo={storeLogo}
+        isVerified={isTenantMode}
+        storeSlug={isTenantMode ? storeSlug : undefined}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        scrolled={headerScrolled}
+      />
 
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <input
-              type="search"
-              placeholder="ابحث عن منتج..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-11 pr-10 pl-12 rounded-xl bg-muted/70 border border-transparent text-right text-sm placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 focus:bg-card focus:border-primary/30 transition-all text-foreground"
-            />
-            <button
-              onClick={toggleVoiceSearch}
-              type="button"
-              aria-label={isListening ? "إيقاف البحث الصوتي" : "البحث الصوتي"}
-              className={`absolute left-1 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full transition-colors ${isListening ? 'text-destructive animate-pulse bg-destructive/10' : 'text-foreground hover:text-primary hover:bg-primary/10'}`}
-            >
-              {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-            </button>
-          </div>
-        </div>
-      </div>
+      <StorefrontHero
+        storeName={storeName || 'المتجر'}
+        bannerImages={bannerImages}
+        currentIndex={currentImageIndex}
+        isTransitioning={isTransitioning}
+        onDotClick={handleBannerDotClick}
+      />
 
-      <StorefrontTrustBar />
+      <StorefrontBenefits />
 
-      <div className="max-w-3xl mx-auto">
-        {/* Banner — hero */}
-        {bannerImages.length > 0 && (
-          <div className="px-4 pt-4">
-            <div className="relative h-44 sm:h-56 overflow-hidden rounded-2xl shadow-lg ring-1 ring-border/40">
-              <div className={`w-full h-full transition-all duration-500 ${isTransitioning ? 'opacity-0 scale-[1.03]' : 'opacity-100 scale-100'}`}>
-                <img src={bannerImages[currentImageIndex]} alt="" className="w-full h-full object-cover" loading="lazy" />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-foreground/50 via-foreground/10 to-transparent pointer-events-none" />
-              <div className="absolute bottom-4 right-4 left-4 text-right pointer-events-none">
-                <p className="text-lg sm:text-xl font-bold text-white">{storeName}</p>
-                <p className="text-xs text-white/90 mt-0.5">تسوق بثقة — توصيل سريع ودفع آمن</p>
-              </div>
-              {bannerImages.length > 1 && (
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-                  {bannerImages.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => {
-                        if (bannerDotTimerRef.current) clearTimeout(bannerDotTimerRef.current);
-                        setIsTransitioning(true);
-                        bannerDotTimerRef.current = setTimeout(() => {
-                          bannerDotTimerRef.current = null;
-                          setCurrentImageIndex(i);
-                          setIsTransitioning(false);
-                        }, 200);
-                      }}
-                      className={`transition-all rounded-full ${currentImageIndex === i ? "bg-primary w-6 h-2" : "bg-background/70 w-2 h-2 hover:bg-background"}`}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Categories with swipe */}
+      <section className="sf-container pb-2">
+        <p className="text-xs font-semibold text-muted-foreground mb-2 text-right px-1">الأقسام</p>
         <div
-          className="px-4 pt-4 pb-1"
           ref={categoriesRef}
           onTouchStart={handleCategoryTouchStart}
           onTouchEnd={handleCategoryTouchEnd}
+          className="overflow-x-auto scrollbar-hide -mx-1 px-1 pb-2"
         >
-          <div className="store-category-bar rounded-2xl border border-border/50 bg-[hsl(var(--store-accent-muted))] p-2.5">
-            <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide">
-              {categories.map((cat) => (
-                <StoreCategoryChip
-                  key={cat.id}
-                  label={cat.name}
-                  active={selectedCategory === cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                />
-              ))}
-            </div>
+          <div className="flex gap-2 min-w-min">
+            {categories.map((cat) => (
+              <StoreCategoryChip
+                key={cat.id}
+                label={cat.name}
+                active={selectedCategory === cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+              />
+            ))}
           </div>
         </div>
+      </section>
 
-        {/* Toolbar: Sort, Filter, View Mode */}
-        <div className="px-4 pb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={cycleSortBy}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                sortBy !== "default" ? "bg-primary/10 text-primary ring-1 ring-primary/20" : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
-            >
-              <ArrowUpDown className="w-3 h-3" />
-              {sortLabel}
-            </button>
-            <StoreFilterDrawer
-              maxPrice={maxPrice}
-              currentRange={filterPriceRange}
-              availableSizes={availableSizes}
-              selectedSizes={filterSizes}
-              onApply={handleFilterApply}
-              onReset={handleFilterReset}
-              activeFilterCount={activeFilterCount}
-            />
-          </div>
-          <div className="flex items-center gap-0.5 bg-muted rounded-lg p-0.5">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`p-1.5 rounded-md transition-all ${viewMode === "grid" ? "bg-card shadow-sm text-primary" : "text-muted-foreground"}`}
-            >
-              <Grid3X3 className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={`p-1.5 rounded-md transition-all ${viewMode === "list" ? "bg-card shadow-sm text-primary" : "text-muted-foreground"}`}
-            >
-              <List className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      </div>
+      <StorefrontToolbar
+        sortLabel={sortLabel}
+        sortActive={sortBy !== 'default'}
+        onCycleSort={cycleSortBy}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        maxPrice={maxPrice}
+        filterPriceRange={filterPriceRange}
+        availableSizes={availableSizes}
+        filterSizes={filterSizes}
+        onFilterApply={handleFilterApply}
+        onFilterReset={handleFilterReset}
+        activeFilterCount={activeFilterCount}
+        productCount={displayProducts.length}
+        sectionTitle={searchQuery ? `نتائج "${searchQuery}"` : 'تسوق الآن'}
+      />
 
-      {/* Products */}
-      <div className="px-4 pb-28 max-w-3xl mx-auto">
-        {searchQuery && (
-          <p className="text-xs text-muted-foreground text-right mb-3">
-            {displayProducts.length} نتيجة
-          </p>
-        )}
-
+      <div className="sf-container pb-32 lg:pb-16 pt-2">
         <StoreProductGrid
           products={displayProducts}
           viewMode={viewMode}
@@ -507,6 +421,8 @@ const Store = () => {
           sentinelRef={sentinelRef}
         />
       </div>
+
+      <StorefrontNewsletter storeName={storeName || 'المتجر'} />
 
       <StorefrontFooter
         storeName={storeName || 'المتجر'}

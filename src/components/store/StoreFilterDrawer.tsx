@@ -1,8 +1,9 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { SlidersHorizontal, X } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 
 interface StoreFilterDrawerProps {
   maxPrice: number;
@@ -54,20 +55,31 @@ export default function StoreFilterDrawer({
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         {children || (
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors bg-primary/10 text-primary">
+          <button
+            type="button"
+            className={cn(
+              'sf-pill text-xs sm:text-sm',
+              activeFilterCount > 0 ? 'sf-pill-active' : 'sf-pill-inactive'
+            )}
+          >
             <SlidersHorizontal className="w-3.5 h-3.5" strokeWidth={2.25} />
-            فلتر {activeFilterCount > 0 && `(${activeFilterCount})`}
+            فلتر
+            {activeFilterCount > 0 && (
+              <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary-foreground/20 px-1.5 text-[10px] font-bold">
+                {activeFilterCount}
+              </span>
+            )}
           </button>
         )}
       </SheetTrigger>
-      <SheetContent side="right" className="w-[320px] font-arabic bg-card">
-        <SheetHeader>
-          <SheetTitle className="text-right text-foreground">تصفية المنتجات</SheetTitle>
+      <SheetContent side="right" className="w-full sm:w-[380px] font-arabic bg-background border-border/50">
+        <SheetHeader className="text-right pb-6 border-b border-border/40">
+          <SheetTitle className="text-xl font-bold text-foreground">تصفية المنتجات</SheetTitle>
+          <p className="text-sm text-muted-foreground font-normal">حدّد نطاق السعر والمقاسات</p>
         </SheetHeader>
 
-        <div className="mt-6 space-y-8">
-          {/* Price Range */}
-          <div className="space-y-4">
+        <div className="mt-8 space-y-10">
+          <div className="space-y-5">
             <h3 className="text-sm font-semibold text-foreground text-right">نطاق السعر</h3>
             <Slider
               value={[priceRange[0], priceRange[1]]}
@@ -77,24 +89,25 @@ export default function StoreFilterDrawer({
               onValueChange={(v) => setPriceRange([v[0], v[1]])}
               className="mt-2"
             />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{priceRange[0].toLocaleString()} د.ع</span>
-              <span>{priceRange[1].toLocaleString()} د.ع</span>
+            <div className="flex justify-between text-sm text-muted-foreground tabular-nums">
+              <span>{priceRange[1].toLocaleString('ar-IQ')} د.ع</span>
+              <span>{priceRange[0].toLocaleString('ar-IQ')} د.ع</span>
             </div>
           </div>
 
-          {/* Sizes */}
           {availableSizes.length > 0 && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <h3 className="text-sm font-semibold text-foreground text-right">المقاسات</h3>
               <div className="flex flex-wrap gap-2 justify-end">
                 {availableSizes.map(size => (
                   <button
                     key={size}
+                    type="button"
                     onClick={() => toggleSize(size)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                      sizes.includes(size) ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border hover:border-primary/50'
-                    }`}
+                    className={cn(
+                      'sf-pill text-xs py-2',
+                      sizes.includes(size) ? 'sf-pill-active' : 'sf-pill-inactive'
+                    )}
                   >
                     {size}
                   </button>
@@ -103,13 +116,12 @@ export default function StoreFilterDrawer({
             </div>
           )}
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-4">
-            <Button variant="outline" onClick={handleReset} className="flex-1 rounded-xl">
+          <div className="flex gap-3 pt-6 border-t border-border/40">
+            <Button variant="outline" onClick={handleReset} className="flex-1 h-12 rounded-2xl text-sm font-semibold">
               إعادة تعيين
             </Button>
-            <Button onClick={handleApply} className="flex-1 rounded-xl bg-primary text-primary-foreground">
-              تطبيق
+            <Button onClick={handleApply} className="flex-1 h-12 rounded-2xl sf-btn-primary border-0">
+              تطبيق الفلتر
             </Button>
           </div>
         </div>

@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ZoomIn } from "lucide-react";
-import { resolveMediaDeliveryUrl } from "@/utils/cdnMediaUtils";
+import { buildResponsiveImageSources } from "@/utils/cdnMediaUtils";
 import { cn } from "@/lib/utils";
 
 interface ProductImageLightboxProps {
@@ -25,7 +25,7 @@ const ProductImageLightbox = ({
   renderImage,
 }: ProductImageLightboxProps) => {
   const [open, setOpen] = useState(false);
-  const fullSrc = resolveMediaDeliveryUrl(src, { variant: "display" });
+  const sources = buildResponsiveImageSources(src, { variant: "display" });
 
   return (
     <>
@@ -42,7 +42,7 @@ const ProductImageLightbox = ({
           renderImage({ alt, onLoad, priority })
         ) : (
           <img
-            src={fullSrc}
+            src={sources.src}
             alt={alt}
             className={cn(
               "max-h-full max-w-full w-full h-full object-contain transition-transform duration-500 ease-out",
@@ -50,6 +50,8 @@ const ProductImageLightbox = ({
             )}
             loading={priority ? "eager" : "lazy"}
             decoding="async"
+            {...(priority ? { fetchPriority: "high" as const } : {})}
+            {...(sources.srcSet ? { srcSet: sources.srcSet, sizes: sources.sizes } : {})}
             onLoad={onLoad}
             onError={(e) => {
               if (e.currentTarget.src !== src) e.currentTarget.src = src;
@@ -64,14 +66,19 @@ const ProductImageLightbox = ({
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-[min(95vw,900px)] max-h-[90vh] p-2 sm:p-4 bg-background border-border/40 shadow-xl">
-          <img
-            src={fullSrc}
-            alt={alt}
-            className="w-full h-full max-h-[85vh] object-contain rounded-lg"
-            onError={(e) => {
-              if (e.currentTarget.src !== src) e.currentTarget.src = src;
-            }}
-          />
+          {open && (
+            <img
+              src={sources.src}
+              alt={alt}
+              className="w-full h-full max-h-[85vh] object-contain rounded-lg"
+              loading="lazy"
+              decoding="async"
+              {...(sources.srcSet ? { srcSet: sources.srcSet, sizes: "90vw" } : {})}
+              onError={(e) => {
+                if (e.currentTarget.src !== src) e.currentTarget.src = src;
+              }}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </>

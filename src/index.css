@@ -345,6 +345,275 @@
   .shadow-soft {
     box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03), 0 1px 6px -1px rgb(0 0 0 / 0.04);
   }
+
+  /* ── Storefront design system ── */
+  .sf-page {
+    @apply min-h-screen bg-background text-foreground font-arabic antialiased;
+    --sf-header-h: 8.75rem;
+    --sf-radius-sm: 0.5rem;
+    --sf-radius-md: 0.75rem;
+    --sf-radius-lg: 1rem;
+    --sf-radius-xl: 1.25rem;
+    --sf-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @media (min-width: 640px) {
+    .sf-page {
+      --sf-header-h: 9.25rem;
+    }
+  }
+
+  .sf-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full;
+  }
+
+  .sf-container-narrow {
+    @apply max-w-3xl mx-auto px-4 sm:px-6 w-full;
+  }
+
+  .sf-header {
+    @apply sticky top-0 z-50 border-b border-border/30 bg-background/85 backdrop-blur-xl backdrop-saturate-150;
+    box-shadow: 0 1px 0 hsl(var(--border) / 0.35);
+  }
+
+  .sf-header-scrolled {
+    @apply bg-background/95;
+    box-shadow: 0 8px 32px -12px hsl(var(--foreground) / 0.07);
+  }
+
+  .sf-search {
+    @apply w-full h-11 sm:h-12 pr-11 pl-4 rounded-xl bg-muted/40 border border-transparent text-sm text-foreground placeholder:text-muted-foreground/60 text-right;
+    transition: border-color 0.2s var(--sf-ease), box-shadow 0.2s var(--sf-ease), background-color 0.2s var(--sf-ease);
+  }
+
+  .sf-search:focus {
+    @apply outline-none bg-card border-border/60;
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.12);
+  }
+
+  .sf-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 h-11 sm:h-12 px-5 sm:px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-sm;
+    transition: background-color 0.2s var(--sf-ease), box-shadow 0.2s var(--sf-ease), transform 0.15s var(--sf-ease);
+  }
+
+  .sf-btn-primary:hover:not(:disabled) {
+    @apply bg-primary/92;
+    box-shadow: 0 8px 24px -8px hsl(var(--primary) / 0.35);
+  }
+
+  .sf-btn-primary:active:not(:disabled) {
+    transform: scale(0.985);
+  }
+
+  .sf-btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 h-11 sm:h-12 px-5 sm:px-6 rounded-xl border border-border/50 bg-card text-foreground font-semibold text-sm;
+    transition: border-color 0.2s var(--sf-ease), background-color 0.2s var(--sf-ease), transform 0.15s var(--sf-ease);
+  }
+
+  .sf-btn-secondary:hover:not(:disabled) {
+    @apply border-primary/25 bg-muted/30;
+  }
+
+  .sf-btn-secondary:active:not(:disabled) {
+    transform: scale(0.985);
+  }
+
+  .sf-btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl text-sm font-medium text-muted-foreground transition-all duration-200;
+    @apply hover:text-foreground hover:bg-muted/60;
+  }
+
+  .sf-pill {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs sm:text-sm font-medium whitespace-nowrap;
+    transition: background-color 0.2s var(--sf-ease), color 0.2s var(--sf-ease), border-color 0.2s var(--sf-ease);
+  }
+
+  .sf-pill-active {
+    @apply bg-primary text-primary-foreground;
+    box-shadow: 0 4px 14px -4px hsl(var(--primary) / 0.4);
+  }
+
+  .sf-pill-inactive {
+    @apply bg-transparent text-muted-foreground border border-border/40 hover:border-primary/20 hover:text-foreground;
+  }
+
+  .sf-card {
+    @apply bg-card rounded-xl border border-border/35 overflow-hidden;
+    transition: border-color 0.25s var(--sf-ease), box-shadow 0.25s var(--sf-ease);
+  }
+
+  .sf-card-hover:hover {
+    @apply border-border/60;
+    box-shadow: 0 8px 32px -16px hsl(var(--foreground) / 0.1);
+  }
+
+  .sf-surface {
+    @apply bg-muted/50;
+  }
+
+  .sf-product-card {
+    @apply sf-card flex flex-col cursor-pointer;
+  }
+
+  .sf-product-card:hover .sf-product-image {
+    transform: scale(1.04);
+  }
+
+  .sf-product-image-wrap {
+    @apply relative aspect-square m-3 rounded-lg sf-surface overflow-hidden;
+  }
+
+  .sf-product-image {
+    @apply w-full h-full object-contain p-2;
+    transition: transform 0.5s var(--sf-ease);
+  }
+
+  .sf-product-body {
+    @apply px-4 pt-1 pb-3 space-y-1.5 flex-1;
+  }
+
+  .sf-product-name {
+    @apply text-sm font-medium text-foreground text-right line-clamp-2 leading-snug min-h-[2.5rem];
+  }
+
+  .sf-product-cta {
+    @apply flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-primary border-t border-border/40;
+    transition: background-color 0.2s var(--sf-ease), color 0.2s var(--sf-ease);
+  }
+
+  .sf-product-cta:hover:not(:disabled) {
+    @apply bg-primary/[0.04];
+  }
+
+  .sf-product-cta:disabled {
+    @apply text-muted-foreground cursor-not-allowed;
+  }
+
+  .sf-section-title {
+    @apply text-lg sm:text-xl font-bold text-foreground tracking-tight text-center;
+  }
+
+  .sf-section-subtitle {
+    @apply text-xs sm:text-sm text-muted-foreground text-center leading-relaxed mt-1;
+  }
+
+  .sf-display {
+    @apply text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground tracking-tight leading-tight;
+  }
+
+  .sf-title {
+    @apply text-xl sm:text-2xl font-bold text-foreground tracking-tight;
+  }
+
+  .sf-body {
+    @apply text-sm sm:text-base text-muted-foreground leading-relaxed;
+  }
+
+  .sf-caption {
+    @apply text-xs text-muted-foreground;
+  }
+
+  .sf-price {
+    @apply text-sm sm:text-base font-bold text-foreground tabular-nums;
+  }
+
+  .sf-input {
+    @apply w-full h-11 sm:h-12 px-4 rounded-xl border border-border/50 bg-card text-sm text-foreground placeholder:text-muted-foreground/60 text-right;
+    transition: border-color 0.2s var(--sf-ease), box-shadow 0.2s var(--sf-ease);
+  }
+
+  .sf-input:focus {
+    @apply outline-none border-primary/40;
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1);
+  }
+
+  .sf-tab {
+    @apply relative pb-2 text-sm font-medium text-muted-foreground transition-colors duration-200;
+  }
+
+  .sf-tab-active {
+    @apply text-primary font-semibold;
+  }
+
+  .sf-tab-active::after {
+    content: '';
+    @apply absolute bottom-0 right-0 left-0 h-0.5 bg-primary rounded-full;
+  }
+
+  .sf-hero-gradient {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary) / 0.08) 0%,
+      hsl(var(--background)) 50%,
+      hsl(var(--muted) / 0.3) 100%
+    );
+  }
+
+  .sf-divider {
+    @apply border-t border-border/40;
+  }
+
+  .sf-icon-btn {
+    @apply relative inline-flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl border border-border/40 bg-card text-foreground;
+    transition: border-color 0.2s var(--sf-ease), background-color 0.2s var(--sf-ease), color 0.2s var(--sf-ease), transform 0.15s var(--sf-ease);
+  }
+
+  .sf-icon-btn:hover {
+    @apply border-primary/25 bg-primary/[0.04] text-primary;
+  }
+
+  .sf-icon-btn:active {
+    transform: scale(0.95);
+  }
+
+  .sf-badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold;
+  }
+
+  .sf-skeleton {
+    @apply animate-pulse bg-muted/60 rounded-xl;
+  }
+
+  .sf-product-grid {
+    @apply grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5;
+  }
+
+  .sf-product-list {
+    @apply flex flex-col gap-4;
+  }
+
+  .sf-toolbar {
+    @apply flex items-center justify-between gap-3 py-4;
+  }
+
+  .sf-footer {
+    @apply mt-16 lg:mt-20 bg-foreground text-background;
+  }
+
+  .sf-footer a {
+    @apply text-background/70 hover:text-background transition-colors duration-200;
+  }
+
+  .sf-footer-muted {
+    @apply text-background/50;
+  }
+
+  .sf-newsletter {
+    @apply rounded-3xl border border-border/40 bg-gradient-to-br from-primary/[0.06] via-card to-card p-8 sm:p-10;
+  }
+
+  .sf-benefit-card {
+    @apply flex flex-col items-center text-center gap-2.5 p-4 sm:p-5 rounded-xl bg-muted/30 border border-transparent;
+    transition: background-color 0.2s var(--sf-ease);
+  }
+
+  .sf-benefit-card:hover {
+    @apply bg-muted/50;
+  }
+
+  .sf-sticky-bar {
+    @apply fixed bottom-0 inset-x-0 z-50 px-4 pb-4 pt-3 bg-gradient-to-t from-background via-background/95 to-transparent safe-area-bottom;
+  }
 }
 
 /* Toast notifications */

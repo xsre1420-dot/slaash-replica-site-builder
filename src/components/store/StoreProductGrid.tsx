@@ -1,5 +1,6 @@
 import { memo, useCallback, useMemo, RefObject } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { PackageSearch } from 'lucide-react';
 import { Product } from '@/types';
 import ProductCard from '@/components/store/ProductCard';
 import ProductSkeleton from '@/components/store/ProductSkeleton';
@@ -50,7 +51,7 @@ const StoreProductGrid = memo(function StoreProductGrid({
   const handleViewProduct = useCallback(
     (productId: string) => {
       const previewProduct = products.find((p) => p.id === productId);
-      navigate(getProductPath(productId, isTenantMode ? storeSlug : null), {
+      navigate(getProductPath(productId, storeSlug ?? null), {
         state: previewProduct ? { previewProduct } : undefined,
       });
     },
@@ -78,8 +79,8 @@ const StoreProductGrid = memo(function StoreProductGrid({
 
   if (isLoading) {
     return (
-      <div className={viewMode === 'grid' ? 'grid grid-cols-2 sm:grid-cols-3 gap-3' : 'space-y-3'}>
-        {Array.from({ length: 6 }).map((_, i) => (
+      <div className={viewMode === 'grid' ? 'sf-product-grid' : 'sf-product-list'}>
+        {Array.from({ length: 8 }).map((_, i) => (
           <ProductSkeleton key={i} viewMode={viewMode} />
         ))}
       </div>
@@ -88,15 +89,15 @@ const StoreProductGrid = memo(function StoreProductGrid({
 
   if (visibleProducts.length === 0) {
     return (
-      <div className="text-center py-20">
-        <div className="w-20 h-20 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center text-3xl">
-          🛍️
+      <div className="text-center py-24 px-4">
+        <div className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-primary/10 flex items-center justify-center">
+          <PackageSearch className="w-9 h-9 text-primary" strokeWidth={1.75} />
         </div>
-        <h3 className="text-lg font-bold mb-1 text-foreground">
+        <h3 className="text-xl font-bold text-foreground mb-2">
           {searchQuery ? 'لا توجد نتائج' : 'لا توجد منتجات'}
         </h3>
-        <p className="text-muted-foreground text-sm">
-          {searchQuery ? 'جرب كلمات بحث مختلفة' : 'تصفح الأقسام الأخرى'}
+        <p className="text-muted-foreground text-sm max-w-xs mx-auto leading-relaxed">
+          {searchQuery ? 'جرّب كلمات بحث مختلفة أو امسح الفلاتر' : 'تصفح الأقسام الأخرى أو عد لاحقاً'}
         </p>
       </div>
     );
@@ -104,7 +105,7 @@ const StoreProductGrid = memo(function StoreProductGrid({
 
   return (
     <>
-      <div className={viewMode === 'grid' ? 'grid grid-cols-2 sm:grid-cols-3 gap-3' : 'space-y-3'}>
+      <div className={viewMode === 'grid' ? 'sf-product-grid' : 'sf-product-list'}>
         {visibleProducts.map((product, i) => (
           <ProductCard
             key={product.id}
@@ -120,8 +121,9 @@ const StoreProductGrid = memo(function StoreProductGrid({
         ))}
       </div>
       {visibleCount < totalCount && (
-        <div ref={sentinelRef} className="flex justify-center py-6">
-          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <div ref={sentinelRef} className="flex flex-col items-center justify-center py-12 gap-3">
+          <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <p className="text-xs text-muted-foreground">جاري تحميل المزيد...</p>
         </div>
       )}
     </>
