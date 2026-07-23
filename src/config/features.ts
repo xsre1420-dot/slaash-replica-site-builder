@@ -3,7 +3,9 @@ import { env } from '@/lib/env';
 /** Feature flags derived from validated environment. */
 export const features = {
   storefrontEdge:
-    env.VITE_STOREFRONT_EDGE_ENABLED === 'true' || env.VITE_STOREFRONT_EDGE_ENABLED === '1',
+    env.VITE_STOREFRONT_EDGE_ENABLED === 'true' ||
+    env.VITE_STOREFRONT_EDGE_ENABLED === '1' ||
+    Boolean(env.VITE_STOREFRONT_EDGE_URL?.trim()),
   readReplica: Boolean(env.VITE_SUPABASE_READ_REPLICA_URL?.trim()),
   regionalReplica: Boolean(env.VITE_SUPABASE_REGIONAL_REPLICA_URL?.trim()),
   connectionPooler: Boolean(env.VITE_SUPABASE_POOLER_URL?.trim()),

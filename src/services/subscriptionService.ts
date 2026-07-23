@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { callReadRpc } from '@/lib/readWrite/readClient';
 import type { SubscriptionRecord } from '@/types/leads';
 import { isSubscriptionExpired } from '@/utils/subscriptionExpiryUtils';
 
@@ -12,7 +12,7 @@ export type MerchantAccessState = {
 };
 
 export const fetchMerchantAccess = async (): Promise<MerchantAccessState> => {
-  const { data, error } = await (supabase as any).rpc('get_my_subscription');
+  const { data, error } = await callReadRpc('get_my_subscription');
 
   if (error) {
     return {

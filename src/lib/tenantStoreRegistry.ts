@@ -9,6 +9,7 @@ import {
   STOREFRONT_PRODUCTS_CHANGED,
 } from '@/services/storefrontProductService';
 import { StorefrontCacheKeys } from '@/services/storefrontCacheService';
+import { callReadRpc } from '@/lib/readWrite/readClient';
 import { supabase } from '@/integrations/supabase/client';
 
 const META_IDB_TTL = 10 * 60 * 1000;
@@ -120,9 +121,9 @@ async function fetchStoreMeta(normalizedSlug: string) {
     };
   }
 
-  const { data: meta, error: metaErr } = await (supabase as any).rpc('get_store_meta', {
+  const { data: meta, error: metaErr } = await callReadRpc<{ store?: Record<string, unknown>; categories?: Record<string, unknown>[] }>('get_store_meta', {
     p_slug: normalizedSlug,
-  });
+  }, { preferEdge: true });
 
   if (!metaErr && meta?.store) {
     const store = meta.store as Record<string, unknown>;

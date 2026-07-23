@@ -2,33 +2,61 @@ import { getServiceSupabase } from '../_shared/supabaseClient.ts';
 import { logStructured, withEdgeSpan } from '../_shared/observability.ts';
 import { checkEdgeRateLimit, clientIpFromRequest } from '../_shared/rateLimiter.ts';
 import { getEdgeCorsHeaders, hasSupabaseAuthHeader } from '../_shared/cors.ts';
+import { isProduction } from '../_shared/env.ts';
+import {
+  META_API_VERSION,
+  buildMetaCapiPayload,
+  buildMetaUserData,
+  metaMatchQualityHints,
+} from '../_shared/metaCapi.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-const META_API_VERSION = 'v21.0';
 
 const jsonHeaders = (extra: Record<string, string> = {}) => ({
   'Content-Type': 'application/json',
   ...extra,
 });
 
-async function sha256Hex(value: string): Promise<string> {
-  const normalized = value.trim().toLowerCase().replace(/\D/g, '');
-  const data = new TextEncoder().encode(normalized);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
 interface MetaConversionPayload {
   store_slug: string;
   order_id: string;
+  event_id?: string;
   value: number;
   currency?: string;
   content_ids?: string[];
+  contents?: Array<{ id: string; quantity: number }>;
+  num_items?: number;
   customer_phone?: string | null;
+  customer_name?: string | null;
+  customer_governorate?: string | null;
+  customer_email?: string | null;
+  external_id?: string | null;
   event_source_url?: string | null;
+  fbp?: string | null;
+  fbc?: string | null;
+}
+
+async function resolveStoreOwner(
+  supabase: ReturnType<typeof getServiceSupabase>,
+  slug: string
+): Promise<string | undefined> {
+  const { data: storeRow } = await supabase
+    .from('store_settings')
+    .select('owner_id')
+    .eq('store_slug', slug)
+    .maybeSingle();
+
+  let ownerId = storeRow?.owner_id as string | undefined;
+  if (!ownerId) {
+    const { data: storeFallback } = await supabase
+      .from('stores')
+      .select('user_id')
+      .eq('store_slug', slug)
+      .maybeSingle();
+    ownerId = storeFallback?.user_id as string | undefined;
+  }
+  return ownerId;
 }
 
 Deno.serve(async (req) => {
@@ -88,7 +116,8 @@ Deno.serve(async (req) => {
 
     const slug = body.store_slug?.trim().toLowerCase();
     const orderId = body.order_id?.trim();
-    if (!slug || !orderId || !Number.isFinite(body.value)) {
+    const eventId = body.event_id?.trim() || orderId;
+    if (!slug || !orderId || !eventId || !Number.isFinite(body.value)) {
       return new Response(JSON.stringify({ success: false, error: 'invalid_payload' }), {
         status: 400,
         headers: jsonHeaders(cors),
@@ -104,23 +133,7 @@ Deno.serve(async (req) => {
     }
 
     const supabase = getServiceSupabase();
-
-    const { data: storeRow } = await supabase
-      .from('store_settings')
-      .select('owner_id')
-      .eq('store_slug', slug)
-      .maybeSingle();
-
-    let ownerId = storeRow?.owner_id as string | undefined;
-
-    if (!ownerId) {
-      const { data: storeFallback } = await supabase
-        .from('stores')
-        .select('user_id')
-        .eq('store_slug', slug)
-        .maybeSingle();
-      ownerId = storeFallback?.user_id as string | undefined;
-    }
+    const ownerId = await resolveStoreOwner(supabase, slug);
 
     if (!ownerId) {
       return new Response(JSON.stringify({ success: false, error: 'store_not_found' }), {
@@ -161,12 +174,15 @@ Deno.serve(async (req) => {
 
     const { data: settings } = await supabase
       .from('marketing_settings')
-      .select('meta_pixel_id, facebook_access_token, marketing_enabled')
+      .select(
+        'meta_pixel_id, facebook_access_token, marketing_enabled, meta_capi_enabled, meta_test_event_code, meta_debug_mode, meta_dataset_id'
+      )
       .eq('owner_id', ownerId)
       .maybeSingle();
 
     if (
       !settings?.marketing_enabled ||
+      settings.meta_capi_enabled === false ||
       !settings.meta_pixel_id?.trim() ||
       !settings.facebook_access_token?.trim()
     ) {
@@ -177,31 +193,44 @@ Deno.serve(async (req) => {
     }
 
     const userAgent = req.headers.get('user-agent') || undefined;
+    const userData = await buildMetaUserData({
+      clientIp: clientIp || undefined,
+      userAgent,
+      fbp: body.fbp,
+      fbc: body.fbc,
+      phone: body.customer_phone,
+      email: body.customer_email,
+      externalId: body.external_id ?? orderId,
+      customerName: body.customer_name,
+      governorate: body.customer_governorate,
+    });
 
-    const userData: Record<string, unknown> = {};
-    if (clientIp) userData.client_ip_address = clientIp;
-    if (userAgent) userData.client_user_agent = userAgent;
-    if (body.customer_phone?.trim()) {
-      userData.ph = [await sha256Hex(body.customer_phone)];
-    }
+    const matchHints = metaMatchQualityHints(userData);
+    const contents =
+      Array.isArray(body.contents) && body.contents.length > 0
+        ? body.contents.filter((line) => line?.id && Number.isFinite(line.quantity) && line.quantity > 0)
+        : (body.content_ids || []).map((id) => ({ id, quantity: 1 }));
+    const numItems = contents.reduce((sum, line) => sum + line.quantity, 0);
 
-    const eventPayload = {
-      data: [
+    const eventPayload = buildMetaCapiPayload(
+      [
         {
-          event_name: 'Purchase',
-          event_time: Math.floor(Date.now() / 1000),
-          event_id: orderId,
-          action_source: 'website',
-          event_source_url: body.event_source_url || undefined,
-          user_data: userData,
-          custom_data: {
+          eventName: 'Purchase',
+          eventId,
+          eventSourceUrl: body.event_source_url,
+          userData,
+          customData: {
             currency: body.currency || 'IQD',
             value: body.value,
-            content_ids: body.content_ids || [],
+            content_ids: contents.map((line) => line.id),
+            content_type: 'product',
+            num_items: numItems,
+            contents,
           },
         },
       ],
-    };
+      settings.meta_debug_mode && !isProduction() ? settings.meta_test_event_code : null
+    );
 
     const pixelId = settings.meta_pixel_id.trim();
     const accessToken = settings.facebook_access_token.trim();
@@ -216,11 +245,17 @@ Deno.serve(async (req) => {
     const metaBody = await metaRes.json().catch(() => ({}));
 
     if (!metaRes.ok) {
-      logStructured('warn', 'meta-conversions.failed', { orderId, slug, metaBody });
-      return new Response(JSON.stringify({ success: false, error: 'meta_api_error' }), {
-        status: 502,
-        headers: jsonHeaders(cors),
-      });
+      logStructured('warn', 'meta-conversions.failed', { orderId, slug, eventId, metaBody });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'meta_api_error',
+          event_id: eventId,
+          meta_response: settings.meta_debug_mode ? metaBody : undefined,
+          match_quality: matchHints,
+        }),
+        { status: 502, headers: jsonHeaders(cors) }
+      );
     }
 
     await supabase.rpc('mark_meta_conversion_sent', {
@@ -228,10 +263,24 @@ Deno.serve(async (req) => {
       p_owner_id: ownerId,
     });
 
-    logStructured('info', 'meta-conversions.sent', { orderId, slug, events_received: metaBody?.events_received });
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: jsonHeaders(cors),
+    logStructured('info', 'meta-conversions.sent', {
+      orderId,
+      slug,
+      eventId,
+      events_received: metaBody?.events_received,
+      match_quality: matchHints,
     });
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        event_id: eventId,
+        deduplication_key: eventId,
+        events_received: metaBody?.events_received,
+        match_quality: matchHints,
+        meta_response: settings.meta_debug_mode ? metaBody : undefined,
+      }),
+      { status: 200, headers: jsonHeaders(cors) }
+    );
   });
 });

@@ -3,6 +3,7 @@ import {
   analyzeMediaUrl,
   auditMediaUrlSet,
   buildStoragePublicUrl,
+  buildResponsiveImageSources,
   CDN_CACHE_MAX_AGE_SECONDS,
   isVersionedStorageAsset,
   resetMediaDeliveryMetricsForTests,
@@ -33,6 +34,14 @@ describe('cdnMediaUtils', () => {
     const url = resolveMediaDeliveryUrl(publicUrl, { variant: 'thumbnail' });
     expect(url).toContain('/thumbs/');
     expect(getMediaDeliveryMetrics().thumbnailResolved).toBe(1);
+  });
+
+  it('buildResponsiveImageSources emits srcSet for storage assets', () => {
+    const { src, srcSet, sizes } = buildResponsiveImageSources(publicUrl, { variant: 'thumbnail' });
+    expect(src).toContain('/thumbs/');
+    expect(srcSet).toContain('400w');
+    expect(srcSet).toContain('1200w');
+    expect(sizes).toBeTruthy();
   });
 
   it('passes through external URLs unchanged', () => {

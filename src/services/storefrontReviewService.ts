@@ -1,3 +1,5 @@
+import { callReadRpc } from '@/lib/readWrite/readClient';
+import { callWriteRpc } from '@/lib/readWrite/writeClient';
 import { supabase } from '@/integrations/supabase/client';
 import { getAuthenticatedUserId } from '@/lib/authSession';
 import { assertMerchantOwner } from '@/lib/tenantGuard';
@@ -23,10 +25,10 @@ export async function fetchApprovedReviewsForStore(
   storeSlug: string,
   productId: string
 ): Promise<StorefrontReview[]> {
-  const { data, error } = await (supabase as any).rpc('get_approved_product_reviews', {
+  const { data, error } = await callReadRpc<StorefrontReview[]>('get_approved_product_reviews', {
     p_slug: storeSlug.trim().toLowerCase(),
     p_product_id: productId,
-  });
+  }, { preferEdge: true });
   if (error || !Array.isArray(data)) return [];
   return data as StorefrontReview[];
 }
@@ -55,7 +57,7 @@ export async function submitStorefrontReview(
   storeSlug: string,
   input: SubmitReviewInput
 ): Promise<{ success: boolean; error?: string }> {
-  const { data, error } = await (supabase as any).rpc('submit_product_review_for_store', {
+  const { data, error } = await callWriteRpc<{ success?: boolean }>('submit_product_review_for_store', {
     p_slug: storeSlug.trim().toLowerCase(),
     p_product_id: input.productId,
     p_reviewer_name: input.reviewerName.trim(),
@@ -64,7 +66,7 @@ export async function submitStorefrontReview(
   });
 
   if (error || !data?.success) {
-    return { success: false, error: error?.message ?? 'فشل إرسال التقييم' };
+    return { success: false, error: error ?? 'فشل إرسال التقييم' };
   }
   return { success: true };
 }

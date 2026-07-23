@@ -12,6 +12,7 @@ export type AttentionKey =
   | 'low-stock'
   | 'empty-catalog'
   | 'missing-slug'
+  | 'missing-delivery-prices'
   | 'draft-products';
 
 export type AttentionVisualPhase = 'idle' | 'emphasized' | 'fading';

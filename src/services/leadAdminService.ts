@@ -1,4 +1,6 @@
-import { supabase } from '@/integrations/supabase/client';
+import { callReadRpc } from '@/lib/readWrite/readClient';
+import { callWriteRpc } from '@/lib/readWrite/writeClient';
+import { callSupabaseEdgeFunction } from '@/integrations/supabase/edge';
 import {
   enforceRateLimit,
   formatRateLimitMessageAr,
@@ -27,7 +29,7 @@ export const submitAccessLead = async (input: {
   instagramUrl?: string;
   source?: string;
 }): Promise<{ leadId: string }> => {
-  const { data, error } = await (supabase as any).rpc('submit_access_lead', {
+  const { data, error } = await callWriteRpc<Record<string, unknown>>('submit_access_lead', {
     p_full_name: input.fullName.trim(),
     p_whatsapp_number: input.whatsappNumber.trim(),
     p_source: input.source ?? 'website',
@@ -38,7 +40,7 @@ export const submitAccessLead = async (input: {
   });
 
   if (error) {
-    const msg = error.message ?? '';
+    const msg = error ?? '';
     if (/column|function|schema cache/i.test(msg)) {
       throw new LeadSubmitError(
         'قاعدة البيانات تحتاج تحديث — شغّل: npm run db:deploy'
@@ -79,24 +81,24 @@ export const fetchLeads = async (opts: {
   };
 
   let data: unknown;
-  let error: { message?: string } | null = null;
+  let error: string | null = null;
   let usedClientFilter = false;
 
-  ({ data, error } = await (supabase as any).rpc('admin_list_leads', {
+  ({ data, error } = await callReadRpc<Record<string, unknown>>('admin_list_leads', {
     ...baseArgs,
     p_filter: filter,
   }));
 
-  if (error && filter && /admin_list_leads|p_filter|schema cache|could not find/i.test(error.message ?? '')) {
+  if (error && filter && /admin_list_leads|p_filter|schema cache|could not find/i.test(error)) {
     usedClientFilter = true;
-    ({ data, error } = await (supabase as any).rpc('admin_list_leads', {
+    ({ data, error } = await callReadRpc<Record<string, unknown>>('admin_list_leads', {
       ...baseArgs,
       p_limit: 1000,
       p_offset: 0,
     }));
   }
 
-  if (error) throw error;
+  if (error) throw new Error(error);
   const payload = data as { success?: boolean; rows?: LeadRecord[]; total?: number; error?: string };
   if (!payload?.success) throw new Error(payload?.error || 'forbidden');
 
@@ -113,8 +115,8 @@ export const fetchLeads = async (opts: {
 };
 
 export const fetchLeadById = async (leadId: string): Promise<LeadRecord | null> => {
-  const { data, error } = await (supabase as any).rpc('admin_get_lead', { p_lead_id: leadId });
-  if (error) throw error;
+  const { data, error } = await callReadRpc<Record<string, unknown>>('admin_get_lead', { p_lead_id: leadId });
+  if (error) throw new Error(error);
   const payload = data as { success?: boolean; lead?: LeadRecord; error?: string };
   if (!payload?.success) return null;
   return payload.lead ?? null;
@@ -124,19 +126,19 @@ export const updateLead = async (
   leadId: string,
   patch: { status?: LeadStatus; notes?: string; markRead?: boolean }
 ): Promise<void> => {
-  const { data, error } = await (supabase as any).rpc('admin_update_lead', {
+  const { data, error } = await callWriteRpc<Record<string, unknown>>('admin_update_lead', {
     p_lead_id: leadId,
     p_status: patch.status ?? null,
     p_notes: patch.notes ?? null,
     p_mark_read: patch.markRead ?? null,
   });
-  if (error) throw error;
+  if (error) throw new Error(error);
   const payload = data as { success?: boolean; error?: string };
   if (!payload?.success) throw new Error(payload?.error || 'update_failed');
 };
 
 export const fetchUnreadLeadsCount = async (): Promise<number> => {
-  const { data, error } = await (supabase as any).rpc('admin_unread_leads_count');
+  const { data, error } = await callReadRpc<number>('admin_unread_leads_count');
   if (error) return 0;
   return typeof data === 'number' ? data : 0;
 };
@@ -153,7 +155,7 @@ export type LeadStatsPayload = {
 };
 
 export const fetchLeadStats = async (): Promise<LeadStatsPayload | null> => {
-  const { data, error } = await (supabase as any).rpc('admin_leads_stats');
+  const { data, error } = await callReadRpc<Record<string, unknown>>('admin_leads_stats');
   if (error) return null;
   const payload = data as { success?: boolean } & LeadStatsPayload;
   if (!payload?.success) return null;
@@ -170,10 +172,10 @@ export const fetchLeadStats = async (): Promise<LeadStatsPayload | null> => {
 };
 
 export const markLeadContacted = async (leadId: string): Promise<void> => {
-  const { data, error } = await (supabase as any).rpc('admin_mark_lead_contacted', {
+  const { data, error } = await callWriteRpc<Record<string, unknown>>('admin_mark_lead_contacted', {
     p_lead_id: leadId,
   });
-  if (error) throw error;
+  if (error) throw new Error(error);
   const payload = data as { success?: boolean; error?: string };
   if (!payload?.success) throw new Error(payload?.error || 'mark_failed');
 };
@@ -184,13 +186,13 @@ export const fetchSubscriptions = async (opts: {
   limit?: number;
   offset?: number;
 }) => {
-  const { data, error } = await (supabase as any).rpc('admin_list_subscriptions', {
+  const { data, error } = await callReadRpc<Record<string, unknown>>('admin_list_subscriptions', {
     p_search: opts.search || null,
     p_status: opts.status || null,
     p_limit: opts.limit ?? 50,
     p_offset: opts.offset ?? 0,
   });
-  if (error) throw error;
+  if (error) throw new Error(error);
   const payload = data as { success?: boolean; rows?: unknown[]; total?: number };
   if (!payload?.success) throw new Error('forbidden');
   return { rows: payload.rows ?? [], total: payload.total ?? 0 };
@@ -204,7 +206,7 @@ export const upsertSubscription = async (opts: {
   status?: string;
   notes?: string;
 }) => {
-  const { data, error } = await (supabase as any).rpc('admin_upsert_subscription', {
+  const { data, error } = await callWriteRpc<Record<string, unknown>>('admin_upsert_subscription', {
     p_user_id: opts.userId,
     p_plan_name: opts.planName,
     p_start_date: opts.startDate ?? new Date().toISOString(),
@@ -212,7 +214,7 @@ export const upsertSubscription = async (opts: {
     p_status: opts.status ?? 'active',
     p_notes: opts.notes ?? null,
   });
-  if (error) throw error;
+  if (error) throw new Error(error);
   const payload = data as { success?: boolean; error?: string };
   if (!payload?.success) throw new Error(payload?.error || 'upsert_failed');
 };
@@ -221,7 +223,7 @@ export const extendSubscription = async (
   leadId: string,
   opts: { extraMonths?: number; reason?: string } = {}
 ): Promise<{ subscriptionEndAt: string; subscriptionStartAt: string | null }> => {
-  const { data, error } = await (supabase as any).rpc('admin_extend_subscription', {
+  const { data, error } = await callWriteRpc<Record<string, unknown>>('admin_extend_subscription', {
     p_lead_id: leadId,
     p_extra_months: opts.extraMonths ?? 6,
     p_reason: opts.reason ?? null,
@@ -243,7 +245,7 @@ export const extendSubscription = async (
 };
 
 export const checkIsPlatformAdmin = async (): Promise<boolean> => {
-  const { data, error } = await (supabase as any).rpc('is_platform_admin');
+  const { data, error } = await callReadRpc<boolean>('is_platform_admin');
   if (error) return false;
   return Boolean(data);
 };
@@ -257,15 +259,20 @@ export interface GenerateAccessCodePayload {
   notes?: string;
 }
 
-const parseSupabaseRpcError = (error: { message?: string; code?: string; details?: string }): string => {
-  const msg = [error.message, error.details, error.code].filter(Boolean).join(' ');
+const parseSupabaseRpcError = (
+  error: string | { message?: string; code?: string; details?: string }
+): string => {
+  const msg =
+    typeof error === 'string'
+      ? error
+      : [error.message, error.details, error.code].filter(Boolean).join(' ');
   if (/PGRST202|schema cache|Could not find the function/i.test(msg)) {
     return 'db_migration_required';
   }
   if (/function|schema cache/i.test(msg)) {
     return 'db_migration_required';
   }
-  return error.message ?? 'rpc_failed';
+  return typeof error === 'string' ? error : error.message ?? 'rpc_failed';
 };
 
 export const generateAccessCode = async (
@@ -283,7 +290,7 @@ export const generateAccessCode = async (
   username: string;
   message?: string;
 }> => {
-  const { data, error } = await (supabase as any).rpc('admin_generate_access_code', {
+  const { data, error } = await callWriteRpc<Record<string, unknown>>('admin_generate_access_code', {
     p_lead_id: payload.leadId,
     p_plan_id: payload.planId,
     p_agreed_price: payload.agreedPrice ?? null,
@@ -400,11 +407,11 @@ export const redeemAccessCode = async (code: string): Promise<{
     throw err;
   }
 
-  const { data, error } = await supabase.functions.invoke('redeem-access-code', {
-    body: { code: code.trim() },
+  const { data, error } = await callSupabaseEdgeFunction('redeem-access-code', {
+    code: code.trim(),
   });
 
-  const result = await parseRedeemFunctionResult(data, error as { message?: string; context?: Response } | null);
+  const result = await parseRedeemFunctionResult(data, error ? { message: error } : null);
 
   if (!result?.success || !result.session) {
     throw new Error(result?.error || 'redeem_failed');
@@ -422,10 +429,10 @@ export const redeemAccessCode = async (code: string): Promise<{
 };
 
 export const fetchLeadAccessCodes = async (leadId: string) => {
-  const { data, error } = await (supabase as any).rpc('admin_list_lead_access_codes', {
+  const { data, error } = await callReadRpc<Record<string, unknown>>('admin_list_lead_access_codes', {
     p_lead_id: leadId,
   });
-  if (error) throw error;
+  if (error) throw new Error(error);
   const payload = data as { success?: boolean; rows?: unknown[]; error?: string };
   if (!payload?.success) throw new Error(payload?.error || 'forbidden');
   return (payload.rows ?? []) as import('@/types/accessCodes').AccessCodeRecord[];
@@ -435,7 +442,7 @@ export const revokeLeadAccessCode = async (
   leadId: string,
   opts?: { codeId?: string; reason?: string }
 ): Promise<{ codeId: string; codeHint: string }> => {
-  const { data, error } = await (supabase as any).rpc('admin_revoke_lead_access_code', {
+  const { data, error } = await callWriteRpc<Record<string, unknown>>('admin_revoke_lead_access_code', {
     p_lead_id: leadId,
     p_code_id: opts?.codeId ?? null,
     p_reason: opts?.reason ?? 'lost-by-customer',
@@ -473,7 +480,7 @@ export const replaceLeadAccessCode = async (
   subscriptionStartAt?: string | null;
   subscriptionEndAt?: string | null;
 }> => {
-  const { data, error } = await (supabase as any).rpc('admin_replace_lead_access_code', {
+  const { data, error } = await callWriteRpc<Record<string, unknown>>('admin_replace_lead_access_code', {
     p_lead_id: leadId,
     p_code_id: opts?.codeId ?? null,
     p_reason: opts?.reason ?? 'replaced-by-admin',
@@ -636,13 +643,13 @@ export const verifyLeadAccessCode = async (
   leadId: string,
   plainCode: string
 ): Promise<import('@/types/accessCodes').AccessCodeVerifyResult> => {
-  const { data, error } = await (supabase as any).rpc('admin_verify_lead_access_code', {
+  const { data, error } = await callReadRpc<Record<string, unknown>>('admin_verify_lead_access_code', {
     p_lead_id: leadId,
     p_plain_code: plainCode.trim(),
   });
 
   if (error) {
-    const msg = error.message ?? '';
+    const msg = error ?? '';
     if (/function|schema cache/i.test(msg)) {
       throw new Error('قاعدة البيانات تحتاج تحديث — npm run db:deploy');
     }
@@ -679,11 +686,12 @@ export const verifyLeadAccessCode = async (
 };
 
 export const previewAccessCode = async (code: string): Promise<import('@/types/accessCodes').AccessCodePreview> => {
-  const { data, error } = await supabase.functions.invoke('redeem-access-code', {
-    body: { code: code.trim(), preview: true },
+  const { data, error } = await callSupabaseEdgeFunction('redeem-access-code', {
+    code: code.trim(),
+    preview: true,
   });
 
-  const result = await parseRedeemFunctionResult(data, error);
+  const result = await parseRedeemFunctionResult(data, error ? { message: error } : null);
 
   if (!result.success || !result.preview) {
     throw new Error(result.error || 'invalid_code');

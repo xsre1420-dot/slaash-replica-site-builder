@@ -44,7 +44,9 @@ const EDGE_STOREFRONT_RPCS = new Set([
 
 export function isStorefrontEdgeEnabled(): boolean {
   const flag = env.VITE_STOREFRONT_EDGE_ENABLED;
-  return flag === 'true' || flag === '1';
+  if (flag === 'false' || flag === '0') return false;
+  if (flag === 'true' || flag === '1') return true;
+  return Boolean(env.VITE_STOREFRONT_EDGE_URL?.trim());
 }
 
 export function hasReadReplica(): boolean {

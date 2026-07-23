@@ -182,11 +182,11 @@ export const CACHE_AUDIT_REGISTRY: CacheAuditEntry[] = [
   {
     id: 'merchant.categories',
     keyPattern: 'categories:{ownerId}',
-    tier: 'short',
+    tier: 'long',
     primaryLayer: 'application_l1',
     fallbackLayers: [],
     domain: 'merchant',
-    description: 'Merchant categories',
+    description: 'Merchant categories — invalidated on CRUD',
   },
   {
     id: 'merchant.store_settings',

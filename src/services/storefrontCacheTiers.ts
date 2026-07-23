@@ -4,6 +4,7 @@
  */
 import { Product } from '@/types';
 import { cache, CacheTTL } from '@/lib/cache';
+import { cacheDeleteByPrefix } from '@/utils/indexedDB';
 import type { StorefrontBundleCache, StorefrontProductsPage } from '@/types/storefrontCache';
 import { StorefrontCacheKeys, setStorefrontCached } from '@/services/storefrontCacheService';
 
@@ -201,6 +202,7 @@ export function flushStorefrontStoreCaches(slug: string): void {
   cache.del(StoreCacheKeys.footer(normalized));
   cache.flushByPrefix(`edge-bundle:${normalized}`);
   cache.flushByPrefix(`edge-meta:${normalized}`);
+  void cacheDeleteByPrefix(`idb:${StoreCacheKeys.meta(normalized)}`);
 }
 
 /** Invalidate a single product detail entry. */

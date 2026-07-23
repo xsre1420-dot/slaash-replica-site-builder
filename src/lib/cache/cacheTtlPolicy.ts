@@ -23,6 +23,7 @@ export const CacheTTLPolicy = {
     orders_filtered: { ttlMs: 30_000, staleWhileRevalidateMs: 15_000, tier: 'short' as const, notes: 'Merchant order list pages' },
     platform_health: { ttlMs: 30_000, staleWhileRevalidateMs: 15_000, tier: 'short' as const, notes: 'Health probe cache' },
     merchant_catalog: { ttlMs: 30_000, staleWhileRevalidateMs: 15_000, tier: 'short' as const, notes: 'Merchant product list' },
+    merchant_categories: { ttlMs: 300_000, staleWhileRevalidateMs: 60_000, tier: 'long' as const, notes: 'Merchant categories — rare changes, CRUD invalidates' },
   },
 
   /** Medium — 60–90s fresh */

@@ -1,4 +1,5 @@
-import { supabase } from '@/integrations/supabase/client';
+import { callReadRpc } from '@/lib/readWrite/readClient';
+import { callWriteRpc } from '@/lib/readWrite/writeClient';
 import { mapPaymentError } from '@/utils/paymentUtils';
 
 export interface OrderPaymentSummary {
@@ -18,7 +19,7 @@ export const fetchOrderPaymentSummary = async (
   orderId: string,
   ownerId: string
 ): Promise<OrderPaymentSummary | null> => {
-  const { data, error } = await (supabase as any).rpc('get_order_payment_summary', {
+  const { data, error } = await callReadRpc<Record<string, unknown>>('get_order_payment_summary', {
     p_order_id: orderId,
     p_owner_id: ownerId,
   });
@@ -50,7 +51,7 @@ export const recordOrderRefund = async (
       ? crypto.randomUUID()
       : `${Date.now()}-refund`;
 
-  const { data, error } = await (supabase as any).rpc('record_order_refund', {
+  const { data, error } = await callWriteRpc<Record<string, unknown>>('record_order_refund', {
     p_order_id: orderId,
     p_owner_id: ownerId,
     p_amount: amount,
@@ -59,7 +60,7 @@ export const recordOrderRefund = async (
   });
 
   if (error) {
-    return { success: false, error: mapPaymentError(error.message) };
+    return { success: false, error: mapPaymentError(error) };
   }
 
   if (!data?.success) {
@@ -75,7 +76,7 @@ export const recordOrderChargeback = async (
   amount: number,
   reason?: string
 ): Promise<{ success: boolean; error?: string }> => {
-  const { data, error } = await (supabase as any).rpc('record_order_chargeback', {
+  const { data, error } = await callWriteRpc<Record<string, unknown>>('record_order_chargeback', {
     p_order_id: orderId,
     p_owner_id: ownerId,
     p_amount: amount,
@@ -84,7 +85,7 @@ export const recordOrderChargeback = async (
   });
 
   if (error) {
-    return { success: false, error: mapPaymentError(error.message) };
+    return { success: false, error: mapPaymentError(error) };
   }
 
   if (!data?.success) {

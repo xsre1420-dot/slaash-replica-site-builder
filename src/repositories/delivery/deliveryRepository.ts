@@ -1,4 +1,4 @@
-import { supabase, callReadRpc } from '@/repositories/base';
+import { supabase, callReadRpc, callWriteRpc, adaptRpcResult } from '@/repositories/base';
 
 export async function rpcCalculateDeliveryFee(p_owner_id: string, p_governorate: string) {
   return callReadRpc<number>('calculate_delivery_fee', { p_owner_id, p_governorate });
@@ -16,13 +16,13 @@ export async function rpcGetOrderShipment(p_order_id: string, p_owner_id: string
 }
 
 export async function rpcUpdateShipmentStatus(args: Record<string, unknown>) {
-  return (supabase as any).rpc('update_shipment_status', args);
+  return adaptRpcResult(await callWriteRpc('update_shipment_status', args));
 }
 
 export async function rpcMarkDeliveryFailed(args: Record<string, unknown>) {
-  return (supabase as any).rpc('mark_delivery_failed', args);
+  return adaptRpcResult(await callWriteRpc('mark_delivery_failed', args));
 }
 
 export async function rpcRetryFailedDelivery(args: Record<string, unknown>) {
-  return (supabase as any).rpc('retry_failed_delivery', args);
+  return adaptRpcResult(await callWriteRpc('retry_failed_delivery', args));
 }

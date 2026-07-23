@@ -1,3 +1,5 @@
+import { callReadRpc } from '@/lib/readWrite/readClient';
+import { callWriteRpc } from '@/lib/readWrite/writeClient';
 import { supabase } from '@/integrations/supabase/client';
 import { cache, CacheTTL } from '@/lib/cache';
 
@@ -20,7 +22,7 @@ export async function fetchMerchantProductReviews(
   if (!productId || !ownerId) return [];
 
   try {
-    const { data: rpcData, error: rpcError } = await (supabase as any).rpc(
+    const { data: rpcData, error: rpcError } = await callReadRpc<MerchantProductReview[]>(
       'get_merchant_product_reviews',
       { p_product_id: productId }
     );
@@ -63,7 +65,7 @@ export async function approveProductReview(
   ownerId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { data, error } = await (supabase as any).rpc('approve_product_review', {
+    const { data, error } = await callWriteRpc<{ success?: boolean }>('approve_product_review', {
       p_review_id: reviewId,
     });
 

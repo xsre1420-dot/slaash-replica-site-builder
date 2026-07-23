@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { scheduleIdle } from '@/utils/scheduleIdle';
+import { scheduleAnalyticsTask } from '@/utils/scheduleAnalytics';
 import { trackProductViewBySlug } from '@/services/analyticsTrackingService';
 import { raceWithTimeout } from '@/lib/memory/asyncGuards';
 
@@ -33,8 +33,8 @@ export function useProductViewTracking(storeSlug?: string, productId?: string | 
     let cancelled = false;
     let timeoutClear: (() => void) | null = null;
 
-    const cancelIdle = scheduleIdle(() => {
-      if (cancelled || (typeof document !== 'undefined' && document.visibilityState === 'hidden')) return;
+    const cancelDeferred = scheduleAnalyticsTask(() => {
+      if (cancelled) return;
       inflightRef.current = key;
 
       const viewPromise = trackProductViewBySlug(
@@ -69,7 +69,7 @@ export function useProductViewTracking(storeSlug?: string, productId?: string | 
     return () => {
       cancelled = true;
       timeoutClear?.();
-      cancelIdle();
+      cancelDeferred();
       if (inflightRef.current === key) inflightRef.current = null;
     };
   }, [storeSlug, productId]);

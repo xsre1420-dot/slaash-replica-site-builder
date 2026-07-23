@@ -9,6 +9,9 @@ import {
   saveAddProductDraft,
 } from '@/lib/addProductDraftStorage';
 import { addProduct, getCategories } from '@/services/productService';
+import { useStore } from '@/context/StoreContext';
+import { hasConfiguredDeliveryPrices } from '@/utils/deliveryUtils';
+import { buildAttentionHref } from '@/lib/attentionHighlight';
 import { useToast } from '@/hooks/use-toast';
 import { Product, Category, ColorOption, ProductVariant } from '@/types';
 import { formatPriceInput, isValidPrice, convertArabicToEnglish } from '@/utils/numberUtils';
@@ -22,6 +25,8 @@ export type SaveMode = ProductSaveMode;
 export function useAddProductForm() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { storeSettings } = useStore();
+  const deliveryConfigured = hasConfiguredDeliveryPrices(storeSettings.deliveryPrices);
   const submitLockRef = useRef(false);
   const idempotencyKeyRef = useRef(createProductIdempotencyKey());
   const ownerIdRef = useRef<string | null>(null);
@@ -291,6 +296,17 @@ export function useAddProductForm() {
       return;
     }
 
+    if (!hasConfiguredDeliveryPrices(storeSettings.deliveryPrices)) {
+      sonnerToast.error('أضف أسعار التوصيل أولاً', {
+        description: 'اذهب إلى الإعدادات ← التوصيل وحدّد أسعار المحافظات ثم حاول مرة أخرى',
+        action: {
+          label: 'الإعدادات',
+          onClick: () => navigate(buildAttentionHref('/settings', 'missing-delivery-prices')),
+        },
+      });
+      return;
+    }
+
     const errors: Record<string, string> = {};
     if (!mainImage) errors.image = 'أضف صورة رئيسية للمنتج';
     if (!name.trim()) errors.name = 'اسم المنتج مطلوب';
@@ -407,7 +423,8 @@ export function useAddProductForm() {
     e?.preventDefault();
   };
 
-  const isSaveDisabled = isSubmitting || isImagesUploading || saveSucceeded;
+  const isSaveDisabled =
+    isSubmitting || isImagesUploading || saveSucceeded || !deliveryConfigured;
 
   return {
     state: {

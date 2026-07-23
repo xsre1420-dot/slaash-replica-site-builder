@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { callReadRpc } from '@/lib/readWrite/readClient';
 import { assertMerchantOwner } from '@/lib/tenantGuard';
 
 export type AnalyticsHealthResult = {
@@ -15,7 +15,7 @@ export const auditMerchantAnalyticsHealth = async (
 ): Promise<AnalyticsHealthResult | null> => {
   await assertMerchantOwner(ownerId);
 
-  const { data, error } = await (supabase as any).rpc('audit_merchant_analytics_health', {
+  const { data, error } = await callReadRpc<Record<string, unknown>>('audit_merchant_analytics_health', {
     p_owner_id: ownerId,
   });
 

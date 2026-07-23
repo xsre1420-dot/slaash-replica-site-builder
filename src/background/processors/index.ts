@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { callSupabaseEdgeFunction } from '@/integrations/supabase/edge';
 import { logger } from '@/lib/observability';
 import { invalidateStorefrontScope, invalidateStorefrontForOwner } from '@/services/write/storefront/storefrontCacheWriteService';
 import { requestEdgeStorefrontPurge } from '@/services/storefrontEdgeService';
@@ -10,6 +10,7 @@ import { trackStoreVisitBySlug, trackProductViewBySlug } from '@/services/analyt
 import { processProductImportBatch } from '@/services/importJobService';
 import { enqueueJob } from '@/background/queues/JobQueue';
 import { registerProcessor } from '@/background/processors/registry';
+import { recordMetaDiagnostic } from '@/lib/meta/diagnostics';
 import type { BackgroundJob } from '@/background/shared/types';
 import type { StorefrontInvalidationScope } from '@/services/storefrontCacheTiers';
 
@@ -41,24 +42,53 @@ export function registerAllProcessors(): void {
     const p = job.payload as {
       storeSlug: string;
       orderId: string;
+      eventId: string;
       value: number;
       currency: string;
       contentIds: string[];
+      contents: Array<{ id: string; quantity: number }>;
+      numItems: number;
       customerPhone: string | null;
+      customerName?: string | null;
+      customerGovernorate?: string | null;
+      customerEmail?: string | null;
+      externalId?: string | null;
       eventSourceUrl: string | null;
+      fbp: string | null;
+      fbc: string | null;
     };
-    const { error } = await (supabase as any).functions.invoke('meta-conversions', {
-      body: {
-        store_slug: p.storeSlug,
-        order_id: p.orderId,
-        value: p.value,
-        currency: p.currency,
-        content_ids: p.contentIds,
-        customer_phone: p.customerPhone,
-        event_source_url: p.eventSourceUrl,
-      },
+    const { data, error } = await callSupabaseEdgeFunction('meta-conversions', {
+      store_slug: p.storeSlug,
+      order_id: p.orderId,
+      event_id: p.eventId,
+      value: p.value,
+      currency: p.currency,
+      content_ids: p.contentIds,
+      contents: p.contents,
+      num_items: p.numItems,
+      customer_phone: p.customerPhone,
+      customer_name: p.customerName ?? null,
+      customer_governorate: p.customerGovernorate ?? null,
+      customer_email: p.customerEmail ?? null,
+      external_id: p.externalId ?? p.orderId,
+      event_source_url: p.eventSourceUrl,
+      fbp: p.fbp,
+      fbc: p.fbc,
     });
-    if (error) throw new Error(error.message ?? 'meta-conversions failed');
+
+    recordMetaDiagnostic({
+      channel: 'server',
+      eventName: 'Purchase',
+      eventId: p.eventId,
+      success: !error,
+      deduplicationKey: p.eventId,
+      error: error ?? undefined,
+      retryCount: job.attempts,
+      metaResponse: data,
+      matchQualityHints: (data as { match_quality?: string[] })?.match_quality,
+    });
+
+    if (error) throw new Error(error);
   });
 
   registerProcessor('image.cleanupRemoved', async (job: BackgroundJob) => {

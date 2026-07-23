@@ -3,6 +3,7 @@
  * Import via `@/services/productService`.
  */
 import { Product, Category } from '@/types';
+import { callReadRpc } from '@/lib/readWrite/readClient';
 import { supabase } from '@/integrations/supabase/client';
 import { getAuthenticatedUserId } from '@/lib/authSession';
 import { enqueueCacheInvalidation, enqueueCacheInvalidationForOwner } from '@/background/enqueue';
@@ -155,7 +156,7 @@ export const getCategories = async (force = false): Promise<Category[]> => {
         order: cat.display_order || 0
       })) || [];
 
-      cache.set(key, categories, CacheTTL.MEDIUM, CacheTTL.STALE);
+      cache.set(key, categories, CacheTTL.LONG, CacheTTL.STALE);
       return categories;
     } catch (error) {
       console.error('Error loading categories:', error);
@@ -216,7 +217,7 @@ export const loadProductsPage = async (
         return result;
       };
 
-      const { data: rpcData, error: rpcError } = await (supabase as any).rpc('get_owner_products_page', {
+      const { data: rpcData, error: rpcError } = await callReadRpc<Record<string, unknown>>('get_owner_products_page', {
         p_owner_id: ownerId,
         p_limit: pageSize,
         p_offset: cursor ? 0 : page * pageSize,
@@ -438,7 +439,7 @@ export const fetchProductById = async (productId: string): Promise<Product | nul
   if (!ownerId) return null;
 
   try {
-    const { data, error } = await (supabase as any).rpc('get_merchant_product_by_id', {
+    const { data, error } = await callReadRpc<Record<string, unknown>>('get_merchant_product_by_id', {
       p_product_id: productId,
     });
     if (!error && data) {

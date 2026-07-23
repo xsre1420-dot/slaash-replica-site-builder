@@ -1,4 +1,5 @@
-import { supabase } from '@/integrations/supabase/client';
+import { callReadRpc } from '@/lib/readWrite/readClient';
+import { callWriteRpc } from '@/lib/readWrite/writeClient';
 import { assertMerchantOwner } from '@/lib/tenantGuard';
 import { getClientBackgroundStatus } from '@/background/scheduler/JobScheduler';
 import type { ClientBackgroundStatus } from '@/background/shared/types';
@@ -29,7 +30,7 @@ export type WebhookRetryResult = {
 
 /** Service-role only via RPC — returns null for merchant sessions. */
 export const fetchBackgroundJobsStatus = async (): Promise<BackgroundJobsStatus | null> => {
-  const { data, error } = await (supabase as any).rpc('get_background_jobs_status');
+  const { data, error } = await callReadRpc<Record<string, unknown>>('get_background_jobs_status');
   const payload = data as {
     success?: boolean;
     status?: BackgroundJobsStatus['status'];
@@ -71,7 +72,7 @@ export const retryFailedWebhookEvents = async (
 ): Promise<WebhookRetryResult | null> => {
   await assertMerchantOwner(ownerId);
 
-  const { data, error } = await (supabase as any).rpc('retry_order_webhook_events', {
+  const { data, error } = await callWriteRpc<Record<string, unknown>>('retry_order_webhook_events', {
     p_owner_id: ownerId,
     p_event_ids: eventIds?.length ? eventIds : null,
   });

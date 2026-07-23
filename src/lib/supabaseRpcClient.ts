@@ -1,22 +1,13 @@
-import { getSupabaseClient } from '@/lib/disasterRecovery/supabaseClient';
+import { callWriteRpc } from '@/lib/readWrite/writeClient';
 import type { RpcResult } from '@/integrations/supabase/rpc';
 
-/** Product mutations — always via Supabase JS client (session JWT + stable transport). */
+/**
+ * @deprecated Prefer callWriteRpc from @/repositories/base — retained for legacy imports.
+ * Delegates to centralized write router (retry, circuit breaker, correlation).
+ */
 export async function supabaseRpc<T>(
   fn: string,
   args: Record<string, unknown>
 ): Promise<RpcResult<T>> {
-  try {
-    const { data, error } = await getSupabaseClient().rpc(fn as never, args as never);
-    if (error) {
-      return { data: null, error: error.message ?? String(error), route: 'primary' };
-    }
-    return { data: data as T, error: null, route: 'primary' };
-  } catch (err) {
-    return {
-      data: null,
-      error: err instanceof Error ? err.message : 'RPC failed',
-      route: 'primary',
-    };
-  }
+  return callWriteRpc<T>(fn, args);
 }

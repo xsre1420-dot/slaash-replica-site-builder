@@ -1,3 +1,5 @@
+import { callReadRpc } from '@/lib/readWrite/readClient';
+import { callWriteRpc } from '@/lib/readWrite/writeClient';
 import { supabase } from '@/integrations/supabase/client';
 import { isSchemaColumnError } from '@/lib/productUpdateUtils';
 import { cache, CacheTTL } from '@/lib/cache';
@@ -147,12 +149,12 @@ async function probePlatformHealthFallback(): Promise<PlatformHealthResult> {
 
   for (const probe of rpcProbes) {
     try {
-      const { error } = await (supabase as any).rpc(probe.name, probe.args);
+      const { error } = await callReadRpc(probe.name, probe.args);
       if (!error) {
         checks[probe.key] = true;
         continue;
       }
-      const msg = error.message.toLowerCase();
+      const msg = error.toLowerCase();
       if (
         msg.includes('could not find the function') ||
         msg.includes('schema cache') ||
@@ -188,7 +190,7 @@ export async function fetchPlatformHealth(force = false): Promise<PlatformHealth
   }
 
   try {
-    const { data, error } = await (supabase as any).rpc('platform_health_check');
+    const { data, error } = await callReadRpc<Record<string, unknown>>('platform_health_check');
 
     if (!error && data && typeof data === 'object') {
       const parsed = parseRpcHealth(data as Record<string, unknown>);
@@ -196,7 +198,7 @@ export async function fetchPlatformHealth(force = false): Promise<PlatformHealth
       return parsed;
     }
 
-    if (error && /could not find the function/i.test(error.message)) {
+    if (error && /could not find the function/i.test(error)) {
       const fallback = await probePlatformHealthFallback();
       cache.set(CACHE_KEY, fallback, CacheTTL.SHORT, CacheTTL.STALE);
       return fallback;

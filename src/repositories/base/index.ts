@@ -6,6 +6,7 @@ import type { RpcResult } from '@/integrations/supabase/rpc';
 
 export { supabase } from '@/integrations/supabase/client';
 export { callSupabaseRpc, type RpcResult } from '@/integrations/supabase/rpc';
+export { callSupabaseEdgeFunction, type EdgeInvokeResult } from '@/integrations/supabase/edge';
 export { callReadRpc } from '@/lib/readWrite/readClient';
 export { callWriteRpc } from '@/lib/readWrite/writeClient';
 

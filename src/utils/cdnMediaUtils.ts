@@ -115,6 +115,49 @@ export function resolveMediaDeliveryUrl(
   return trimmed;
 }
 
+export type ResponsiveImageSources = {
+  src: string;
+  srcSet?: string;
+  sizes?: string;
+};
+
+/**
+ * Build src + srcSet for Supabase storage assets (400w thumb + full display).
+ * Browsers on narrow viewports download ~90% less bytes for grid/thumbnail slots.
+ */
+export function buildResponsiveImageSources(
+  publicUrl: string | null | undefined,
+  options: MediaDeliveryOptions & { sizes?: string } = {}
+): ResponsiveImageSources {
+  const trimmed = publicUrl?.trim();
+  if (!trimmed) {
+    return { src: '/placeholder.svg' };
+  }
+
+  if (!isOurStorageUrl(trimmed)) {
+    return { src: trimmed };
+  }
+
+  const thumb = resolveThumbnailUrl(trimmed);
+  const display = trimmed;
+  const variant = options.variant ?? 'display';
+
+  if (thumb && thumb !== display) {
+    const src = variant === 'thumbnail' ? thumb : display;
+    return {
+      src,
+      srcSet: `${thumb} 400w, ${display} 1200w`,
+      sizes:
+        options.sizes ??
+        (variant === 'thumbnail'
+          ? '(max-width: 640px) 45vw, 200px'
+          : '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 600px'),
+    };
+  }
+
+  return { src: resolveMediaDeliveryUrl(trimmed, options) };
+}
+
 /** Asset versioning: UUID filenames are content-addressed — URL change = cache bust. */
 export function isVersionedStorageAsset(publicUrl: string): boolean {
   const path = parseStorageObjectPath(publicUrl);

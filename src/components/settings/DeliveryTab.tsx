@@ -3,6 +3,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Truck } from "lucide-react";
 import { formatPriceInput } from "@/utils/numberUtils";
+import AttentionStrip from "@/components/ui/AttentionStrip";
+import { hasConfiguredDeliveryPrices } from "@/utils/deliveryUtils";
+import { useStore } from "@/context/StoreContext";
 import React from "react";
 
 interface DeliveryPrice {
@@ -25,6 +28,9 @@ const governorates = [
 ];
 
 const DeliveryTab = ({ settings, setSettings }: DeliveryTabProps) => {
+  const { storeSettings } = useStore();
+  const savedDeliveryConfigured = hasConfiguredDeliveryPrices(storeSettings.deliveryPrices);
+
   const initializeDeliveryPrices = () => {
     const existingGovernorates = settings.deliveryPrices.map((d: DeliveryPrice) => d.governorate);
     const missingGovernorates = governorates.filter(gov => !existingGovernorates.includes(gov));
@@ -65,6 +71,14 @@ const DeliveryTab = ({ settings, setSettings }: DeliveryTabProps) => {
         <Truck className="w-5 h-5 text-muted-foreground" />
       </div>
       <p className="text-sm text-muted-foreground text-right">حدد سعر التوصيل لكل محافظة</p>
+
+      {!savedDeliveryConfigured && (
+        <AttentionStrip
+          attentionKey="missing-delivery-prices"
+          icon={Truck}
+          message="حدّد أسعار التوصيل لكل محافظة — يتم الحفظ تلقائياً بعد التعديل"
+        />
+      )}
 
       <div className="space-y-2">
         {settings.deliveryPrices.length === 0 ? (

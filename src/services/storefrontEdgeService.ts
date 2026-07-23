@@ -3,6 +3,7 @@
  * Falls back to direct RPC when edge is unavailable or disabled.
  */
 import { env } from '@/lib/env';
+import { features } from '@/config/features';
 import { dedup } from '@/lib/cache';
 import {
   getRememberedStorefrontCacheVersion,
@@ -31,16 +32,23 @@ export interface StorefrontEdgeMeta {
   cacheVersion?: number;
 }
 
-const edgeDisabled = () =>
+const edgeExplicitlyDisabled = () =>
   import.meta.env.VITE_STOREFRONT_EDGE_ENABLED === 'false' ||
   import.meta.env.VITE_STOREFRONT_EDGE_ENABLED === '0';
 
-export function resolveStorefrontEdgeUrl(): string | null {
-  if (edgeDisabled()) return null;
+/** Edge is active when explicitly enabled OR when a dedicated edge URL is configured. */
+export function isStorefrontEdgeActive(): boolean {
+  if (edgeExplicitlyDisabled()) return false;
+  if (features.storefrontEdge) return true;
+  return Boolean(env.VITE_STOREFRONT_EDGE_URL?.trim());
+}
 
-  const explicit = import.meta.env.VITE_STOREFRONT_EDGE_URL as string | undefined;
-  if (explicit?.trim()) {
-    return explicit.trim().replace(/\/$/, '');
+export function resolveStorefrontEdgeUrl(): string | null {
+  if (!isStorefrontEdgeActive()) return null;
+
+  const explicit = env.VITE_STOREFRONT_EDGE_URL?.trim();
+  if (explicit) {
+    return explicit.replace(/\/$/, '');
   }
 
   const base = env.VITE_SUPABASE_URL?.replace(/\/$/, '');

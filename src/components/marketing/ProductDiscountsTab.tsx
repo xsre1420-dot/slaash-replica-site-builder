@@ -16,6 +16,8 @@ import {
   updateProductDiscount,
   type DiscountProductRow,
 } from "@/services/marketingService";
+import { parseDiscountInput, validateDiscountValue } from "@/lib/marketingFormUtils";
+import { mapMarketingWriteError } from "@/lib/marketingWriteErrors";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -29,11 +31,11 @@ export default function ProductDiscountsTab() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [discountForm, setDiscountForm] = useState({
-    discount_type: 'none' as 'none' | 'percentage' | 'amount',
-    discount_value: 0,
+    discount_type: 'percentage' as 'none' | 'percentage' | 'amount',
     discount_start_date: new Date(),
     discount_end_date: null as Date | null,
   });
+  const [discountValueInput, setDiscountValueInput] = useState('');
 
   const loadProducts = useCallback(async () => {
     if (!user) return;
@@ -53,45 +55,95 @@ export default function ProductDiscountsTab() {
     totalSavings: discountedProducts.reduce((sum, p) => sum + ((p.original_price || p.price) - p.price), 0),
   }), [products, discountedProducts]);
 
-  const openDialog = (product?: Product) => {
-    if (product) {
-      setSelectedProduct(product);
+  const applyProductToForm = (product: Product) => {
+    setSelectedProduct(product);
+    if (product.discount_type && product.discount_type !== 'none') {
       setDiscountForm({
-        discount_type: (product.discount_type as 'none' | 'percentage' | 'amount') || 'none',
-        discount_value: product.discount_value || 0,
+        discount_type: product.discount_type,
         discount_start_date: product.discount_start_date ? new Date(product.discount_start_date) : new Date(),
         discount_end_date: product.discount_end_date ? new Date(product.discount_end_date) : null,
       });
+      setDiscountValueInput(String(product.discount_value ?? ''));
+    } else {
+      setDiscountForm({
+        discount_type: 'percentage',
+        discount_start_date: new Date(),
+        discount_end_date: null,
+      });
+      setDiscountValueInput('');
+    }
+  };
+
+  const openDialog = (product?: Product) => {
+    if (product) {
+      applyProductToForm(product);
     } else {
       setSelectedProduct(null);
-      setDiscountForm({ discount_type: 'percentage', discount_value: 0, discount_start_date: new Date(), discount_end_date: null });
+      setDiscountForm({
+        discount_type: 'percentage',
+        discount_start_date: new Date(),
+        discount_end_date: null,
+      });
+      setDiscountValueInput('');
     }
     setIsDialogOpen(true);
   };
 
   const saveDiscount = async () => {
     if (!selectedProduct || !user) return;
+
+    if (discountForm.discount_type === 'none') {
+      setLoading(true);
+      const result = await updateProductDiscount(user.id, selectedProduct.id, {
+        discount_type: 'none',
+        discount_value: 0,
+        price: selectedProduct.original_price || selectedProduct.price,
+        original_price: null,
+      });
+      if (!result.success) toast.error(mapMarketingWriteError(result.error));
+      else { toast.success("تم إزالة الخصم"); loadProducts(); setIsDialogOpen(false); setSelectedProduct(null); }
+      setLoading(false);
+      return;
+    }
+
+    const discountValue = parseDiscountInput(discountValueInput);
+    const discountError = validateDiscountValue(discountForm.discount_type, discountValue);
+    if (discountError) {
+      toast.error(discountError);
+      return;
+    }
+
     setLoading(true);
 
     const originalPrice = selectedProduct.original_price || selectedProduct.price;
     let newPrice = originalPrice;
-    if (discountForm.discount_type === 'percentage') newPrice = originalPrice * (1 - discountForm.discount_value / 100);
-    else if (discountForm.discount_type === 'amount') newPrice = originalPrice - discountForm.discount_value;
+    if (discountForm.discount_type === 'percentage') newPrice = originalPrice * (1 - discountValue / 100);
+    else if (discountForm.discount_type === 'amount') newPrice = originalPrice - discountValue;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const updateData: any = {
+    if (newPrice <= 0) {
+      toast.error("السعر بعد الخصم يجب أن يكون أكبر من صفر");
+      setLoading(false);
+      return;
+    }
+
+    const updateData: Record<string, unknown> = {
       discount_type: discountForm.discount_type,
-      discount_value: discountForm.discount_value,
+      discount_value: discountValue,
       discount_start_date: discountForm.discount_start_date.toISOString(),
-      discount_end_date: discountForm.discount_end_date?.toISOString() || null,
-      price: newPrice,
+      price: Math.round(newPrice),
     };
-    if (discountForm.discount_type !== 'none' && !selectedProduct.original_price) updateData.original_price = originalPrice;
-    if (discountForm.discount_type === 'none' && selectedProduct.original_price) updateData.original_price = null;
+    if (discountForm.discount_end_date) {
+      updateData.discount_end_date = discountForm.discount_end_date.toISOString();
+    } else {
+      updateData.discount_end_date = null;
+    }
+    if (!selectedProduct.original_price) updateData.original_price = originalPrice;
 
     const result = await updateProductDiscount(user.id, selectedProduct.id, updateData);
-    if (!result.success) toast.error("فشل في تحديث الخصم");
-    else { toast.success(discountForm.discount_type === 'none' ? "تم إزالة الخصم" : "تم حفظ الخصم"); loadProducts(); setIsDialogOpen(false); setSelectedProduct(null); }
+    if (!result.success) {
+      toast.error(mapMarketingWriteError(result.error));
+    }
+    else { toast.success("تم حفظ الخصم"); loadProducts(); setIsDialogOpen(false); setSelectedProduct(null); }
     setLoading(false);
   };
 
@@ -208,7 +260,7 @@ export default function ProductDiscountsTab() {
                 <Label className="font-semibold">اختر المنتج</Label>
                 <div className="max-h-[300px] overflow-y-auto space-y-2">
                   {products.map((product) => (
-                    <div key={product.id} onClick={() => { setSelectedProduct(product); if (product.discount_type && product.discount_type !== 'none') { setDiscountForm({ discount_type: product.discount_type, discount_value: product.discount_value || 0, discount_start_date: product.discount_start_date ? new Date(product.discount_start_date) : new Date(), discount_end_date: product.discount_end_date ? new Date(product.discount_end_date) : null }); } }}
+                    <div key={product.id} onClick={() => applyProductToForm(product)}
                       className="flex items-center gap-3 p-3 border border-border/30 rounded-xl cursor-pointer transition-all hover:border-primary/40 hover:bg-muted/30">
                       {product.image_url ? (
                         <img src={product.image_url} alt={product.name} className="w-14 h-14 rounded-lg object-cover" />
@@ -245,9 +297,16 @@ export default function ProductDiscountsTab() {
 
                 <div className="space-y-2">
                   <Label>نوع الخصم</Label>
-                  <Select value={discountForm.discount_type} onValueChange={(v: 'none' | 'percentage' | 'amount') => setDiscountForm(p => ({ ...p, discount_type: v }))}>
+                  <Select
+                    modal={false}
+                    value={discountForm.discount_type}
+                    onValueChange={(v: 'none' | 'percentage' | 'amount') => {
+                      setDiscountForm(p => ({ ...p, discount_type: v }));
+                      if (v === 'none') setDiscountValueInput('');
+                    }}
+                  >
                     <SelectTrigger className="rounded-xl text-right"><SelectValue /></SelectTrigger>
-                    <SelectContent>
+                    <SelectContent position="popper" className="z-[100]">
                       <SelectItem value="none">بدون خصم</SelectItem>
                       <SelectItem value="percentage">نسبة مئوية (%)</SelectItem>
                       <SelectItem value="amount">مبلغ ثابت (د.ع)</SelectItem>
@@ -258,8 +317,17 @@ export default function ProductDiscountsTab() {
                 {discountForm.discount_type !== 'none' && (
                   <>
                     <div className="space-y-2">
-                      <Label>قيمة الخصم</Label>
-                      <Input type="number" placeholder={discountForm.discount_type === 'percentage' ? '10' : '5000'} value={discountForm.discount_value || ''} onChange={(e) => setDiscountForm(p => ({ ...p, discount_value: Number(e.target.value) }))} className="text-right rounded-xl" />
+                      <Label>
+                        {discountForm.discount_type === 'percentage' ? 'نسبة الخصم (%)' : 'قيمة الخصم (د.ع)'}
+                      </Label>
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        placeholder={discountForm.discount_type === 'percentage' ? '10' : '5000'}
+                        value={discountValueInput}
+                        onChange={(e) => setDiscountValueInput(e.target.value)}
+                        className="text-right rounded-xl"
+                      />
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
@@ -299,10 +367,15 @@ export default function ProductDiscountsTab() {
                         <div>
                           <div className="text-muted-foreground text-xs">السعر بعد الخصم:</div>
                           <div className="text-lg font-bold text-foreground">
-                            {discountForm.discount_type === 'percentage'
-                              ? ((selectedProduct.original_price || selectedProduct.price) * (1 - discountForm.discount_value / 100)).toLocaleString()
-                              : ((selectedProduct.original_price || selectedProduct.price) - discountForm.discount_value).toLocaleString()
-                            } د.ع
+                            {(() => {
+                              const original = selectedProduct.original_price || selectedProduct.price;
+                              const parsed = parseDiscountInput(discountValueInput);
+                              if (!Number.isFinite(parsed) || parsed <= 0) return '—';
+                              const after = discountForm.discount_type === 'percentage'
+                                ? original * (1 - parsed / 100)
+                                : original - parsed;
+                              return Math.max(0, Math.round(after)).toLocaleString();
+                            })()} د.ع
                           </div>
                         </div>
                         <div>

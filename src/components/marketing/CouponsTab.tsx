@@ -18,6 +18,8 @@ import {
   updateMerchantCoupon,
   type MerchantCoupon,
 } from "@/services/couponService";
+import { parseDiscountInput, validateDiscountValue } from "@/lib/marketingFormUtils";
+import { mapMarketingWriteError } from "@/lib/marketingWriteErrors";
 
 export default function CouponsTab() {
   const { user } = useAuth();
@@ -30,13 +32,13 @@ export default function CouponsTab() {
   const [newCoupon, setNewCoupon] = useState({
     code: '',
     discount_type: 'percentage' as 'percentage' | 'fixed_amount',
-    discount_value: 0,
     minimum_order_amount: 0,
     usage_limit: null as number | null,
     start_date: new Date().toISOString().split('T')[0],
     end_date: '',
     description: ''
   });
+  const [discountValueInput, setDiscountValueInput] = useState('');
 
   const loadCoupons = useCallback(async () => {
     if (!user) return;
@@ -66,16 +68,37 @@ export default function CouponsTab() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const resetCouponForm = () => {
+    setNewCoupon({
+      code: '',
+      discount_type: 'percentage',
+      minimum_order_amount: 0,
+      usage_limit: null,
+      start_date: new Date().toISOString().split('T')[0],
+      end_date: '',
+      description: '',
+    });
+    setDiscountValueInput('');
+  };
+
   const handleAddCoupon = async () => {
-    if (!user || !newCoupon.code.trim() || !newCoupon.discount_value) {
-      toast.error("يرجى إدخال جميع البيانات المطلوبة");
+    if (!user || !newCoupon.code.trim()) {
+      toast.error("يرجى إدخال كود الكوبون");
       return;
     }
+
+    const discountValue = parseDiscountInput(discountValueInput);
+    const discountError = validateDiscountValue(newCoupon.discount_type, discountValue);
+    if (discountError) {
+      toast.error(discountError);
+      return;
+    }
+
     setLoading(true);
     const result = await createMerchantCoupon(user.id, {
       code: newCoupon.code.toUpperCase(),
       discount_type: newCoupon.discount_type,
-      discount_value: newCoupon.discount_value,
+      discount_value: discountValue,
       minimum_order_amount: newCoupon.minimum_order_amount,
       usage_limit: newCoupon.usage_limit,
       start_date: new Date(newCoupon.start_date).toISOString(),
@@ -85,12 +108,12 @@ export default function CouponsTab() {
     });
 
     if (!result.success) {
-      toast.error(result.error?.includes('duplicate') ? "كود الكوبون موجود مسبقاً" : "فشل في إضافة الكوبون");
+      toast.error(mapMarketingWriteError(result.error));
     } else {
       toast.success("تمت إضافة الكوبون الجديد");
       loadCoupons();
       setIsAddOpen(false);
-      setNewCoupon({ code: '', discount_type: 'percentage', discount_value: 0, minimum_order_amount: 0, usage_limit: null, start_date: new Date().toISOString().split('T')[0], end_date: '', description: '' });
+      resetCouponForm();
     }
     setLoading(false);
   };
@@ -135,7 +158,7 @@ export default function CouponsTab() {
             className="pr-10 rounded-xl border-border/30 bg-card/80"
           />
         </div>
-        <Button onClick={() => setIsAddOpen(true)} className="rounded-xl">
+        <Button onClick={() => { resetCouponForm(); setIsAddOpen(true); }} className="rounded-xl">
           <Plus className="w-4 h-4 ml-2" />
           إضافة كوبون
         </Button>
@@ -157,7 +180,7 @@ export default function CouponsTab() {
                 {searchTerm ? "لا توجد نتائج مطابقة" : "لا توجد كوبونات بعد"}
               </p>
               {!searchTerm && (
-                <Button variant="outline" size="sm" onClick={() => setIsAddOpen(true)} className="rounded-xl">
+                <Button variant="outline" size="sm" onClick={() => { resetCouponForm(); setIsAddOpen(true); }} className="rounded-xl">
                   <Plus className="w-4 h-4 ml-2" /> إضافة كوبون
                 </Button>
               )}
@@ -209,7 +232,7 @@ export default function CouponsTab() {
       </Card>
 
       {/* Add Coupon Dialog */}
-      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+      <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (!open) resetCouponForm(); }}>
         <DialogContent className="sm:max-w-[500px] text-right rounded-2xl">
           <DialogHeader>
             <DialogTitle className="text-right">إضافة كوبون خصم جديد</DialogTitle>
@@ -221,14 +244,27 @@ export default function CouponsTab() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>قيمة الخصم</Label>
-                <Input type="number" placeholder="10" value={newCoupon.discount_value || ''} onChange={(e) => setNewCoupon(p => ({ ...p, discount_value: Number(e.target.value) }))} className="text-right rounded-xl" />
+                <Label>
+                  {newCoupon.discount_type === 'percentage' ? 'نسبة الخصم (%)' : 'قيمة الخصم (د.ع)'}
+                </Label>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder={newCoupon.discount_type === 'percentage' ? '20' : '5000'}
+                  value={discountValueInput}
+                  onChange={(e) => setDiscountValueInput(e.target.value)}
+                  className="text-right rounded-xl"
+                />
               </div>
               <div className="space-y-2">
                 <Label>نوع الخصم</Label>
-                <Select value={newCoupon.discount_type} onValueChange={(v: 'percentage' | 'fixed_amount') => setNewCoupon(p => ({ ...p, discount_type: v }))}>
+                <Select
+                  modal={false}
+                  value={newCoupon.discount_type}
+                  onValueChange={(v: 'percentage' | 'fixed_amount') => setNewCoupon(p => ({ ...p, discount_type: v }))}
+                >
                   <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" className="z-[100]">
                     <SelectItem value="percentage">نسبة مئوية (%)</SelectItem>
                     <SelectItem value="fixed_amount">مبلغ ثابت (د.ع)</SelectItem>
                   </SelectContent>

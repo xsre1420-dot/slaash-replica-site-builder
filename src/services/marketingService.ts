@@ -1,8 +1,10 @@
 import { cachedFetchNullable } from '@/lib/cache/enterpriseCache';
 import { callReadRpc } from '@/lib/readWrite/readClient';
+import { callWriteRpc } from '@/lib/readWrite/writeClient';
 import { cache, CacheTTL } from '@/lib/cache';
 import { invalidateMarketingPublicCache } from '@/lib/cache/cacheInvalidation';
 import { supabase } from '@/integrations/supabase/client';
+import { mapMarketingWriteError } from '@/lib/marketingWriteErrors';
 import { resolveStoreSlugByOwnerId } from '@/services/storefrontProductService';
 
 export interface StoreMarketingConfig {
@@ -10,6 +12,8 @@ export interface StoreMarketingConfig {
   marketingEnabled: boolean;
   metaPixelId: string | null;
   googleAnalyticsId: string | null;
+  metaBrowserEventsEnabled?: boolean;
+  metaDebugMode?: boolean;
 }
 
 const VALID_PIXEL_ID = /^[0-9]+$/;
@@ -26,6 +30,8 @@ function normalizeConfig(raw: Record<string, unknown> | null): StoreMarketingCon
     marketingEnabled: Boolean(raw.marketing_enabled),
     metaPixelId: metaRaw && VALID_PIXEL_ID.test(metaRaw) ? metaRaw : null,
     googleAnalyticsId: gaRaw && VALID_GA_ID.test(gaRaw) ? gaRaw : null,
+    metaBrowserEventsEnabled: raw.meta_browser_events_enabled !== false,
+    metaDebugMode: raw.meta_debug_mode === true,
   };
 }
 
@@ -52,7 +58,7 @@ export async function fetchStoreMarketingByOwner(ownerId: string): Promise<Store
   const cached = cache.get<StoreMarketingConfig>(cacheKey);
   if (cached) return cached;
 
-  const { data, error } = await (supabase as any).rpc('get_store_marketing_for_owner', {
+  const { data, error } = await callReadRpc<Record<string, unknown>>('get_store_marketing_for_owner', {
     p_owner_id: ownerId,
   });
 
@@ -92,39 +98,65 @@ export interface MerchantMarketingSettings {
   marketing_enabled: boolean;
   email_marketing_enabled: boolean;
   sms_marketing_enabled: boolean;
+  meta_capi_enabled: boolean;
+  meta_browser_events_enabled: boolean;
+  meta_debug_mode: boolean;
+  meta_test_event_code: string;
+  meta_dataset_id: string;
+  facebook_access_token_configured: boolean;
   store_slug: string | null;
 }
 
 export async function fetchMerchantMarketingSettings(
   ownerId: string
 ): Promise<MerchantMarketingSettings | null> {
-  const [marketingRes, storeRes] = await Promise.all([
-    supabase
-      .from('marketing_settings')
-      .select(
-        'meta_pixel_id, google_analytics_id, marketing_enabled, email_marketing_enabled, sms_marketing_enabled'
-      )
-      .eq('owner_id', ownerId)
-      .maybeSingle(),
-    supabase.from('store_settings').select('store_slug').eq('owner_id', ownerId).maybeSingle(),
+  const [settingsRes, storeSlug] = await Promise.all([
+    callReadRpc<Record<string, unknown>>('get_merchant_marketing_settings', {
+      p_owner_id: ownerId,
+    }),
+    resolveStoreSlugByOwnerId(ownerId),
   ]);
 
-  if (marketingRes.error && storeRes.error) return null;
+  const data = settingsRes.data;
+  if (settingsRes.error || !data || data.success === false) {
+    if (!storeSlug) return null;
+    return {
+      meta_pixel_id: '',
+      google_analytics_id: '',
+      marketing_enabled: false,
+      email_marketing_enabled: false,
+      sms_marketing_enabled: false,
+      meta_capi_enabled: true,
+      meta_browser_events_enabled: true,
+      meta_debug_mode: false,
+      meta_test_event_code: '',
+      meta_dataset_id: '',
+      facebook_access_token_configured: false,
+      store_slug: storeSlug,
+    };
+  }
 
-  const data = marketingRes.data;
   return {
-    meta_pixel_id: data?.meta_pixel_id || '',
-    google_analytics_id: data?.google_analytics_id || '',
-    marketing_enabled: data?.marketing_enabled || false,
-    email_marketing_enabled: data?.email_marketing_enabled || false,
-    sms_marketing_enabled: data?.sms_marketing_enabled || false,
-    store_slug: storeRes.data?.store_slug?.trim().toLowerCase() || null,
+    meta_pixel_id: String(data.meta_pixel_id || ''),
+    google_analytics_id: String(data.google_analytics_id || ''),
+    marketing_enabled: Boolean(data.marketing_enabled),
+    email_marketing_enabled: Boolean(data.email_marketing_enabled),
+    sms_marketing_enabled: Boolean(data.sms_marketing_enabled),
+    meta_capi_enabled: data.meta_capi_enabled !== false,
+    meta_browser_events_enabled: data.meta_browser_events_enabled !== false,
+    meta_debug_mode: data.meta_debug_mode === true,
+    meta_test_event_code: String(data.meta_test_event_code || ''),
+    meta_dataset_id: String(data.meta_dataset_id || ''),
+    facebook_access_token_configured: Boolean(data.facebook_access_token_configured),
+    store_slug: storeSlug,
   };
 }
 
 export async function upsertMerchantMarketingSettings(
   ownerId: string,
-  settings: Omit<MerchantMarketingSettings, 'store_slug'> & { facebook_access_token?: string }
+  settings: Omit<MerchantMarketingSettings, 'store_slug' | 'facebook_access_token_configured'> & {
+    facebook_access_token?: string;
+  }
 ): Promise<{ success: boolean; error?: string; storeSlug?: string | null }> {
   const payload: Record<string, unknown> = {
     owner_id: ownerId,
@@ -133,12 +165,17 @@ export async function upsertMerchantMarketingSettings(
     marketing_enabled: settings.marketing_enabled,
     email_marketing_enabled: settings.email_marketing_enabled,
     sms_marketing_enabled: settings.sms_marketing_enabled,
+    meta_capi_enabled: settings.meta_capi_enabled,
+    meta_browser_events_enabled: settings.meta_browser_events_enabled,
+    meta_debug_mode: settings.meta_debug_mode,
+    meta_test_event_code: settings.meta_test_event_code,
+    meta_dataset_id: settings.meta_dataset_id,
   };
   if (settings.facebook_access_token?.trim()) {
     payload.facebook_access_token = settings.facebook_access_token.trim();
   }
 
-  const { data, error } = await (supabase as any).rpc('upsert_merchant_marketing_settings', {
+  const { data, error } = await callWriteRpc<Record<string, unknown>>('upsert_merchant_marketing_settings', {
     p_owner_id: ownerId,
     p_patch: payload,
   });
@@ -184,13 +221,19 @@ export async function updateProductDiscount(
   productId: string,
   updateData: Record<string, unknown>
 ): Promise<{ success: boolean; error?: string }> {
-  const { data, error } = await (supabase as any).rpc('patch_merchant_product', {
+  const { ensureWritableSession } = await import('@/lib/authSession');
+  const sessionOwnerId = await ensureWritableSession();
+  if (!sessionOwnerId || sessionOwnerId !== ownerId) {
+    return { success: false, error: 'انتهت الجلسة — سجّل الدخول مجدداً' };
+  }
+
+  const { data, error } = await callWriteRpc<Record<string, unknown>>('patch_merchant_product', {
     p_product_id: productId,
     p_owner_id: ownerId,
     p_patch: updateData,
   });
 
-  if (error) return { success: false, error: error.message };
-  if (data?.success === false) return { success: false, error: String(data?.error ?? 'patch_failed') };
+  if (error) return { success: false, error: mapMarketingWriteError(error.message) };
+  if (data?.success === false) return { success: false, error: mapMarketingWriteError(String(data?.error ?? 'patch_failed')) };
   return { success: true };
 }

@@ -1,8 +1,9 @@
 import { useState, useCallback, useRef, useEffect, memo, useMemo } from 'react';
 import {
-  resolveMediaDeliveryUrl,
+  buildResponsiveImageSources,
   type MediaDeliveryVariant,
 } from '@/utils/cdnMediaUtils';
+import { isImageUrlLoaded, markImageUrlLoaded } from '@/utils/imageLoadCache';
 
 interface OptimizedImageProps {
   src: string;
@@ -11,10 +12,14 @@ interface OptimizedImageProps {
   width?: number;
   height?: number;
   loading?: 'lazy' | 'eager';
+  fetchPriority?: 'high' | 'low' | 'auto';
   fallbackSrc?: string;
   blurPlaceholder?: boolean;
   /** CDN variant — thumbnail for grids/cart, display for hero/detail */
   variant?: MediaDeliveryVariant;
+  /** Enable srcSet for Supabase storage assets */
+  responsive?: boolean;
+  sizes?: string;
   onLoad?: () => void;
   onError?: () => void;
 }
@@ -30,48 +35,59 @@ const OptimizedImage = memo(({
   width,
   height,
   loading = 'lazy',
+  fetchPriority,
   fallbackSrc = FALLBACK_IMAGE,
   blurPlaceholder = true,
   variant = 'display',
+  responsive = true,
+  sizes,
   onLoad,
   onError,
 }: OptimizedImageProps) => {
-  const deliverySrc = useMemo(
-    () => resolveMediaDeliveryUrl(src, { variant }),
-    [src, variant]
+  const sources = useMemo(
+    () =>
+      responsive
+        ? buildResponsiveImageSources(src, { variant, sizes })
+        : { src: buildResponsiveImageSources(src, { variant }).src },
+    [src, variant, responsive, sizes]
   );
-  const [loaded, setLoaded] = useState(false);
+
+  const [loaded, setLoaded] = useState(() => isImageUrlLoaded(sources.src));
   const [error, setError] = useState(false);
-  const [currentSrc, setCurrentSrc] = useState(deliverySrc);
+  const [currentSrc, setCurrentSrc] = useState(sources.src);
   const retriesRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fellBackToFullRef = useRef(false);
+  const prevSourcesSrcRef = useRef(sources.src);
 
   useEffect(() => {
-    setLoaded(false);
+    if (prevSourcesSrcRef.current === sources.src) return;
+    prevSourcesSrcRef.current = sources.src;
     setError(false);
-    setCurrentSrc(deliverySrc);
+    setCurrentSrc(sources.src);
     retriesRef.current = 0;
     fellBackToFullRef.current = false;
+    setLoaded(isImageUrlLoaded(sources.src));
     return () => {
       if (retryTimerRef.current) {
         clearTimeout(retryTimerRef.current);
         retryTimerRef.current = null;
       }
     };
-  }, [deliverySrc]);
+  }, [sources.src]);
 
   const handleLoad = useCallback(() => {
+    markImageUrlLoaded(currentSrc);
     setLoaded(true);
     setError(false);
     onLoad?.();
-  }, [onLoad]);
+  }, [currentSrc, onLoad]);
 
   const handleError = useCallback(() => {
     if (
       variant === 'thumbnail' &&
       !fellBackToFullRef.current &&
-      deliverySrc !== src &&
+      sources.src !== src &&
       src?.trim()
     ) {
       fellBackToFullRef.current = true;
@@ -83,7 +99,7 @@ const OptimizedImage = memo(({
       if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
       retryTimerRef.current = setTimeout(() => {
         retryTimerRef.current = null;
-        const base = fellBackToFullRef.current ? src : deliverySrc;
+        const base = fellBackToFullRef.current ? src : sources.src;
         const separator = base.includes('?') ? '&' : '?';
         setCurrentSrc(`${base}${separator}_r=${retriesRef.current}`);
       }, RETRY_DELAY * retriesRef.current);
@@ -92,12 +108,18 @@ const OptimizedImage = memo(({
       setCurrentSrc(fallbackSrc);
       onError?.();
     }
-  }, [src, deliverySrc, variant, fallbackSrc, onError]);
+  }, [src, sources.src, variant, fallbackSrc, onError]);
+
+  const imgStyle =
+    width && height ? ({ width, height } as const) : undefined;
 
   return (
-    <div className={`relative overflow-hidden ${className}`} style={{ width, height }}>
+    <div
+      className={`relative overflow-hidden ${className}`}
+      style={imgStyle}
+    >
       {blurPlaceholder && !loaded && !error && (
-        <div className="absolute inset-0 bg-muted animate-pulse" />
+        <div className="absolute inset-0 bg-muted animate-pulse" aria-hidden />
       )}
       <img
         src={currentSrc}
@@ -106,6 +128,8 @@ const OptimizedImage = memo(({
         height={height}
         loading={loading}
         decoding="async"
+        {...(fetchPriority ? { fetchPriority } : {})}
+        {...(sources.srcSet ? { srcSet: sources.srcSet, sizes: sources.sizes } : {})}
         onLoad={handleLoad}
         onError={handleError}
         className={`w-full h-full transition-opacity duration-300 ${

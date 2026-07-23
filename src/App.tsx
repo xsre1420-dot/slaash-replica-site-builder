@@ -3,9 +3,9 @@ import React, { Suspense, lazy, memo } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { createAppQueryClient } from "@/lib/query/queryClientConfig";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { reportError } from "@/lib/observability";
 import RouteObserver from "./components/RouteObserver";
 import { CartProvider } from "./context/CartContext";
 import { StoreProvider } from "./context/StoreContext";
@@ -49,7 +49,6 @@ const Orders = lazy(() => import("./pages/Orders"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Statistics = lazy(() => import("./pages/Statistics"));
 const Marketing = lazy(() => import("./pages/Marketing"));
-const Inventory = lazy(() => import("./pages/Inventory"));
 const Sitemap = lazy(() => import("./pages/Sitemap"));
 
 const queryClient = new QueryClient({
@@ -103,7 +102,7 @@ const App = () => (
               <Toaster />
               <Sonner />
               <BrowserRouter>
-              <StoreBootstrapProvider>
+                    <Route path="/inventory" element={<Navigate to="/products" replace />} />
                 <RouteObserver />
                 <SubdomainRouter />
                 <Suspense fallback={<PageLoader />}>

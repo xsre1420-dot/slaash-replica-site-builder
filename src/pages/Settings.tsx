@@ -3,15 +3,15 @@ import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStore } from "@/context/StoreContext";
+import { useStoreHydration } from "@/context/StoreBootstrapContext";
 import { toast } from "sonner";
-import { Store, Truck, FileText, MessageCircle, Globe, Loader2, CheckCircle2 } from "lucide-react";
+import { Store, Truck, FileText, Globe, Loader2, CheckCircle2 } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/layout/PageHeader";
 import StoreInfoTab from "@/components/settings/StoreInfoTab";
 import DeliveryTab from "@/components/settings/DeliveryTab";
 import PoliciesTab from "@/components/settings/PoliciesTab";
 import WhatsAppTab from "@/components/settings/WhatsAppTab";
-import PaymentTab from "@/components/settings/PaymentTab";
 import DesignTab from "@/components/settings/DesignTab";
 import CustomDomainTab from "@/components/settings/CustomDomainTab";
 import { validateStoreSlug, normalizeStoreSlugInput } from "@/lib/storeSlug";
@@ -23,10 +23,13 @@ import {
 
 const Settings = () => {
   const { user } = useAuth();
+  const { isReady: storeHydrated } = useStoreHydration();
   const { storeName, storeLogo, storeGovernorate, storeSettings, updateStore, updateStoreSettings } = useStore();
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstRender = useRef(true);
   const isDbLoaded = useRef(false);
+  const profileHydratedRef = useRef(false);
+  const settingsDirtyRef = useRef(false);
   const lastSavedRef = useRef<string>("");
   const [saveStatus, setSaveStatus] = useState<'idle' | 'pending' | 'saving' | 'saved' | 'error'>('idle');
   const [searchParams] = useSearchParams();
@@ -50,10 +53,10 @@ const Settings = () => {
     whatsappNumber: "",
     whatsappWelcomeMessage: "",
     whatsappOrderConfirmation: "",
-    paymentCashOnDelivery: true,
-    paymentCreditCard: false,
-    paymentEwallet: false,
   });
+
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
 
   useEffect(() => {
     if (!user?.id) return;
@@ -81,9 +84,6 @@ const Settings = () => {
           whatsappNumber: compliance.whatsappNumber || prev.whatsappNumber,
           whatsappWelcomeMessage: compliance.whatsappWelcomeMessage || prev.whatsappWelcomeMessage,
           whatsappOrderConfirmation: compliance.whatsappOrderConfirmation || prev.whatsappOrderConfirmation,
-          paymentCashOnDelivery: compliance.paymentCashOnDelivery,
-          paymentCreditCard: compliance.paymentCreditCard,
-          paymentEwallet: compliance.paymentEwallet,
         };
         lastSavedRef.current = JSON.stringify(merged);
         return merged;
@@ -97,49 +97,61 @@ const Settings = () => {
   }, [user?.id]);
 
   useEffect(() => {
-    if (searchParams.get(ATTENTION_PARAM) === 'missing-slug') {
+    const attention = searchParams.get(ATTENTION_PARAM);
+    if (attention === 'missing-slug') {
       setActiveTab('store');
+    }
+    if (attention === 'missing-delivery-prices') {
+      setActiveTab('delivery');
     }
   }, [searchParams]);
 
+  // Hydrate local form once from StoreContext after bootstrap — never overwrite in-progress edits.
   useEffect(() => {
-    setSettings(prev => ({
+    if (!storeHydrated || profileHydratedRef.current || settingsDirtyRef.current) return;
+    profileHydratedRef.current = true;
+    setSettings((prev) => ({
       ...prev,
-      storeName,
-      storeLogo,
-      storeGovernorate,
-      menuBackgroundColor: storeSettings.menuBackgroundColor,
-      menuTextColor: storeSettings.menuTextColor,
-      menuAccentColor: storeSettings.menuAccentColor,
-      storeFont: storeSettings.storeFont || "Tajawal",
-      bannerImages: storeSettings.bannerImages,
-      primaryBannerIndex: storeSettings.primaryBannerIndex,
-      deliveryPrices: storeSettings.deliveryPrices || []
+      storeName: storeName || prev.storeName,
+      storeLogo: storeLogo || prev.storeLogo,
+      storeGovernorate: storeGovernorate || prev.storeGovernorate,
+      menuBackgroundColor: storeSettings.menuBackgroundColor || prev.menuBackgroundColor,
+      menuTextColor: storeSettings.menuTextColor || prev.menuTextColor,
+      menuAccentColor: storeSettings.menuAccentColor || prev.menuAccentColor,
+      storeFont: storeSettings.storeFont || prev.storeFont,
+      bannerImages: storeSettings.bannerImages.length > 0 ? storeSettings.bannerImages : prev.bannerImages,
+      primaryBannerIndex: storeSettings.primaryBannerIndex ?? prev.primaryBannerIndex,
+      deliveryPrices: storeSettings.deliveryPrices?.length ? storeSettings.deliveryPrices : prev.deliveryPrices,
     }));
-  }, [storeName, storeLogo, storeGovernorate, storeSettings]);
+  }, [
+    storeHydrated,
+    storeName,
+    storeLogo,
+    storeGovernorate,
+    storeSettings.menuBackgroundColor,
+    storeSettings.menuTextColor,
+    storeSettings.menuAccentColor,
+    storeSettings.storeFont,
+    storeSettings.bannerImages,
+    storeSettings.primaryBannerIndex,
+    storeSettings.deliveryPrices,
+  ]);
 
   const performSave = useCallback(async () => {
-    const settingsHash = JSON.stringify(settings);
+    const current = settingsRef.current;
+    const settingsHash = JSON.stringify(current);
     if (settingsHash === lastSavedRef.current) return;
 
     const hasBlobUrls =
-      settings.storeLogo?.startsWith('blob:') ||
-      settings.bannerImages.some((url: string) => url.startsWith('blob:'));
+      current.storeLogo?.startsWith('blob:') ||
+      current.bannerImages.some((url: string) => url.startsWith('blob:'));
     if (hasBlobUrls) {
       setSaveStatus('pending');
       return;
     }
 
-    const hasPaymentMethod =
-      settings.paymentCashOnDelivery || settings.paymentCreditCard || settings.paymentEwallet;
-    if (!hasPaymentMethod) {
-      setSaveStatus('error');
-      toast.error("يجب تفعيل طريقة دفع واحدة على الأقل", { id: "settings-payment-error" });
-      return;
-    }
-
-    const normalizedSlug = normalizeStoreSlugInput(settings.storeSlug);
-    const slugError = validateStoreSlug(normalizedSlug);
+    const normalizedSlug = normalizeStoreSlugInput(current.storeSlug);
+    const slugError = normalizedSlug ? validateStoreSlug(normalizedSlug) : null;
     if (slugError) {
       setSaveStatus('error');
       toast.error(slugError, { id: "settings-slug-error" });
@@ -148,28 +160,28 @@ const Settings = () => {
 
     setSaveStatus('saving');
     try {
-      await updateStore(settings.storeLogo, settings.storeName, settings.storeGovernorate);
+      await updateStore(current.storeLogo, current.storeName, current.storeGovernorate);
       await updateStoreSettings({
-        menuBackgroundColor: settings.menuBackgroundColor,
-        menuTextColor: settings.menuTextColor,
-        menuAccentColor: settings.menuAccentColor,
-        storeFont: settings.storeFont || "Tajawal",
-        bannerImages: settings.bannerImages,
-        primaryBannerIndex: settings.primaryBannerIndex,
-        deliveryPrices: settings.deliveryPrices
+        menuBackgroundColor: current.menuBackgroundColor,
+        menuTextColor: current.menuTextColor,
+        menuAccentColor: current.menuAccentColor,
+        storeFont: current.storeFont || "Tajawal",
+        bannerImages: current.bannerImages,
+        primaryBannerIndex: current.primaryBannerIndex,
+        deliveryPrices: current.deliveryPrices,
       });
       if (user?.id) {
         const saveResult = await saveMerchantComplianceSettings(user.id, {
           storeSlug: normalizedSlug,
-          returnPolicy: settings.returnPolicy,
-          privacyPolicy: settings.privacyPolicy,
-          termsConditions: settings.termsConditions,
-          whatsappNumber: settings.whatsappNumber,
-          whatsappWelcomeMessage: settings.whatsappWelcomeMessage,
-          whatsappOrderConfirmation: settings.whatsappOrderConfirmation,
-          paymentCashOnDelivery: settings.paymentCashOnDelivery,
-          paymentCreditCard: settings.paymentCreditCard,
-          paymentEwallet: settings.paymentEwallet,
+          returnPolicy: current.returnPolicy,
+          privacyPolicy: current.privacyPolicy,
+          termsConditions: current.termsConditions,
+          whatsappNumber: current.whatsappNumber,
+          whatsappWelcomeMessage: current.whatsappWelcomeMessage,
+          whatsappOrderConfirmation: current.whatsappOrderConfirmation,
+          paymentCashOnDelivery: true,
+          paymentCreditCard: false,
+          paymentEwallet: false,
         });
 
         if (!saveResult.success) {
@@ -180,8 +192,9 @@ const Settings = () => {
           throw new Error(message);
         }
       }
-      
+
       lastSavedRef.current = settingsHash;
+      settingsDirtyRef.current = false;
       setSaveStatus('saved');
       toast.success("تم الحفظ", { duration: 1500, id: "settings-save" });
     } catch (error) {
@@ -190,7 +203,7 @@ const Settings = () => {
       const message = error instanceof Error ? error.message : 'فشل في حفظ الإعدادات';
       toast.error(message, { id: "settings-error" });
     }
-  }, [settings, updateStore, updateStoreSettings, user?.id]);
+  }, [updateStore, updateStoreSettings, user?.id]);
 
   useEffect(() => {
     if (isFirstRender.current || !isDbLoaded.current) {
@@ -198,6 +211,7 @@ const Settings = () => {
       return;
     }
 
+    settingsDirtyRef.current = true;
     setSaveStatus('pending');
 
     if (saveTimeoutRef.current) {
@@ -233,14 +247,13 @@ const Settings = () => {
     { value: "delivery", label: "التوصيل", icon: Truck },
     { value: "domain", label: "النطاق", icon: Globe },
     { value: "policies", label: "السياسات", icon: FileText },
-    { value: "communication", label: "التواصل والدفع", icon: MessageCircle },
   ];
 
   return (
     <DashboardLayout>
       <PageHeader
         title="الإعدادات"
-        description="خصّص متجرك، التوصيل، الدفع، والسياسات — يتم الحفظ تلقائياً"
+        description="خصّص متجرك، التوصيل، السياسات، والتواصل — يتم الحفظ تلقائياً"
         hideBack
         breadcrumbs={[{ label: 'لوحة التحكم', href: '/builder' }, { label: 'الإعدادات' }]}
         actions={
@@ -296,11 +309,7 @@ const Settings = () => {
 
           <TabsContent value="policies" className="space-y-6">
             <PoliciesTab settings={settings} setSettings={setSettings} />
-          </TabsContent>
-
-          <TabsContent value="communication" className="space-y-6">
             <WhatsAppTab settings={settings} setSettings={setSettings} />
-            <PaymentTab settings={settings} setSettings={setSettings} />
           </TabsContent>
         </Tabs>
 

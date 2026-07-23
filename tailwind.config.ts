@@ -148,6 +148,15 @@ export default {
           "0%": { transform: "translateX(8px)", opacity: "0" },
           "100%": { transform: "translateX(0)", opacity: "1" },
         },
+        shimmer: {
+          "0%": { backgroundPosition: "200% 0" },
+          "100%": { backgroundPosition: "-200% 0" },
+        },
+        "cart-pop": {
+          "0%": { transform: "scale(1)" },
+          "40%": { transform: "scale(1.06)" },
+          "100%": { transform: "scale(1)" },
+        },
         "attention-glow": {
           "0%, 100%": { boxShadow: "0 0 0 0 rgba(248, 113, 113, 0.35)" },
           "50%": { boxShadow: "0 0 0 6px rgba(248, 113, 113, 0.12)" },
@@ -187,6 +196,8 @@ export default {
         "scale-bounce": "scale-bounce 0.5s ease-out forwards",
         "scale-in": "scale-bounce 0.3s ease-out forwards",
         "slide-in-right": "slide-in-right 0.2s ease-out forwards",
+        shimmer: "shimmer 1.8s ease-in-out infinite",
+        "cart-pop": "cart-pop 0.35s ease-out",
         "attention-glow": "attention-glow 2s ease-in-out 3",
         "attention-enter": "attention-enter 1.1s ease-out forwards",
         "attention-bar-glow": "attention-bar-glow 2.2s ease-in-out infinite",

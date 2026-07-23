@@ -6,7 +6,7 @@ import {
   markDistributedIdempotencyComplete,
 } from '@/background/shared/distributedIdempotency';
 import { nextScheduledAt } from '@/background/retry/backoff';
-import { pushToDeadLetter } from '@/background/retry/deadLetterQueue';
+import { pushToDeadLetter, getDeadLetterJobs } from '@/background/retry/deadLetterQueue';
 import { persistPendingJobs } from '@/background/shared/jobPersistence';
 import { getWorkerInstanceId } from '@/core/distributed/workerIdentity';
 import { logger, getCorrelationContext, newRequestId } from '@/lib/observability';
@@ -136,7 +136,7 @@ export function getQueueMetrics(kind: QueueKind): QueueMetrics {
     processing: countByQueue(kind, 'processing'),
     completed,
     failed,
-    deadLetter: 0,
+    deadLetter: getDeadLetterJobs(kind).length,
     avgExecutionMs: Math.round(avg),
     successRate: completed / total,
     retryCount: retryByQueue.get(kind) ?? 0,

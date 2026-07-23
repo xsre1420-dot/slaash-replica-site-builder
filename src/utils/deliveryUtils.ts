@@ -44,6 +44,13 @@ export const calculateDeliveryFeeFromPrices = (
   return match?.price ?? 0;
 };
 
+/** True when the merchant saved at least one governorate delivery price. */
+export const hasConfiguredDeliveryPrices = (
+  deliveryPrices: DeliveryPrice[] | undefined
+): boolean =>
+  Array.isArray(deliveryPrices) &&
+  deliveryPrices.some((entry) => Boolean(entry.governorate?.trim()));
+
 export const computeOrderTotal = (
   subtotal: number,
   deliveryFee: number,

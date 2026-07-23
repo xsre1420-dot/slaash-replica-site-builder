@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { callReadRpc } from '@/lib/readWrite/readClient';
 import { getOrCreateIdempotencyKey } from '@/utils/checkoutSession';
 
 export type RecoveredCheckoutOrder = {
@@ -19,7 +19,7 @@ export const tryRecoverCheckoutOrder = async (
   if (!idempotencyKey) return null;
 
   try {
-    const { data, error } = await (supabase as any).rpc('get_order_by_idempotency_key', {
+    const { data, error } = await callReadRpc<Record<string, unknown>>('get_order_by_idempotency_key', {
       p_idempotency_key: idempotencyKey,
       p_owner_id: ownerId,
       p_store_slug: storeSlug?.trim().toLowerCase() || null,

@@ -4,7 +4,6 @@ import { useStoreHydration } from "./StoreBootstrapContext";
 import {
   defaultStoreSettings,
   fetchStoreSettings,
-  invalidateStoreSettingsCache,
   upsertStoreSettings,
   type StoreSettings,
 } from "@/services/storeService";
@@ -52,35 +51,41 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateStore = useCallback(async (logo: string, name: string, governorate?: string) => {
+    if (!user?.id) return;
+
+    const result = await upsertStoreSettings(user.id, {
+      store_name: name,
+      store_logo: logo,
+      store_governorate: governorate ?? storeGovernorate,
+    });
+
+    if (!result.success) {
+      throw new Error(result.error || 'فشل في حفظ معلومات المتجر');
+    }
+
     setStoreLogo(logo);
     setStoreName(name);
     if (governorate !== undefined) setStoreGovernorate(governorate);
-
-    if (user?.id) {
-      invalidateStoreSettingsCache(user.id);
-      await upsertStoreSettings(user.id, {
-        store_name: name,
-        store_logo: logo,
-        store_governorate: governorate ?? storeGovernorate,
-      });
-    }
   }, [user?.id, storeGovernorate]);
 
   const updateStoreSettings = useCallback(async (settings: StoreSettings) => {
-    setStoreSettings(settings);
+    if (!user?.id) return;
 
-    if (user?.id) {
-      invalidateStoreSettingsCache(user.id);
-      await upsertStoreSettings(user.id, {
-        menu_background_color: settings.menuBackgroundColor,
-        menu_text_color: settings.menuTextColor,
-        menu_accent_color: settings.menuAccentColor,
-        store_font: settings.storeFont,
-        banner_images: settings.bannerImages,
-        primary_banner_index: settings.primaryBannerIndex,
-        delivery_prices: settings.deliveryPrices,
-      });
+    const result = await upsertStoreSettings(user.id, {
+      menu_background_color: settings.menuBackgroundColor,
+      menu_text_color: settings.menuTextColor,
+      menu_accent_color: settings.menuAccentColor,
+      store_font: settings.storeFont,
+      banner_images: settings.bannerImages,
+      primary_banner_index: settings.primaryBannerIndex,
+      delivery_prices: settings.deliveryPrices,
+    });
+
+    if (!result.success) {
+      throw new Error(result.error || 'فشل في حفظ إعدادات المتجر');
     }
+
+    setStoreSettings(settings);
   }, [user?.id]);
 
   const value = useMemo(() => ({

@@ -6,10 +6,13 @@ import {
   Settings,
   Archive,
   MessageSquare,
+  Truck,
   type LucideIcon,
 } from 'lucide-react';
 import { buildAttentionHref, type AttentionKey } from '@/lib/attentionHighlight';
 import { useAuth } from '@/context/AuthContext';
+import { useStore } from '@/context/StoreContext';
+import { hasConfiguredDeliveryPrices } from '@/utils/deliveryUtils';
 import { getProductsSync } from '@/services/productService';
 import { countPendingReviewsForOwner } from '@/services/reviewService';
 import { getStorePublicSlug } from '@/lib/storeUrl';
@@ -64,6 +67,7 @@ const fetchRpcPeriod = (
 
 export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
   const { user } = useAuth();
+  const { storeSettings } = useStore();
   const mountedRef = useIsMounted();
   const [orders, setOrders] = useState<Order[]>([]);
   const [pendingFulfillment, setPendingFulfillment] = useState(0);
@@ -232,9 +236,21 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
     ? { low: catalogKpis.lowStockCount, out: 0 }
     : summarizeInventoryAlerts(localProducts);
 
+  const deliveryConfigured = hasConfiguredDeliveryPrices(storeSettings.deliveryPrices);
+
   const actions = useMemo((): DashboardActionItem[] => {
     const items: DashboardActionItem[] = [];
     const pendingOrdersCount = pendingFulfillment;
+
+    if (!deliveryConfigured) {
+      items.push({
+        id: 'missing-delivery-prices',
+        title: 'أسعار التوصيل غير مُعدّة',
+        description: 'حدّد أسعار التوصيل للمحافظات حتى تتمكن من إضافة المنتجات واستقبال الطلبات',
+        href: buildAttentionHref('/settings', 'missing-delivery-prices'),
+        icon: Truck,
+      });
+    }
 
     if (pendingOrdersCount > 0) {
       items.push({
@@ -265,12 +281,12 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
         id: 'low-stock',
         title: 'مخزون منخفض',
         description: stockDetail,
-        href: buildAttentionHref('/inventory', 'low-stock'),
+        href: buildAttentionHref('/products', 'low-stock'),
         icon: Archive,
       });
     }
 
-    if (catalogTotalCount === 0) {
+    if (catalogTotalCount === 0 && deliveryConfigured) {
       items.push({
         id: 'empty-catalog',
         title: 'متجرك بدون منتجات',
@@ -310,6 +326,7 @@ export const useDashboardInsights = (refreshKey = 0): DashboardInsights => {
     inventorySummary.out,
     draftCount,
     pendingReviewsCount,
+    deliveryConfigured,
   ]);
 
   return {

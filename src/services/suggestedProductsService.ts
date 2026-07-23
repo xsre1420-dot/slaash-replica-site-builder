@@ -1,3 +1,4 @@
+import { callReadRpc } from '@/lib/readWrite/readClient';
 import { supabase } from '@/integrations/supabase/client';
 import { assertMerchantOwner } from '@/lib/tenantGuard';
 
@@ -42,10 +43,10 @@ export async function fetchSuggestedProductsForStore(
   productId: string,
   limit = 4
 ): Promise<SuggestedProductCard[]> {
-  const { data, error } = await (supabase as any).rpc('get_suggested_products_for_store', {
+  const { data, error } = await callReadRpc<SuggestedProductCard[]>('get_suggested_products_for_store', {
     p_slug: storeSlug.trim().toLowerCase(),
     p_product_id: productId,
-  });
+  }, { preferEdge: true });
 
   if (error || !Array.isArray(data)) return [];
   return (data as SuggestedProductCard[]).slice(0, limit);

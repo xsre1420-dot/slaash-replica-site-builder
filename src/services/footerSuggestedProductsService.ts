@@ -1,3 +1,4 @@
+import { callReadRpc } from '@/lib/readWrite/readClient';
 import { supabase } from '@/integrations/supabase/client';
 import { cache, CacheKeys, CacheTTL, dedup } from '@/lib/cache';
 import { enqueueCacheInvalidationForOwner } from '@/background/enqueue';
@@ -33,9 +34,9 @@ export async function fetchFooterSuggestedForStorefront(
 
     return dedup(cacheKey, async () => {
       try {
-        const { data, error } = await (supabase as any).rpc('get_storefront_footer_products', {
+        const { data, error } = await callReadRpc<FooterSuggestedProduct[]>('get_storefront_footer_products', {
           p_slug: slug,
-        });
+        }, { preferEdge: true });
 
         if (!error && Array.isArray(data)) {
           const products = data as FooterSuggestedProduct[];

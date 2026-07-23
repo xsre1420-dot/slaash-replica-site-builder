@@ -3,6 +3,7 @@ import {
   calculateDeliveryFeeFromPrices,
   computeOrderTotal,
   getDeliveryStatusLabel,
+  hasConfiguredDeliveryPrices,
 } from '@/utils/deliveryUtils';
 
 describe('deliveryUtils', () => {
@@ -28,5 +29,11 @@ describe('deliveryUtils', () => {
 
   it('labels delivery status in Arabic', () => {
     expect(getDeliveryStatusLabel('delivered')).toBe('تم التسليم');
+  });
+
+  it('detects configured delivery prices', () => {
+    expect(hasConfiguredDeliveryPrices([])).toBe(false);
+    expect(hasConfiguredDeliveryPrices(undefined)).toBe(false);
+    expect(hasConfiguredDeliveryPrices([{ governorate: 'بغداد', price: 0 }])).toBe(true);
   });
 });

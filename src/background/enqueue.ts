@@ -45,11 +45,20 @@ export function enqueueEdgePurge(slug: string): string {
 export function enqueueMetaConversion(payload: {
   storeSlug: string;
   orderId: string;
+  eventId: string;
   value: number;
   currency: string;
   contentIds: string[];
+  contents: Array<{ id: string; quantity: number }>;
+  numItems: number;
   customerPhone: string | null;
+  customerName?: string | null;
+  customerGovernorate?: string | null;
+  customerEmail?: string | null;
+  externalId?: string | null;
   eventSourceUrl: string | null;
+  fbp: string | null;
+  fbc: string | null;
 }): string {
   return enqueueJob('orders', 'orders.metaConversions', payload, {
     idempotencyKey: `meta:${payload.orderId}`,

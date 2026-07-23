@@ -1,22 +1,24 @@
-import { supabase } from '@/repositories/base';
+import { supabase, callReadRpc, callWriteRpc, adaptRpcResult } from '@/repositories/base';
 
 export async function rpcIncrementProductStock(args: Record<string, unknown>) {
-  return (supabase as any).rpc('increment_product_stock', args);
+  return adaptRpcResult(await callWriteRpc('increment_product_stock', args));
 }
 
 export async function rpcAuditMerchantInventoryIntegrity(p_owner_id: string) {
-  return (supabase as any).rpc('audit_merchant_inventory_integrity', { p_owner_id });
+  return adaptRpcResult(await callReadRpc('audit_merchant_inventory_integrity', { p_owner_id }));
 }
 
 export async function rpcBatchRestockProducts(p_owner_id: string, p_items: unknown[]) {
-  return (supabase as any).rpc('batch_restock_products', {
-    p_owner_id,
-    p_items,
-  });
+  return adaptRpcResult(
+    await callWriteRpc('batch_restock_products', {
+      p_owner_id,
+      p_items,
+    })
+  );
 }
 
 export async function rpcMerchantInventorySummary(p_owner_id: string) {
-  return (supabase as any).rpc('merchant_inventory_summary', { p_owner_id });
+  return adaptRpcResult(await callReadRpc('merchant_inventory_summary', { p_owner_id }));
 }
 
 export async function rpcListMerchantInventoryMovements(
@@ -25,31 +27,35 @@ export async function rpcListMerchantInventoryMovements(
   p_to?: string,
   p_limit?: number
 ) {
-  return (supabase as any).rpc('list_merchant_inventory_movements', {
-    p_owner_id,
-    p_from,
-    p_to,
-    p_limit,
-  });
+  return adaptRpcResult(
+    await callReadRpc('list_merchant_inventory_movements', {
+      p_owner_id,
+      p_from,
+      p_to,
+      p_limit,
+    })
+  );
 }
 
 export async function rpcMerchantInventoryForecast(p_owner_id: string) {
-  return (supabase as any).rpc('merchant_inventory_forecast', { p_owner_id });
+  return adaptRpcResult(await callReadRpc('merchant_inventory_forecast', { p_owner_id }));
 }
 
 export async function rpcMerchantAbcAnalysis(p_owner_id: string) {
-  return (supabase as any).rpc('merchant_abc_analysis', { p_owner_id });
+  return adaptRpcResult(await callReadRpc('merchant_abc_analysis', { p_owner_id }));
 }
 
 export async function rpcLookupProductByBarcode(p_owner_id: string, p_barcode: string) {
-  return (supabase as any).rpc('lookup_product_by_barcode', {
-    p_owner_id,
-    p_barcode,
-  });
+  return adaptRpcResult(
+    await callReadRpc('lookup_product_by_barcode', {
+      p_owner_id,
+      p_barcode,
+    })
+  );
 }
 
 export async function rpcEnsureDefaultWarehouse(p_owner_id: string) {
-  return (supabase as any).rpc('ensure_default_warehouse', { p_owner_id });
+  return adaptRpcResult(await callWriteRpc('ensure_default_warehouse', { p_owner_id }));
 }
 
 export async function rpcTransferWarehouseStock(args: {
@@ -60,7 +66,7 @@ export async function rpcTransferWarehouseStock(args: {
   p_quantity: number;
   p_notes?: string;
 }) {
-  return (supabase as any).rpc('transfer_warehouse_stock', args);
+  return adaptRpcResult(await callWriteRpc('transfer_warehouse_stock', args));
 }
 
 export async function rpcReceivePurchaseOrderLine(
@@ -68,11 +74,13 @@ export async function rpcReceivePurchaseOrderLine(
   p_line_id: string,
   p_quantity: number
 ) {
-  return (supabase as any).rpc('receive_purchase_order_line', {
-    p_owner_id,
-    p_line_id,
-    p_quantity,
-  });
+  return adaptRpcResult(
+    await callWriteRpc('receive_purchase_order_line', {
+      p_owner_id,
+      p_line_id,
+      p_quantity,
+    })
+  );
 }
 
 export async function rpcStartInventoryCycleCount(
@@ -80,11 +88,13 @@ export async function rpcStartInventoryCycleCount(
   p_warehouse_id?: string,
   p_name?: string
 ) {
-  return (supabase as any).rpc('start_inventory_cycle_count', {
-    p_owner_id,
-    p_warehouse_id: p_warehouse_id ?? null,
-    p_name: p_name ?? null,
-  });
+  return adaptRpcResult(
+    await callWriteRpc('start_inventory_cycle_count', {
+      p_owner_id,
+      p_warehouse_id: p_warehouse_id ?? null,
+      p_name: p_name ?? null,
+    })
+  );
 }
 
 export async function rpcSubmitCycleCountLine(
@@ -93,19 +103,23 @@ export async function rpcSubmitCycleCountLine(
   p_counted_qty: number,
   p_apply_adjustment?: boolean
 ) {
-  return (supabase as any).rpc('submit_cycle_count_line', {
-    p_owner_id,
-    p_line_id,
-    p_counted_qty,
-    p_apply_adjustment: p_apply_adjustment ?? false,
-  });
+  return adaptRpcResult(
+    await callWriteRpc('submit_cycle_count_line', {
+      p_owner_id,
+      p_line_id,
+      p_counted_qty,
+      p_apply_adjustment: p_apply_adjustment ?? false,
+    })
+  );
 }
 
 export async function rpcCompleteInventoryCycleCount(p_owner_id: string, p_cycle_count_id: string) {
-  return (supabase as any).rpc('complete_inventory_cycle_count', {
-    p_owner_id,
-    p_cycle_count_id,
-  });
+  return adaptRpcResult(
+    await callWriteRpc('complete_inventory_cycle_count', {
+      p_owner_id,
+      p_cycle_count_id,
+    })
+  );
 }
 
 export function inventoryMovementsTable() {

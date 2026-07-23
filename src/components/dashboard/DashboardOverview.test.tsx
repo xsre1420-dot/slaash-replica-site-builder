@@ -56,7 +56,7 @@ vi.mock('@/hooks/useDashboardInsights', () => ({
         id: 'low-stock',
         title: 'مخزون منخفض',
         description: '1 نفد · 2 منخفض',
-        href: '/inventory?attention=low-stock',
+        href: '/products?attention=low-stock',
         icon: () => null,
       },
     ],
