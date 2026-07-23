@@ -194,7 +194,7 @@ export const ProductsList = ({
             </div>
           )}
 
-          <OptimizedImage src={product.image} alt={product.name} className="w-full h-40 sm:h-48" loading="lazy" />
+          <OptimizedImage src={product.image} alt={product.name} className="w-full h-40 sm:h-48" variant="thumbnail" loading="lazy" sizes="(max-width: 640px) 100vw, 320px" />
 
           <div
             className={`absolute top-3 left-3 text-xs px-2.5 py-1 rounded-lg font-semibold border ${

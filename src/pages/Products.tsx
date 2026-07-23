@@ -8,7 +8,6 @@ import {
   FileEdit,
   Archive,
   AlertTriangle,
-  Download,
   Wallet,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -17,9 +16,7 @@ import { Button } from '@/components/ui/button';
 import StatCard from '@/components/ui/StatCard';
 import ProductsWorkflowTabs from '@/components/products/ProductsWorkflowTabs';
 import ProductsToolbar from '@/components/products/ProductsToolbar';
-import ProductsBulkBar from '@/components/products/ProductsBulkBar';
 import ProductsDataTable from '@/components/products/ProductsDataTable';
-import { BulkUpload } from '@/components/product-management/BulkUpload';
 import InventoryStockDialog from '@/components/inventory/InventoryStockDialog';
 import { Product } from '@/types';
 import { toast } from 'sonner';
@@ -40,7 +37,6 @@ import type { ProductVariant } from '@/types';
 import { useMerchantProductsPage } from '@/hooks/useMerchantProductsPage';
 import { useProgressiveRender } from '@/hooks/useProgressiveRender';
 import { getFirstPendingReviewTarget, countPendingReviewsForOwner } from '@/services/reviewService';
-import { getProductLifecycleStatus } from '@/lib/productLifecycle';
 import type { ProductSaveMode } from '@/lib/productFormLabels';
 import { useAuth } from '@/context/AuthContext';
 import { useRealtimeProducts } from '@/hooks/useRealtimeProducts';
@@ -56,13 +52,9 @@ import {
   DEFAULT_PRODUCT_CATALOG_FILTERS,
   filterProductCatalog,
   formatProductInventoryValue,
+  getProductCatalogStockStatus,
   type ProductCatalogFilters,
 } from '@/utils/productCatalogPageUtils';
-import {
-  buildProductsExportFilename,
-  exportProductsToCsv,
-} from '@/utils/productExportUtils';
-import { runWithConcurrency } from '@/utils/runWithConcurrency';
 import { generateUUID } from '@/lib/uuid';
 
 const Products = () => {
@@ -74,8 +66,6 @@ const Products = () => {
   const debouncedSearch = useDebouncedValue(catalogFilters.search, 350);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [pendingReviewsCount, setPendingReviewsCount] = useState(0);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkProcessing, setBulkProcessing] = useState(false);
   const [stockDialogOpen, setStockDialogOpen] = useState(false);
   const [stockDialogProduct, setStockDialogProduct] = useState<InventoryProductRow | null>(null);
   const [stockSaving, setStockSaving] = useState(false);
@@ -134,8 +124,22 @@ const Products = () => {
           state: { productName: target.productName },
         });
       });
+      return;
     }
-  }, [searchParams, user?.id, navigate]);
+
+    if (attention === 'low-stock') {
+      if (catalogLoading) return;
+      attentionApplied.current = true;
+      const outCount = loadedProducts.filter((p) => getProductCatalogStockStatus(p) === 'out').length;
+      const lowCount = loadedProducts.filter((p) => getProductCatalogStockStatus(p) === 'low').length;
+      setCatalogFilters((prev) => ({
+        ...prev,
+        lifecycle: 'all',
+        stock: outCount > 0 && lowCount === 0 ? 'out' : 'low',
+        sort: 'stock_asc',
+      }));
+    }
+  }, [searchParams, user?.id, navigate, catalogLoading, loadedProducts]);
 
   useEffect(() => {
     getCategories().then((cats) => setCategories(cats));
@@ -212,23 +216,12 @@ const Products = () => {
     return [...new Set([...fromDb, ...fromProducts])].sort((a, b) => a.localeCompare(b, 'ar'));
   }, [categories, loadedProducts]);
 
-  useEffect(() => {
-    setSelectedIds((prev) => {
-      const next = new Set([...prev].filter((id) => visibleProducts.some((p) => p.id === id)));
-      return next.size === prev.size ? prev : next;
-    });
-  }, [visibleProducts]);
-
   const updateFilters = (patch: Partial<ProductCatalogFilters>) => {
     setCatalogFilters((prev) => ({ ...prev, ...patch }));
-    if ('lifecycle' in patch || 'category' in patch || 'stock' in patch || 'search' in patch) {
-      setSelectedIds(new Set());
-    }
   };
 
   const clearFilters = () => {
     setCatalogFilters(DEFAULT_PRODUCT_CATALOG_FILTERS);
-    setSelectedIds(new Set());
     saveFilters('products', {
       categoryFilter: 'all',
       stockFilter: 'all',
@@ -256,20 +249,6 @@ const Products = () => {
     void reloadCatalog();
     navigate('/products', { replace: true, state: {} });
   }, [location.state, navigate, reloadCatalog, clearFilters]);
-
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedIds.size === visibleProducts.length) setSelectedIds(new Set());
-    else setSelectedIds(new Set(visibleProducts.map((p) => p.id)));
-  };
 
   const runProductAction = async (
     product: Product,
@@ -313,42 +292,6 @@ const Products = () => {
     } else {
       toast.error('فشل في تكرار المنتج');
     }
-  };
-
-  const runBulkLifecycle = async (mode: 'publish' | 'archive') => {
-    const targets = visibleProducts.filter((p) => {
-      if (!selectedIds.has(p.id)) return false;
-      const lifecycle = getProductLifecycleStatus(p);
-      if (mode === 'publish') return lifecycle === 'draft';
-      return lifecycle === 'published';
-    });
-
-    if (targets.length === 0) {
-      toast.error('لا توجد منتجات قابلة للتحديث');
-      return;
-    }
-
-    setBulkProcessing(true);
-    const ok = await runWithConcurrency(targets, 4, async (product) => {
-      const result =
-        mode === 'publish'
-          ? await publishProduct(product.id)
-          : await setProductLifecycle(product.id, 'archive');
-      return result.success;
-    });
-    setBulkProcessing(false);
-    setSelectedIds(new Set());
-    await reloadCatalog();
-    toast.success(`تم تحديث ${ok} من ${targets.length} منتج`);
-  };
-
-  const handleExport = (products: Product[]) => {
-    if (products.length === 0) {
-      toast.error('لا توجد منتجات للتصدير');
-      return;
-    }
-    exportProductsToCsv(products, buildProductsExportFilename());
-    toast.success(`تم تصدير ${products.length} منتج`);
   };
 
   const inventoryRowsById = useMemo(() => {
@@ -436,23 +379,6 @@ const Products = () => {
 
   const headerActions = (
     <div className="flex items-center gap-2 flex-wrap justify-end">
-      <BulkUpload onComplete={() => void reloadCatalog()} />
-      <Button
-        variant="outline"
-        size="sm"
-        className="rounded-xl min-h-[40px] gap-1.5"
-        onClick={() =>
-          handleExport(
-            selectedIds.size > 0
-              ? visibleProducts.filter((p) => selectedIds.has(p.id))
-              : visibleProducts
-          )
-        }
-        disabled={visibleProducts.length === 0}
-      >
-        <Download className="w-4 h-4" />
-        <span className="hidden sm:inline">تصدير</span>
-      </Button>
       <Link to="/add-product">
         <Button size="sm" className="rounded-xl min-h-[40px] gap-1.5">
           <Plus className="w-4 h-4" />
@@ -473,7 +399,7 @@ const Products = () => {
       />
 
       <div className="ds-page max-w-6xl min-w-0">
-          <div className="space-y-5 sm:space-y-6 min-w-0 pb-24 sm:pb-6">
+          <div className="space-y-3 min-w-0 pb-6">
             {/* Primary stats — lifecycle */}
             <section className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 min-w-0">
               <StatCard
@@ -566,6 +492,18 @@ const Products = () => {
               />
             )}
 
+            {(stats.lowStock > 0 || stats.outOfStock > 0) && (
+              <AttentionStrip
+                attentionKey="low-stock"
+                icon={AlertTriangle}
+                message={
+                  stats.outOfStock > 0
+                    ? `${stats.outOfStock} نفد · ${stats.lowStock} منخفض — راجع الكميات وحدّث المخزون`
+                    : `${stats.lowStock} ${stats.lowStock === 1 ? 'منتج' : 'منتجات'} بمخزون منخفض — حدّث الكميات من القائمة`
+                }
+              />
+            )}
+
             <section className="rounded-2xl border border-border/50 bg-card shadow-sm overflow-hidden min-w-0">
               <div className="px-3 sm:px-4 pt-3 sm:pt-3.5 pb-2 border-b border-border/40 bg-muted/20">
                 <p className="text-[11px] font-semibold text-muted-foreground mb-2 px-0.5">
@@ -621,30 +559,11 @@ const Products = () => {
               <div className="space-y-3 min-w-0">
                 <ProductsDataTable
                   products={pagedVisibleProducts}
-                  selectedIds={selectedIds}
-                  onToggleSelect={toggleSelect}
-                  onToggleSelectAll={toggleSelectAll}
-                  allSelected={
-                    selectedIds.size === visibleProducts.length && visibleProducts.length > 0
-                  }
                   onDuplicate={handleDuplicate}
                   onPublish={handlePublish}
                   onArchive={handleArchive}
                   onRestore={handleRestore}
                   onRestock={openStockDialog}
-                />
-
-                <ProductsBulkBar
-                  selectedCount={selectedIds.size}
-                  totalVisible={visibleProducts.length}
-                  onSelectAll={toggleSelectAll}
-                  onClearSelection={() => setSelectedIds(new Set())}
-                  onBulkPublish={() => void runBulkLifecycle('publish')}
-                  onBulkArchive={() => void runBulkLifecycle('archive')}
-                  onBulkExport={() =>
-                    handleExport(visibleProducts.filter((p) => selectedIds.has(p.id)))
-                  }
-                  processing={bulkProcessing}
                 />
 
                 {(hasMoreToRender || catalog.hasMore) && (

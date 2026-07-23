@@ -12,11 +12,10 @@ import {
   updateOrderStatus,
   ORDERS_PER_PAGE,
   type WorkflowTabCounts,
-  type OrdersPageResult,
 } from '@/services/orderService';
 import {
   DEFAULT_ORDER_FILTERS,
-  matchesWorkflowTab,
+  filterOrdersList,
   OrderListFilters,
   OrderWorkflowTab,
 } from '@/utils/orderWorkflowUtils';
@@ -36,33 +35,33 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
   const { isReady, hydrationVersion } = useStoreHydration();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(0);
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
   const [tabCounts, setTabCounts] = useState<WorkflowTabCounts>(EMPTY_TAB_COUNTS);
   const knownOrderIdsRef = useRef<Set<string>>(new Set());
   const lastVisibilityRefetchRef = useRef(0);
-  /** Keyset cursor chain: page N uses cursor stored at page N-1 */
-  const pageCursorsRef = useRef<Map<number, string>>(new Map());
 
   const filterKey = useMemo(() => serializeOrderFilters(listFilters), [listFilters]);
 
-  const resetCursorChain = useCallback(() => {
-    pageCursorsRef.current = new Map();
-  }, []);
+  const serverFilters = useMemo(
+    (): OrderListFilters => ({ ...listFilters, workflowTab: 'all' }),
+    [
+      listFilters.search,
+      listFilters.orderStatus,
+      listFilters.paymentStatus,
+      listFilters.deliveryStatus,
+      listFilters.datePreset,
+      listFilters.minValue,
+      listFilters.maxValue,
+    ]
+  );
 
-  const applyOrdersPage = useCallback((result: OrdersPageResult, pageNum: number) => {
-    setOrders(result.orders);
-    setTotal(result.total);
-    setTotalPages(result.totalPages);
-    setPage(pageNum);
-    result.orders.forEach((o) => knownOrderIdsRef.current.add(o.id));
-  }, []);
+  const serverFilterKey = useMemo(
+    () => serializeOrderFilters(serverFilters),
+    [serverFilters]
+  );
 
-  const readCachedPage = useCallback(
-    (ownerId: string, pageNum: number, cursor: string | null): OrdersPageResult | null =>
-      cache.get<OrdersPageResult>(CacheKeys.ordersFiltered(ownerId, filterKey, pageNum, cursor ?? '')),
-    [filterKey]
+  const visibleOrders = useMemo(
+    () => filterOrdersList(orders, listFilters),
+    [orders, listFilters]
   );
 
   const loadTabCounts = useCallback(async () => {
@@ -82,48 +81,44 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
     }
   }, [user?.id, filterKey, listFilters]);
 
-  const loadPage = useCallback(
-    async (pageNum: number) => {
-      const ownerId = user?.id;
-      if (!ownerId) {
-        setOrders([]);
-        setTotal(0);
-        setTotalPages(1);
-        setLoading(false);
-        resetCursorChain();
-        return;
-      }
+  const loadAllOrders = useCallback(async () => {
+    const ownerId = user?.id;
+    if (!ownerId) {
+      setOrders([]);
+      setLoading(false);
+      return;
+    }
 
-      const cursor = pageNum > 0 ? pageCursorsRef.current.get(pageNum - 1) ?? null : null;
-      const warmed = readCachedPage(ownerId, pageNum, cursor);
-      if (warmed) {
-        applyOrdersPage(warmed, pageNum);
-        if (warmed.nextCursor) pageCursorsRef.current.set(pageNum, warmed.nextCursor);
-        setLoading(false);
-        return;
-      }
+    setLoading(true);
 
-      setLoading(true);
-      const dedupKey = `fetch-orders-${ownerId}-${filterKey}-${pageNum}-${cursor ?? 'start'}`;
+    try {
+      const allOrders: Order[] = [];
+      let cursor: string | null = null;
+      let pageNum = 0;
 
-      try {
+      while (true) {
+        const dedupKey = `fetch-orders-${ownerId}-${serverFilterKey}-${pageNum}-${cursor ?? 'start'}`;
         const result = await dedup(dedupKey, () =>
-          fetchOrdersFiltered(ownerId, listFilters, pageNum, ORDERS_PER_PAGE, cursor)
+          fetchOrdersFiltered(ownerId, serverFilters, pageNum, ORDERS_PER_PAGE, cursor)
         );
 
-        applyOrdersPage(result, pageNum);
-        if (result.nextCursor) {
-          pageCursorsRef.current.set(pageNum, result.nextCursor);
-        }
-      } catch (err) {
-        console.error('[useOrders] load failed:', err);
-        toast.error('تعذر تحميل الطلبات');
-      } finally {
-        setLoading(false);
+        allOrders.push(...result.orders);
+
+        if (!result.nextCursor || result.orders.length === 0) break;
+
+        cursor = result.nextCursor;
+        pageNum += 1;
       }
-    },
-    [user?.id, filterKey, listFilters, readCachedPage, applyOrdersPage, resetCursorChain]
-  );
+
+      setOrders(allOrders);
+      allOrders.forEach((o) => knownOrderIdsRef.current.add(o.id));
+    } catch (err) {
+      console.error('[useOrders] load failed:', err);
+      toast.error('تعذر تحميل الطلبات');
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, serverFilterKey, serverFilters]);
 
   useEffect(() => {
     if (!isReady) return;
@@ -132,10 +127,8 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
 
   useEffect(() => {
     if (!isReady) return;
-    resetCursorChain();
-    setPage(0);
-    void loadPage(0);
-  }, [isReady, hydrationVersion, loadPage, resetCursorChain]);
+    void loadAllOrders();
+  }, [isReady, hydrationVersion, loadAllOrders]);
 
   useEffect(() => {
     const onVisible = () => {
@@ -144,20 +137,12 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
       if (now - lastVisibilityRefetchRef.current < VISIBILITY_REFETCH_MS) return;
       lastVisibilityRefetchRef.current = now;
       flushOrderListCache(user.id);
-      void loadPage(page);
+      void loadAllOrders();
       void loadTabCounts();
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [loadPage, loadTabCounts, page, user?.id]);
-
-  const goToPage = useCallback(
-    (next: number) => {
-      const clamped = Math.max(0, Math.min(next, totalPages - 1));
-      if (clamped !== page && !loading) void loadPage(clamped);
-    },
-    [page, totalPages, loading, loadPage]
-  );
+  }, [loadAllOrders, loadTabCounts, user?.id]);
 
   const updateOrderStatusLocal = async (
     orderId: string,
@@ -186,11 +171,6 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
           ...(newStatus === 'completed' ? { deliveryStatus: 'delivered' } : {}),
         };
 
-        if (!matchesWorkflowTab(updated, listFilters.workflowTab)) {
-          setTotal((count) => Math.max(0, count - 1));
-          return prev.filter((o) => o.id !== orderId);
-        }
-
         return prev.map((o) => (o.id === orderId ? updated : o));
       });
       flushOrderCache(ownerId);
@@ -204,10 +184,9 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
 
   const refetch = useCallback(() => {
     if (user?.id) flushOrderCache(user.id);
-    resetCursorChain();
-    void loadPage(page);
+    void loadAllOrders();
     void loadTabCounts();
-  }, [loadPage, loadTabCounts, page, user?.id, resetCursorChain]);
+  }, [loadAllOrders, loadTabCounts, user?.id]);
 
   const isNewOrder = useCallback((orderId: string) => {
     return !knownOrderIdsRef.current.has(orderId);
@@ -219,35 +198,16 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
 
   return useMemo(
     () => ({
-      orders,
+      orders: visibleOrders,
       updateOrderStatus: updateOrderStatusLocal,
       loading,
-      page,
-      total,
-      totalPages,
+      total: visibleOrders.length,
       tabCounts,
-      goToPage,
       refetch,
       isNewOrder,
       markOrderKnown,
-      /** @deprecated use goToPage */
-      hasMore: page < totalPages - 1,
-      /** @deprecated use goToPage */
-      loadMore: () => goToPage(page + 1),
     }),
-    [
-      orders,
-      updateOrderStatusLocal,
-      loading,
-      page,
-      total,
-      totalPages,
-      tabCounts,
-      goToPage,
-      refetch,
-      isNewOrder,
-      markOrderKnown,
-    ]
+    [visibleOrders, updateOrderStatusLocal, loading, tabCounts, refetch, isNewOrder, markOrderKnown]
   );
 };
 

@@ -15,6 +15,9 @@ import {
   RateLimitExceededError,
 } from '@/lib/security/rateLimiter';
 import type { MarketingAttribution } from '@/lib/attribution';
+import { getMetaBrowserContext } from '@/lib/meta/cookies';
+import { purchaseEventId } from '@/lib/meta/eventIds';
+import { buildMetaPurchaseContents } from '@/lib/meta/purchasePayload';
 import { enqueueCacheInvalidation, enqueueMetaConversion } from '@/background/enqueue';
 import { assertMerchantOwner } from '@/lib/tenantGuard';
 import {
@@ -179,14 +182,26 @@ export const createOrder = async (
         }
 
         if (storeSlug?.trim() && !wasIdempotent) {
+          const metaCtx = typeof window !== 'undefined' ? getMetaBrowserContext(storeSlug) : { fbp: null, fbc: null, eventSourceUrl: null };
+          const purchaseLines = buildMetaPurchaseContents(
+            order.items.map((item) => ({ productId: item.product.id, quantity: item.quantity }))
+          );
           enqueueMetaConversion({
             storeSlug: storeSlug.trim().toLowerCase(),
             orderId,
+            eventId: purchaseEventId(orderId),
             value: Number(data.total_amount ?? order.total),
             currency: 'IQD',
-            contentIds: order.items.map((item) => item.product.id),
+            contentIds: purchaseLines.contentIds,
+            contents: purchaseLines.contents,
+            numItems: purchaseLines.numItems,
             customerPhone: order.customerInfo.phone || null,
-            eventSourceUrl: typeof window !== 'undefined' ? window.location.href : null,
+            customerName: order.customerInfo.name?.trim() || null,
+            customerGovernorate: order.customerInfo.governorate?.trim() || null,
+            externalId: orderId,
+            eventSourceUrl: metaCtx.eventSourceUrl || null,
+            fbp: metaCtx.fbp,
+            fbc: metaCtx.fbc,
           });
         }
 

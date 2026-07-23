@@ -1,9 +1,10 @@
 import { Order } from '@/types';
 import { getDeliveryStatusLabel, DeliveryStatus } from '@/utils/deliveryUtils';
 import { getPaymentStatusLabel, PaymentStatus } from '@/utils/paymentUtils';
-import { isToday, isYesterday, isThisWeek, isThisMonth } from 'date-fns';
+import { isToday, isYesterday, isThisWeek, isThisMonth, format } from 'date-fns';
 
-export type OrderWorkflowTab = 'new' | 'completed' | 'cancelled';
+export type OrderWorkflowCategory = 'new' | 'completed' | 'cancelled';
+export type OrderWorkflowTab = OrderWorkflowCategory | 'all';
 
 export type OrderDatePreset = 'all' | 'today' | 'yesterday' | 'week' | 'month';
 
@@ -20,7 +21,7 @@ export interface OrderListFilters {
 
 export const DEFAULT_ORDER_FILTERS: OrderListFilters = {
   search: '',
-  workflowTab: 'new',
+  workflowTab: 'all',
   orderStatus: 'all',
   paymentStatus: 'all',
   deliveryStatus: 'all',
@@ -28,6 +29,7 @@ export const DEFAULT_ORDER_FILTERS: OrderListFilters = {
 };
 
 export const WORKFLOW_TABS: { id: OrderWorkflowTab; label: string }[] = [
+  { id: 'all', label: 'الكل' },
   { id: 'new', label: 'جديد' },
   { id: 'completed', label: 'مكتمل' },
   { id: 'cancelled', label: 'ملغي' },
@@ -36,7 +38,7 @@ export const WORKFLOW_TABS: { id: OrderWorkflowTab; label: string }[] = [
 /** Maps legacy RPC workflow keys to the simplified 3-tab model. */
 export const normalizeWorkflowTabCounts = (
   raw: Partial<Record<string, number>> | null | undefined
-): Record<OrderWorkflowTab, number> => {
+): Record<OrderWorkflowCategory, number> => {
   if (!raw) {
     return { new: 0, completed: 0, cancelled: 0 };
   }
@@ -59,6 +61,17 @@ export const normalizeWorkflowTabCounts = (
 export const formatOrderNumber = (orderId: string): string =>
   `#${orderId.replace(/-/g, '').slice(0, 8).toUpperCase()}`;
 
+export const formatOrderDateTime = (value?: string): string => {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  try {
+    return format(date, 'yyyy-MM-dd · hh:mm a');
+  } catch {
+    return value;
+  }
+};
+
 export const normalizeOrderPhone = (phone: string): string =>
   phone.replace(/\D/g, '');
 
@@ -68,7 +81,7 @@ export const getEffectivePaymentStatus = (order: Order): string =>
 export const getEffectiveDeliveryStatus = (order: Order): string =>
   order.deliveryStatus || 'pending';
 
-export const getOrderWorkflowCategory = (order: Order): OrderWorkflowTab => {
+export const getOrderWorkflowCategory = (order: Order): OrderWorkflowCategory => {
   if (order.status === 'cancelled') return 'cancelled';
 
   const paymentStatus = getEffectivePaymentStatus(order);
@@ -82,7 +95,7 @@ export const getOrderWorkflowCategory = (order: Order): OrderWorkflowTab => {
 };
 
 export const matchesWorkflowTab = (order: Order, tab: OrderWorkflowTab): boolean =>
-  getOrderWorkflowCategory(order) === tab;
+  tab === 'all' || getOrderWorkflowCategory(order) === tab;
 
 const matchesDatePreset = (orderDate: string, preset: OrderDatePreset): boolean => {
   if (preset === 'all') return true;
@@ -147,8 +160,8 @@ export const filterOrdersList = (
   });
 };
 
-export const countOrdersByWorkflowTab = (orders: Order[]): Record<OrderWorkflowTab, number> => {
-  const counts: Record<OrderWorkflowTab, number> = {
+export const countOrdersByWorkflowTab = (orders: Order[]): Record<OrderWorkflowCategory, number> => {
+  const counts: Record<OrderWorkflowCategory, number> = {
     new: 0,
     completed: 0,
     cancelled: 0,
@@ -178,7 +191,7 @@ export const getOrderStatusLabel = (status: Order['status']): string => {
 export const getWorkflowTabLabel = (tab: OrderWorkflowTab): string =>
   WORKFLOW_TABS.find((t) => t.id === tab)?.label ?? tab;
 
-export type SimplifiedOrderStatusKey = OrderWorkflowTab;
+export type SimplifiedOrderStatusKey = OrderWorkflowCategory;
 
 /** Single merchant-facing status for list cards (one badge instead of order/payment/delivery). */
 export const getSimplifiedOrderDisplayStatus = (

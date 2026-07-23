@@ -1,5 +1,4 @@
-import { supabase } from '@/repositories/base';
-import { supabaseRpc } from '@/lib/supabaseRpcClient';
+import { supabase, callWriteRpc, callReadRpc } from '@/repositories/base';
 
 export function productsTable() {
   return supabase.from('products');
@@ -10,32 +9,32 @@ export async function pingProductsTable() {
 }
 
 export async function rpcCreateMerchantProductWithStock(args: Record<string, unknown>) {
-  return supabaseRpc<{ success?: boolean; product_id?: string; error?: string; detail?: string }>(
+  return callWriteRpc<{ success?: boolean; product_id?: string; error?: string; detail?: string }>(
     'create_merchant_product_with_stock',
     args
   );
 }
 
 export async function rpcRecordProductInitialStock(args: Record<string, unknown>) {
-  return supabaseRpc('record_product_initial_stock', args);
+  return callWriteRpc('record_product_initial_stock', args);
 }
 
 export async function rpcPatchMerchantProduct(args: Record<string, unknown>) {
-  return supabaseRpc('patch_merchant_product', args);
+  return callWriteRpc('patch_merchant_product', args);
 }
 
 export async function rpcPublishOwnerProduct(args: Record<string, unknown>) {
-  return supabaseRpc('publish_owner_product', args);
+  return callWriteRpc('publish_owner_product', args);
 }
 
 export async function rpcRecordInitialStockMovements(args: Record<string, unknown>) {
-  return supabaseRpc('record_initial_stock_movements', args);
+  return callWriteRpc('record_initial_stock_movements', args);
 }
 
 export async function rpcLookupProductIdempotency(args: Record<string, unknown>) {
-  return supabaseRpc<string>('lookup_product_idempotency', args);
+  return callReadRpc<string>('lookup_product_idempotency', args);
 }
 
 export async function rpcRecordProductIdempotency(args: Record<string, unknown>) {
-  return supabaseRpc('record_product_idempotency', args);
+  return callWriteRpc('record_product_idempotency', args);
 }

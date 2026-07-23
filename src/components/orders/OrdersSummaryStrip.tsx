@@ -27,6 +27,11 @@ const OrdersSummaryStrip = ({
     value: string | number;
     emphasis?: boolean;
   }[] = [
+    {
+      tab: 'all',
+      label: 'الكل',
+      value: (tabCounts.new ?? 0) + (tabCounts.completed ?? 0) + (tabCounts.cancelled ?? 0) || stats.total,
+    },
     { tab: 'new', label: 'جديد', value: tabCounts.new ?? stats.newOrders, emphasis: (tabCounts.new ?? 0) > 0 },
     { tab: 'completed', label: 'مكتمل', value: tabCounts.completed ?? stats.delivered },
     { tab: 'cancelled', label: 'ملغي', value: tabCounts.cancelled ?? 0 },

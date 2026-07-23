@@ -131,6 +131,7 @@ const applyWorkflowTabFilter = (
   query: ReturnType<typeof ordersTable>,
   workflowTab: OrderWorkflowTab
 ) => {
+  if (workflowTab === 'all') return query;
   if (workflowTab === 'new') return query.eq('status', 'pending');
   if (workflowTab === 'completed') return query.eq('status', 'completed');
   if (workflowTab === 'cancelled') return query.eq('status', 'cancelled');
@@ -291,7 +292,12 @@ export const fetchWorkflowTabCounts = async (
 
   const defaultKey = serializeOrderFilters({ ...DEFAULT_ORDER_FILTERS, workflowTab: 'new' });
   if (baseKey === defaultKey) {
-    const batch = cache.get<DashboardBatchPayload>(CacheKeys.dashboardBatch(ownerId));
+    const cachedBatch = cache.get<DashboardBatchPayload>(CacheKeys.dashboardBatch(ownerId));
+    if (cachedBatch?.workflowCounts) {
+      cache.set(cacheKey, cachedBatch.workflowCounts, CacheTTL.SHORT, CacheTTL.STALE);
+      return cachedBatch.workflowCounts;
+    }
+    const batch = await fetchDashboardStatisticsBatch(ownerId);
     if (batch?.workflowCounts) {
       cache.set(cacheKey, batch.workflowCounts, CacheTTL.SHORT, CacheTTL.STALE);
       return batch.workflowCounts;
@@ -315,7 +321,7 @@ export const fetchWorkflowTabCounts = async (
   const { getDateRangeForPreset } = await import('@/utils/orderQueryBuilder');
 
   let query = ordersTable()
-    .select(ORDER_LIST_SELECT)
+    .select(WORKFLOW_COUNT_FALLBACK_SELECT)
     .eq('owner_id', ownerId);
 
   if (filters.orderStatus !== 'all') query = query.eq('status', filters.orderStatus);
@@ -370,7 +376,7 @@ export const fetchRecentOrders = async (ownerId: string, limit = 5): Promise<Ord
     );
     const newOrders = mapped.filter((order) => order.status === 'pending');
     const enriched = await enrichOrdersWithProductImages(newOrders, ownerId, { skip: true });
-    cache.set(cacheKey, enriched, CacheTTL.MEDIUM, CacheTTL.STALE);
+    cache.set(cacheKey, enriched, CacheTTL.SHORT, CacheTTL.STALE);
     return enriched;
   }
 
@@ -385,7 +391,7 @@ export const fetchRecentOrders = async (ownerId: string, limit = 5): Promise<Ord
 
   const mapped = rows.map((row) => mapDbOrder(row as Record<string, unknown>));
   const enriched = await enrichOrdersWithProductImages(mapped, ownerId, { skip: true });
-  cache.set(cacheKey, enriched, CacheTTL.MEDIUM, CacheTTL.STALE);
+  cache.set(cacheKey, enriched, CacheTTL.SHORT, CacheTTL.STALE);
   return enriched;
 };
 
@@ -419,6 +425,10 @@ export const ORDERS_STATS_CAP = 5000;
 
 export const ORDER_STATS_SELECT =
   'id, status, total_amount, payment_status, delivery_status, created_at';
+
+/** Workflow tab count fallback — no nested order_items (avoids expensive join for counting only). */
+export const WORKFLOW_COUNT_FALLBACK_SELECT =
+  'id, status, total_amount, payment_status, delivery_status, created_at, customer_name, customer_phone';
 
 export type { OrderDashboardStats, WorkflowTabCounts } from '@/types/orders';
 
