@@ -25,32 +25,33 @@ const ExpandableSection = ({
     if (contentRef.current) {
       setHeight(isOpen ? contentRef.current.scrollHeight : 0);
     }
-  }, [isOpen]);
+  }, [isOpen, children]);
 
   return (
-    <div className={cn('sf-card overflow-hidden', className)}>
+    <div className={cn('sf-pdp-expand', className)}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between gap-4 px-6 py-5 text-right hover:bg-muted/20 transition-colors"
+        className="sf-pdp-expand-trigger"
+        aria-expanded={isOpen}
       >
         <ChevronDown
           className={cn(
-            'h-5 w-5 text-muted-foreground shrink-0 transition-transform duration-300',
+            'h-4 w-4 text-muted-foreground shrink-0 transition-transform duration-200',
             isOpen && 'rotate-180'
           )}
         />
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2.5 min-w-0">
           {icon}
           <h3 className="text-base font-bold text-foreground">{title}</h3>
         </div>
       </button>
       <div
         ref={contentRef}
-        className="overflow-hidden transition-all duration-300 ease-in-out"
+        className="overflow-hidden transition-[height] duration-250 ease-out"
         style={{ height: height !== undefined ? `${height}px` : 'auto' }}
       >
-        <div className="px-6 pb-6 pt-0 text-right border-t border-border/20">{children}</div>
+        <div className="pb-5 pt-1 text-right">{children}</div>
       </div>
     </div>
   );

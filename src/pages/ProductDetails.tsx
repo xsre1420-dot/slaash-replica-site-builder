@@ -31,19 +31,23 @@ import SuggestedProducts from "@/components/product-details/SuggestedProducts";
 import ScrollReveal from "@/components/product-details/ScrollReveal";
 import { useStoreVisitTracking } from "@/hooks/useStoreVisitTracking";
 import { useProductViewTracking } from "@/hooks/useProductViewTracking";
+import StoreEmptyState from '@/components/store/StoreEmptyState';
+import { PackageX } from 'lucide-react';
 
 const ProductDetailsSkeleton = () => (
-  <div className="sf-page">
+  <div className="sf-page pb-28 lg:pb-16">
     <ProductHeader />
-    <div className="sf-container py-8 lg:py-12">
-      <div className="grid lg:grid-cols-2 gap-10 xl:gap-16">
-        <div className="aspect-[4/5] sf-skeleton rounded-3xl" />
-        <div className="space-y-6">
-          <div className="h-6 sf-skeleton w-1/3 mr-auto rounded-lg" />
-          <div className="h-10 sf-skeleton w-full rounded-xl" />
-          <div className="h-16 sf-skeleton w-2/3 mr-auto rounded-2xl" />
-          <div className="h-32 sf-skeleton w-full rounded-2xl" />
-          <div className="h-14 sf-skeleton w-full rounded-2xl" />
+    <div className="sf-container py-6 lg:py-10">
+      <div className="grid lg:grid-cols-2 xl:grid-cols-[1.08fr_0.92fr] gap-8 xl:gap-12">
+        <div className="aspect-[4/5] sm:aspect-square lg:aspect-[4/5] sf-skeleton rounded-2xl" />
+        <div className="space-y-5">
+          <div className="h-4 sf-skeleton w-1/3 mr-auto rounded-md" />
+          <div className="h-8 sf-skeleton w-full rounded-lg" />
+          <div className="h-10 sf-skeleton w-2/3 mr-auto rounded-lg" />
+          <div className="h-6 sf-skeleton w-1/2 mr-auto rounded-md" />
+          <div className="h-24 sf-skeleton w-full rounded-xl" />
+          <div className="h-12 sf-skeleton w-full rounded-xl" />
+          <div className="h-12 sf-skeleton w-full rounded-xl" />
         </div>
       </div>
     </div>
@@ -176,13 +180,17 @@ const ProductDetails = () => {
   if (productLoadStatus === "not_found") {
     const storeHome = getStoreHomePath(isTenantMode ? storeSlug : null);
     return (
-      <div className="sf-page flex flex-col items-center justify-center p-8 text-center min-h-[70vh]">
-        <div className="w-24 h-24 mb-6 rounded-3xl bg-muted/50 flex items-center justify-center text-4xl">📦</div>
-        <h1 className="text-xl font-bold text-foreground mb-2">المنتج غير موجود</h1>
-        <p className="text-sm text-muted-foreground mb-8 max-w-sm">ربما تم حذف المنتج أو أن الرابط غير صحيح</p>
-        <button type="button" onClick={() => navigate(storeHome)} className="sf-btn-primary px-8">
-          العودة للمتجر
-        </button>
+      <div className="sf-page min-h-[70vh] flex items-center justify-center p-6">
+        <StoreEmptyState
+          icon={<PackageX className="w-8 h-8" strokeWidth={1.75} />}
+          title="المنتج غير موجود"
+          description="ربما تم حذف المنتج أو أن الرابط غير صحيح"
+          action={
+            <button type="button" onClick={() => navigate(storeHome)} className="sf-btn-primary px-8 h-11">
+              العودة للمتجر
+            </button>
+          }
+        />
       </div>
     );
   }
@@ -208,8 +216,8 @@ const ProductDetails = () => {
         <MarketingScripts storeSlug={isTenantMode ? storeSlug : undefined} storeOwnerId={isTenantMode ? tenant.storeInfo?.ownerId : user?.id} disabled={!isTenantMode} />
         <ProductHeader />
 
-        <div className="sf-container py-6 lg:py-10">
-          <div className="grid lg:grid-cols-2 xl:grid-cols-[1.08fr_0.92fr] gap-8 xl:gap-16 items-start">
+        <div className="sf-container py-5 lg:py-9">
+          <div className="grid lg:grid-cols-2 xl:grid-cols-[1.08fr_0.92fr] gap-6 lg:gap-10 xl:gap-14 items-start">
             <ScrollReveal delay={0} className="lg:sticky lg:top-24 lg:self-start">
               <ProductImages
                 key={`${selectedColor || "default"}-${galleryImages.join("|")}`}
@@ -250,7 +258,7 @@ const ProductDetails = () => {
             </ScrollReveal>
           </div>
 
-          <div className="mt-16 lg:mt-24 space-y-8 lg:space-y-12 max-w-4xl mr-auto ml-0">
+          <div className="mt-12 lg:mt-16 space-y-10 lg:space-y-12 max-w-3xl mr-auto ml-0">
             <ScrollReveal delay={120}>
               <ProductSpecifications product={product} />
             </ScrollReveal>
@@ -262,7 +270,7 @@ const ProductDetails = () => {
             {returnPolicy && (
               <ScrollReveal delay={200}>
                 <ExpandableSection title="سياسة الإرجاع والشحن" defaultOpen={false}>
-                  <p className="text-sm text-muted-foreground leading-[1.85] whitespace-pre-wrap">{returnPolicy}</p>
+                  <p className="text-sm text-muted-foreground leading-[1.8] whitespace-pre-wrap">{returnPolicy}</p>
                 </ExpandableSection>
               </ScrollReveal>
             )}

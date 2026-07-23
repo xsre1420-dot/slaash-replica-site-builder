@@ -16,12 +16,12 @@ const SpecRow = ({
   label: string;
   value: string;
 }) => (
-  <div className="flex items-center justify-between gap-4 py-3.5 border-b border-border/30 last:border-0">
-    <div className="flex items-center gap-2 text-muted-foreground shrink-0">
-      <span className="text-sm font-medium text-foreground">{label}</span>
-      <Icon className="w-4 h-4 text-primary/70" strokeWidth={2} />
+  <div className="flex items-center justify-between gap-4 py-3 border-b border-border/25 last:border-0">
+    <div className="flex items-center gap-2 min-w-0">
+      <Icon className="w-3.5 h-3.5 text-primary/60 shrink-0" strokeWidth={2} />
+      <span className="text-sm text-muted-foreground">{label}</span>
     </div>
-    <span className="text-sm text-muted-foreground tabular-nums text-left" dir="ltr">
+    <span className="text-sm font-medium text-foreground tabular-nums text-left" dir="ltr">
       {value}
     </span>
   </div>
@@ -42,8 +42,8 @@ const ProductSpecifications = ({ product, className }: ProductSpecificationsProp
   if (rows.length === 0) return null;
 
   return (
-    <section className={cn('sf-card p-5 sm:p-6', className)}>
-      <h2 className="sf-section-title text-lg mb-4">المواصفات</h2>
+    <section className={cn('sf-pdp-open-block', className)}>
+      <h2 className="sf-pdp-section-title">المواصفات</h2>
       <div dir="rtl">{rows.map((row) => <SpecRow key={row.label} {...row} />)}</div>
     </section>
   );

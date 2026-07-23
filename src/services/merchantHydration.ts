@@ -14,8 +14,10 @@ import {
   fetchStoreByUserId,
   fetchStoreSettings,
   bootstrapOwnerStore,
+  ensureMerchantStoreSlug,
 } from '@/services/storeService';
 import { fetchOrdersFiltered, ORDERS_PER_PAGE, type OrdersPageResult } from '@/services/orderService';
+import { fetchDashboardStatisticsBatch } from '@/services/dashboardStatsService';
 import { logger } from '@/lib/observability';
 import { fetchPlatformHealth } from '@/services/platformHealthService';
 import { DEFAULT_ORDER_FILTERS } from '@/utils/orderWorkflowUtils';
@@ -36,7 +38,10 @@ const readCachedProducts = (userId: string): Product[] =>
 const readCachedCategories = (userId: string): Category[] =>
   cache.get<Category[]>(CacheKeys.categories(userId)) ?? [];
 
-export const hydrateMerchantStore = async (userId: string): Promise<HydrationResult> => {
+export const hydrateMerchantStore = async (
+  userId: string,
+  options?: { username?: string; storeName?: string }
+): Promise<HydrationResult> => {
   logger.info('merchant.hydrate.start', { userId });
 
   void fetchPlatformHealth(false).then((health) => {
@@ -49,7 +54,18 @@ export const hydrateMerchantStore = async (userId: string): Promise<HydrationRes
     }
   });
 
+  if (!cache.has(CacheKeys.dashboardBatch(userId))) {
+    void fetchDashboardStatisticsBatch(userId).catch(() => undefined);
+  }
+
   const bootstrap = await bootstrapOwnerStore(userId);
+
+  void ensureMerchantStoreSlug(userId, {
+    username: options?.username,
+    storeName: options?.storeName,
+  }).catch((error) => {
+    logger.warn('store.slug.ensure_deferred_failed', { userId, error });
+  });
 
   const needsStore = !cache.has(CacheKeys.store(userId));
   const needsSettings = !cache.has(CacheKeys.storeSettings(userId));

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { listPublicStoreSlugs } from '@/services/storeService';
 import { withRateLimit } from '@/lib/security/rateLimiter';
+import { getPublicAppOrigin } from '@/lib/storeUrl';
 
 /**
  * Phase 13: Dynamic sitemap — lists all public store slugs
@@ -43,7 +44,7 @@ ${urls}
 const Sitemap = () => {
   useEffect(() => {
     let cancelled = false;
-    const base = window.location.origin;
+    const base = getPublicAppOrigin();
 
     void generateSitemapXml(base).then((xml) => {
       if (cancelled) return;

@@ -12,22 +12,22 @@ const trustItems = [
 
 interface ProductTrustStripProps {
   className?: string;
+  style?: React.CSSProperties;
 }
 
-const ProductTrustStrip = ({ className }: ProductTrustStripProps) => (
+const ProductTrustStrip = ({ className, style }: ProductTrustStripProps) => (
   <div
     className={cn(
-      'grid grid-cols-2 sm:grid-cols-3 gap-3 rounded-2xl border border-border/40 bg-muted/20 p-4',
+      'flex flex-wrap gap-x-4 gap-y-2 pt-3 border-t border-border/25',
       className
     )}
+    style={style}
   >
     {trustItems.map(({ icon: Icon, label }) => (
-      <div key={label} className="flex items-center gap-2.5 min-w-0">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <Icon className="h-4 w-4" strokeWidth={2} />
-        </div>
-        <span className="text-xs font-medium text-foreground leading-tight">{label}</span>
-      </div>
+      <span key={label} className="sf-pdp-trust-item">
+        <Icon className="h-3.5 w-3.5 text-primary/70 shrink-0" strokeWidth={2} />
+        {label}
+      </span>
     ))}
   </div>
 );

@@ -19,9 +19,9 @@ interface ProductPriceDisplayProps {
 
 const sizeClasses = {
   sm: {
-    list: 'text-[11px] leading-none',
-    sale: 'text-sm font-bold leading-tight',
-    badge: 'text-[10px] px-1.5 py-0.5',
+    list: 'text-[10px] leading-none',
+    sale: 'text-sm font-bold leading-tight tracking-tight',
+    badge: 'text-[9px] px-1.5 py-px font-semibold',
   },
   md: {
     list: 'text-xs leading-none',
@@ -30,7 +30,7 @@ const sizeClasses = {
   },
   lg: {
     list: 'text-sm leading-none',
-    sale: 'text-3xl sm:text-4xl font-bold leading-none',
+    sale: 'text-2xl sm:text-3xl font-bold leading-none tracking-tight',
     badge: 'text-xs px-2.5 py-1',
   },
 } as const;
@@ -60,7 +60,7 @@ const ProductPriceDisplay = ({
       )}
     >
       {onSale && list != null && (
-        <span className={cn('text-muted-foreground/75 line-through tabular-nums font-medium', s.list)}>
+        <span className={cn('text-muted-foreground/60 line-through tabular-nums font-normal', s.list)}>
           {formatStorePrice(list)}
         </span>
       )}

@@ -8,15 +8,12 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/layout/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
 import { useOrders } from '@/hooks/useOrders';
 import { useAuth } from '@/context/AuthContext';
 import { useRealtimeOrders, OrderRealtimeEvent } from '@/hooks/useRealtimeOrders';
 import OrdersToolbar, { DEFAULT_ORDER_FILTERS } from '@/components/orders/OrdersToolbar';
 import OrdersSummaryStrip from '@/components/orders/OrdersSummaryStrip';
 import OrdersDataTable from '@/components/orders/OrdersDataTable';
-import OrdersBulkBar from '@/components/orders/OrdersBulkBar';
-import OrdersPagination from '@/components/orders/OrdersPagination';
 import OrderNotificationsCenter from '@/components/orders/OrderNotificationsCenter';
 import { useOrderNotifications, eventToNotification } from '@/hooks/useOrderNotifications';
 import {
@@ -26,13 +23,10 @@ import {
 import { useOrderDashboardStats } from '@/hooks/useOrderDashboardStats';
 import { isLocalOrderMutationEcho } from '@/lib/localMutationGuard';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { ORDERS_PER_PAGE } from '@/services/orderService';
 import { toast } from 'sonner';
-import { copyStorePublicUrl } from '@/lib/storeUrl';
+import { copyStorePublicUrl, getStoreLinkShareHint } from '@/lib/storeUrl';
 import { useScrollPersistence } from '@/hooks/useScrollPersistence';
 import { ATTENTION_PARAM } from '@/lib/attentionHighlight';
-import { canTransitionOrderStatus } from '@/utils/orderStatusUtils';
-import { runWithConcurrency } from '@/utils/runWithConcurrency';
 
 const Orders = () => {
   const { user } = useAuth();
@@ -51,11 +45,8 @@ const Orders = () => {
     orders,
     updateOrderStatus,
     loading,
-    page,
     total,
-    totalPages,
     tabCounts,
-    goToPage,
     refetch,
     isNewOrder,
     markOrderKnown,
@@ -69,9 +60,6 @@ const Orders = () => {
     clearAll,
     openOrder,
   } = useOrderNotifications(user?.id);
-
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   useScrollPersistence('orders');
 
@@ -152,17 +140,6 @@ const Orders = () => {
     handleRealtimeEvent
   );
 
-  useEffect(() => {
-    setSelectedIds((prev) => {
-      const next = new Set([...prev].filter((id) => orders.some((o) => o.id === id)));
-      return next.size === prev.size ? prev : next;
-    });
-  }, [orders]);
-
-  useEffect(() => {
-    setSelectedIds(new Set());
-  }, [listFilters]);
-
   const updateFilters = (patch: Partial<OrderListFilters>) => {
     setFilters((prev) => ({ ...prev, ...patch }));
   };
@@ -179,56 +156,25 @@ const Orders = () => {
       };
       toast.success(messages[newStatus]);
     }
+    return success;
   };
 
   const handleCopyStoreLink = async () => {
     if (!user?.id) return;
     try {
-      const url = await copyStorePublicUrl(user.id);
+      const url = await copyStorePublicUrl(user.id, {
+        username: user.username,
+        storeName: user.store_name,
+      });
       if (!url) {
         toast.error('حدّد رابط المتجر (slug) من الإعدادات أولاً');
         return;
       }
-      toast.success('تم نسخ رابط المتجر');
+      const hint = getStoreLinkShareHint(url);
+      toast.success('تم نسخ رابط المتجر', hint ? { description: hint, duration: 5000 } : undefined);
     } catch {
       toast.error('فشل في نسخ الرابط');
     }
-  };
-
-  const toggleSelect = (orderId: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(orderId)) next.delete(orderId);
-      else next.add(orderId);
-      return next;
-    });
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedIds.size === orders.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(orders.map((o) => o.id)));
-    }
-  };
-
-  const runBulkStatus = async (status: 'completed' | 'cancelled') => {
-    const targets = orders.filter(
-      (o) => selectedIds.has(o.id) && canTransitionOrderStatus(o.status, status)
-    );
-    if (targets.length === 0) {
-      toast.error('لا توجد طلبات قابلة للتحديث');
-      return;
-    }
-    if (status === 'cancelled' && !confirm(`إلغاء ${targets.length} طلب؟`)) return;
-
-    setBulkProcessing(true);
-    const ok = await runWithConcurrency(targets, 5, (order) =>
-      updateOrderStatus(order.id, status)
-    );
-    setBulkProcessing(false);
-    setSelectedIds(new Set());
-    toast.success(`تم تحديث ${ok} من ${targets.length} طلب`);
   };
 
   const hasActiveFilters =
@@ -262,7 +208,7 @@ const Orders = () => {
         actions={headerActions}
       />
 
-      <div className="ds-page space-y-4 pb-24 sm:pb-6 min-w-0">
+      <div className="ds-page space-y-3 pb-6 min-w-0">
         <OrdersSummaryStrip
           stats={stats}
           tabCounts={tabCounts}
@@ -278,49 +224,22 @@ const Orders = () => {
         />
 
         {loading && orders.length === 0 ? (
-          <div className="space-y-3">
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-20 rounded-2xl" />
-            ))}
+          <div className="rounded-2xl border border-border/60 overflow-hidden bg-card min-w-0">
+            <div className="space-y-0">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-16 rounded-none border-b border-border/30" />
+              ))}
+            </div>
           </div>
         ) : orders.length > 0 ? (
           <section className="space-y-3 min-w-0">
             <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground px-1 gap-2">
               <span>{total} طلب</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 text-xs rounded-lg"
-                onClick={toggleSelectAll}
-              >
-                {selectedIds.size === orders.length ? 'إلغاء التحديد' : 'تحديد الكل'}
-              </Button>
             </div>
 
             <OrdersDataTable
               orders={orders}
               onUpdateStatus={handleStatusChange}
-              selectedIds={selectedIds}
-              onToggleSelect={toggleSelect}
-            />
-
-            <OrdersBulkBar
-              selectedCount={selectedIds.size}
-              totalVisible={orders.length}
-              onSelectAll={toggleSelectAll}
-              onClearSelection={() => setSelectedIds(new Set())}
-              onBulkComplete={() => void runBulkStatus('completed')}
-              onBulkCancel={() => void runBulkStatus('cancelled')}
-              processing={bulkProcessing}
-            />
-
-            <OrdersPagination
-              page={page}
-              totalPages={totalPages}
-              total={total}
-              pageSize={ORDERS_PER_PAGE}
-              loading={loading}
-              onPageChange={goToPage}
             />
 
             {loading && (

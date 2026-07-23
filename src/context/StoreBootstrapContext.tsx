@@ -58,7 +58,11 @@ export const StoreBootstrapProvider = ({ children }: { children: ReactNode }) =>
   const hydratedForRef = useRef<string | null>(null);
   const inflightRef = useRef<Promise<void> | null>(null);
 
-  const runHydration = useCallback(async (userId: string, force = false) => {
+  const runHydration = useCallback(async (
+    userId: string,
+    force = false,
+    profile?: { username?: string; storeName?: string }
+  ) => {
     if (!force && hydratedForRef.current === userId && inflightRef.current) {
       return inflightRef.current;
     }
@@ -79,7 +83,10 @@ export const StoreBootstrapProvider = ({ children }: { children: ReactNode }) =>
           return;
         }
 
-        await hydrateMerchantStore(userId);
+        await hydrateMerchantStore(userId, {
+          username: profile?.username,
+          storeName: profile?.storeName,
+        });
         hydratedForRef.current = userId;
         setHydrationVersion((v) => v + 1);
         setIsReady(true);
@@ -101,8 +108,11 @@ export const StoreBootstrapProvider = ({ children }: { children: ReactNode }) =>
 
   const refresh = useCallback(async () => {
     if (!user?.id) return;
-    await runHydration(user.id, true);
-  }, [user?.id, runHydration]);
+    await runHydration(user.id, true, {
+      username: user.username,
+      storeName: user.store_name,
+    });
+  }, [user?.id, user?.username, user?.store_name, runHydration]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -123,8 +133,11 @@ export const StoreBootstrapProvider = ({ children }: { children: ReactNode }) =>
 
     if (hydratedForRef.current === user.id && isReady) return;
 
-    runHydration(user.id);
-  }, [user?.id, authLoading, location.pathname, runHydration, isReady]);
+    runHydration(user.id, false, {
+      username: user.username,
+      storeName: user.store_name,
+    });
+  }, [user?.id, user?.username, user?.store_name, authLoading, location.pathname, runHydration, isReady]);
 
   const value = useMemo(
     () => ({ isReady, isHydrating, hydrationError, hydrationVersion, refresh }),

@@ -75,6 +75,14 @@ const countGalleryUrls = (product: Pick<Product, 'image' | 'additionalImages'>):
   return seen.size;
 };
 
+/** RPC/detail SELECT already includes gallery, variants, and stock — skip redundant enrich round-trip. */
+function storefrontProductDetailIsComplete(product: Product): boolean {
+  return (
+    product.stockQuantity != null &&
+    Boolean(product.image?.trim() || (product.additionalImages?.length ?? 0) > 0)
+  );
+}
+
 /** Load detail fields from DB — source of truth when RPC payload omits tags/gallery. */
 async function enrichStorefrontProductDetail(
   slug: string,
@@ -148,13 +156,13 @@ async function fetchStorefrontBundleRpc(
 ): Promise<StorefrontBundleCache | null> {
   const normalized = slug.trim().toLowerCase();
   try {
-    const { data, error } = await (supabase as any).rpc('get_storefront_page_bundle', {
+    const { data, error } = await callReadRpc<Record<string, unknown>>('get_storefront_page_bundle', {
       p_slug: normalized,
       p_limit: options.limit ?? 24,
       p_cursor: options.cursor || '',
       p_category: options.category?.trim() || '',
       p_search: options.search?.trim() || '',
-    });
+    }, { preferEdge: true });
     if (error || !data?.store) return null;
     const products = ((data.products as Record<string, unknown>[]) || [])
       .map((row) => safeMapStorefrontProduct(row))
@@ -235,7 +243,7 @@ export async function resolveStoreOwnerBySlug(slug: string): Promise<string | nu
 
   return dedup(resolutionKey, async () => {
     try {
-      const { data: meta, error } = await (supabase as any).rpc('get_store_meta', { p_slug: normalized });
+      const { data: meta, error } = await callReadRpc<{ store?: { owner_id?: string } }>('get_store_meta', { p_slug: normalized }, { preferEdge: true });
       if (!error && meta?.store?.owner_id) {
         const ownerId = String(meta.store.owner_id);
         cache.set(resolutionKey, ownerId, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
@@ -244,6 +252,22 @@ export async function resolveStoreOwnerBySlug(slug: string): Promise<string | nu
       }
     } catch {
       /* RPC may be unavailable */
+    }
+
+    try {
+      const { data: settingsRow } = await supabase
+        .from('store_settings')
+        .select('owner_id')
+        .ilike('store_slug', normalized)
+        .maybeSingle();
+      if (settingsRow?.owner_id) {
+        const ownerId = settingsRow.owner_id as string;
+        cache.set(resolutionKey, ownerId, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+        cache.set(CacheKeys.ownerSlug(ownerId), normalized, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+        return ownerId;
+      }
+    } catch {
+      /* store_settings may be unavailable */
     }
 
     try {
@@ -324,7 +348,7 @@ async function queryProductsByIdsForOwner(
   const uniqueIds = [...new Set(productIds.filter(Boolean))];
 
   try {
-    const { data, error } = await (supabase as any).rpc('get_owner_checkout_products_by_ids', {
+    const { data, error } = await callReadRpc<Record<string, unknown>[]>('get_owner_checkout_products_by_ids', {
       p_owner_id: ownerId,
       p_product_ids: uniqueIds,
     });
@@ -422,12 +446,12 @@ async function queryActiveProductsByOwner(
 /** SECURITY DEFINER RPC — works for anonymous customers (bypasses RLS). */
 async function fetchProductsViaSlugRpc(slug: string): Promise<Product[]> {
   try {
-    const { data, error } = await (supabase as any).rpc('get_store_products_by_slug', {
+    const { data, error } = await callReadRpc<Record<string, unknown>[]>('get_store_products_by_slug', {
       p_slug: slug.trim().toLowerCase(),
-    });
+    }, { preferEdge: true });
 
     if (error) {
-      console.warn('[storefront] get_store_products_by_slug failed:', error.message);
+      console.warn('[storefront] get_store_products_by_slug failed:', error);
       return [];
     }
 
@@ -541,13 +565,13 @@ export async function fetchStorefrontProductsPage(
     if (edgePage) return edgePage;
 
     try {
-      const { data, error } = await (supabase as any).rpc('get_store_products_page', {
+      const { data, error } = await callReadRpc<Record<string, unknown>>('get_store_products_page', {
         p_slug: normalized,
         p_limit: limit,
         p_cursor: cursor,
         p_category: category,
         p_search: search,
-      });
+      }, { preferEdge: true });
 
       if (!error && data?.products !== undefined) {
         const mapped = ((data.products as Record<string, unknown>[]) || [])
@@ -573,7 +597,7 @@ export async function fetchStorefrontProductsPage(
       }
 
       if (error) {
-        console.warn('[storefront] RPC get_store_products_page failed, trying fallbacks:', error.message);
+        console.warn('[storefront] RPC get_store_products_page failed, trying fallbacks:', error);
       }
     } catch (err) {
       console.warn('[storefront] RPC unavailable, trying fallbacks:', err);
@@ -614,7 +638,7 @@ export async function fetchStorefrontProductsPage(
 export async function fetchStorefrontProductById(
   slug: string,
   productId: string,
-  options?: { bypassCache?: boolean }
+  options?: { bypassCache?: boolean; revalidate?: boolean }
 ): Promise<Product | null> {
   const normalized = slug.trim().toLowerCase();
   const id = productId.trim();
@@ -630,8 +654,18 @@ export async function fetchStorefrontProductById(
     return product;
   }
 
-  const cachedProduct = getStorefrontCached<Product>(productCacheKey);
-  if (cachedProduct) return cachedProduct;
+  if (options?.revalidate) {
+    const revalidateFn = async () => {
+      const product = await fetchStorefrontProductByIdUncached(normalized, id);
+      if (product) setStorefrontCached(productCacheKey, product);
+      return product;
+    };
+    const cachedProduct = getStorefrontCached<Product>(productCacheKey, revalidateFn);
+    if (cachedProduct) return cachedProduct;
+  } else {
+    const cachedProduct = getStorefrontCached<Product>(productCacheKey);
+    if (cachedProduct) return cachedProduct;
+  }
 
   return dedup(productCacheKey, async () => {
     const product = await fetchStorefrontProductByIdUncached(normalized, id);
@@ -648,6 +682,9 @@ async function finalizeStorefrontProduct(
   product: Product | null
 ): Promise<Product | null> {
   if (!product || !isStorefrontVisible(product)) return null;
+  if (storefrontProductDetailIsComplete(product)) {
+    return hydrateProductVariantOptions(product);
+  }
   return enrichStorefrontProductDetail(slug, productId, product);
 }
 
@@ -656,10 +693,10 @@ async function fetchStorefrontProductByIdUncached(
   id: string
 ): Promise<Product | null> {
   try {
-    const { data, error } = await (supabase as any).rpc('get_store_product_by_id', {
+    const { data, error } = await callReadRpc<Record<string, unknown>>('get_store_product_by_id', {
       p_slug: normalized,
       p_product_id: id,
-    });
+    }, { preferEdge: true });
 
     if (!error && data) {
       const mapped = await finalizeStorefrontProduct(normalized, id, safeMapStorefrontProduct(data));
@@ -667,7 +704,7 @@ async function fetchStorefrontProductByIdUncached(
     }
 
     if (error) {
-      console.warn('[storefront] get_store_product_by_id failed:', error.message);
+      console.warn('[storefront] get_store_product_by_id failed:', error);
     }
 
     const ownerId = await resolveStoreOwnerBySlug(normalized);
@@ -714,7 +751,7 @@ export async function fetchCheckoutProductsByIds(
   if (!/^[a-z0-9-]+$/.test(normalized) || uniqueIds.length === 0) return map;
 
   try {
-    const { data, error } = await (supabase as any).rpc('get_checkout_products_by_ids', {
+    const { data, error } = await callReadRpc<Record<string, unknown>[]>('get_checkout_products_by_ids', {
       p_slug: normalized,
       p_product_ids: uniqueIds,
     });
@@ -765,7 +802,7 @@ export async function fetchCheckoutPreflightBundle(
   if (!/^[a-z0-9-]+$/.test(normalized) || uniqueIds.length === 0) return null;
 
   try {
-    const { data, error } = await (supabase as any).rpc('get_checkout_preflight_bundle', {
+    const { data, error } = await callReadRpc<Record<string, unknown>>('get_checkout_preflight_bundle', {
       p_slug: normalized,
       p_product_ids: uniqueIds,
       p_governorate: options.governorate?.trim() || null,

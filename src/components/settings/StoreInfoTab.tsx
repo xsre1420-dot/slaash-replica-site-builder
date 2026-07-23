@@ -8,6 +8,7 @@ import { uploadImage, deleteImage } from "@/utils/imageUpload";
 import { enqueueBrandingCleanup } from '@/background/enqueue';
 import { toast } from "sonner";
 import { normalizeStoreSlugInput, validateStoreSlug } from "@/lib/storeSlug";
+import { buildStorePublicUrl, isLocalDevOrigin } from "@/lib/storeUrl";
 import AttentionStrip from "@/components/ui/AttentionStrip";
 
 interface StoreInfoTabProps {
@@ -148,8 +149,13 @@ const StoreInfoTab = ({ settings, setSettings }: StoreInfoTabProps) => {
             />
           </div>
           {settings.storeSlug && (
-            <p className="text-xs text-muted-foreground text-right">
-              رابط متجرك: {window.location.origin}/store/{settings.storeSlug}
+            <p className="text-xs text-muted-foreground text-right" dir="ltr">
+              رابط متجرك: {buildStorePublicUrl(settings.storeSlug)}
+            </p>
+          )}
+          {settings.storeSlug && isLocalDevOrigin() && (
+            <p className="text-xs text-amber-700 dark:text-amber-400 text-right">
+              للمشاركة مع العملاء، اضبط VITE_PUBLIC_APP_URL برابط موقعك المنشور.
             </p>
           )}
           {settings.storeSlug && validateStoreSlug(settings.storeSlug) && (

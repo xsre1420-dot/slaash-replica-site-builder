@@ -162,10 +162,10 @@ const ProductImages = ({
       aria-label={`صورة ${idx + 1}`}
       className={cn(
         'relative overflow-hidden transition-all duration-200 bg-card border-2',
-        vertical ? 'w-full aspect-square rounded-xl' : 'shrink-0 w-[4.5rem] h-[4.5rem] rounded-xl',
+        vertical ? 'w-full aspect-square rounded-lg' : 'shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-lg',
         idx === activeIndex
-          ? 'border-primary opacity-100 shadow-md ring-1 ring-primary/20'
-          : 'border-border/40 opacity-70 hover:opacity-100 hover:border-primary/30'
+          ? 'border-primary opacity-100 ring-1 ring-primary/15'
+          : 'border-border/35 opacity-75 hover:opacity-100 hover:border-primary/25'
       )}
     >
       <img
@@ -192,7 +192,7 @@ const ProductImages = ({
   }
 
   const mainStage = (
-    <div className="relative group overflow-hidden rounded-3xl border border-border/40 bg-muted/10 shadow-xl shadow-foreground/[0.04]">
+    <div className="sf-pdp-gallery group">
       <Carousel className="w-full" setApi={setApi} opts={{ loop: hasMultiple, align: 'start', direction: 'rtl', dragFree: false }}>
         <CarouselContent className="ml-0">
           {safeImages.map((img, index) => {
@@ -269,17 +269,17 @@ const ProductImages = ({
             type="button"
             onClick={() => api?.scrollNext()}
             aria-label="الصورة التالية"
-            className="absolute left-3 top-1/2 -translate-y-1/2 z-30 sf-icon-btn h-11 w-11 bg-card/95 backdrop-blur-md shadow-lg"
+            className="absolute left-3 top-1/2 -translate-y-1/2 z-30 sf-icon-btn h-10 w-10 bg-card/90 backdrop-blur-sm"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft className="w-4 h-4" />
           </button>
           <button
             type="button"
             onClick={() => api?.scrollPrev()}
             aria-label="الصورة السابقة"
-            className="absolute right-3 top-1/2 -translate-y-1/2 z-30 sf-icon-btn h-11 w-11 bg-card/95 backdrop-blur-md shadow-lg"
+            className="absolute right-3 top-1/2 -translate-y-1/2 z-30 sf-icon-btn h-10 w-10 bg-card/90 backdrop-blur-sm"
           >
-            <ChevronRight className="w-5 h-5" />
+            <ChevronRight className="w-4 h-4" />
           </button>
         </>
       )}

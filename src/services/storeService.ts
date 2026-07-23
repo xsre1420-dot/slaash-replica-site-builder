@@ -25,4 +25,5 @@ export {
   saveMerchantComplianceSettings,
   saveCustomDomain,
   removeCustomDomain,
+  ensureMerchantStoreSlug,
 } from '@/services/write/store/storeWriteService';

@@ -32,6 +32,8 @@ const envSchema = z.object({
   /** Upstash Redis REST — shared L2 cache across browser tabs / instances. */
   VITE_KV_REST_URL: z.union([z.string().url(), z.literal('')]).optional(),
   VITE_KV_REST_TOKEN: z.string().min(10).optional(),
+  /** Canonical public site URL for shareable store links (e.g. https://app.bidaya.com) */
+  VITE_PUBLIC_APP_URL: z.string().optional(),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;
@@ -56,6 +58,7 @@ const raw = {
   VITE_READ_REPLICA_REGION: import.meta.env.VITE_READ_REPLICA_REGION as string | undefined,
   VITE_KV_REST_URL: import.meta.env.VITE_KV_REST_URL as string | undefined,
   VITE_KV_REST_TOKEN: import.meta.env.VITE_KV_REST_TOKEN as string | undefined,
+  VITE_PUBLIC_APP_URL: import.meta.env.VITE_PUBLIC_APP_URL as string | undefined,
 };
 
 const parsed = envSchema.safeParse(raw);

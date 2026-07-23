@@ -406,7 +406,7 @@ const Store = () => {
         sectionTitle={searchQuery ? `نتائج "${searchQuery}"` : 'تسوق الآن'}
       />
 
-      <div className="sf-container pb-32 lg:pb-16 pt-2">
+      <div className="sf-container pb-32 lg:pb-16 pt-1">
         <StoreProductGrid
           products={displayProducts}
           viewMode={viewMode}

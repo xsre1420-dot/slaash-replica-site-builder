@@ -5,7 +5,6 @@ import {
   ShoppingBag,
   Settings,
   BarChart3,
-  Archive,
   TrendingUp,
   Eye,
   Menu,
@@ -46,7 +45,6 @@ const navGroups = [
   {
     label: 'الإدارة',
     items: [
-      { to: '/inventory', icon: Archive, label: 'المخزون' },
       { to: '/marketing', icon: TrendingUp, label: 'التسويق' },
       { to: '/statistics', icon: BarChart3, label: 'الإحصائيات' },
     ],
@@ -147,10 +145,12 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
     to,
     icon: Icon,
     label,
+    index = 0,
   }: {
     to: string;
     icon: typeof LayoutDashboard;
     label: string;
+    index?: number;
   }) => {
     const active = isActive(to);
     return (
@@ -158,27 +158,22 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
         to={to}
         onClick={() => setMenuOpen(false)}
         className={cn(
-          'flex items-center gap-2.5 rounded-xl px-2.5 py-2 min-h-[44px] transition-all duration-200 active:scale-[0.98]',
-          active
-            ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/15'
-            : 'text-foreground/85 hover:bg-sidebar-accent/80'
+          'ds-mobile-nav-link sf-enter',
+          active ? 'ds-mobile-nav-link-active' : 'ds-mobile-nav-link-inactive'
         )}
+        style={{ ['--sf-stagger' as string]: index }}
         aria-current={active ? 'page' : undefined}
       >
-        <span
-          className={cn(
-            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors',
-            active
-              ? 'bg-primary-foreground/15 text-primary-foreground'
-              : 'bg-muted/50 text-muted-foreground'
-          )}
-        >
-          <Icon className="w-4 h-4" strokeWidth={active ? 2.25 : 2} />
-        </span>
-        <span className="text-sm font-medium leading-none">{label}</span>
+        <Icon
+          className="w-[18px] h-[18px] shrink-0"
+          strokeWidth={active ? 2.25 : 1.75}
+        />
+        <span className="truncate">{label}</span>
       </Link>
     );
   };
+
+  let mobileNavIndex = 0;
 
   const sidebarWidth = collapsed ? 'lg:w-[72px]' : 'lg:w-[260px]';
   const mainOffset = collapsed ? 'lg:mr-[72px]' : 'lg:mr-[260px]';
@@ -331,14 +326,15 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
         {/* Main content */}
         <div className={cn('flex-1 flex flex-col min-h-screen min-w-0 w-full max-w-full transition-all duration-300', mainOffset)}>
           {/* Mobile top bar */}
-          <header className="lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card w-full min-w-0 shrink-0">
+          <header className="lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-2.5 border-b border-border/40 bg-background/95 backdrop-blur-md w-full min-w-0 shrink-0">
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
               <SheetTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="rounded-xl min-h-[44px] min-w-[44px] hover:bg-muted"
+                  className="rounded-xl min-h-[44px] min-w-[44px] hover:bg-muted/60 active:scale-95 transition-transform duration-150"
                   aria-label="فتح القائمة"
+                  aria-expanded={menuOpen}
                 >
                   <Menu className="w-5 h-5" />
                 </Button>
@@ -346,27 +342,25 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
               <SheetContent
                 side="right"
                 className={cn(
-                  'w-[min(268px,80vw)] p-0 font-arabic bg-sidebar border-l border-sidebar-border/50',
-                  'flex flex-col max-h-[100dvh] shadow-2xl shadow-black/10',
+                  'w-[min(280px,84vw)] p-0 font-arabic bg-sidebar border-l border-sidebar-border/40',
+                  'flex flex-col max-h-[100dvh]',
                   '[&>button]:hidden'
                 )}
               >
-                <div className="relative shrink-0 border-b border-sidebar-border/50 bg-gradient-to-b from-primary/[0.06] via-primary/[0.02] to-transparent px-4 py-3.5">
-                  <div className="flex items-center justify-between gap-4" dir="rtl">
+                <div className="ds-mobile-sheet-header">
+                  <div className="flex items-center justify-between gap-3" dir="rtl">
                     <div className="flex min-w-0 flex-1 items-center gap-3">
-                      <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-border/50 bg-card shadow-sm">
-                        {storeLogo ? (
-                          <img
-                            src={storeLogo}
-                            alt=""
-                            className="absolute inset-0 h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center bg-primary/10">
-                            <Store className="h-4 w-4 text-primary" strokeWidth={2} />
-                          </div>
-                        )}
-                      </div>
+                      {storeLogo ? (
+                        <img
+                          src={storeLogo}
+                          alt=""
+                          className="h-10 w-10 shrink-0 rounded-xl object-cover border border-border/40"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                          <Store className="h-4 w-4 text-primary" strokeWidth={2} />
+                        </div>
+                      )}
 
                       <div className="min-w-0 flex-1 text-right">
                         <p className="truncate text-sm font-bold leading-snug text-foreground">
@@ -381,45 +375,42 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
                     <SheetClose asChild>
                       <button
                         type="button"
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/60 bg-muted/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        className="sf-icon-btn h-9 w-9 shrink-0"
                         aria-label="إغلاق القائمة"
                       >
-                        <X className="h-4 w-4" strokeWidth={2.5} />
+                        <X className="h-4 w-4" strokeWidth={2.25} />
                       </button>
                     </SheetClose>
                   </div>
                 </div>
 
                 <nav
-                  className="flex-1 min-h-0 overflow-y-auto mobile-sidebar-scroll py-3.5 px-2.5"
+                  className="flex-1 min-h-0 overflow-y-auto mobile-sidebar-scroll py-3 px-2"
                   aria-label="القائمة الرئيسية"
                 >
                   {navGroups.map((group, groupIndex) => (
                     <div
                       key={group.label}
-                      className={cn('px-0.5', groupIndex > 0 ? 'mt-4' : '')}
+                      className={cn(groupIndex > 0 ? 'mt-5' : '')}
                     >
-                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/75 px-2.5 mb-1.5">
-                        {group.label}
-                      </p>
+                      <p className="ds-mobile-nav-group-label">{group.label}</p>
                       <div className="space-y-0.5">
-                        {group.items.map((item) => (
-                          <MobileNavLink key={item.to} {...item} />
-                        ))}
+                        {group.items.map((item) => {
+                          const idx = mobileNavIndex++;
+                          return <MobileNavLink key={item.to} {...item} index={idx} />;
+                        })}
                       </div>
                     </div>
                   ))}
                 </nav>
 
-                <div className="shrink-0 border-t border-sidebar-border/50 bg-sidebar/95 backdrop-blur-sm p-3 space-y-2 safe-area-bottom">
+                <div className="ds-mobile-sheet-footer">
                   <Link to="/preview" onClick={() => setMenuOpen(false)}>
                     <Button
                       variant="outline"
-                      className="w-full rounded-xl justify-start gap-2.5 min-h-[44px] px-2.5 text-sm border-primary/20 bg-background/50 hover:bg-primary/5 hover:text-primary hover:border-primary/30"
+                      className="w-full rounded-xl justify-start gap-2 min-h-[44px] border-primary/20 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-colors duration-150"
                     >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                        <Eye className="h-4 w-4 text-primary" strokeWidth={2.25} />
-                      </span>
+                      <Eye className="w-4 h-4 shrink-0" strokeWidth={2} />
                       معاينة المتجر
                     </Button>
                   </Link>
@@ -431,18 +422,16 @@ const DashboardLayout = ({ children, isHome = false }: DashboardLayoutProps) => 
                         setMenuOpen(false);
                         void handleLogout();
                       }}
-                      className="h-11 flex-1 min-h-0 min-w-0 justify-start gap-2.5 rounded-xl border border-border/50 bg-background/40 px-3 text-muted-foreground hover:border-destructive/30 hover:text-destructive hover:bg-destructive/10"
+                      className="h-11 flex-1 min-w-0 justify-start gap-2 rounded-xl px-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors duration-150"
                       aria-label="تسجيل الخروج"
                     >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-destructive/10 ring-1 ring-destructive/15">
-                        <LogOut className="h-4 w-4 text-destructive" strokeWidth={2.25} />
-                      </span>
-                      <span className="text-xs font-medium">تسجيل الخروج</span>
+                      <LogOut className="h-4 w-4 shrink-0" strokeWidth={2} />
+                      <span className="text-sm font-medium">تسجيل الخروج</span>
                     </Button>
                     <ThemeToggle
                       yellowSun
-                      iconClassName="h-3.5 w-3.5"
-                      className="h-9 w-9 shrink-0 rounded-xl border border-border/50 bg-background/40 hover:bg-background [&_svg]:h-3.5 [&_svg]:w-3.5"
+                      iconClassName="h-4 w-4"
+                      className="h-11 w-11 shrink-0 rounded-xl border border-border/50 hover:bg-muted/50 transition-colors duration-150"
                     />
                   </div>
                 </div>

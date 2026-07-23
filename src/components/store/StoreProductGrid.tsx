@@ -4,6 +4,7 @@ import { PackageSearch } from 'lucide-react';
 import { Product } from '@/types';
 import ProductCard from '@/components/store/ProductCard';
 import ProductSkeleton from '@/components/store/ProductSkeleton';
+import StoreEmptyState from '@/components/store/StoreEmptyState';
 import { useCartActions, useCartState } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { getProductPath } from '@/lib/storefrontPaths';
@@ -55,7 +56,7 @@ const StoreProductGrid = memo(function StoreProductGrid({
         state: previewProduct ? { previewProduct } : undefined,
       });
     },
-    [products, isTenantMode, storeSlug, navigate]
+    [products, storeSlug, navigate]
   );
 
   const handleUpdateQuantity = useCallback(
@@ -79,9 +80,9 @@ const StoreProductGrid = memo(function StoreProductGrid({
 
   if (isLoading) {
     return (
-      <div className={viewMode === 'grid' ? 'sf-product-grid' : 'sf-product-list'}>
+      <div className={viewMode === 'grid' ? 'sf-product-grid' : 'sf-product-list'} aria-busy="true" aria-label="جاري تحميل المنتجات">
         {Array.from({ length: 8 }).map((_, i) => (
-          <ProductSkeleton key={i} viewMode={viewMode} />
+          <ProductSkeleton key={i} viewMode={viewMode} index={i} />
         ))}
       </div>
     );
@@ -89,17 +90,15 @@ const StoreProductGrid = memo(function StoreProductGrid({
 
   if (visibleProducts.length === 0) {
     return (
-      <div className="text-center py-24 px-4">
-        <div className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-primary/10 flex items-center justify-center">
-          <PackageSearch className="w-9 h-9 text-primary" strokeWidth={1.75} />
-        </div>
-        <h3 className="text-xl font-bold text-foreground mb-2">
-          {searchQuery ? 'لا توجد نتائج' : 'لا توجد منتجات'}
-        </h3>
-        <p className="text-muted-foreground text-sm max-w-xs mx-auto leading-relaxed">
-          {searchQuery ? 'جرّب كلمات بحث مختلفة أو امسح الفلاتر' : 'تصفح الأقسام الأخرى أو عد لاحقاً'}
-        </p>
-      </div>
+      <StoreEmptyState
+        icon={<PackageSearch className="w-8 h-8" strokeWidth={1.75} />}
+        title={searchQuery ? 'لا توجد نتائج' : 'لا توجد منتجات'}
+        description={
+          searchQuery
+            ? 'جرّب كلمات بحث مختلفة أو امسح الفلاتر'
+            : 'تصفح الأقسام الأخرى أو عد لاحقاً'
+        }
+      />
     );
   }
 
@@ -121,8 +120,12 @@ const StoreProductGrid = memo(function StoreProductGrid({
         ))}
       </div>
       {visibleCount < totalCount && (
-        <div ref={sentinelRef} className="flex flex-col items-center justify-center py-12 gap-3">
-          <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+        <div ref={sentinelRef} className="sf-load-more" aria-live="polite">
+          <div className="flex gap-1.5" aria-hidden>
+            <span className="sf-load-dot" />
+            <span className="sf-load-dot" />
+            <span className="sf-load-dot" />
+          </div>
           <p className="text-xs text-muted-foreground">جاري تحميل المزيد...</p>
         </div>
       )}

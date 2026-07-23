@@ -204,6 +204,30 @@
     @apply text-xs font-semibold uppercase tracking-wider text-muted-foreground;
   }
 
+  .ds-mobile-nav-group-label {
+    @apply text-[11px] font-semibold text-muted-foreground/70 px-3 mb-1.5 tracking-wide;
+  }
+
+  .ds-mobile-nav-link {
+    @apply flex items-center gap-3 rounded-xl px-3 py-2.5 min-h-[44px] text-sm font-medium transition-all duration-150 active:scale-[0.98];
+  }
+
+  .ds-mobile-nav-link-active {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .ds-mobile-nav-link-inactive {
+    @apply text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/90;
+  }
+
+  .ds-mobile-sheet-header {
+    @apply shrink-0 border-b border-sidebar-border/40 px-4 py-3.5;
+  }
+
+  .ds-mobile-sheet-footer {
+    @apply shrink-0 border-t border-sidebar-border/40 p-3 space-y-2 safe-area-bottom bg-sidebar;
+  }
+
   .ds-stat-value {
     @apply text-2xl sm:text-3xl font-semibold text-foreground tracking-tight tabular-nums;
   }
@@ -354,7 +378,8 @@
     --sf-radius-md: 0.75rem;
     --sf-radius-lg: 1rem;
     --sf-radius-xl: 1.25rem;
-    --sf-ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --sf-ease: cubic-bezier(0.32, 0.72, 0, 1);
+    --sf-duration: 0.22s;
   }
 
   @media (min-width: 640px) {
@@ -397,7 +422,7 @@
   }
 
   .sf-btn-primary:hover:not(:disabled) {
-    @apply bg-primary/92;
+    @apply bg-primary/90;
     box-shadow: 0 8px 24px -8px hsl(var(--primary) / 0.35);
   }
 
@@ -452,49 +477,195 @@
   }
 
   .sf-product-card {
-    @apply sf-card flex flex-col cursor-pointer;
+    @apply flex flex-col cursor-pointer rounded-xl overflow-hidden bg-card;
+    border: 1px solid hsl(var(--border) / 0.22);
+    transition:
+      border-color var(--sf-duration) var(--sf-ease),
+      box-shadow var(--sf-duration) var(--sf-ease),
+      transform 0.15s var(--sf-ease);
+  }
+
+  .sf-product-card:hover {
+    border-color: hsl(var(--border) / 0.45);
+    box-shadow: 0 4px 24px -12px hsl(var(--foreground) / 0.08);
+  }
+
+  .sf-product-card:active {
+    transform: scale(0.985);
   }
 
   .sf-product-card:hover .sf-product-image {
-    transform: scale(1.04);
+    transform: scale(1.03);
+  }
+
+  .sf-product-card:hover .sf-product-cta-icon {
+    transform: translateX(-2px);
+  }
+
+  .sf-product-card--in-cart {
+    border-color: hsl(var(--primary) / 0.28);
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.08);
   }
 
   .sf-product-image-wrap {
-    @apply relative aspect-square m-3 rounded-lg sf-surface overflow-hidden;
+    @apply relative aspect-square m-2.5 sm:m-3 rounded-lg sf-surface overflow-hidden;
   }
 
   .sf-product-image {
-    @apply w-full h-full object-contain p-2;
-    transition: transform 0.5s var(--sf-ease);
+    @apply w-full h-full object-contain p-2 sm:p-3;
+    transition: transform 0.45s var(--sf-ease);
   }
 
   .sf-product-body {
-    @apply px-4 pt-1 pb-3 space-y-1.5 flex-1;
+    @apply px-3 sm:px-4 pt-0.5 pb-2.5 space-y-1 flex-1;
   }
 
   .sf-product-name {
-    @apply text-sm font-medium text-foreground text-right line-clamp-2 leading-snug min-h-[2.5rem];
+    @apply text-[13px] sm:text-sm font-medium text-foreground text-right line-clamp-2 leading-snug;
+    min-height: 2.35rem;
   }
 
   .sf-product-cta {
-    @apply flex items-center justify-center gap-2 w-full py-3.5 text-sm font-semibold text-primary border-t border-border/40;
-    transition: background-color 0.2s var(--sf-ease), color 0.2s var(--sf-ease);
+    @apply flex items-center justify-center gap-2 w-full py-3 text-[13px] font-semibold text-primary;
+    border-top: 1px solid hsl(var(--border) / 0.35);
+    transition:
+      background-color var(--sf-duration) var(--sf-ease),
+      color var(--sf-duration) var(--sf-ease);
+  }
+
+  .sf-product-cta-icon {
+    transition: transform var(--sf-duration) var(--sf-ease);
   }
 
   .sf-product-cta:hover:not(:disabled) {
-    @apply bg-primary/[0.04];
+    background-color: hsl(var(--primary) / 0.05);
+  }
+
+  .sf-product-cta:active:not(:disabled) {
+    background-color: hsl(var(--primary) / 0.08);
   }
 
   .sf-product-cta:disabled {
     @apply text-muted-foreground cursor-not-allowed;
   }
 
+  .sf-product-qty-bar {
+    @apply flex items-center justify-between border-t px-2.5 py-2;
+    border-color: hsl(var(--primary) / 0.15);
+    background: hsl(var(--primary) / 0.04);
+  }
+
+  .sf-product-qty-btn {
+    @apply p-2 text-primary rounded-lg transition-colors duration-150;
+  }
+
+  .sf-product-qty-btn:hover {
+    background-color: hsl(var(--primary) / 0.1);
+  }
+
+  .sf-product-qty-btn:active {
+    transform: scale(0.92);
+  }
+
   .sf-section-title {
     @apply text-lg sm:text-xl font-bold text-foreground tracking-tight text-center;
+    letter-spacing: -0.01em;
   }
 
   .sf-section-subtitle {
-    @apply text-xs sm:text-sm text-muted-foreground text-center leading-relaxed mt-1;
+    @apply text-xs text-muted-foreground/80 text-center leading-relaxed mt-1;
+  }
+
+  .sf-enter {
+    animation: sf-enter 0.38s var(--sf-ease) backwards;
+    animation-delay: calc(min(var(--sf-stagger, 0), 8) * 35ms);
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  @keyframes sf-enter {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .sf-empty-state {
+    @apply text-center py-20 sm:py-24 px-4 sf-enter;
+  }
+
+  .sf-empty-state-icon {
+    @apply w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem] mx-auto mb-5 rounded-2xl bg-muted/60 flex items-center justify-center text-primary;
+  }
+
+  .sf-empty-state-title {
+    @apply text-lg font-bold text-foreground mb-2 tracking-tight;
+  }
+
+  .sf-empty-state-desc {
+    @apply text-sm text-muted-foreground max-w-xs mx-auto leading-relaxed;
+  }
+
+  .sf-segment {
+    @apply relative inline-flex p-0.5 rounded-lg bg-muted/45;
+  }
+
+  .sf-segment-btn {
+    @apply relative z-10 p-2 rounded-md text-muted-foreground transition-colors duration-200;
+  }
+
+  .sf-segment-btn:hover {
+    @apply text-foreground;
+  }
+
+  .sf-segment-btn-active {
+    @apply text-primary;
+  }
+
+  .sf-segment-btn-active::before {
+    content: '';
+    @apply absolute inset-0 bg-card rounded-md shadow-sm -z-10;
+    animation: sf-segment-in 0.2s var(--sf-ease);
+  }
+
+  @keyframes sf-segment-in {
+    from { opacity: 0.6; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .sf-skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted) / 0.55) 0%,
+      hsl(var(--muted) / 0.85) 50%,
+      hsl(var(--muted) / 0.55) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.8s ease-in-out infinite;
+  }
+
+  .sf-load-more {
+    @apply flex flex-col items-center justify-center py-10 gap-2.5;
+  }
+
+  .sf-load-dot {
+    @apply w-1.5 h-1.5 rounded-full bg-primary/40;
+    animation: sf-load-pulse 1.2s ease-in-out infinite;
+  }
+
+  .sf-load-dot:nth-child(2) { animation-delay: 0.15s; }
+  .sf-load-dot:nth-child(3) { animation-delay: 0.3s; }
+
+  @keyframes sf-load-pulse {
+    0%, 80%, 100% { opacity: 0.35; transform: scale(0.85); }
+    40% { opacity: 1; transform: scale(1); }
   }
 
   .sf-display {
@@ -571,7 +742,7 @@
   }
 
   .sf-skeleton {
-    @apply animate-pulse bg-muted/60 rounded-xl;
+    @apply rounded-xl sf-skeleton-shimmer;
   }
 
   .sf-product-grid {
@@ -579,11 +750,15 @@
   }
 
   .sf-product-list {
-    @apply flex flex-col gap-4;
+    @apply flex flex-col gap-3 sm:gap-4;
   }
 
   .sf-toolbar {
-    @apply flex items-center justify-between gap-3 py-4;
+    @apply flex items-center justify-between gap-3 py-3;
+  }
+
+  .sf-toolbar-section {
+    @apply text-center pt-6 sm:pt-8 pb-2;
   }
 
   .sf-footer {
@@ -612,7 +787,104 @@
   }
 
   .sf-sticky-bar {
-    @apply fixed bottom-0 inset-x-0 z-50 px-4 pb-4 pt-3 bg-gradient-to-t from-background via-background/95 to-transparent safe-area-bottom;
+    @apply fixed bottom-0 inset-x-0 z-50 px-4 pb-4 pt-3 safe-area-bottom;
+    background: linear-gradient(to top, hsl(var(--background)) 65%, transparent);
+    animation: slide-up-sticky 0.32s var(--sf-ease) forwards;
+  }
+
+  .sf-sticky-bar-inner {
+    @apply sf-btn-primary w-full h-[3.25rem] sm:h-14 rounded-xl justify-between px-4 sm:px-5;
+    box-shadow: 0 8px 32px -8px hsl(var(--primary) / 0.45);
+  }
+
+  /* ── Product details (PDP) ── */
+  .sf-pdp-panel {
+    @apply space-y-6 lg:space-y-7;
+  }
+
+  .sf-pdp-price-block {
+    @apply space-y-1.5 pt-1;
+  }
+
+  .sf-pdp-divider {
+    border-top: 1px solid hsl(var(--border) / 0.28);
+    @apply pt-5;
+  }
+
+  .sf-pdp-label {
+    @apply text-sm font-semibold text-foreground text-right;
+  }
+
+  .sf-pdp-hint {
+    @apply text-xs text-muted-foreground/80 text-right leading-relaxed;
+  }
+
+  .sf-pdp-option {
+    @apply min-h-[44px] min-w-[3rem] px-4 rounded-xl text-sm font-semibold border transition-all duration-150;
+  }
+
+  .sf-pdp-option-default {
+    @apply bg-transparent border-border/45 text-foreground hover:border-primary/35 hover:text-primary active:scale-[0.97];
+  }
+
+  .sf-pdp-option-selected {
+    @apply bg-primary text-primary-foreground border-primary;
+  }
+
+  .sf-pdp-option-disabled {
+    @apply opacity-40 cursor-not-allowed line-through decoration-muted-foreground border-border/30;
+  }
+
+  .sf-pdp-color-swatch {
+    @apply relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden border-2 transition-all duration-200;
+  }
+
+  .sf-pdp-color-swatch-selected {
+    @apply border-primary ring-2 ring-primary/15;
+  }
+
+  .sf-pdp-color-swatch-default {
+    @apply border-border/45 hover:border-primary/35 active:scale-[0.97];
+  }
+
+  .sf-pdp-section-title {
+    @apply text-base sm:text-lg font-bold text-foreground tracking-tight text-right mb-4;
+  }
+
+  .sf-pdp-open-block {
+    @apply py-1;
+  }
+
+  .sf-pdp-gallery {
+    @apply relative overflow-hidden rounded-2xl sf-surface;
+    border: 1px solid hsl(var(--border) / 0.25);
+  }
+
+  .sf-pdp-expand {
+    @apply border-b border-border/30;
+  }
+
+  .sf-pdp-expand-trigger {
+    @apply w-full flex items-center justify-between gap-4 py-4 text-right transition-colors duration-150 hover:text-primary;
+  }
+
+  .sf-pdp-trust-item {
+    @apply inline-flex items-center gap-1.5 text-xs text-muted-foreground;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sf-enter,
+    .sf-sticky-bar,
+    .sf-segment-btn-active::before,
+    .sf-skeleton-shimmer,
+    .sf-load-dot {
+      animation: none !important;
+    }
+
+    .sf-product-card:hover .sf-product-image,
+    .sf-product-card:active {
+      transform: none;
+    }
   }
 }
 

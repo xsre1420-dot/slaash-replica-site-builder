@@ -49,11 +49,16 @@ const ProductCard = memo(({
     onAddToCart(product);
   };
 
+  const enterStyle = { ['--sf-stagger' as string]: index } as React.CSSProperties;
+
   if (viewMode === "list") {
     return (
       <article
-        className="sf-card sf-card-hover group flex gap-4 p-4 cursor-pointer animate-fade-in"
-        style={{ animationDelay: `${index * 40}ms` }}
+        className={cn(
+          "sf-card sf-card-hover group flex gap-4 p-4 cursor-pointer sf-enter",
+          cartQuantity > 0 && "border-primary/20"
+        )}
+        style={enterStyle}
         onClick={() => onView(product.id)}
       >
         <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-xl overflow-hidden shrink-0 sf-surface">
@@ -61,7 +66,7 @@ const ProductCard = memo(({
             src={product.image}
             alt={product.name}
             variant="thumbnail"
-            className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500 ease-out"
+            className="w-full h-full object-contain p-2 group-hover:scale-[1.03] transition-transform duration-500 ease-out"
             loading={isAboveFold ? "eager" : "lazy"}
             fetchPriority={isLcpCandidate ? "high" : undefined}
             sizes="128px"
@@ -79,14 +84,14 @@ const ProductCard = memo(({
               {product.name}
             </h3>
             {blurb && (
-              <p className="text-xs text-muted-foreground text-right line-clamp-2 leading-relaxed">{blurb}</p>
+              <p className="text-xs text-muted-foreground/90 text-right line-clamp-2 leading-relaxed">{blurb}</p>
             )}
             {optionSummary && (
-              <p className="text-[10px] text-muted-foreground/80 text-right">{optionSummary}</p>
+              <p className="text-[10px] text-muted-foreground/70 text-right">{optionSummary}</p>
             )}
             {product.rating != null && product.rating > 0 && (
               <div className="flex items-center justify-end gap-1">
-                <span className="text-xs font-medium text-foreground">{product.rating.toFixed(1)}</span>
+                <span className="text-xs font-medium text-muted-foreground">{product.rating.toFixed(1)}</span>
                 <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
               </div>
             )}
@@ -95,12 +100,12 @@ const ProductCard = memo(({
           <div className="flex items-center justify-between gap-3 mt-3" dir="rtl">
             <ProductPriceDisplay product={product} size="md" align="right" showBadge />
             {cartQuantity > 0 && !hasVariants ? (
-              <div className="flex items-center gap-1 bg-primary/8 rounded-xl h-10 px-2 border border-primary/10">
-                <button onClick={(e) => { e.stopPropagation(); onUpdateQuantity(product.id, cartQuantity - 1); }} className="p-1.5 text-primary rounded-lg hover:bg-primary/15 transition-colors">
+              <div className="flex items-center gap-1 bg-primary/10 rounded-xl h-10 px-2 border border-primary/15 animate-cart-pop">
+                <button onClick={(e) => { e.stopPropagation(); onUpdateQuantity(product.id, cartQuantity - 1); }} className="sf-product-qty-btn">
                   <Minus className="w-4 h-4" />
                 </button>
                 <span className="text-sm font-bold text-primary w-6 text-center tabular-nums">{cartQuantity}</span>
-                <button onClick={(e) => { e.stopPropagation(); onUpdateQuantity(product.id, cartQuantity + 1); }} className="p-1.5 text-primary rounded-lg hover:bg-primary/15 transition-colors">
+                <button onClick={(e) => { e.stopPropagation(); onUpdateQuantity(product.id, cartQuantity + 1); }} className="sf-product-qty-btn">
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
@@ -122,8 +127,11 @@ const ProductCard = memo(({
 
   return (
     <article
-      className="sf-product-card sf-card-hover group animate-fade-in"
-      style={{ animationDelay: `${index * 40}ms` }}
+      className={cn(
+        "sf-product-card sf-enter group",
+        cartQuantity > 0 && !hasVariants && "sf-product-card--in-cart"
+      )}
+      style={enterStyle}
       onClick={() => onView(product.id)}
     >
       <div className="sf-product-image-wrap">
@@ -156,12 +164,12 @@ const ProductCard = memo(({
 
       <div className="sf-product-body">
         <h3 className="sf-product-name">{product.name}</h3>
-        <div className="flex items-center justify-between gap-2 w-full" dir="rtl">
-          <ProductPriceDisplay product={product} size="md" align="right" showBadge />
+        <div className="flex items-end justify-between gap-2 w-full pt-0.5" dir="rtl">
+          <ProductPriceDisplay product={product} size="sm" align="right" showBadge />
           {product.rating != null && product.rating > 0 ? (
-            <div className="flex items-center gap-1 shrink-0">
-              <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-              <span className="text-xs font-medium text-muted-foreground">{product.rating.toFixed(1)}</span>
+            <div className="flex items-center gap-0.5 shrink-0 pb-0.5">
+              <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+              <span className="text-[11px] font-medium text-muted-foreground tabular-nums">{product.rating.toFixed(1)}</span>
             </div>
           ) : null}
         </div>
@@ -169,20 +177,20 @@ const ProductCard = memo(({
 
       {cartQuantity > 0 && !hasVariants ? (
         <div
-          className="flex items-center justify-between border-t border-border/40 px-3 py-2.5"
+          className="sf-product-qty-bar animate-cart-pop"
           onClick={(e) => e.stopPropagation()}
         >
           <button
             onClick={() => onUpdateQuantity(product.id, cartQuantity - 1)}
-            className="p-2 text-primary rounded-lg hover:bg-primary/10 transition-colors"
+            className="sf-product-qty-btn"
             aria-label="تقليل الكمية"
           >
             <Minus className="w-4 h-4" />
           </button>
-          <span className="text-sm font-semibold text-primary tabular-nums">{cartQuantity} في السلة</span>
+          <span className="text-xs sm:text-sm font-semibold text-primary tabular-nums">{cartQuantity} في السلة</span>
           <button
             onClick={() => onUpdateQuantity(product.id, cartQuantity + 1)}
-            className="p-2 text-primary rounded-lg hover:bg-primary/10 transition-colors"
+            className="sf-product-qty-btn"
             aria-label="زيادة الكمية"
           >
             <Plus className="w-4 h-4" />
@@ -195,7 +203,7 @@ const ProductCard = memo(({
           disabled={isOutOfStock}
           className="sf-product-cta"
         >
-          <ShoppingBag className="w-4 h-4" strokeWidth={2} />
+          <ShoppingBag className="w-4 h-4 sf-product-cta-icon" strokeWidth={2} />
           {isOutOfStock ? "نفذ المخزون" : hasVariants ? "عرض الخيارات" : "أضف إلى السلة"}
         </button>
       )}

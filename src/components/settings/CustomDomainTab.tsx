@@ -10,6 +10,7 @@ import {
 } from "@/services/storeService";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import { buildStorePublicUrl } from "@/lib/storeUrl";
 
 interface CustomDomainTabProps {
   storeSlug: string;
@@ -97,7 +98,7 @@ const CustomDomainTab = ({ storeSlug }: CustomDomainTabProps) => {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const defaultStoreUrl = `${window.location.origin}/store/${storeSlug}`;
+  const defaultStoreUrl = storeSlug ? buildStorePublicUrl(storeSlug) : '';
 
   return (
     <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 space-y-5">

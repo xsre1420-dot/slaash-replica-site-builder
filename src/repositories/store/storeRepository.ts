@@ -23,6 +23,14 @@ export async function rpcListPublicStoreSlugs(p_limit: number, p_offset: number)
   return adaptRpcResult(await callReadRpc('list_public_store_slugs', { p_limit, p_offset }));
 }
 
+export async function rpcProvisionMerchantStore(args: {
+  p_user_id: string;
+  p_username?: string;
+  p_store_name?: string;
+}) {
+  return callWriteRpc<Record<string, unknown>>('provision_merchant_store', args);
+}
+
 export async function rpcPatchMerchantStoreSettings(args: Record<string, unknown>) {
   return callWriteRpc('patch_merchant_store_settings', args);
 }

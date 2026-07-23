@@ -36,20 +36,20 @@ const StorefrontToolbar = ({
   sectionTitle = 'المنتجات',
 }: StorefrontToolbarProps) => (
   <div className="sf-container">
-    <div className="text-center py-6 sm:py-8 border-b border-border/30 mb-4">
+    <div className="sf-toolbar-section sf-enter">
       <h2 className="sf-section-title">{sectionTitle}</h2>
       {productCount != null && (
         <p className="sf-section-subtitle">{productCount} منتج</p>
       )}
     </div>
 
-    <div className="sf-toolbar sticky top-[calc(var(--sf-header-h))] z-30 -mx-4 px-4 sm:mx-0 sm:px-0 bg-background/92 backdrop-blur-md pb-3">
+    <div className="sf-toolbar sticky top-[calc(var(--sf-header-h))] z-30 -mx-4 px-4 sm:mx-0 sm:px-0 bg-background/88 backdrop-blur-lg pb-2">
       <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={onCycleSort}
           className={cn(
-            'sf-pill',
+            'sf-pill active:scale-[0.97]',
             sortActive ? 'sf-pill-active' : 'sf-pill-inactive'
           )}
         >
@@ -67,26 +67,22 @@ const StorefrontToolbar = ({
         />
       </div>
 
-      <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-muted/40">
+      <div className="sf-segment" role="group" aria-label="طريقة العرض">
         <button
           type="button"
           aria-label="عرض شبكي"
+          aria-pressed={viewMode === 'grid'}
           onClick={() => onViewModeChange('grid')}
-          className={cn(
-            'p-2 rounded-md transition-all duration-200',
-            viewMode === 'grid' ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
-          )}
+          className={cn('sf-segment-btn', viewMode === 'grid' && 'sf-segment-btn-active')}
         >
           <Grid3X3 className="w-4 h-4" strokeWidth={2} />
         </button>
         <button
           type="button"
           aria-label="عرض قائمة"
+          aria-pressed={viewMode === 'list'}
           onClick={() => onViewModeChange('list')}
-          className={cn(
-            'p-2 rounded-md transition-all duration-200',
-            viewMode === 'list' ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
-          )}
+          className={cn('sf-segment-btn', viewMode === 'list' && 'sf-segment-btn-active')}
         >
           <List className="w-4 h-4" strokeWidth={2} />
         </button>

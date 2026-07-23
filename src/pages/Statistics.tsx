@@ -12,7 +12,7 @@ import { useRealStatistics } from "@/hooks/useRealStatistics";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
-import { copyStorePublicUrl } from "@/lib/storeUrl";
+import { getStoreLinkShareHint, copyStorePublicUrl } from "@/lib/storeUrl";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const SalesChart = lazy(() => import("@/components/statistics/SalesChart").then(m => ({ default: m.SalesChart })));
@@ -102,12 +102,16 @@ const Statistics = () => {
   const handleCopyStoreLink = async () => {
     if (!user?.id) return;
     try {
-      const url = await copyStorePublicUrl(user.id);
+      const url = await copyStorePublicUrl(user.id, {
+        username: user.username,
+        storeName: user.store_name,
+      });
       if (!url) {
         toast.error("لم يتم العثور على رابط المتجر — حدّد slug في الإعدادات");
         return;
       }
-      toast.success("تم نسخ رابط المتجر");
+      const hint = getStoreLinkShareHint(url);
+      toast.success("تم نسخ رابط المتجر", hint ? { description: hint, duration: 5000 } : undefined);
     } catch {
       toast.error("فشل في نسخ الرابط");
     }

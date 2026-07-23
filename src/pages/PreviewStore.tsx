@@ -15,6 +15,7 @@ import MarketingScripts from "@/components/MarketingScripts";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import StoreThemeProvider from "@/components/StoreThemeProvider";
 import StoreProductGrid from "@/components/store/StoreProductGrid";
+import StoreEmptyState from "@/components/store/StoreEmptyState";
 import { StoreCartHeaderButton, StoreFixedCheckoutBar } from "@/components/store/StoreCartChrome";
 import StoreCategoryChip from "@/components/store/StoreCategoryChip";
 import StorefrontHeader from "@/components/storefront/layout/StorefrontHeader";
@@ -425,23 +426,21 @@ const PreviewStore = () => {
           sectionTitle={searchQuery ? `نتائج "${searchQuery}"` : "تسوق الآن"}
         />
 
-        <div className="sf-container pb-32 lg:pb-16 pt-2">
+        <div className="sf-container pb-32 lg:pb-16 pt-1">
           {showOwnerEmpty ? (
-            <div className="text-center py-24 px-4">
-              <div className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-primary/10 flex items-center justify-center">
-                <PackageSearch className="w-9 h-9 text-primary" strokeWidth={1.75} />
-              </div>
-              <h3 className="text-xl font-bold text-foreground mb-2">لا توجد منتجات بعد</h3>
-              <p className="text-muted-foreground text-sm mb-8 max-w-sm mx-auto">
-                ابدأ بإضافة منتجاتك من لوحة التحكم ليراها عملاؤك في متجرك
-              </p>
-              <Link to="/add-product">
-                <Button className="sf-btn-primary rounded-2xl px-8 h-12">
-                  <Plus className="w-4 h-4 ml-2" />
-                  إضافة أول منتج
-                </Button>
-              </Link>
-            </div>
+            <StoreEmptyState
+              icon={<PackageSearch className="w-8 h-8" strokeWidth={1.75} />}
+              title="لا توجد منتجات بعد"
+              description="ابدأ بإضافة منتجاتك من لوحة التحكم ليراها عملاؤك في متجرك"
+              action={
+                <Link to="/add-product">
+                  <Button className="sf-btn-primary rounded-xl px-8 h-11">
+                    <Plus className="w-4 h-4 ml-2" />
+                    إضافة أول منتج
+                  </Button>
+                </Link>
+              }
+            />
           ) : (
             <StoreProductGrid
               products={displayProducts}

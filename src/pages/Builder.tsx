@@ -16,8 +16,6 @@ import {
 
   Package,
 
-  Archive,
-
   TrendingUp,
 
   ShoppingBag,
@@ -34,11 +32,12 @@ import { useState } from "react";
 
 import { toast } from "sonner";
 
-import { copyStorePublicUrl } from "@/lib/storeUrl";
+import { copyStorePublicUrl, getStoreLinkShareHint } from "@/lib/storeUrl";
 
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
 
 import StoreIdentityHeader from "@/components/dashboard/StoreIdentityHeader";
+import StorePublicLinkBar from "@/components/dashboard/StorePublicLinkBar";
 
 import { usePreloadData } from "@/hooks/usePreloadData";
 
@@ -124,24 +123,6 @@ const dashboardCards = [
 
   {
 
-    to: "/inventory",
-
-    icon: Archive,
-
-    label: "المخزون",
-
-    desc: "كميات وتوفر المنتجات",
-
-    iconBg: "bg-teal-500/10",
-
-    iconColor: "text-teal-600 dark:text-teal-400",
-
-    ring: "ring-teal-500/15 group-hover:ring-teal-500/30",
-
-  },
-
-  {
-
     to: "/settings",
 
     icon: Settings,
@@ -180,11 +161,14 @@ export default function Builder() {
 
     try {
 
-      const url = await copyStorePublicUrl(user.id);
+      const url = await copyStorePublicUrl(user.id, {
+        username: user.username,
+        storeName: user.store_name,
+      });
 
       if (!url) {
 
-        toast.error("حدّد رابط المتجر (slug) من الإعدادات أولاً");
+        toast.error("تعذّر إنشاء رابط المتجر — حاول مرة أخرى");
 
         return;
 
@@ -192,7 +176,8 @@ export default function Builder() {
 
       setCopied(true);
 
-      toast.success("تم نسخ الرابط — شاركه مع عملائك الآن!");
+      const hint = getStoreLinkShareHint(url);
+      toast.success("تم نسخ رابط المتجر", hint ? { description: hint, duration: 5000 } : undefined);
 
       setTimeout(() => setCopied(false), 2000);
 
@@ -250,7 +235,7 @@ export default function Builder() {
 
         </div>
 
-
+        <StorePublicLinkBar className="mb-4" />
 
         <DashboardOverview />
 

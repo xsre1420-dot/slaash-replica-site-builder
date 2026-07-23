@@ -1,6 +1,7 @@
-import { format } from 'date-fns';
+import { useState } from 'react';
 import {
-  CheckCircle,
+  BadgeCheck,
+  Check,
   XCircle,
   Phone,
   MessageSquare,
@@ -11,13 +12,13 @@ import {
   CreditCard,
   CalendarDays,
   User,
+  Loader2,
 } from 'lucide-react';
 import { Order } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import OrderStatusBadges from './OrderStatusBadges';
 import OrderItems from './OrderItems';
-import { formatOrderNumber, getOrderWorkflowCategory } from '@/utils/orderWorkflowUtils';
+import { formatOrderNumber, formatOrderDateTime, getOrderWorkflowCategory } from '@/utils/orderWorkflowUtils';
 import { getPaymentMethodLabel } from '@/utils/paymentUtils';
 import { printOrderInvoice } from '@/utils/orderExportUtils';
 import { cn } from '@/lib/utils';
@@ -32,9 +33,8 @@ const workflowAccent: Record<string, string> = {
 
 interface OrderMobileCardProps {
   order: Order;
-  onUpdateStatus: (orderId: string, status: Order['status']) => void;
-  selected?: boolean;
-  onToggleSelect?: (orderId: string) => void;
+  onUpdateStatus: (orderId: string, status: Order['status']) => void | Promise<boolean>;
+  onClose?: () => void;
 }
 
 const DetailRow = ({
@@ -62,18 +62,8 @@ const DetailRow = ({
   );
 };
 
-const formatOrderDateTime = (value?: string) => {
-  if (!value) return '—';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  try {
-    return format(date, 'yyyy-MM-dd · hh:mm a');
-  } catch {
-    return value;
-  }
-};
-
-const OrderMobileCard = ({ order, onUpdateStatus, selected, onToggleSelect }: OrderMobileCardProps) => {
+const OrderMobileCard = ({ order, onUpdateStatus, onClose }: OrderMobileCardProps) => {
+  const [pendingAction, setPendingAction] = useState<'complete' | 'complete-success' | 'cancel' | null>(null);
   const workflow = getOrderWorkflowCategory(order);
   const accent = workflowAccent[workflow] ?? 'bg-muted-foreground';
   const canComplete = canTransitionOrderStatus(order.status, 'completed');
@@ -88,6 +78,26 @@ const OrderMobileCard = ({ order, onUpdateStatus, selected, onToggleSelect }: Or
     if (!ok) toast.error('تعذر فتح نافذة الطباعة — تحقق من حظر النوافذ المنبثقة');
   };
 
+  const handleStatusChange = async (status: Order['status']) => {
+    if (pendingAction) return;
+
+    setPendingAction(status === 'completed' ? 'complete' : 'cancel');
+    try {
+      const result = await onUpdateStatus(order.id, status);
+      if (result === false) return;
+
+      if (status === 'completed') {
+        setPendingAction('complete-success');
+        await new Promise((resolve) => setTimeout(resolve, 650));
+        onClose?.();
+      } else {
+        onClose?.();
+      }
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
   return (
     <article
       className={cn(
@@ -100,14 +110,6 @@ const OrderMobileCard = ({ order, onUpdateStatus, selected, onToggleSelect }: Or
       <div className="p-4 space-y-4">
         {/* Header */}
         <div className="flex items-start gap-2">
-          {onToggleSelect && (
-            <Checkbox
-              checked={selected}
-              onCheckedChange={() => onToggleSelect(order.id)}
-              className="mt-1 shrink-0"
-              aria-label={`تحديد ${formatOrderNumber(order.id)}`}
-            />
-          )}
           <div className="flex-1 min-w-0 space-y-2">
             <div className="flex items-start justify-between gap-3">
               <div className="text-right min-w-0">
@@ -211,21 +213,46 @@ const OrderMobileCard = ({ order, onUpdateStatus, selected, onToggleSelect }: Or
             {canComplete && (
               <Button
                 size="sm"
-                className="rounded-xl h-10 flex-1 max-w-[130px] gap-1 bg-success hover:bg-success/90 text-success-foreground"
-                onClick={() => onUpdateStatus(order.id, 'completed')}
+                disabled={!!pendingAction}
+                className={cn(
+                  'rounded-xl h-10 flex-1 max-w-[150px] gap-1.5 shadow-sm transition-all duration-200',
+                  pendingAction === 'complete-success'
+                    ? 'bg-success text-success-foreground hover:bg-success'
+                    : 'bg-success hover:bg-success/90 text-success-foreground'
+                )}
+                onClick={() => void handleStatusChange('completed')}
               >
-                <CheckCircle className="w-4 h-4 shrink-0" />
-                تأكيد
+                {pendingAction === 'complete-success' ? (
+                  <>
+                    <Check className="w-4 h-4 shrink-0" strokeWidth={2.5} />
+                    مكتمل
+                  </>
+                ) : pendingAction === 'complete' ? (
+                  <>
+                    <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+                    جاري التأكيد...
+                  </>
+                ) : (
+                  <>
+                    <BadgeCheck className="w-4 h-4 shrink-0" strokeWidth={2.25} />
+                    تأكيد الطلب
+                  </>
+                )}
               </Button>
             )}
             {canCancel && (
               <Button
                 size="sm"
                 variant="outline"
+                disabled={!!pendingAction}
                 className="rounded-xl h-10 flex-1 max-w-[110px] gap-1 border-destructive/30 text-destructive hover:bg-destructive/10"
-                onClick={() => onUpdateStatus(order.id, 'cancelled')}
+                onClick={() => void handleStatusChange('cancelled')}
               >
-                <XCircle className="w-4 h-4 shrink-0" />
+                {pendingAction === 'cancel' ? (
+                  <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+                ) : (
+                  <XCircle className="w-4 h-4 shrink-0" strokeWidth={2} />
+                )}
                 إلغاء
               </Button>
             )}
