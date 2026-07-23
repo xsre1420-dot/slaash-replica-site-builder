@@ -51,30 +51,7 @@ const Statistics = lazy(() => import("./pages/Statistics"));
 const Marketing = lazy(() => import("./pages/Marketing"));
 const Sitemap = lazy(() => import("./pages/Sitemap"));
 
-const queryClient = new QueryClient({
-  queryCache: new QueryCache({
-    onError: (error, query) => {
-      reportError(error, { source: 'react-query', queryKey: JSON.stringify(query.queryKey) });
-    },
-  }),
-  mutationCache: new MutationCache({
-    onError: (error, _vars, _ctx, mutation) => {
-      reportError(error, {
-        source: 'react-query-mutation',
-        mutationKey: JSON.stringify(mutation.options.mutationKey),
-      });
-    },
-  }),
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000,
-      gcTime: 10 * 60 * 1000,
-      retry: 1,
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+const queryClient = createAppQueryClient();
 
 const PageLoader = memo(() => (
   <div className="min-h-screen flex items-center justify-center bg-background">
@@ -102,7 +79,7 @@ const App = () => (
               <Toaster />
               <Sonner />
               <BrowserRouter>
-                    <Route path="/inventory" element={<Navigate to="/products" replace />} />
+              <StoreBootstrapProvider>
                 <RouteObserver />
                 <SubdomainRouter />
                 <Suspense fallback={<PageLoader />}>
@@ -125,7 +102,7 @@ const App = () => (
                     <Route path="/orders" element={withRouteBoundary(<ProtectedRoute><Orders /></ProtectedRoute>)} />
                     <Route path="/orders/:orderId" element={<Navigate to="/orders" replace />} />
                     <Route path="/marketing" element={withRouteBoundary(<ProtectedRoute><Marketing /></ProtectedRoute>)} />
-                    <Route path="/inventory" element={withRouteBoundary(<ProtectedRoute><Inventory /></ProtectedRoute>)} />
+                    <Route path="/inventory" element={<Navigate to="/products" replace />} />
                     <Route path="/admin/login" element={<AdminLogin />} />
                     <Route path="/admin" element={<AdminRoute><Navigate to="/admin/leads" replace /></AdminRoute>} />
                     <Route path="/admin/leads" element={<AdminRoute><AdminLeads /></AdminRoute>} />
