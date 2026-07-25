@@ -8,6 +8,8 @@ import {
   RateLimitExceededError,
 } from '@/lib/security/rateLimiter';
 import type { LeadRecord, LeadStatus } from '@/types/leads';
+import { formatAccessCodeForSubmit } from '@/types/accessCodes';
+import { callSupabaseRpcLegacy } from '@/integrations/supabase/rpc';
 import {
   matchesLeadQuickFilter,
   type LeadQuickFilter,
@@ -57,6 +59,9 @@ export const submitAccessLead = async (input: {
     if (code === 'invalid_plan') throw new LeadSubmitError('يرجى اختيار باقة صحيحة');
     if (code === 'invalid_governorate') throw new LeadSubmitError('يرجى اختيار المحافظة');
     if (code === 'invalid_monthly_orders') throw new LeadSubmitError('يرجى تحديد عدد الطلبات المتوقع');
+    if (code === 'rate_limited') {
+      throw new LeadSubmitError('محاولات كثيرة — انتظر ساعة ثم حاول مرة أخرى');
+    }
     throw new LeadSubmitError('تعذر إرسال الطلب، حاول مرة أخرى');
   }
 
@@ -318,7 +323,39 @@ export const generateAccessCode = async (
   };
 
   if (!result?.success || !result.access_code) {
+    if (result?.error === 'active_code_exists') {
+      const replaced = await replaceLeadAccessCode(payload.leadId, {
+        reason: 'auto-replaced: admin requested new code',
+        planId: payload.planId,
+        agreedPrice: payload.agreedPrice ?? null,
+        storeName: payload.storeName,
+      });
+      return {
+        accessCode: replaced.accessCode,
+        codeId: replaced.codeId,
+        planId: replaced.planId,
+        durationMonths: replaced.durationMonths,
+        agreedPrice: replaced.agreedPrice,
+        codeExpiresAt: replaced.codeExpiresAt ?? '',
+        subscriptionStartAt: replaced.subscriptionStartAt ?? null,
+        subscriptionEndAt: replaced.subscriptionEndAt ?? null,
+        storeName: payload.storeName ?? '',
+        username: '',
+      };
+    }
     throw new Error(result?.error || 'generate_failed');
+  }
+
+  try {
+    const verified = await previewAccessCodeViaRpc(result.access_code);
+    if (!verified) {
+      /* preview RPC not deployed yet — code still saved in DB */
+    }
+  } catch (verifyErr) {
+    const verifyCode = verifyErr instanceof Error ? verifyErr.message : '';
+    if (verifyCode === 'invalid_code') {
+      throw new Error('generate_failed');
+    }
   }
 
   return {
@@ -407,11 +444,19 @@ export const redeemAccessCode = async (code: string): Promise<{
     throw err;
   }
 
-  const { data, error } = await callSupabaseEdgeFunction('redeem-access-code', {
-    code: code.trim(),
+  const formatted = formatAccessCodeForSubmit(code);
+  if (!formatted) {
+    throw new Error('invalid_code');
+  }
+
+  const { data, error, errorContext } = await callSupabaseEdgeFunction('redeem-access-code', {
+    code: formatted,
   });
 
-  const result = await parseRedeemFunctionResult(data, error ? { message: error } : null);
+  const result = await parseRedeemFunctionResult(
+    data,
+    error ? { message: error, context: errorContext } : null
+  );
 
   if (!result?.success || !result.session) {
     throw new Error(result?.error || 'redeem_failed');
@@ -645,7 +690,7 @@ export const verifyLeadAccessCode = async (
 ): Promise<import('@/types/accessCodes').AccessCodeVerifyResult> => {
   const { data, error } = await callReadRpc<Record<string, unknown>>('admin_verify_lead_access_code', {
     p_lead_id: leadId,
-    p_plain_code: plainCode.trim(),
+    p_plain_code: formatAccessCodeForSubmit(plainCode) ?? plainCode.trim(),
   });
 
   if (error) {
@@ -685,30 +730,107 @@ export const verifyLeadAccessCode = async (
   };
 };
 
-export const previewAccessCode = async (code: string): Promise<import('@/types/accessCodes').AccessCodePreview> => {
-  const { data, error } = await callSupabaseEdgeFunction('redeem-access-code', {
-    code: code.trim(),
+const previewAccessCodeViaEdge = async (
+  formatted: string
+): Promise<import('@/types/accessCodes').AccessCodePreview> => {
+  const { data, error, errorContext } = await callSupabaseEdgeFunction('redeem-access-code', {
+    code: formatted,
     preview: true,
   });
 
-  const result = await parseRedeemFunctionResult(data, error ? { message: error } : null);
+  const result = await parseRedeemFunctionResult(
+    data,
+    error ? { message: error, context: errorContext } : null
+  );
 
   if (!result.success || !result.preview) {
     throw new Error(result.error || 'invalid_code');
   }
 
-  const payload = result as {
+  return {
+    planId: result.plan_id ?? 'annual',
+    durationMonths: result.duration_months ?? 6,
+    agreedPrice: result.agreed_price ?? null,
+    storeName: result.store_name ?? null,
+  };
+};
+
+const previewAccessCodeViaRpc = async (
+  formatted: string
+): Promise<import('@/types/accessCodes').AccessCodePreview | null> => {
+  const { data: rpcData, error: rpcError } = await callSupabaseRpcLegacy<Record<string, unknown>>(
+    'preview_merchant_access_code',
+    { p_code: formatted }
+  );
+
+  if (rpcError) {
+    if (/PGRST202|Could not find the function|schema cache/i.test(rpcError)) {
+      throw new Error('db_migration_required');
+    }
+    return null;
+  }
+
+  const rpc = rpcData as {
+    success?: boolean;
+    error?: string;
+    preview?: boolean;
     plan_id?: string;
     duration_months?: number;
     agreed_price?: number | null;
     store_name?: string | null;
   };
 
-  return {
-    planId: payload.plan_id ?? 'annual',
-    durationMonths: payload.duration_months ?? 6,
-    agreedPrice: payload.agreed_price ?? null,
-    storeName: payload.store_name ?? null,
-  };
+  if (rpc?.success && rpc.preview) {
+    return {
+      planId: rpc.plan_id ?? 'annual',
+      durationMonths: rpc.duration_months ?? 6,
+      agreedPrice: rpc.agreed_price ?? null,
+      storeName: rpc.store_name ?? null,
+    };
+  }
+
+  if (rpc?.error) {
+    throw new Error(rpc.error);
+  }
+
+  return null;
+};
+
+export const previewAccessCode = async (code: string): Promise<import('@/types/accessCodes').AccessCodePreview> => {
+  const formatted = formatAccessCodeForSubmit(code);
+  if (!formatted) {
+    throw new Error('invalid_code');
+  }
+
+  let rpcUnavailable = false;
+
+  try {
+    const rpcPreview = await previewAccessCodeViaRpc(formatted);
+    if (rpcPreview) return rpcPreview;
+    rpcUnavailable = true;
+  } catch (rpcErr) {
+    const rpcCode = rpcErr instanceof Error ? rpcErr.message : 'invalid_code';
+    if (rpcCode === 'db_migration_required') throw rpcErr;
+    if (
+      rpcCode === 'invalid_code' ||
+      rpcCode === 'code_expired' ||
+      rpcCode === 'code_revoked' ||
+      rpcCode === 'subscription_expired'
+    ) {
+      throw rpcErr;
+    }
+    rpcUnavailable = true;
+  }
+
+  try {
+    return await previewAccessCodeViaEdge(formatted);
+  } catch (edgeErr) {
+    const edgeCode = edgeErr instanceof Error ? edgeErr.message : 'invalid_code';
+    if (edgeCode === 'network_error') throw edgeErr;
+    if (edgeCode === 'edge_unavailable' || edgeCode === 'cors_blocked') {
+      throw new Error(rpcUnavailable ? 'db_migration_required' : edgeCode);
+    }
+    throw new Error(edgeCode);
+  }
 };
 

@@ -1,21 +1,17 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { Search, ExternalLink, CalendarPlus, KeyRound } from 'lucide-react';
+import { ExternalLink, CalendarPlus, KeyRound } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import ExtendSubscriptionDialog from '@/components/admin/ExtendSubscriptionDialog';
 import GenerateAccessCodeDialog from '@/components/admin/GenerateAccessCodeDialog';
-import { Input } from '@/components/ui/input';
+import SubscriptionOverviewCards, {
+  type SubscriptionOverviewStats,
+} from '@/components/admin/subscription/SubscriptionOverviewCards';
+import AdminSubscriptionFilters from '@/components/admin/subscription/AdminSubscriptionFilters';
+import SubscriptionStatusBadge from '@/components/admin/subscription/SubscriptionStatusBadge';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -28,14 +24,37 @@ import { fetchLeadById, fetchSubscriptions } from '@/services/leadAdminService';
 import { SUBSCRIPTION_STATUS_LABELS, type SubscriptionRecord } from '@/types/leads';
 import { useLeadAccessCodeDialog } from '@/hooks/useLeadAccessCodeDialog';
 import { getSubscriptionRemainingDays, planLabelFor } from '@/utils/subscriptionPlanLabels';
+import { PUBLIC_SUBSCRIPTION_PLANS } from '@/data/subscriptionPlans';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+
+const STATUS_OPTIONS = [
+  { value: 'all', label: 'الكل' },
+  ...Object.entries(SUBSCRIPTION_STATUS_LABELS).map(([value, label]) => ({ value, label })),
+];
+
+const PLAN_OPTIONS = [
+  { value: 'all', label: 'كل الباقات' },
+  ...PUBLIC_SUBSCRIPTION_PLANS.map((p) => ({
+    value: p.id,
+    label: `${p.name} — ${p.toggleLabel}`,
+  })),
+];
 
 const AdminSubscriptions = () => {
   const [rows, setRows] = useState<SubscriptionRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
+  const [planFilter, setPlanFilter] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [stats, setStats] = useState<SubscriptionOverviewStats>({
+    total: 0,
+    active: 0,
+    expired: 0,
+    suspended: 0,
+  });
   const [extendLeadId, setExtendLeadId] = useState<string | null>(null);
   const [extendCustomerName, setExtendCustomerName] = useState('');
 
@@ -52,6 +71,28 @@ const AdminSubscriptions = () => {
     handleReplaceCode,
     replacingCode,
   } = useLeadAccessCodeDialog();
+
+  const loadStats = useCallback(async () => {
+    setStatsLoading(true);
+    try {
+      const [all, active, expired, suspended] = await Promise.all([
+        fetchSubscriptions({ limit: 1 }),
+        fetchSubscriptions({ status: 'active', limit: 1 }),
+        fetchSubscriptions({ status: 'expired', limit: 1 }),
+        fetchSubscriptions({ status: 'suspended', limit: 1 }),
+      ]);
+      setStats({
+        total: all.total,
+        active: active.total,
+        expired: expired.total,
+        suspended: suspended.total,
+      });
+    } catch {
+      /* keep previous stats */
+    } finally {
+      setStatsLoading(false);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -70,9 +111,20 @@ const AdminSubscriptions = () => {
   }, [search, status]);
 
   useEffect(() => {
+    void loadStats();
+  }, [loadStats]);
+
+  useEffect(() => {
     const t = setTimeout(() => void load(), 300);
     return () => clearTimeout(t);
   }, [load]);
+
+  const filteredRows = useMemo(() => {
+    if (planFilter === 'all') return rows;
+    return rows.filter((sub) => sub.plan_name === planFilter);
+  }, [rows, planFilter]);
+
+  const displayTotal = planFilter === 'all' ? total : filteredRows.length;
 
   const openExtend = (sub: SubscriptionRecord) => {
     if (!sub.lead_id) {
@@ -96,136 +148,263 @@ const AdminSubscriptions = () => {
     }
   };
 
-  return (
-    <AdminLayout title="إدارة الاشتراكات">
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="بحث بالباقة أو اسم المستخدم..."
-              className="pr-10 rounded-xl"
-            />
+  const handleStatusFilter = (value: string) => {
+    setStatus(value);
+  };
+
+  const refreshAll = () => {
+    void loadStats();
+    void load();
+  };
+
+  const renderSubscriptionRow = (sub: SubscriptionRecord) => {
+    const daysLeft = getSubscriptionRemainingDays(sub.end_date);
+    const displayName = sub.store_name || sub.username || '—';
+
+    return (
+      <article key={sub.id} className="sub-subscription-row">
+        <div className="sub-subscription-row__main">
+          <div className="sub-subscription-row__avatar">{displayName.charAt(0)}</div>
+          <div className="min-w-0">
+            <p className="sub-subscription-row__name">{displayName}</p>
+            <p className="sub-subscription-row__meta">
+              {planLabelFor(sub.plan_name)}
+              {sub.lead_id && (
+                <>
+                  {' · '}
+                  <Link
+                    to={`/admin/leads/${sub.lead_id}`}
+                    className="text-primary hover:underline inline-flex items-center gap-0.5"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    تفاصيل الطلب
+                  </Link>
+                </>
+              )}
+            </p>
           </div>
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="w-full sm:w-[160px] rounded-xl">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">الكل</SelectItem>
-              <SelectItem value="active">نشط</SelectItem>
-              <SelectItem value="expired">منتهي</SelectItem>
-              <SelectItem value="suspended">موقوف</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
-        <div className="rounded-2xl border border-border/50 bg-card overflow-hidden">
-          <div className="px-4 py-3 border-b text-sm text-muted-foreground">{total} اشتراك</div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-right">المستخدم</TableHead>
-                <TableHead className="text-right">الباقة</TableHead>
-                <TableHead className="text-right">الحالة</TableHead>
-                <TableHead className="text-right">البداية</TableHead>
-                <TableHead className="text-right">الانتهاء</TableHead>
-                <TableHead className="text-right">المتبقي</TableHead>
-                <TableHead className="text-right">إجراءات</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
+        <div className="sub-subscription-row__dates">
+          <div>
+            <span className="text-muted-foreground">البداية: </span>
+            <span className="sub-subscription-row__date-value">
+              {format(new Date(sub.start_date), 'dd/MM/yyyy', { locale: ar })}
+            </span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">الانتهاء: </span>
+            <span className="sub-subscription-row__date-value">
+              {sub.end_date
+                ? format(new Date(sub.end_date), 'dd/MM/yyyy', { locale: ar })
+                : '—'}
+            </span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">المتبقي: </span>
+            {daysLeft === null ? (
+              <span>—</span>
+            ) : daysLeft <= 0 ? (
+              <span className="sub-subscription-row__remaining--expired">منتهٍ</span>
+            ) : (
+              <span
+                className={cn(
+                  daysLeft <= 7 && 'sub-subscription-row__remaining--warn'
+                )}
+              >
+                {daysLeft} يوم
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <SubscriptionStatusBadge type="subscription" status={sub.status} />
+          <div className="sub-subscription-row__actions">
+            {sub.lead_id && (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-lg h-8 text-xs gap-1"
+                  onClick={() => void openCodeForLead(sub)}
+                >
+                  <KeyRound className="w-3 h-3" />
+                  رمز
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-lg h-8 text-xs gap-1"
+                  onClick={() => openExtend(sub)}
+                >
+                  <CalendarPlus className="w-3 h-3" />
+                  تمديد
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      </article>
+    );
+  };
+
+  return (
+    <AdminLayout title="إدارة الاشتراكات">
+      <div className="space-y-5">
+        <SubscriptionOverviewCards
+          stats={stats}
+          activeStatus={status}
+          onStatusFilter={handleStatusFilter}
+          loading={statsLoading}
+        />
+
+        <AdminSubscriptionFilters
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="بحث بالباقة أو اسم المتجر..."
+          status={status}
+          onStatusChange={setStatus}
+          statusOptions={STATUS_OPTIONS}
+          plan={planFilter}
+          onPlanChange={setPlanFilter}
+          planOptions={PLAN_OPTIONS}
+          onRefresh={refreshAll}
+          loading={loading}
+          resultCount={displayTotal}
+          resultLabel="اشتراك"
+        />
+
+        {/* Mobile cards */}
+        <div className="space-y-3 md:hidden">
+          {loading ? (
+            <div className="sub-admin-table-wrap p-8 text-center text-muted-foreground">
+              جاري التحميل...
+            </div>
+          ) : filteredRows.length === 0 ? (
+            <div className="sub-admin-table-wrap p-8 text-center text-muted-foreground">
+              لا توجد اشتراكات
+            </div>
+          ) : (
+            filteredRows.map(renderSubscriptionRow)
+          )}
+        </div>
+
+        {/* Desktop table */}
+        <div className="sub-admin-table-wrap hidden md:block">
+          <div className="sub-admin-table-wrap__header">
+            <span>{displayTotal} اشتراك</span>
+          </div>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                    جاري التحميل...
-                  </TableCell>
+                  <TableHead className="text-right">المستخدم</TableHead>
+                  <TableHead className="text-right">الباقة</TableHead>
+                  <TableHead className="text-right">الحالة</TableHead>
+                  <TableHead className="text-right">البداية</TableHead>
+                  <TableHead className="text-right">الانتهاء</TableHead>
+                  <TableHead className="text-right">المتبقي</TableHead>
+                  <TableHead className="text-right">إجراءات</TableHead>
                 </TableRow>
-              ) : rows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                    لا توجد اشتراكات
-                  </TableCell>
-                </TableRow>
-              ) : (
-                rows.map((sub) => {
-                  const daysLeft = getSubscriptionRemainingDays(sub.end_date);
-                  return (
-                    <TableRow key={sub.id}>
-                      <TableCell>
-                        <div className="font-medium">{sub.store_name || sub.username || '—'}</div>
-                        <div className="text-xs text-muted-foreground font-mono" dir="ltr">
-                          {sub.user_id.slice(0, 8)}...
-                        </div>
-                        {sub.lead_id && (
-                          <Link
-                            to={`/admin/leads/${sub.lead_id}`}
-                            className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
-                          >
-                            <ExternalLink className="w-3 h-3" />
-                            تفاصيل الطلب
-                          </Link>
-                        )}
-                      </TableCell>
-                      <TableCell>{planLabelFor(sub.plan_name)}</TableCell>
-                      <TableCell>
-                        <Badge variant={sub.status === 'active' ? 'default' : 'secondary'}>
-                          {SUBSCRIPTION_STATUS_LABELS[sub.status]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {format(new Date(sub.start_date), 'dd/MM/yyyy', { locale: ar })}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {sub.end_date
-                          ? format(new Date(sub.end_date), 'dd/MM/yyyy', { locale: ar })
-                          : '—'}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {daysLeft === null ? (
-                          '—'
-                        ) : daysLeft <= 0 ? (
-                          <span className="text-destructive">منتهٍ</span>
-                        ) : (
-                          <span className={daysLeft <= 7 ? 'text-amber-700 font-medium' : ''}>
-                            {daysLeft} يوم
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {sub.lead_id && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="rounded-lg h-8 text-xs gap-1"
-                                onClick={() => void openCodeForLead(sub)}
-                              >
-                                <KeyRound className="w-3 h-3" />
-                                رمز
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="rounded-lg h-8 text-xs gap-1"
-                                onClick={() => openExtend(sub)}
-                              >
-                                <CalendarPlus className="w-3 h-3" />
-                                تمديد
-                              </Button>
-                            </>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                      جاري التحميل...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredRows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                      لا توجد اشتراكات
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredRows.map((sub) => {
+                    const daysLeft = getSubscriptionRemainingDays(sub.end_date);
+                    const displayName = sub.store_name || sub.username || '—';
+
+                    return (
+                      <TableRow key={sub.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="sub-subscription-row__avatar">{displayName.charAt(0)}</div>
+                            <div>
+                              <div className="font-medium">{displayName}</div>
+                              {sub.lead_id && (
+                                <Link
+                                  to={`/admin/leads/${sub.lead_id}`}
+                                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-0.5"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                  تفاصيل الطلب
+                                </Link>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{planLabelFor(sub.plan_name)}</TableCell>
+                        <TableCell>
+                          <SubscriptionStatusBadge type="subscription" status={sub.status} />
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {format(new Date(sub.start_date), 'dd/MM/yyyy', { locale: ar })}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {sub.end_date
+                            ? format(new Date(sub.end_date), 'dd/MM/yyyy', { locale: ar })
+                            : '—'}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {daysLeft === null ? (
+                            '—'
+                          ) : daysLeft <= 0 ? (
+                            <span className="sub-subscription-row__remaining--expired">منتهٍ</span>
+                          ) : (
+                            <span
+                              className={cn(
+                                daysLeft <= 7 && 'sub-subscription-row__remaining--warn'
+                              )}
+                            >
+                              {daysLeft} يوم
+                            </span>
                           )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {sub.lead_id && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="rounded-lg h-8 text-xs gap-1"
+                                  onClick={() => void openCodeForLead(sub)}
+                                >
+                                  <KeyRound className="w-3 h-3" />
+                                  رمز
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="rounded-lg h-8 text-xs gap-1"
+                                  onClick={() => openExtend(sub)}
+                                >
+                                  <CalendarPlus className="w-3 h-3" />
+                                  تمديد
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </div>
 
@@ -237,7 +416,10 @@ const AdminSubscriptions = () => {
           onOpenChange={(open) => {
             if (!open) setExtendLeadId(null);
           }}
-          onExtended={() => void load()}
+          onExtended={() => {
+            void load();
+            void loadStats();
+          }}
         />
       )}
 

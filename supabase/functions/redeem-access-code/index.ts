@@ -1,7 +1,7 @@
 import { getAnonSupabase, getServiceSupabase } from '../_shared/supabaseClient.ts';
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
 import { logStructured, withEdgeSpan } from '../_shared/observability.ts';
-import { addMonths, generateAuthPassword, hashAccessCode } from '../_shared/accessCodeUtils.ts';
+import { addMonths, generateAuthPassword, accessCodeHashCandidates, resolveAccessCodeForHash } from '../_shared/accessCodeUtils.ts';
 import { checkEdgeRateLimit, clientIpFromRequest } from '../_shared/rateLimiter.ts';
 import { getEdgeCorsHeaders } from '../_shared/cors.ts';
 
@@ -95,8 +95,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    const rawCode = body.code?.trim();
-    if (!rawCode || rawCode.replace(/[^A-Za-z0-9]/g, '').length < 8) {
+    const resolvedCode = resolveAccessCodeForHash(body.code?.trim() ?? '');
+    if (!resolvedCode || resolvedCode.length < 11) {
       return new Response(JSON.stringify({ success: false, error: 'invalid_code' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -104,13 +104,25 @@ Deno.serve(async (req) => {
     }
 
     const adminClient = getServiceSupabase();
-    const codeHash = await hashAccessCode(rawCode);
+    const hashCandidates = await accessCodeHashCandidates(body.code?.trim() ?? '');
 
-    const { data: codeRow, error: codeError } = await adminClient
-      .from('merchant_access_codes')
-      .select('*')
-      .eq('code_hash', codeHash)
-      .maybeSingle();
+    let codeRow: Record<string, unknown> | null = null;
+    let codeError: { message?: string } | null = null;
+
+    for (const codeHash of hashCandidates) {
+      const { data, error } = await adminClient
+        .from('merchant_access_codes')
+        .select('*')
+        .eq('code_hash', codeHash)
+        .maybeSingle();
+
+      if (data) {
+        codeRow = data as Record<string, unknown>;
+        codeError = null;
+        break;
+      }
+      codeError = error;
+    }
 
     if (codeError || !codeRow) {
       return new Response(JSON.stringify({ success: false, error: 'invalid_code' }), {
@@ -277,6 +289,7 @@ Deno.serve(async (req) => {
     };
 
     if (!userId) {
+      let isNewUser = false;
       const initialPassword = generateAuthPassword();
       const { data: createdUser, error: createError } = await adminClient.auth.admin.createUser({
         email: codeRow.auth_email,
@@ -292,85 +305,109 @@ Deno.serve(async (req) => {
       });
 
       if (createError || !createdUser.user) {
-        logStructured('error', 'redeem-access-code.create_user_failed', {
-          message: createError?.message,
-          email: codeRow.auth_email,
-        });
-        return new Response(JSON.stringify({ success: false, error: 'create_user_failed' }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        const { data: refreshedCode } = await adminClient
+          .from('merchant_access_codes')
+          .select('*')
+          .eq('id', codeRow.id)
+          .maybeSingle();
+
+        if (refreshedCode?.redeemed_user_id) {
+          userId = refreshedCode.redeemed_user_id as string;
+          subscriptionEndAt = (refreshedCode.subscription_end_at as string | null) ?? subscriptionEndAt;
+        } else {
+          const { data: usersPage } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 });
+          const existingUser = usersPage?.users?.find((u) => u.email === codeRow.auth_email);
+          if (existingUser?.id) {
+            userId = existingUser.id;
+            signInEmail = existingUser.email ?? signInEmail;
+          }
+        }
+
+        if (!userId) {
+          logStructured('error', 'redeem-access-code.create_user_failed', {
+            message: createError?.message,
+            email: codeRow.auth_email,
+          });
+          return new Response(JSON.stringify({ success: false, error: 'create_user_failed' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      } else {
+        userId = createdUser.user.id;
+        isNewUser = true;
       }
 
-      userId = createdUser.user.id;
-      const subscriptionStart =
-        codeRow.subscription_start_at &&
-        !Number.isNaN(new Date(codeRow.subscription_start_at as string).getTime())
-          ? new Date(codeRow.subscription_start_at as string).toISOString()
-          : now.toISOString();
-      const subscriptionEnd =
-        codeRow.subscription_end_at &&
-        new Date(codeRow.subscription_end_at as string) > new Date(subscriptionStart)
-          ? new Date(codeRow.subscription_end_at as string).toISOString()
-          : addMonths(new Date(subscriptionStart), codeRow.duration_months).toISOString();
-      subscriptionEndAt = subscriptionEnd;
+      if (isNewUser) {
+        const subscriptionStart =
+          codeRow.subscription_start_at &&
+          !Number.isNaN(new Date(codeRow.subscription_start_at as string).getTime())
+            ? new Date(codeRow.subscription_start_at as string).toISOString()
+            : now.toISOString();
+        const subscriptionEnd =
+          codeRow.subscription_end_at &&
+          new Date(codeRow.subscription_end_at as string) > new Date(subscriptionStart)
+            ? new Date(codeRow.subscription_end_at as string).toISOString()
+            : addMonths(new Date(subscriptionStart), codeRow.duration_months).toISOString();
+        subscriptionEndAt = subscriptionEnd;
 
-      const { error: subError } = await adminClient.from('subscriptions').upsert(
-        {
-          user_id: userId,
-          plan_name: codeRow.plan_id,
-          start_date: subscriptionStart,
-          end_date: subscriptionEnd,
-          status: 'active',
-          lead_id: codeRow.lead_id,
-          converted_at: now.toISOString(),
-          notes: codeRow.agreed_price
-            ? `سعر متفق عليه: ${codeRow.agreed_price} د.ع`
-            : null,
-        },
-        { onConflict: 'user_id' }
-      );
+        const { error: subError } = await adminClient.from('subscriptions').upsert(
+          {
+            user_id: userId,
+            plan_name: codeRow.plan_id,
+            start_date: subscriptionStart,
+            end_date: subscriptionEnd,
+            status: 'active',
+            lead_id: codeRow.lead_id,
+            converted_at: now.toISOString(),
+            notes: codeRow.agreed_price
+              ? `سعر متفق عليه: ${codeRow.agreed_price} د.ع`
+              : null,
+          },
+          { onConflict: 'user_id' }
+        );
 
-      if (subError) {
-        logStructured('error', 'redeem-access-code.subscription_failed', { message: subError.message });
-        await adminClient.auth.admin.deleteUser(userId);
-        return new Response(JSON.stringify({ success: false, error: 'subscription_failed' }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        if (subError) {
+          logStructured('error', 'redeem-access-code.subscription_failed', { message: subError.message });
+          await adminClient.auth.admin.deleteUser(userId);
+          return new Response(JSON.stringify({ success: false, error: 'subscription_failed' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        if (!(await ensureStoreProvision(userId))) {
+          await adminClient.auth.admin.deleteUser(userId);
+          await adminClient.from('subscriptions').delete().eq('user_id', userId);
+          return new Response(JSON.stringify({ success: false, error: 'provision_failed' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        await adminClient
+          .from('leads')
+          .update({
+            status: 'customer',
+            converted_user_id: userId,
+            converted_at: now.toISOString(),
+            admin_read_at: now.toISOString(),
+          })
+          .eq('id', codeRow.lead_id);
+
+        await adminClient
+          .from('merchant_access_codes')
+          .update({
+            status: 'redeemed',
+            redeemed_at: now.toISOString(),
+            redeemed_user_id: userId,
+            subscription_start_at: subscriptionStart,
+            subscription_end_at: subscriptionEnd,
+            store_name: storeName,
+            username,
+          })
+          .eq('id', codeRow.id);
       }
-
-      if (!(await ensureStoreProvision(userId))) {
-        await adminClient.auth.admin.deleteUser(userId);
-        await adminClient.from('subscriptions').delete().eq('user_id', userId);
-        return new Response(JSON.stringify({ success: false, error: 'provision_failed' }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      await adminClient
-        .from('leads')
-        .update({
-          status: 'customer',
-          converted_user_id: userId,
-          converted_at: now.toISOString(),
-          admin_read_at: now.toISOString(),
-        })
-        .eq('id', codeRow.lead_id);
-
-      await adminClient
-        .from('merchant_access_codes')
-        .update({
-          status: 'redeemed',
-          redeemed_at: now.toISOString(),
-          redeemed_user_id: userId,
-          subscription_start_at: subscriptionStart,
-          subscription_end_at: subscriptionEnd,
-          store_name: storeName,
-          username,
-        })
-        .eq('id', codeRow.id);
     } else {
       const subscriptionEnd = codeRow.subscription_end_at
         ? new Date(codeRow.subscription_end_at)

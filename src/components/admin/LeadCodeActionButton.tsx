@@ -9,6 +9,7 @@ import {
   canManageAccessCodeForLead,
   canReissueAccessCodeForLead,
   getRawActiveAccessCode,
+  getUsableActiveAccessCode,
   isConvertedLead,
 } from '@/utils/leadAccessCodeUtils';
 import { getStoredAccessCodeForLead } from '@/utils/accessCodeSessionStore';
@@ -37,6 +38,7 @@ export const LeadCodeActionButton = ({
   const canManage = canManageAccessCodeForLead(lead, codes);
   const canReissue = canReissueAccessCodeForLead(lead, codes);
   const rawActive = getRawActiveAccessCode(codes);
+  const usableActive = getUsableActiveAccessCode(codes);
 
   if (converted && !canIssueNewLoginCodeForConvertedLead(lead, codes)) {
     return (
@@ -50,22 +52,28 @@ export const LeadCodeActionButton = ({
     const needsNewCode =
       canReissue ||
       (converted && canIssueNewLoginCodeForConvertedLead(lead, codes)) ||
-      (rawActive != null && !getStoredAccessCodeForLead(lead.id, rawActive.id)) ||
-      (lead.has_pending_code && !rawActive);
+      (usableActive != null && !getStoredAccessCodeForLead(lead.id, usableActive.id)) ||
+      (lead.has_pending_code && !usableActive && !rawActive);
 
     return (
       <Button
         size={fullWidth ? 'default' : size}
-        variant={needsNewCode ? 'default' : 'outline'}
+        variant={needsNewCode || !usableActive ? 'default' : 'outline'}
         className={cn(
           fullWidth ? 'w-full rounded-xl gap-2' : 'rounded-lg h-9 gap-1.5 text-xs sm:text-sm px-3',
-          needsNewCode && 'bg-amber-600 hover:bg-amber-700 text-white',
+          (needsNewCode || !usableActive) && 'bg-amber-600 hover:bg-amber-700 text-white',
           className
         )}
         onClick={onClick}
       >
         <KeyRound className="w-4 h-4" />
-        {needsNewCode ? 'إنشاء رمز جديد للعميل' : 'إدارة الرمز'}
+        {!usableActive && !converted
+          ? fullWidth
+            ? 'إنشاء رمز دخول'
+            : 'إنشاء رمز'
+          : needsNewCode
+            ? 'إنشاء رمز جديد للعميل'
+            : 'إدارة الرمز'}
       </Button>
     );
   }

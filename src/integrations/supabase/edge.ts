@@ -9,6 +9,8 @@ import { traceSpan } from '@/lib/tracing/spanEngine';
 export type EdgeInvokeResult<T> = {
   data: T | null;
   error: string | null;
+  /** Raw Response when Supabase invoke fails with non-2xx (body may still hold JSON). */
+  errorContext?: Response;
   requestId: string;
 };
 
@@ -49,9 +51,21 @@ export async function callSupabaseEdgeFunction<T>(
       });
 
       if (error) {
-        const message = error.message ?? String(error);
-        logger.debug('edge.error', { name, requestId, durationMs, error: message });
-        return { data: null, error: message, requestId };
+        const fnError = error as { message?: string; context?: Response };
+        const message = fnError.message ?? String(error);
+        logger.debug('edge.error', {
+          name,
+          requestId,
+          durationMs,
+          error: message,
+          hasData: data != null,
+        });
+        return {
+          data: (data as T) ?? null,
+          error: message,
+          errorContext: fnError.context,
+          requestId,
+        };
       }
 
       logger.debug('edge.ok', { name, requestId, durationMs });

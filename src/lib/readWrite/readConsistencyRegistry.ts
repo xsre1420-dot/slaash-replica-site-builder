@@ -39,6 +39,7 @@ const specs: ReadOperationSpec[] = [
   { rpc: 'get_store_for_user', category: 'critical', consistency: 'requires_primary', description: 'Session store resolution' },
   { rpc: 'audit_merchant_inventory_integrity', category: 'critical', consistency: 'requires_primary', description: 'Live inventory integrity audit' },
   { rpc: 'is_platform_admin', category: 'admin', consistency: 'requires_primary', description: 'Admin gate' },
+  { rpc: 'preview_merchant_access_code', category: 'critical', consistency: 'requires_primary', description: 'Access code login preview' },
 
   // --- Storefront (replica-ready) ---
   { rpc: 'get_storefront_page_bundle', category: 'storefront', consistency: 'eventually_consistent', description: 'Homepage bundle', edgeEligible: true, clientCacheEligible: true },

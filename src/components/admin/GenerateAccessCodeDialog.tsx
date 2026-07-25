@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { KeyRound, MessageCircle, RefreshCw, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,12 +30,13 @@ import {
 import {
   ACCESS_CODE_ERROR_MESSAGES,
   formatAccessCodeInput,
+  formatAccessCodeForSubmit,
   type AccessCodeRecord,
 } from '@/types/accessCodes';
 import type { LeadRecord } from '@/types/leads';
 import { buildWhatsAppUrl } from '@/types/leads';
 import { buildInitialWhatsAppMessage } from '@/utils/leadWorkflowUtils';
-import { canCreateAccessCodeForLead, canReissueAccessCodeForLead, getLastRedeemedAccessCode, getRawActiveAccessCode, isConvertedLead, resolveAccessCodeDialogMode } from '@/utils/leadAccessCodeUtils';
+import { canReissueAccessCodeForLead, getLastRedeemedAccessCode, getRawActiveAccessCode, getUsableActiveAccessCode, hasActiveAccessCode, hasBlockingActiveAccessCode, hasStalePendingCodeFlag, isConvertedLead, resolveAccessCodeDialogMode } from '@/utils/leadAccessCodeUtils';
 import {
   formatAccessCodeExpiryLabel,
   getAccessCodeEffectiveEnd,
@@ -63,7 +64,11 @@ type GenerateAccessCodeDialogProps = {
   lead: LeadRecord | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onGenerated?: (payload: { accessCode: string; codeId: string }) => void;
+  onGenerated?: (payload: {
+    accessCode: string;
+    codeId: string;
+    meta?: AccessCodeDeliverMeta;
+  }) => void;
   activeCode?: AccessCodeRecord | null;
   codes?: AccessCodeRecord[];
   initialStep?: DialogStep;
@@ -105,8 +110,15 @@ export const GenerateAccessCodeDialog = ({
   const [verifyInput, setVerifyInput] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [confirmReplaceOpen, setConfirmReplaceOpen] = useState(false);
+  /** Keeps deliver step stable while parent refreshes codes after generation. */
+  const pendingDeliverRef = useRef<{
+    accessCode: string;
+    codeId: string;
+    meta: AccessCodeDeliverMeta;
+  } | null>(null);
 
   const resetState = () => {
+    pendingDeliverRef.current = null;
     setStep('configure');
     setGeneratedCode(null);
     setCodeId(null);
@@ -118,7 +130,22 @@ export const GenerateAccessCodeDialog = ({
   useEffect(() => {
     if (!lead || !open) return;
 
+    if (pendingDeliverRef.current) {
+      const pending = pendingDeliverRef.current;
+      setStep('deliver');
+      setGeneratedCode(pending.accessCode);
+      setCodeId(pending.codeId);
+      setDeliverMeta(pending.meta);
+      setVerifyInput('');
+      return;
+    }
+
     if (initialDeliver) {
+      pendingDeliverRef.current = {
+        accessCode: initialDeliver.accessCode,
+        codeId: initialDeliver.codeId,
+        meta: initialDeliver.meta,
+      };
       setStep('deliver');
       setGeneratedCode(initialDeliver.accessCode);
       setCodeId(initialDeliver.codeId);
@@ -128,7 +155,9 @@ export const GenerateAccessCodeDialog = ({
     }
 
     const stored =
-      activeCode != null ? getStoredAccessCodeForLead(lead.id, activeCode.id) : null;
+      (activeCode != null
+        ? getStoredAccessCodeForLead(lead.id, activeCode.id)
+        : null) ?? getStoredAccessCodeForLead(lead.id);
 
     if (initialStep) {
       setStep(initialStep);
@@ -192,14 +221,19 @@ export const GenerateAccessCodeDialog = ({
     setAgreedPrice(String(defaultPriceForPlan(next)));
   };
 
-  const persistCode = (leadId: string, nextCodeId: string, accessCode: string) => {
+  const persistCode = (
+    leadId: string,
+    nextCodeId: string,
+    accessCode: string,
+    meta?: AccessCodeDeliverMeta
+  ) => {
     saveGeneratedAccessCode({
       leadId,
       codeId: nextCodeId,
       accessCode,
       createdAt: new Date().toISOString(),
     });
-    onGenerated?.({ accessCode, codeId: nextCodeId });
+    onGenerated?.({ accessCode, codeId: nextCodeId, meta });
   };
 
   const goDeliver = (
@@ -207,6 +241,7 @@ export const GenerateAccessCodeDialog = ({
     nextCodeId: string,
     meta: AccessCodeDeliverMeta
   ) => {
+    pendingDeliverRef.current = { accessCode, codeId: nextCodeId, meta };
     setGeneratedCode(accessCode);
     setCodeId(nextCodeId);
     setDeliverMeta(meta);
@@ -219,10 +254,7 @@ export const GenerateAccessCodeDialog = ({
       setStep('reissue');
       return;
     }
-    if (!canCreateAccessCodeForLead(lead, codes)) {
-      toast.info('يوجد رمز نشط لهذا العميل — استخدم «إدارة الرمز» للاستبدال');
-      return;
-    }
+
     setGenerating(true);
     try {
       const result = await generateAccessCode({
@@ -231,8 +263,7 @@ export const GenerateAccessCodeDialog = ({
         agreedPrice: agreedPrice ? Number(agreedPrice) : defaultPriceForPlan(planId),
         storeName: lead.full_name,
       });
-      persistCode(lead.id, result.codeId, result.accessCode);
-      goDeliver(result.accessCode, result.codeId, {
+      const deliverMetaPayload = {
         planId: result.planId,
         durationMonths: result.durationMonths,
         agreedPrice: result.agreedPrice,
@@ -240,8 +271,14 @@ export const GenerateAccessCodeDialog = ({
         subscriptionStartAt: result.subscriptionStartAt,
         subscriptionEndAt: result.subscriptionEndAt,
         convertedCustomer: false,
-      });
-      toast.success('تم إنشاء الرمز');
+      };
+      goDeliver(result.accessCode, result.codeId, deliverMetaPayload);
+      persistCode(lead.id, result.codeId, result.accessCode, deliverMetaPayload);
+      toast.success(
+        usableActive || blockingActive
+          ? 'تم استبدال الرمز القديم وإنشاء رمز جديد'
+          : 'تم إنشاء الرمز'
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'generate_failed';
       if (msg === 'lead_already_converted') {
@@ -265,12 +302,17 @@ export const GenerateAccessCodeDialog = ({
     setVerifying(true);
     try {
       const verified = await verifyLeadAccessCode(lead.id, verifyInput);
-      goDeliver(verifyInput.trim(), verified.codeId, {
+      const formattedCode = formatAccessCodeForSubmit(verifyInput) ?? verifyInput.trim();
+      goDeliver(formattedCode, verified.codeId, {
         planId: verified.planId,
         durationMonths: verified.durationMonths,
         agreedPrice: verified.agreedPrice,
       });
-      persistCode(lead.id, verified.codeId, verifyInput.trim());
+      persistCode(lead.id, verified.codeId, formattedCode, {
+        planId: verified.planId,
+        durationMonths: verified.durationMonths,
+        agreedPrice: verified.agreedPrice,
+      });
       toast.success('الرمز صحيح — نفس شروط الاشتراك');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'invalid_code';
@@ -323,8 +365,7 @@ export const GenerateAccessCodeDialog = ({
             subscriptionEndAt: generated.subscriptionEndAt,
           }));
 
-      persistCode(lead.id, result.codeId, result.accessCode);
-      goDeliver(result.accessCode, result.codeId, {
+      const deliverMetaPayload = {
         planId: result.planId,
         durationMonths: result.durationMonths,
         agreedPrice: result.agreedPrice,
@@ -332,7 +373,9 @@ export const GenerateAccessCodeDialog = ({
         subscriptionStartAt: result.subscriptionStartAt,
         subscriptionEndAt: result.subscriptionEndAt,
         convertedCustomer: isConvertedLead(lead),
-      });
+      };
+      goDeliver(result.accessCode, result.codeId, deliverMetaPayload);
+      persistCode(lead.id, result.codeId, result.accessCode, deliverMetaPayload);
       toast.success(
         rawActive ? 'تم استبدال الرمز القديم وإنشاء رمز جديد' : 'تم إنشاء رمز جديد للعميل المُفعّل'
       );
@@ -362,8 +405,7 @@ export const GenerateAccessCodeDialog = ({
         codeId: codeId ?? activeCode?.id,
         reason: 'replaced-by-admin: same subscription terms',
       });
-      persistCode(lead.id, result.codeId, result.accessCode);
-      goDeliver(result.accessCode, result.codeId, {
+      const deliverMetaPayload = {
         planId: result.planId,
         durationMonths: result.durationMonths,
         agreedPrice: result.agreedPrice,
@@ -371,7 +413,9 @@ export const GenerateAccessCodeDialog = ({
         subscriptionStartAt: result.subscriptionStartAt,
         subscriptionEndAt: result.subscriptionEndAt,
         convertedCustomer: isConvertedLead(lead),
-      });
+      };
+      goDeliver(result.accessCode, result.codeId, deliverMetaPayload);
+      persistCode(lead.id, result.codeId, result.accessCode, deliverMetaPayload);
       toast.success('تم إنشاء رمز جديد بنفس شروط الاشتراك');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'replace_failed';
@@ -383,7 +427,8 @@ export const GenerateAccessCodeDialog = ({
 
   const copyCode = async () => {
     if (!generatedCode) return;
-    await navigator.clipboard.writeText(generatedCode);
+    const formatted = formatAccessCodeForSubmit(generatedCode) ?? generatedCode.trim();
+    await navigator.clipboard.writeText(formatted);
     toast.success('تم نسخ الرمز');
   };
 
@@ -395,6 +440,12 @@ export const GenerateAccessCodeDialog = ({
   const reissueExpiryLabel = reissueTemplate
     ? formatAccessCodeExpiryLabel(reissueTemplate, { converted: true })
     : null;
+  const stalePending = hasStalePendingCodeFlag(lead, codes, { codesFetched: true });
+  const usableActive = getUsableActiveAccessCode(codes);
+  const blockingActive = getRawActiveAccessCode(codes);
+  const showCreateButton = !isConvertedLead(lead);
+  const createButtonLabel =
+    usableActive || blockingActive ? 'استبدال وإنشاء رمز جديد' : 'إنشاء الرمز';
 
   const titleByStep: Record<DialogStep, string> = {
     configure: `رمز دخول — ${lead.full_name}`,
@@ -413,7 +464,20 @@ export const GenerateAccessCodeDialog = ({
           if (!next) resetState();
         }}
       >
-        <DialogContent className="font-arabic max-w-md" dir="rtl">
+        <DialogContent
+          className="font-arabic max-w-md"
+          dir="rtl"
+          onInteractOutside={(event) => {
+            if (step === 'deliver' && generatedCode) {
+              event.preventDefault();
+            }
+          }}
+          onEscapeKeyDown={(event) => {
+            if (step === 'deliver' && generatedCode) {
+              event.preventDefault();
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <KeyRound className="h-5 w-5 text-primary" />
@@ -541,81 +605,87 @@ export const GenerateAccessCodeDialog = ({
             </div>
           ) : (
             <div className="space-y-4 py-1">
-              {lead.has_pending_code ? (
-                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm">
-                  يوجد رمز نشط —{' '}
+              {stalePending && (
+                <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm leading-relaxed">
+                  لا يوجد رمز نشط فعلياً لهذا العميل — يمكنك إنشاء رمز جديد الآن.
+                </div>
+              )}
+              {usableActive && (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm leading-relaxed">
+                  يوجد رمز نشط{' '}
+                  <span className="font-mono" dir="ltr">
+                    (BDY-****-{usableActive.code_hint})
+                  </span>
+                  . إنشاء رمز جديد سيستبدله تلقائياً.
+                </div>
+              )}
+              {blockingActive && !usableActive && (
+                <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm leading-relaxed">
+                  يوجد رمز قديم غير صالح — سيتم استبداله عند إنشاء رمز جديد.
+                </div>
+              )}
+              <>
+                <p className="text-sm text-muted-foreground">
+                  اختر المدة المتفق عليها ثم اضغط إنشاء — رمز واحد نشط لكل عميل.
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {PUBLIC_SUBSCRIPTION_PLANS.map((plan) => (
+                    <button
+                      key={plan.id}
+                      type="button"
+                      onClick={() => handlePlanPick(plan.id as PlanId)}
+                      className={cn(
+                        'rounded-xl border-2 px-3 py-4 text-right transition-all',
+                        planId === plan.id
+                          ? 'border-primary bg-primary/5 shadow-sm'
+                          : 'border-border hover:border-primary/40'
+                      )}
+                    >
+                      <p className="font-bold">{plan.toggleLabel}</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {plan.priceAmount.toLocaleString('ar-IQ')} د.ع
+                      </p>
+                    </button>
+                  ))}
+                </div>
+                {!showPrice ? (
                   <button
                     type="button"
-                    className="text-primary font-medium underline"
-                    onClick={() => setStep('manage')}
+                    className="text-xs text-primary hover:underline"
+                    onClick={() => setShowPrice(true)}
                   >
-                    إنشاء رمز جديد للعميل
+                    تعديل السعر المتفق عليه
                   </button>
-                </div>
-              ) : (
-                <>
-                  <p className="text-sm text-muted-foreground">
-                    اختر المدة المتفق عليها ثم اضغط إنشاء — رمز واحد لكل عميل.
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {PUBLIC_SUBSCRIPTION_PLANS.map((plan) => (
-                      <button
-                        key={plan.id}
-                        type="button"
-                        onClick={() => handlePlanPick(plan.id as PlanId)}
-                        className={cn(
-                          'rounded-xl border-2 px-3 py-4 text-right transition-all',
-                          planId === plan.id
-                            ? 'border-primary bg-primary/5 shadow-sm'
-                            : 'border-border hover:border-primary/40'
-                        )}
-                      >
-                        <p className="font-bold">{plan.toggleLabel}</p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {plan.priceAmount.toLocaleString('ar-IQ')} د.ع
-                        </p>
-                      </button>
-                    ))}
+                ) : (
+                  <div className="space-y-1">
+                    <Label htmlFor="agreed-price">السعر (د.ع)</Label>
+                    <Input
+                      id="agreed-price"
+                      type="number"
+                      value={agreedPrice}
+                      onChange={(e) => setAgreedPrice(e.target.value)}
+                      className="rounded-xl"
+                      dir="ltr"
+                    />
                   </div>
-                  {!showPrice ? (
-                    <button
-                      type="button"
-                      className="text-xs text-primary hover:underline"
-                      onClick={() => setShowPrice(true)}
-                    >
-                      تعديل السعر المتفق عليه
-                    </button>
-                  ) : (
-                    <div className="space-y-1">
-                      <Label htmlFor="agreed-price">السعر (د.ع)</Label>
-                      <Input
-                        id="agreed-price"
-                        type="number"
-                        value={agreedPrice}
-                        onChange={(e) => setAgreedPrice(e.target.value)}
-                        className="rounded-xl"
-                        dir="ltr"
-                      />
-                    </div>
-                  )}
-                  <a
-                    href={buildWhatsAppUrl(lead.whatsapp_number, buildInitialWhatsAppMessage(lead))}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 rounded-xl border border-[#25D366]/30 bg-[#25D366]/5 py-2.5 text-sm text-[#128C7E] hover:bg-[#25D366]/10"
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                    تواصل مع العميل قبل إنشاء الرمز
-                  </a>
-                </>
-              )}
+                )}
+                <a
+                  href={buildWhatsAppUrl(lead.whatsapp_number, buildInitialWhatsAppMessage(lead))}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 rounded-xl border border-[#25D366]/30 bg-[#25D366]/5 py-2.5 text-sm text-[#128C7E] hover:bg-[#25D366]/10"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  تواصل مع العميل قبل إنشاء الرمز
+                </a>
+              </>
             </div>
           )}
 
           <DialogFooter className="gap-2 sm:gap-0">
             {step === 'deliver' ? (
-              <Button className="w-full rounded-xl" onClick={() => onOpenChange(false)}>
-                تم
+              <Button type="button" className="w-full rounded-xl" onClick={() => onOpenChange(false)}>
+                تم — أغلق بعد النسخ
               </Button>
             ) : step === 'manage' || step === 'verify' ? (
               <Button variant="outline" className="rounded-xl" onClick={() => onOpenChange(false)}>
@@ -640,14 +710,14 @@ export const GenerateAccessCodeDialog = ({
                 <Button variant="outline" className="rounded-xl" onClick={() => onOpenChange(false)}>
                   إلغاء
                 </Button>
-                {!lead.has_pending_code && (
+                {showCreateButton && (
                   <Button
                     className="rounded-xl gap-2"
                     disabled={generating}
                     onClick={() => void handleGenerate()}
                   >
                     <KeyRound className="h-4 w-4" />
-                    {generating ? 'جاري الإنشاء...' : 'إنشاء الرمز'}
+                    {generating ? 'جاري الإنشاء...' : createButtonLabel}
                   </Button>
                 )}
               </>

@@ -31,9 +31,33 @@ export const getRawActiveAccessCode = (
   codes: AccessCodeRecord[]
 ): AccessCodeRecord | null => codes.find((c) => c.status === 'active') ?? null;
 
-export const hasActiveAccessCode = (codes: AccessCodeRecord[]): boolean => {
+/** Active code that customers can still redeem (status + expiry). */
+export const getUsableActiveAccessCode = (
+  codes: AccessCodeRecord[]
+): AccessCodeRecord | null => {
   const active = getRawActiveAccessCode(codes);
-  return active != null && canUseAccessCodeByExpiry(active);
+  if (!active || !canUseAccessCodeByExpiry(active)) return null;
+  return active;
+};
+
+export const hasActiveAccessCode = (codes: AccessCodeRecord[]): boolean =>
+  getUsableActiveAccessCode(codes) != null;
+
+/** DB row still marked active but no longer usable — blocks new generates until replaced/expired. */
+export const hasBlockingActiveAccessCode = (codes: AccessCodeRecord[]): boolean =>
+  getRawActiveAccessCode(codes) != null;
+
+/** List row flag says pending but fetched codes show none — stale admin_list_leads state. */
+export const hasStalePendingCodeFlag = (
+  lead: Pick<LeadRecord, 'has_pending_code'>,
+  codes: AccessCodeRecord[],
+  options?: AccessCodeEligibilityOptions
+): boolean =>
+  Boolean(options?.codesFetched && leadHasPendingAccessCode(lead) && !hasActiveAccessCode(codes));
+
+export type AccessCodeEligibilityOptions = {
+  /** When true, trust `codes` over the list-row `has_pending_code` flag. */
+  codesFetched?: boolean;
 };
 
 /**
@@ -41,10 +65,12 @@ export const hasActiveAccessCode = (codes: AccessCodeRecord[]): boolean => {
  */
 export const canCreateAccessCodeForLead = (
   lead: Pick<LeadRecord, 'converted_user_id' | 'has_pending_code' | 'status'>,
-  codes: AccessCodeRecord[] = []
+  codes: AccessCodeRecord[] = [],
+  options?: AccessCodeEligibilityOptions
 ): boolean => {
   if (isConvertedLead(lead)) return false;
   if (hasActiveAccessCode(codes)) return false;
+  if (options?.codesFetched) return true;
   return !leadHasPendingAccessCode(lead);
 };
 
@@ -77,19 +103,24 @@ export const canIssueNewLoginCodeForConvertedLead = (
 
 export const canManageAccessCodeForLead = (
   lead: Pick<LeadRecord, 'converted_user_id' | 'has_pending_code' | 'status'>,
-  codes: AccessCodeRecord[] = []
+  codes: AccessCodeRecord[] = [],
+  options?: AccessCodeEligibilityOptions
 ): boolean => {
   if (isConvertedLead(lead)) {
     return canIssueNewLoginCodeForConvertedLead(lead, codes);
   }
-  return hasActiveAccessCode(codes) || canCreateAccessCodeForLead(lead, codes);
+  if (hasActiveAccessCode(codes)) return true;
+  if (leadHasPendingAccessCode(lead)) return true;
+  return canCreateAccessCodeForLead(lead, codes, options);
 };
 
 export const accessCodeBlockReason = (
   lead: Pick<LeadRecord, 'has_pending_code'>,
-  codes: AccessCodeRecord[] = []
+  codes: AccessCodeRecord[] = [],
+  options?: AccessCodeEligibilityOptions
 ): 'pending' | null => {
   if (hasActiveAccessCode(codes)) return 'pending';
+  if (hasStalePendingCodeFlag(lead, codes, options)) return null;
   if (leadHasPendingAccessCode(lead) && codes.length === 0) return 'pending';
   return null;
 };
@@ -99,12 +130,17 @@ export const resolveAccessCodeDialogMode = (
   lead: LeadRecord,
   codes: AccessCodeRecord[]
 ): 'create' | 'reissue' | 'manage' | 'deliver' => {
+  const usableActive = getUsableActiveAccessCode(codes);
   const rawActive = getRawActiveAccessCode(codes);
-  const usableActive =
-    rawActive && canUseAccessCodeByExpiry(rawActive) ? rawActive : null;
 
   if (usableActive || (isConvertedLead(lead) && rawActive)) {
     return 'manage';
+  }
+  if (hasStalePendingCodeFlag(lead, codes, { codesFetched: true })) {
+    return 'create';
+  }
+  if (hasBlockingActiveAccessCode(codes)) {
+    return 'create';
   }
   if (canReissueAccessCodeForLead(lead, codes)) {
     return 'reissue';

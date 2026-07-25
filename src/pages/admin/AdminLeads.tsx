@@ -3,31 +3,23 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import {
-  Search,
   MessageCircle,
-  Copy,
   Eye,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   PhoneCall,
-  RefreshCw,
 } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import GenerateAccessCodeDialog from '@/components/admin/GenerateAccessCodeDialog';
 import LeadCodeActionButton from '@/components/admin/LeadCodeActionButton';
 import LeadStatsBar from '@/components/admin/LeadStatsBar';
-import LeadWorkflowBadge from '@/components/admin/LeadWorkflowBadge';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { LeadOverviewCards } from '@/components/admin/subscription/SubscriptionOverviewCards';
+import AdminSubscriptionFilters from '@/components/admin/subscription/AdminSubscriptionFilters';
+import LeadRequestMobileCard, {
+  LeadRequestCopyButton,
+  LeadRequestDesktopMeta,
+} from '@/components/admin/subscription/LeadRequestMobileCard';
+import SubscriptionStatusBadge from '@/components/admin/subscription/SubscriptionStatusBadge';
 import {
   Table,
   TableBody,
@@ -36,6 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
 import {
   fetchLeads,
   fetchLeadStats,
@@ -43,20 +36,32 @@ import {
   type LeadStatsPayload,
 } from '@/services/leadAdminService';
 import {
-  LEAD_STATUS_LABELS,
   LEAD_STATUS_OPTIONS,
+  LEAD_STATUS_LABELS,
   buildWhatsAppUrl,
   type LeadRecord,
   type LeadStatus,
 } from '@/types/leads';
 import { useLeadAccessCodeDialog } from '@/hooks/useLeadAccessCodeDialog';
-import { buildInitialWhatsAppMessage, buildFollowUpWhatsAppMessage, formatLeadRelativeTime, getLeadFilterEmptyMessage, LEAD_FILTER_DEFINITIONS, type LeadQuickFilter } from '@/utils/leadWorkflowUtils';
+import {
+  buildInitialWhatsAppMessage,
+  buildFollowUpWhatsAppMessage,
+  formatLeadRelativeTime,
+  getLeadFilterEmptyMessage,
+  LEAD_FILTER_DEFINITIONS,
+  type LeadQuickFilter,
+} from '@/utils/leadWorkflowUtils';
 import { getMonthlyOrderLabel } from '@/data/leadFormOptions';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useVisibilityAwareInterval } from '@/hooks/useVisibilityAwareInterval';
 
 const PAGE_SIZE = 20;
+
+const STATUS_FILTER_OPTIONS = [
+  { value: 'all', label: 'كل الحالات' },
+  ...LEAD_STATUS_OPTIONS.map((s) => ({ value: s, label: LEAD_STATUS_LABELS[s] })),
+];
 
 const AdminLeads = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -69,7 +74,6 @@ const AdminLeads = () => {
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
-  const [helpOpen, setHelpOpen] = useState(false);
 
   const patchLeadRow = useCallback((leadId: string, patch: Partial<LeadRecord>) => {
     setRows((prev) => prev.map((row) => (row.id === leadId ? { ...row, ...patch } : row)));
@@ -177,6 +181,7 @@ const AdminLeads = () => {
   }, 60_000);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
   const copyNumber = (phone: string) => {
     void navigator.clipboard.writeText(phone);
     toast.success('تم نسخ الرقم');
@@ -219,21 +224,11 @@ const AdminLeads = () => {
     void load();
   };
 
-  const renderWorkflowBadge = (lead: LeadRecord) => <LeadWorkflowBadge lead={lead} />;
-
-  const renderCodeButton = (lead: LeadRecord, fullWidth = false) => (
-    <LeadCodeActionButton
-      lead={lead}
-      activeCode={activeCodesByLead.get(lead.id) ?? null}
-      codes={codeLead?.id === lead.id ? codes : []}
-      fullWidth={fullWidth}
-      onClick={() => void openCodeDialog(lead)}
-    />
-  );
-
   return (
     <AdminLayout title="طلبات الاشتراك">
       <div className="space-y-5">
+        <LeadOverviewCards stats={stats} loading={statsLoading} />
+
         <LeadStatsBar
           stats={stats}
           activeFilter={quickFilter}
@@ -242,124 +237,52 @@ const AdminLeads = () => {
           resultCount={total}
         />
 
-        <div className="rounded-2xl border border-border/50 bg-card overflow-hidden">
-          <button
-            type="button"
-            className="flex w-full items-center justify-between gap-2 px-4 py-3 text-sm hover:bg-muted/40 transition-colors"
-            onClick={() => setHelpOpen((v) => !v)}
-          >
-            <span className="font-medium text-muted-foreground">مسار المتابعة: غير مقروء → تواصل → رمز → تفعيل</span>
-            <ChevronDown className={cn('h-4 w-4 transition-transform', helpOpen && 'rotate-180')} />
-          </button>
-          {helpOpen && (
-            <div className="border-t border-border/50 px-4 py-3 text-sm text-muted-foreground space-y-2">
-              <p>1. <strong className="text-foreground font-medium">غير مقروء</strong> — طلب جديد لم يُفتح؛ افتح التفاصيل أو اضغط واتساب.</p>
-              <p>2. <strong className="text-foreground font-medium">بانتظار التواصل</strong> — طُلِع عليه؛ راسِل العميل واضغط «تم التواصل».</p>
-              <p>3. <strong className="text-foreground font-medium">يحتاج رمز</strong> — بعد الاتفاق أنشئ رمز التفعيل وأرسله.</p>
-              <p>4. <strong className="text-foreground font-medium">بانتظار التفعيل</strong> — العميل يدخل من /login بالرمز.</p>
-              <p>5. <strong className="text-foreground font-medium">مُفعّل</strong> — يظهر ضمن «عملاء مُفعّلون» ويخرج من مسار المتابعة.</p>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-3 rounded-2xl border border-border/50 bg-card p-3 sm:p-4">
-          <div className="relative flex-1">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="بحث: اسم، واتساب، باقة، محافظة..."
-              className="pr-10 rounded-xl font-arabic bg-background"
-            />
-          </div>
-          <Select value={status} onValueChange={handleStatusChange} disabled={quickFilter !== 'all'}>
-            <SelectTrigger className="w-full sm:w-[180px] rounded-xl bg-background">
-              <SelectValue placeholder="الحالة" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">كل الحالات</SelectItem>
-              {LEAD_STATUS_OPTIONS.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {LEAD_STATUS_LABELS[s]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button variant="outline" className="rounded-xl gap-2 shrink-0" onClick={refreshAll}>
-            <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
-            تحديث
-          </Button>
-        </div>
+        <AdminSubscriptionFilters
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="بحث: اسم، واتساب، باقة، محافظة..."
+          status={status}
+          onStatusChange={handleStatusChange}
+          statusOptions={STATUS_FILTER_OPTIONS}
+          statusDisabled={quickFilter !== 'all'}
+          onRefresh={refreshAll}
+          loading={loading}
+          resultCount={total}
+          resultLabel="طلب"
+        />
 
         {/* Mobile */}
         <div className="space-y-3 md:hidden">
           {loading ? (
-            <div className="rounded-2xl border bg-card p-8 text-center text-muted-foreground">جاري التحميل...</div>
+            <div className="sub-admin-table-wrap p-8 text-center text-muted-foreground">
+              جاري التحميل...
+            </div>
           ) : rows.length === 0 ? (
-            <div className="rounded-2xl border bg-card p-8 text-center text-muted-foreground">
+            <div className="sub-admin-table-wrap p-8 text-center text-muted-foreground">
               {getLeadFilterEmptyMessage(quickFilter)}
             </div>
           ) : (
             rows.map((lead) => (
-              <div key={lead.id} className="rounded-2xl border border-border/60 bg-card p-4 space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-bold">{lead.full_name}</p>
-                      {renderWorkflowBadge(lead)}
-                    </div>
-                    <p className="text-xs text-muted-foreground font-mono mt-0.5" dir="ltr">
-                      {lead.whatsapp_number}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground mt-1">
-                      {formatLeadRelativeTime(lead.created_at)}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {lead.selected_plan_name && <Badge variant="outline">{lead.selected_plan_name}</Badge>}
-                  {lead.governorate && (
-                    <Badge variant="outline" className="text-muted-foreground">
-                      {lead.governorate}
-                    </Badge>
-                  )}
-                </div>
-                {renderCodeButton(lead, true)}
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant="outline"
-                    className="rounded-xl gap-2 text-[#25D366] border-[#25D366]/30"
-                    onClick={() => void handleWhatsApp(lead)}
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    واتساب
-                  </Button>
-                  {lead.status === 'new' && (
-                    <Button
-                      variant="outline"
-                      className="rounded-xl gap-2"
-                      onClick={() => void handleMarkContacted(lead)}
-                    >
-                      <PhoneCall className="w-4 h-4" />
-                      تم التواصل
-                    </Button>
-                  )}
-                  <Link to={`/admin/leads/${lead.id}`} className={lead.status === 'new' ? '' : 'col-span-2'}>
-                    <Button variant="outline" className="w-full rounded-xl gap-2">
-                      <Eye className="w-4 h-4" />
-                      التفاصيل
-                    </Button>
-                  </Link>
-                </div>
-              </div>
+              <LeadRequestMobileCard
+                key={lead.id}
+                lead={lead}
+                activeCode={activeCodesByLead.get(lead.id) ?? null}
+                codes={codeLead?.id === lead.id ? codes : []}
+                onWhatsApp={() => void handleWhatsApp(lead)}
+                onMarkContacted={
+                  lead.status === 'new' ? () => void handleMarkContacted(lead) : undefined
+                }
+                onCopyPhone={() => copyNumber(lead.whatsapp_number)}
+                onOpenCode={() => void openCodeDialog(lead)}
+              />
             ))
           )}
         </div>
 
         {/* Desktop */}
-        <div className="hidden md:block rounded-2xl border border-border/50 bg-card overflow-hidden">
-          <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between text-sm text-muted-foreground">
-            <span>{total} طلب</span>
+        <div className="sub-admin-table-wrap hidden md:block">
+          <div className="sub-admin-table-wrap__header">
+            <span>{total} طلب اشتراك</span>
             {totalPages > 1 && (
               <span>
                 صفحة {page + 1} من {totalPages}
@@ -373,8 +296,8 @@ const AdminLeads = () => {
                   <TableHead className="text-right">العميل</TableHead>
                   <TableHead className="text-right">الباقة / المحافظة</TableHead>
                   <TableHead className="text-right hidden lg:table-cell">الحجم</TableHead>
-                  <TableHead className="text-right">مرحلة المتابعة</TableHead>
-                  <TableHead className="text-right hidden sm:table-cell">الوقت</TableHead>
+                  <TableHead className="text-right">الحالة</TableHead>
+                  <TableHead className="text-right hidden sm:table-cell">التاريخ</TableHead>
                   <TableHead className="text-right min-w-[260px]">إجراءات</TableHead>
                 </TableRow>
               </TableHeader>
@@ -393,40 +316,46 @@ const AdminLeads = () => {
                   </TableRow>
                 ) : (
                   rows.map((lead) => (
-                    <TableRow key={lead.id} className={lead.is_unread ? 'bg-primary/[0.02]' : undefined}>
-                      <TableCell className="font-medium">
-                        <div>
-                          <div className="font-medium">{lead.full_name}</div>
-                          <p className="text-xs text-muted-foreground mt-0.5 font-mono" dir="ltr">
-                            {lead.whatsapp_number}
-                          </p>
+                    <TableRow
+                      key={lead.id}
+                      className={cn(lead.is_unread && 'sub-row--unread')}
+                    >
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="sub-request-card__avatar hidden sm:flex">
+                            {lead.full_name.charAt(0)}
+                          </div>
+                          <div>
+                            <div className="font-medium">{lead.full_name}</div>
+                            <p className="text-xs text-muted-foreground mt-0.5 font-mono" dir="ltr">
+                              {lead.whatsapp_number}
+                            </p>
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="space-y-1">
-                          {lead.selected_plan_name ? (
-                            <Badge variant="outline">{lead.selected_plan_name}</Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">—</span>
-                          )}
-                          {lead.governorate && (
-                            <p className="text-xs text-muted-foreground">{lead.governorate}</p>
-                          )}
-                        </div>
+                        <LeadRequestDesktopMeta lead={lead} />
                       </TableCell>
                       <TableCell className="hidden lg:table-cell text-xs text-muted-foreground max-w-[140px]">
                         {getMonthlyOrderLabel(lead.expected_monthly_orders)}
                       </TableCell>
-                      <TableCell>{renderWorkflowBadge(lead)}</TableCell>
+                      <TableCell>
+                        <SubscriptionStatusBadge type="workflow" lead={lead} />
+                      </TableCell>
                       <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
                         <div>{formatLeadRelativeTime(lead.created_at)}</div>
                         <div className="text-[11px]">
-                          {format(new Date(lead.created_at), 'dd MMM', { locale: ar })}
+                          {format(new Date(lead.created_at), 'dd MMM yyyy', { locale: ar })}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap items-center gap-2">
-                          {renderCodeButton(lead)}
+                          <LeadCodeActionButton
+                            lead={lead}
+                            activeCode={activeCodesByLead.get(lead.id) ?? null}
+                            codes={codeLead?.id === lead.id ? codes : []}
+                            onClick={() => void openCodeDialog(lead)}
+                          />
                           <Button
                             size="sm"
                             variant="outline"
@@ -439,20 +368,14 @@ const AdminLeads = () => {
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="rounded-lg h-9 px-2 text-xs"
+                              className="rounded-lg h-9 px-2 text-xs gap-1"
                               onClick={() => void handleMarkContacted(lead)}
                             >
+                              <PhoneCall className="w-3.5 h-3.5" />
                               تم التواصل
                             </Button>
                           )}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="rounded-lg h-9 px-2.5"
-                            onClick={() => copyNumber(lead.whatsapp_number)}
-                          >
-                            <Copy className="w-4 h-4" />
-                          </Button>
+                          <LeadRequestCopyButton onCopy={() => copyNumber(lead.whatsapp_number)} />
                           <Link to={`/admin/leads/${lead.id}`}>
                             <Button size="sm" variant="ghost" className="rounded-lg h-9 px-2.5">
                               <Eye className="w-4 h-4" />

@@ -65,11 +65,47 @@ export type AccessCodeVerifyResult = {
   createdAt: string;
 };
 
+/** Body charset matches DB: ABCDEFGHJKLMNPQRSTUVWXYZ23456789 (no I/O/0/1). */
+const ACCESS_CODE_COMPACT_PATTERN = /BDY[A-HJ-NP-Z2-9]{8}/;
+
+/** Strip bidi marks and non-alphanumeric noise from pasted text (WhatsApp, RTL, etc.). */
+export const normalizeAccessCodeRaw = (value: string): string =>
+  value
+    .replace(/[\u200B-\u200D\uFEFF\u2066-\u2069]/g, '')
+    .replace(/[^A-Za-z0-9]/g, '')
+    .toUpperCase();
+
+/** Extract canonical 11-char compact code (BDY + 8) from messy paste input. */
+export const extractAccessCodeCompact = (value: string): string | null => {
+  const compact = normalizeAccessCodeRaw(value);
+  const match = compact.match(ACCESS_CODE_COMPACT_PATTERN);
+  if (match) return match[0];
+  if (compact.startsWith('BDY') && compact.length >= 11) {
+    return compact.slice(0, 11);
+  }
+  return null;
+};
+
+export const isCompleteAccessCode = (value: string): boolean =>
+  extractAccessCodeCompact(value) !== null;
+
+/** Canonical formatted code for API + clipboard (BDY-XXXX-XXXX). */
+export const formatAccessCodeForSubmit = (value: string): string | null => {
+  const compact = extractAccessCodeCompact(value);
+  if (!compact || compact.length !== 11) return null;
+  return `${compact.slice(0, 3)}-${compact.slice(3, 7)}-${compact.slice(7, 11)}`;
+};
+
 export const formatAccessCodeInput = (value: string): string => {
-  const raw = value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 11);
-  if (raw.length <= 3) return raw;
-  if (raw.length <= 7) return `${raw.slice(0, 3)}-${raw.slice(3)}`;
-  return `${raw.slice(0, 3)}-${raw.slice(3, 7)}-${raw.slice(7)}`;
+  const compact = extractAccessCodeCompact(value) ?? normalizeAccessCodeRaw(value).slice(0, 11);
+  if (compact.length <= 3) return compact;
+  if (compact.length <= 7) return `${compact.slice(0, 3)}-${compact.slice(3)}`;
+  return `${compact.slice(0, 3)}-${compact.slice(3, 7)}-${compact.slice(7, 11)}`;
+};
+
+export const parseAccessCodePaste = (value: string): string => {
+  const formatted = formatAccessCodeForSubmit(value);
+  return formatted ?? formatAccessCodeInput(value);
 };
 
 export const buildAccessCodeWhatsAppMessage = (opts: {
@@ -95,7 +131,7 @@ export const buildAccessCodeWhatsAppMessage = (opts: {
     });
     return (
       `مرحباً ${opts.customerName} 👋\n\n` +
-      `🔑 *رمز دخول جديد لحسابك:*\n${opts.accessCode}\n\n` +
+      `🔑 *رمز دخول جديد لحسابك:*\n\u2066${opts.accessCode}\u2069\n\n` +
       `اشتراك *${opts.planLabel}* ينتهي في *${endDate}* (متبقٍ ${opts.durationMonths} ${opts.durationMonths === 1 ? 'شهر' : 'أشهر'}).\n` +
       `⚠️ هذا الرمز للدخول فقط — *لا يمدّد* مدة الاشتراك.${priceLine}\n\n` +
       `ادخل من الرابط:\n${opts.loginUrl}\n\n` +
@@ -106,7 +142,7 @@ export const buildAccessCodeWhatsAppMessage = (opts: {
   return (
     `مرحباً ${opts.customerName} 👋\n\n` +
     `تم الاتفاق على اشتراك *${opts.planLabel}* (${opts.durationMonths} ${opts.durationMonths === 12 ? 'شهر' : opts.durationMonths === 1 ? 'شهر' : 'أشهر'}).${priceLine}\n\n` +
-    `🔑 *رمز الدخول للمنصة:*\n${opts.accessCode}\n\n` +
+    `🔑 *رمز الدخول للمنصة:*\n\u2066${opts.accessCode}\u2069\n\n` +
     `ادخل من الرابط:\n${opts.loginUrl}\n\n` +
     `الصق الرمز في صفحة تسجيل الدخول واضغط «دخول للمنصة».`
   );

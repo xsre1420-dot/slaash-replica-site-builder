@@ -15,6 +15,7 @@ import {
   canReissueAccessCodeForLead,
   getLastRedeemedAccessCode,
   getRawActiveAccessCode,
+  getUsableActiveAccessCode,
   hasActiveAccessCode,
   isConvertedLead,
 } from '@/utils/leadAccessCodeUtils';
@@ -50,9 +51,7 @@ export const useLeadAccessCodeDialog = (options: UseLeadAccessCodeDialogOptions 
   const [revealedAccessCode, setRevealedAccessCode] = useState<string | null>(null);
   const [codeDialogDeliver, setCodeDialogDeliver] = useState<CodeDialogDeliver | null>(null);
 
-  const activeCodeRecord =
-    codes.find((c) => c.status === 'active' && canUseAccessCodeByExpiry(c)) ??
-    getRawActiveAccessCode(codes);
+  const activeCodeRecord = getUsableActiveAccessCode(codes);
   const lastRedeemedCode = getLastRedeemedAccessCode(codes);
 
   const loadCodes = useCallback(
@@ -127,14 +126,22 @@ export const useLeadAccessCodeDialog = (options: UseLeadAccessCodeDialogOptions 
 
       const rows = await loadCodes(lead.id);
       const rawActive = getRawActiveAccessCode(rows);
+      const leadAfterFetch: LeadRecord = {
+        ...lead,
+        has_pending_code: rows.some(
+          (c) => c.status === 'active' && canUseAccessCodeByExpiry(c)
+        ),
+      };
 
-      if (hasActiveAccessCode(rows) || (isConvertedLead(lead) && rawActive)) {
+      if (hasActiveAccessCode(rows) || (isConvertedLead(leadAfterFetch) && rawActive)) {
+        setCodeLead(leadAfterFetch);
         setCodeOpen(true);
         return;
       }
 
-      if (isConvertedLead(lead)) {
-        if (canReissueAccessCodeForLead(lead, rows)) {
+      if (isConvertedLead(leadAfterFetch)) {
+        if (canReissueAccessCodeForLead(leadAfterFetch, rows)) {
+          setCodeLead(leadAfterFetch);
           setCodeOpen(true);
           return;
         }
@@ -142,11 +149,12 @@ export const useLeadAccessCodeDialog = (options: UseLeadAccessCodeDialogOptions 
         return;
       }
 
-      if (!canCreateAccessCodeForLead(lead, rows)) {
+      if (!canCreateAccessCodeForLead(leadAfterFetch, rows, { codesFetched: true })) {
         toast.info('لا يمكن إنشاء رمز لهذا الطلب');
         return;
       }
 
+      setCodeLead(leadAfterFetch);
       setCodeOpen(true);
     },
     [loadCodes]
@@ -211,8 +219,19 @@ export const useLeadAccessCodeDialog = (options: UseLeadAccessCodeDialogOptions 
   }, [applyCodeResult, codeLead, codes, handleReissueCode, lastRedeemedCode, loadCodes]);
 
   const handleGenerated = useCallback(
-    ({ accessCode, codeId }: { accessCode: string; codeId: string }) => {
+    ({
+      accessCode,
+      codeId,
+      meta,
+    }: {
+      accessCode: string;
+      codeId: string;
+      meta?: CodeDialogDeliver['meta'];
+    }) => {
       setRevealedAccessCode(accessCode);
+      if (meta) {
+        setCodeDialogDeliver({ accessCode, codeId, meta });
+      }
       if (codeLead) {
         onLeadPatch?.(codeLead.id, {
           has_pending_code: true,

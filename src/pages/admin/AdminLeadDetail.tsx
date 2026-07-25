@@ -2,14 +2,25 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { MessageCircle, Copy, ArrowRight, ClipboardList, CalendarPlus } from 'lucide-react';
+import {
+  MessageCircle,
+  Copy,
+  ArrowRight,
+  ClipboardList,
+  CalendarPlus,
+  Package,
+  MapPin,
+  BarChart3,
+  Instagram,
+  Calendar,
+} from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import GenerateAccessCodeDialog from '@/components/admin/GenerateAccessCodeDialog';
 import ExtendSubscriptionDialog from '@/components/admin/ExtendSubscriptionDialog';
 import LeadAccessCodePanel from '@/components/admin/LeadAccessCodePanel';
 import LeadCodeActionButton from '@/components/admin/LeadCodeActionButton';
+import SubscriptionStatusBadge from '@/components/admin/subscription/SubscriptionStatusBadge';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
@@ -25,8 +36,8 @@ import {
   updateLead,
 } from '@/services/leadAdminService';
 import {
-  LEAD_STATUS_LABELS,
   LEAD_STATUS_OPTIONS,
+  LEAD_STATUS_LABELS,
   buildWhatsAppUrl,
   type LeadRecord,
   type LeadStatus,
@@ -34,13 +45,12 @@ import {
 import { getMonthlyOrderLabel } from '@/data/leadFormOptions';
 import { useLeadAccessCodeDialog } from '@/hooks/useLeadAccessCodeDialog';
 import {
-  LEAD_STATUS_COLORS,
   buildFollowUpWhatsAppMessage,
   buildInitialWhatsAppMessage,
   buildLeadSummaryText,
   formatLeadRelativeTime,
 } from '@/utils/leadWorkflowUtils';
-import { cn } from '@/lib/utils';
+import { planLabelForLead } from '@/utils/subscriptionPlanLabels';
 import { toast } from 'sonner';
 import { isConvertedLead } from '@/utils/leadAccessCodeUtils';
 
@@ -96,10 +106,6 @@ const AdminLeadDetail = () => {
     return data;
   };
 
-  const loadCodesForLead = async (id: string) => {
-    await loadCodes(id);
-  };
-
   useEffect(() => {
     if (!leadId) return;
     resetForLead();
@@ -110,7 +116,7 @@ const AdminLeadDetail = () => {
     void (async () => {
       setLoading(true);
       await loadLead(leadId);
-      await loadCodesForLead(leadId);
+      await loadCodes(leadId);
       setLoading(false);
     })();
   }, [leadId, navigate]);
@@ -147,17 +153,12 @@ const AdminLeadDetail = () => {
 
   const refreshAfterCode = async () => {
     if (!leadId) return;
-    await loadCodesForLead(leadId);
+    await loadCodes(leadId);
     const data = await fetchLeadById(leadId);
     if (data) {
       setLead(data);
       setStatus(data.status);
     }
-  };
-
-  const openLeadCodeDialog = () => {
-    if (!lead) return;
-    void openCodeDialog(lead);
   };
 
   if (loading || !lead) {
@@ -174,8 +175,8 @@ const AdminLeadDetail = () => {
       : buildInitialWhatsAppMessage(lead);
 
   return (
-    <AdminLayout title="تفاصيل الطلب">
-      <div className="space-y-6 max-w-2xl">
+    <AdminLayout title="تفاصيل طلب الاشتراك">
+      <div className="space-y-5">
         <Button
           variant="ghost"
           className="rounded-xl gap-2 -mr-2"
@@ -185,169 +186,201 @@ const AdminLeadDetail = () => {
           العودة للقائمة
         </Button>
 
-        <div className="rounded-2xl border border-border/50 bg-card p-6 space-y-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-bold">{lead.full_name}</h2>
-              <p className="text-sm text-muted-foreground mt-1 font-mono" dir="ltr">
-                {lead.whatsapp_number}
-              </p>
-              <p className="text-xs text-muted-foreground mt-2">
-                {formatLeadRelativeTime(lead.created_at)} ·{' '}
-                {format(new Date(lead.created_at), 'EEEE dd MMMM yyyy، HH:mm', { locale: ar })}
-              </p>
+        <div className="sub-detail-grid">
+          <div className="sub-detail-grid__main space-y-5">
+            <div className="sub-detail-hero">
+              <div className="sub-detail-hero__banner" />
+              <div className="sub-detail-hero__body">
+                <div className="sub-detail-hero__top">
+                  <div>
+                    <div className="sub-detail-hero__avatar">{lead.full_name.charAt(0)}</div>
+                    <h2 className="sub-detail-hero__name">{lead.full_name}</h2>
+                    <p className="sub-detail-hero__phone" dir="ltr">
+                      {lead.whatsapp_number}
+                    </p>
+                    <p className="sub-detail-hero__date">
+                      <Calendar className="inline h-3.5 w-3.5 ml-1" />
+                      {formatLeadRelativeTime(lead.created_at)} ·{' '}
+                      {format(new Date(lead.created_at), 'EEEE dd MMMM yyyy، HH:mm', {
+                        locale: ar,
+                      })}
+                    </p>
+                  </div>
+                  <SubscriptionStatusBadge type="workflow" lead={lead} />
+                </div>
+
+                <div className="sub-detail-info-grid">
+                  {lead.selected_plan_name && (
+                    <div className="sub-detail-info-item">
+                      <p className="sub-detail-info-item__label">
+                        <Package className="inline h-3 w-3 ml-1" />
+                        الباقة المطلوبة
+                      </p>
+                      <p className="sub-detail-info-item__value">{planLabelForLead(lead)}</p>
+                    </div>
+                  )}
+                  {lead.governorate && (
+                    <div className="sub-detail-info-item">
+                      <p className="sub-detail-info-item__label">
+                        <MapPin className="inline h-3 w-3 ml-1" />
+                        المحافظة
+                      </p>
+                      <p className="sub-detail-info-item__value">{lead.governorate}</p>
+                    </div>
+                  )}
+                  {lead.expected_monthly_orders && (
+                    <div className="sub-detail-info-item">
+                      <p className="sub-detail-info-item__label">
+                        <BarChart3 className="inline h-3 w-3 ml-1" />
+                        الطلبات الشهرية
+                      </p>
+                      <p className="sub-detail-info-item__value">
+                        {getMonthlyOrderLabel(lead.expected_monthly_orders)}
+                      </p>
+                    </div>
+                  )}
+                  {lead.instagram_url && (
+                    <div className="sub-detail-info-item sub-detail-info-item--wide">
+                      <p className="sub-detail-info-item__label">
+                        <Instagram className="inline h-3 w-3 ml-1" />
+                        إنستغرام
+                      </p>
+                      <a
+                        href={
+                          lead.instagram_url.startsWith('http')
+                            ? lead.instagram_url
+                            : `https://instagram.com/${lead.instagram_url.replace(/^@/, '')}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="sub-detail-info-item__value text-primary hover:underline break-all"
+                        dir="ltr"
+                      >
+                        {lead.instagram_url}
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                <div className="sub-detail-actions">
+                  <LeadCodeActionButton
+                    lead={lead}
+                    activeCode={activeCodeRecord}
+                    codes={codes}
+                    size="lg"
+                    onClick={() => void openCodeDialog(lead)}
+                  />
+                  {isConvertedLead(lead) && (
+                    <Button
+                      variant="outline"
+                      className="sub-detail-action border-primary/30"
+                      onClick={() => setExtendOpen(true)}
+                    >
+                      <CalendarPlus className="w-4 h-4" />
+                      تمديد الاشتراك
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    className="sub-detail-action bg-[#25D366]/5 text-[#128C7E] border-[#25D366]/30"
+                    onClick={() => void handleWhatsApp(whatsAppMessage)}
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    {lead.status === 'new' ? 'تواصل واتساب' : 'متابعة واتساب'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="sub-detail-action"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(lead.whatsapp_number);
+                      toast.success('تم نسخ الرقم');
+                    }}
+                  >
+                    <Copy className="w-4 h-4" />
+                    نسخ الرقم
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="sub-detail-action"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(buildLeadSummaryText(lead));
+                      toast.success('تم نسخ ملخص الطلب');
+                    }}
+                  >
+                    <ClipboardList className="w-4 h-4" />
+                    نسخ الملخص
+                  </Button>
+                </div>
+              </div>
             </div>
-            <Badge variant="outline" className={cn('font-normal', LEAD_STATUS_COLORS[lead.status])}>
-              {LEAD_STATUS_LABELS[lead.status]}
-            </Badge>
-          </div>
 
-          {lead.selected_plan_name && (
-            <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
-              <span className="text-muted-foreground">الباقة المطلوبة: </span>
-              <span className="font-semibold text-foreground">{lead.selected_plan_name}</span>
-            </div>
-          )}
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            {lead.governorate && (
-              <div className="rounded-xl border border-border/50 bg-muted/30 px-4 py-3 text-sm">
-                <p className="text-xs text-muted-foreground mb-1">المحافظة</p>
-                <p className="font-medium">{lead.governorate}</p>
-              </div>
-            )}
-            {lead.expected_monthly_orders && (
-              <div className="rounded-xl border border-border/50 bg-muted/30 px-4 py-3 text-sm">
-                <p className="text-xs text-muted-foreground mb-1">الطلبات الشهرية</p>
-                <p className="font-medium">{getMonthlyOrderLabel(lead.expected_monthly_orders)}</p>
-              </div>
-            )}
-            {lead.instagram_url && (
-              <div className="rounded-xl border border-border/50 bg-muted/30 px-4 py-3 text-sm sm:col-span-2">
-                <p className="text-xs text-muted-foreground mb-1">إنستغرام</p>
-                <a
-                  href={
-                    lead.instagram_url.startsWith('http')
-                      ? lead.instagram_url
-                      : `https://instagram.com/${lead.instagram_url.replace(/^@/, '')}`
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-medium text-primary hover:underline break-all"
-                  dir="ltr"
-                >
-                  {lead.instagram_url}
-                </a>
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <LeadCodeActionButton
+            <LeadAccessCodePanel
               lead={lead}
-              activeCode={activeCodeRecord}
               codes={codes}
-              size="lg"
-              onClick={openLeadCodeDialog}
+              codesLoading={codesLoading}
+              replacing={replacingCode}
+              revealedAccessCode={revealedAccessCode}
+              onRefreshCodes={() => leadId && void loadCodes(leadId)}
+              onManageCode={canManageCode ? () => setCodeOpen(true) : undefined}
+              onReplaceCode={canManageCode ? handleReplaceCode : undefined}
+              onReissueCode={canReissueCode ? handleReissueCode : undefined}
             />
-            {isConvertedLead(lead) && (
+          </div>
+
+          <div className="sub-detail-grid__side">
+            <div className="sub-detail-panel space-y-4">
+              <h3 className="sub-detail-panel__title">إدارة الطلب</h3>
+
+              <div className="space-y-2">
+                <Label>الحالة</Label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {QUICK_STATUSES.map((s) => (
+                    <Button
+                      key={s}
+                      type="button"
+                      size="sm"
+                      variant={status === s ? 'default' : 'outline'}
+                      className="rounded-full h-8 text-xs"
+                      onClick={() => setStatus(s)}
+                    >
+                      {LEAD_STATUS_LABELS[s]}
+                    </Button>
+                  ))}
+                </div>
+                <Select value={status} onValueChange={(v) => setStatus(v as LeadStatus)}>
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LEAD_STATUS_OPTIONS.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {LEAD_STATUS_LABELS[s]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>ملاحظات المبيعات</Label>
+                <Textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={6}
+                  className="rounded-xl font-arabic min-h-[140px]"
+                  placeholder="السعر المتفق عليه، موعد التفعيل، اعتراضات العميل..."
+                />
+              </div>
+
               <Button
-                variant="outline"
-                className="rounded-xl gap-2 w-full sm:w-auto border-primary/30"
-                onClick={() => setExtendOpen(true)}
+                onClick={() => void saveNotes()}
+                disabled={saving}
+                className="rounded-xl w-full h-11 font-semibold"
               >
-                <CalendarPlus className="w-4 h-4" />
-                تمديد الاشتراك
+                {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
               </Button>
-            )}
-            <Button
-              variant="outline"
-              className="rounded-xl gap-2 w-full sm:w-auto bg-[#25D366]/5 text-[#128C7E] border-[#25D366]/30"
-              onClick={() => void handleWhatsApp(whatsAppMessage)}
-            >
-              <MessageCircle className="w-4 h-4" />
-              {lead.status === 'new' ? 'تواصل واتساب' : 'متابعة واتساب'}
-            </Button>
-            <Button
-              variant="outline"
-              className="rounded-xl gap-2 w-full sm:w-auto"
-              onClick={() => {
-                void navigator.clipboard.writeText(lead.whatsapp_number);
-                toast.success('تم نسخ الرقم');
-              }}
-            >
-              <Copy className="w-4 h-4" />
-              نسخ الرقم
-            </Button>
-            <Button
-              variant="outline"
-              className="rounded-xl gap-2 w-full sm:w-auto"
-              onClick={() => {
-                void navigator.clipboard.writeText(buildLeadSummaryText(lead));
-                toast.success('تم نسخ ملخص الطلب');
-              }}
-            >
-              <ClipboardList className="w-4 h-4" />
-              نسخ الملخص
-            </Button>
-          </div>
-        </div>
-
-        <LeadAccessCodePanel
-          lead={lead}
-          codes={codes}
-          codesLoading={codesLoading}
-          replacing={replacingCode}
-          revealedAccessCode={revealedAccessCode}
-          onRefreshCodes={() => leadId && void loadCodesForLead(leadId)}
-          onManageCode={canManageCode ? () => setCodeOpen(true) : undefined}
-          onReplaceCode={canManageCode ? handleReplaceCode : undefined}
-          onReissueCode={canReissueCode ? handleReissueCode : undefined}
-        />
-
-        <div className="rounded-2xl border border-border/50 bg-card p-6 space-y-4">
-          <div className="space-y-2">
-            <Label>الحالة</Label>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {QUICK_STATUSES.map((s) => (
-                <Button
-                  key={s}
-                  type="button"
-                  size="sm"
-                  variant={status === s ? 'default' : 'outline'}
-                  className="rounded-full h-8 text-xs"
-                  onClick={() => setStatus(s)}
-                >
-                  {LEAD_STATUS_LABELS[s]}
-                </Button>
-              ))}
             </div>
-            <Select value={status} onValueChange={(v) => setStatus(v as LeadStatus)}>
-              <SelectTrigger className="rounded-xl">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {LEAD_STATUS_OPTIONS.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {LEAD_STATUS_LABELS[s]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
-          <div className="space-y-2">
-            <Label>ملاحظات المبيعات</Label>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={5}
-              className="rounded-xl font-arabic"
-              placeholder="السعر المتفق عليه، موعد التفعيل، اعتراضات العميل..."
-            />
-          </div>
-          <Button onClick={() => void saveNotes()} disabled={saving} className="rounded-xl w-full sm:w-auto">
-            {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
-          </Button>
         </div>
       </div>
 
@@ -367,14 +400,14 @@ const AdminLeadDetail = () => {
         }}
       />
 
-      {lead && isConvertedLead(lead) && (
+      {isConvertedLead(lead) && (
         <ExtendSubscriptionDialog
           leadId={lead.id}
           customerName={lead.full_name}
           open={extendOpen}
           onOpenChange={setExtendOpen}
           onExtended={() => {
-            void loadCodesForLead(lead.id);
+            void loadCodes(lead.id);
             void refreshAfterCode();
           }}
         />

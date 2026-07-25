@@ -9,7 +9,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/context/SubscriptionContext';
-import { fetchMerchantAccess } from '@/services/subscriptionService';
+import { fetchMerchantAccessWithRetry } from '@/services/subscriptionService';
 import { previewAccessCode } from '@/services/leadAdminService';
 import { useToast } from '@/hooks/use-toast';
 import { AuthPageShell, AuthLoadingScreen } from '@/components/auth/AuthPageShell';
@@ -17,8 +17,14 @@ import { AuthPageHeader } from '@/components/auth/AuthFormFields';
 import { authHintClass, authSubmitClass } from '@/components/auth/authFormStyles';
 import { clearAuthUrlParams, parseAuthUrlError, sanitizeInternalRedirect } from '@/lib/authUtils';
 import { env } from '@/lib/env';
-import { ACCESS_CODE_ERROR_MESSAGES, formatAccessCodeInput, type AccessCodePreview } from '@/types/accessCodes';
-import { PUBLIC_SUBSCRIPTION_PLANS } from '@/data/subscriptionPlans';
+import {
+  ACCESS_CODE_ERROR_MESSAGES,
+  formatAccessCodeForSubmit,
+  formatAccessCodeInput,
+  parseAccessCodePaste,
+  type AccessCodePreview,
+} from '@/types/accessCodes';
+import { planLabelFor } from '@/utils/subscriptionPlanLabels';
 
 const redirectAuthTokensToCallback = (navigate: (path: string, opts?: { replace?: boolean }) => void) => {
   if (typeof window === 'undefined') return false;
@@ -37,9 +43,7 @@ const redirectAuthTokensToCallback = (navigate: (path: string, opts?: { replace?
   return false;
 };
 
-const planLabel = (planId: string) =>
-  PUBLIC_SUBSCRIPTION_PLANS.find((p) => p.id === planId)?.name ??
-  (planId === 'yearly' ? 'باقة سنوية' : 'باقة 6 أشهر');
+const planLabel = planLabelFor;
 
 type LoginStep = 'enter' | 'confirm';
 
@@ -84,9 +88,9 @@ const Login = () => {
 
   const handleVerifyCode = async (e: FormEvent) => {
     e.preventDefault();
-    const normalized = accessCode.replace(/[^A-Za-z0-9]/g, '');
-    if (normalized.length < 11) {
-      setError('يرجى إدخال رمز التفعيل كاملاً');
+    const formatted = formatAccessCodeForSubmit(accessCode);
+    if (!formatted) {
+      setError('يرجى إدخال رمز التفعيل كاملاً بصيغة BDY-XXXX-XXXX');
       return;
     }
 
@@ -94,7 +98,8 @@ const Login = () => {
     setError(null);
 
     try {
-      const result = await previewAccessCode(accessCode);
+      setAccessCode(formatted);
+      const result = await previewAccessCode(formatted);
       setPreview(result);
       setStep('confirm');
       setError(null);
@@ -110,8 +115,15 @@ const Login = () => {
     setIsLoading(true);
     setError(null);
 
+    const formatted = formatAccessCodeForSubmit(accessCode);
+    if (!formatted) {
+      setError('يرجى إدخال رمز التفعيل كاملاً بصيغة BDY-XXXX-XXXX');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const result = await loginWithAccessCode(accessCode, rememberMe);
+      const result = await loginWithAccessCode(formatted, rememberMe);
       if (result.error) {
         setError(result.error);
         setStep('confirm');
@@ -119,7 +131,7 @@ const Login = () => {
       }
 
       await refreshSubscription();
-      const access = await fetchMerchantAccess();
+      const access = await fetchMerchantAccessWithRetry();
 
       if (access.isAdmin) {
         navigate('/admin/leads', { replace: true });
@@ -173,6 +185,12 @@ const Login = () => {
               id="access-code"
               value={accessCode}
               onChange={(e) => setAccessCode(formatAccessCodeInput(e.target.value))}
+              onPaste={(e) => {
+                const text = e.clipboardData.getData('text');
+                if (!text) return;
+                e.preventDefault();
+                setAccessCode(parseAccessCodePaste(text));
+              }}
               placeholder="BDY-XXXX-XXXX"
               className="h-12 rounded-xl text-center font-mono text-lg tracking-widest"
               dir="ltr"
@@ -180,7 +198,7 @@ const Login = () => {
               disabled={isLoading}
               required
             />
-            <p className={authHintClass}>الخطوة 1: التحقق من الرمز</p>
+            <p className={authHintClass}>الخطوة 1: التحقق من الرمز — الصق الرمز فقط (BDY-XXXX-XXXX)</p>
           </div>
 
           <div className="flex items-center justify-end gap-2.5">

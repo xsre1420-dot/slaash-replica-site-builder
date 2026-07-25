@@ -5,6 +5,8 @@ import {
   canReissueAccessCodeForLead,
   accessCodeBlockReason,
   getLastRedeemedAccessCode,
+  hasStalePendingCodeFlag,
+  resolveAccessCodeDialogMode,
 } from '@/utils/leadAccessCodeUtils';
 import type { AccessCodeRecord } from '@/types/accessCodes';
 
@@ -21,11 +23,13 @@ describe('leadAccessCodeUtils', () => {
     expect(accessCodeBlockReason({ has_pending_code: true }, [])).toBe('pending');
   });
 
-  it('ignores stale has_pending_code when codes show no active code', () => {
+  it('allows create when pending flag is stale and codes were fetched', () => {
     const lead = { converted_user_id: null, has_pending_code: true, status: 'interested' as const };
-    expect(canCreateAccessCodeForLead(lead, [])).toBe(false);
-    expect(accessCodeBlockReason(lead, [])).toBe('pending');
-    expect(canCreateAccessCodeForLead(lead, [])).toBe(false);
+    expect(canCreateAccessCodeForLead(lead, [], { codesFetched: true })).toBe(true);
+    expect(hasStalePendingCodeFlag(lead, [], { codesFetched: true })).toBe(true);
+    expect(accessCodeBlockReason(lead, [], { codesFetched: true })).toBeNull();
+    expect(canManageAccessCodeForLead(lead, [])).toBe(true);
+    expect(resolveAccessCodeDialogMode(lead as import('@/types/leads').LeadRecord, [])).toBe('create');
   });
 
   it('allows reissue for converted leads without active code', () => {

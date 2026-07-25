@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { buildAccessCodeWhatsAppMessage } from '@/types/accessCodes';
+import { buildAccessCodeWhatsAppMessage, formatAccessCodeForSubmit } from '@/types/accessCodes';
 import { buildWhatsAppUrl, type LeadRecord } from '@/types/leads';
 import { PUBLIC_SUBSCRIPTION_PLANS } from '@/data/subscriptionPlans';
 import { cn } from '@/lib/utils';
@@ -135,8 +135,8 @@ export const AccessCodeDeliverStep = ({
         {replacing ? 'جاري استبدال الرمز...' : 'استبدال الرمز (رمز جديد — نفس الاشتراك)'}
       </Button>
 
-      <p className="text-xs text-center text-muted-foreground leading-relaxed">
-        {subtitle ?? 'العميل يدخل من /login — يتحقق من الرمز ثم يُفعَّل حسابه بنفس مدة الاشتراك.'}
+      <p className="text-xs text-center text-emerald-700 bg-emerald-500/10 rounded-lg px-3 py-2 leading-relaxed">
+        {subtitle ?? 'انسخ الرمز أو أرسله عبر واتساب قبل إغلاق النافذة — العميل يدخل من /login'}
       </p>
     </div>
   );
