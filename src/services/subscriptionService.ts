@@ -42,4 +42,19 @@ export const fetchMerchantAccess = async (): Promise<MerchantAccessState> => {
   };
 };
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Retry access check after redeem — avoids spurious logout when RPC lags behind edge write. */
+export const fetchMerchantAccessWithRetry = async (
+  attempts = 4,
+  delayMs = 400
+): Promise<MerchantAccessState> => {
+  let last = await fetchMerchantAccess();
+  for (let i = 1; i < attempts && !last.hasAccess && !last.isAdmin; i += 1) {
+    await sleep(delayMs * i);
+    last = await fetchMerchantAccess();
+  }
+  return last;
+};
+
 export { isSubscriptionExpired };

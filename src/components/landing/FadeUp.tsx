@@ -26,7 +26,7 @@ export const FadeUp = ({
 };
 
 export const SectionBadge = ({ children }: { children: ReactNode }) => (
-  <span className="landing-badge">{children}</span>
+  <span className="lp-badge">{children}</span>
 );
 
 export const SectionTitle = ({
@@ -42,7 +42,7 @@ export const SectionTitle = ({
 }) => (
   <div className={align === 'center' ? 'mx-auto max-w-3xl text-center' : 'max-w-2xl text-right'}>
     {eyebrow && <SectionBadge>{eyebrow}</SectionBadge>}
-    <h2 className="landing-section-title mt-5">{title}</h2>
-    {subtitle && <p className="landing-section-subtitle mt-4">{subtitle}</p>}
+    <h2 className="lp-section-title">{title}</h2>
+    {subtitle && <p className="lp-section-subtitle">{subtitle}</p>}
   </div>
 );

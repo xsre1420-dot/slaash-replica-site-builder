@@ -14,6 +14,7 @@ import { useRealtimeOrders, OrderRealtimeEvent } from '@/hooks/useRealtimeOrders
 import OrdersToolbar, { DEFAULT_ORDER_FILTERS } from '@/components/orders/OrdersToolbar';
 import OrdersSummaryStrip from '@/components/orders/OrdersSummaryStrip';
 import OrdersDataTable from '@/components/orders/OrdersDataTable';
+import OrdersPagination from '@/components/orders/OrdersPagination';
 import OrderNotificationsCenter from '@/components/orders/OrderNotificationsCenter';
 import { useOrderNotifications, eventToNotification } from '@/hooks/useOrderNotifications';
 import {

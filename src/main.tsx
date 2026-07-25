@@ -9,6 +9,7 @@ import { startBackgroundWorkers } from '@/background';
 import { installMemoryLifecycle } from '@/lib/memory/lifecycle';
 import App from './App.tsx';
 import './index.css';
+import './styles/subscription.css';
 
 initMonitoring({
   webhookUrl: isObservabilityClientEnabled() ? env.VITE_OBSERVABILITY_WEBHOOK_URL : undefined,

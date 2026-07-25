@@ -1,8 +1,24 @@
 import { PUBLIC_SUBSCRIPTION_PLANS } from '@/data/subscriptionPlans';
+import type { LeadRecord } from '@/types/leads';
 
-export const planLabelFor = (planId: string): string =>
-  PUBLIC_SUBSCRIPTION_PLANS.find((p) => p.id === planId)?.name ??
-  (planId === 'yearly' ? 'باقة سنوية' : planId === 'annual' ? 'باقة 6 أشهر' : planId);
+/** Display label for a plan ID or legacy stored name — always includes duration when known. */
+export const planLabelFor = (planIdOrName: string): string => {
+  const plan = PUBLIC_SUBSCRIPTION_PLANS.find((p) => p.id === planIdOrName);
+  if (plan) return `${plan.name} — ${plan.toggleLabel}`;
+
+  const normalized = planIdOrName.trim().toLowerCase();
+  if (normalized === 'yearly' || planIdOrName.includes('سنو')) return 'باقة سنوية';
+  if (normalized === 'annual' || planIdOrName.includes('6')) return 'باقة 6 أشهر';
+
+  return planIdOrName;
+};
+
+/** Prefer selected_plan_id (source of truth) over display name from DB. */
+export const planLabelForLead = (lead: Pick<LeadRecord, 'selected_plan_id' | 'selected_plan_name'>): string => {
+  if (lead.selected_plan_id) return planLabelFor(lead.selected_plan_id);
+  if (lead.selected_plan_name) return planLabelFor(lead.selected_plan_name);
+  return '—';
+};
 
 export const getSubscriptionRemainingDays = (endDate: string | null | undefined): number | null => {
   if (!endDate) return null;

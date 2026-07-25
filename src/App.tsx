@@ -1,8 +1,9 @@
 
-import React, { Suspense, lazy, memo } from "react";
+import React, { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import PageSpinner from "@/components/ui/page-spinner";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { createAppQueryClient } from "@/lib/query/queryClientConfig";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -53,15 +54,6 @@ const Sitemap = lazy(() => import("./pages/Sitemap"));
 
 const queryClient = createAppQueryClient();
 
-const PageLoader = memo(() => (
-  <div className="min-h-screen flex items-center justify-center bg-background">
-    <div className="flex flex-col items-center gap-4">
-      <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin" />
-      <p className="text-muted-foreground text-sm font-arabic">جارٍ التحميل...</p>
-    </div>
-  </div>
-));
-
 const withRouteBoundary = (element: React.ReactNode) => (
   <RouteErrorBoundary>{element}</RouteErrorBoundary>
 );
@@ -71,19 +63,19 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <SubscriptionProvider>
-        <StoreProvider>
-          <TooltipProvider>
-            <CartProvider>
-              <OfflineBanner />
-              <RecoveryBanner />
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-              <StoreBootstrapProvider>
-                <RouteObserver />
-                <SubdomainRouter />
-                <Suspense fallback={<PageLoader />}>
-                  <Routes>
+          <BrowserRouter>
+            <StoreBootstrapProvider>
+              <StoreProvider>
+                <TooltipProvider>
+                  <CartProvider>
+                    <OfflineBanner />
+                    <RecoveryBanner />
+                    <Toaster />
+                    <Sonner />
+                    <RouteObserver />
+                    <SubdomainRouter />
+                    <Suspense fallback={<PageSpinner />}>
+                      <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/request-access" element={<RequestAccess />} />
@@ -120,13 +112,13 @@ const App = () => (
                     <Route path="/preview" element={<ProtectedRoute><PreviewStore /></ProtectedRoute>} />
                     <Route path="/sitemap.xml" element={<Sitemap />} />
                     <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </Suspense>
-              </StoreBootstrapProvider>
-              </BrowserRouter>
-            </CartProvider>
-          </TooltipProvider>
-        </StoreProvider>
+                      </Routes>
+                    </Suspense>
+                  </CartProvider>
+                </TooltipProvider>
+              </StoreProvider>
+            </StoreBootstrapProvider>
+          </BrowserRouter>
         </SubscriptionProvider>
       </AuthProvider>
     </QueryClientProvider>

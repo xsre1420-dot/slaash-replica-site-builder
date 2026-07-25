@@ -1,17 +1,26 @@
 import { describe, it, expect } from 'vitest';
-import { getSubscriptionRemainingDays, planLabelFor } from '@/utils/subscriptionPlanLabels';
+import { planLabelFor, planLabelForLead, getSubscriptionRemainingDays } from '@/utils/subscriptionPlanLabels';
 import { isSubscriptionExpired } from '@/utils/subscriptionExpiryUtils';
 
 describe('subscriptionPlanLabels', () => {
   it('labels annual and yearly plans', () => {
     expect(planLabelFor('annual')).toContain('6');
-    expect(planLabelFor('yearly')).toContain('سنو');
+    expect(planLabelFor('yearly')).toMatch(/سنة|سنو/);
   });
 
   it('computes remaining days', () => {
     const future = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
     expect(getSubscriptionRemainingDays(future)).toBeGreaterThanOrEqual(9);
     expect(getSubscriptionRemainingDays(null)).toBeNull();
+  });
+
+  it('prefers selected_plan_id for lead display', () => {
+    expect(
+      planLabelForLead({
+        selected_plan_id: 'yearly',
+        selected_plan_name: 'باقة 6 أشهر',
+      })
+    ).toMatch(/سنة|سنو/);
   });
 });
 

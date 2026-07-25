@@ -1,88 +1,223 @@
-import { BarChart3, LayoutDashboard, Package, ShoppingBag, TrendingUp } from 'lucide-react';
+import {
+  BarChart3,
+  Bell,
+  LayoutDashboard,
+  Package,
+  Settings,
+  ShoppingBag,
+  TrendingUp,
+  Users,
+  Wallet,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type DashboardMockupProps = {
   className?: string;
-  compact?: boolean;
+  variant?: 'desktop' | 'mobile';
 };
 
-const DashboardMockup = ({ className, compact = false }: DashboardMockupProps) => (
+const navItems = [
+  { icon: LayoutDashboard, label: 'الرئيسية', active: true },
+  { icon: Package, label: 'المنتجات', active: false },
+  { icon: ShoppingBag, label: 'الطلبات', active: false },
+  { icon: Users, label: 'العملاء', active: false },
+  { icon: BarChart3, label: 'التقارير', active: false },
+  { icon: Settings, label: 'الإعدادات', active: false },
+];
+
+const metrics = [
+  {
+    label: 'إجمالي المبيعات',
+    value: '12,450,000',
+    suffix: ' د.ع',
+    delta: '+12%',
+    icon: Wallet,
+    spark: [18, 22, 20, 28, 24, 32, 30],
+  },
+  {
+    label: 'الطلبات',
+    value: '342',
+    suffix: '',
+    delta: '+8%',
+    icon: ShoppingBag,
+    spark: [24, 20, 28, 26, 34, 30, 38],
+  },
+  {
+    label: 'العملاء',
+    value: '218',
+    suffix: '',
+    delta: '+15%',
+    icon: Users,
+    spark: [12, 16, 14, 20, 18, 24, 22],
+  },
+  {
+    label: 'المنتجات',
+    value: '64',
+    suffix: '',
+    delta: '+5%',
+    icon: Package,
+    spark: [14, 16, 15, 18, 17, 20, 19],
+  },
+];
+
+const recentOrders = [
+  {
+    id: '#1247',
+    time: 'منذ 10 دقائق',
+    amount: '45,000',
+    status: 'تم التوصيل',
+    tone: 'emerald' as const,
+    thumbClass: 'lp-dashboard-order-thumb--headphones',
+    thumb: '🎧',
+  },
+  {
+    id: '#1248',
+    time: 'منذ 25 دقيقة',
+    amount: '128,500',
+    status: 'تم الشحن',
+    tone: 'sky' as const,
+    thumbClass: 'lp-dashboard-order-thumb--watch',
+    thumb: '⌚',
+  },
+  {
+    id: '#1249',
+    time: 'منذ 40 دقيقة',
+    amount: '32,000',
+    status: 'قيد المعالجة',
+    tone: 'amber' as const,
+    thumbClass: 'lp-dashboard-order-thumb--camera',
+    thumb: '📷',
+  },
+];
+
+const MiniLineChart = ({ points }: { points: number[] }) => {
+  const width = 88;
+  const height = 28;
+  const max = Math.max(...points);
+  const min = Math.min(...points);
+  const range = max - min || 1;
+
+  const path = points
+    .map((point, index) => {
+      const x = (index / (points.length - 1)) * width;
+      const y = height - ((point - min) / range) * (height - 4) - 2;
+      return `${index === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+    })
+    .join(' ');
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className="h-7 w-full" aria-hidden>
+      <path
+        d={path}
+        fill="none"
+        stroke="hsl(var(--primary))"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle
+        cx={width}
+        cy={height - ((points[points.length - 1] - min) / range) * (height - 4) - 2}
+        r="2.5"
+        fill="hsl(var(--primary))"
+      />
+    </svg>
+  );
+};
+
+const DashboardMockup = ({ className, variant = 'desktop' }: DashboardMockupProps) => (
   <div
     className={cn(
-      'overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-[0_24px_64px_-16px_rgba(15,23,42,0.12)]',
+      'lp-dashboard-mockup',
+      variant === 'mobile' && 'lp-dashboard-mockup--mobile',
       className
     )}
-    dir="ltr"
+    dir="rtl"
   >
-    <div className="flex border-b border-[#e2e8f0] bg-[#f8fafc] px-4 py-3">
-      <div className="flex gap-1.5">
-        <span className="h-2.5 w-2.5 rounded-full bg-[#fca5a5]" />
-        <span className="h-2.5 w-2.5 rounded-full bg-[#fcd34d]" />
-        <span className="h-2.5 w-2.5 rounded-full bg-[#86efac]" />
-      </div>
-      <div className="mx-auto hidden h-6 w-48 rounded-md bg-white/80 sm:block" />
-    </div>
-
-    <div className="flex">
-      <aside className={cn('hidden shrink-0 border-r border-[#e2e8f0] bg-white sm:block', compact ? 'w-14' : 'w-44')}>
-        <div className="space-y-1 p-3">
-          {[
-            { icon: LayoutDashboard, active: true },
-            { icon: Package, active: false },
-            { icon: ShoppingBag, active: false },
-            { icon: BarChart3, active: false },
-          ].map(({ icon: Icon, active }, i) => (
-            <div
-              key={i}
-              className={cn(
-                'flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-medium',
-                active ? 'bg-primary/10 text-primary' : 'text-[#94a3b8]'
-              )}
-            >
-              <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
-              {!compact && <span>{['Dashboard', 'Products', 'Orders', 'Analytics'][i]}</span>}
-            </div>
-          ))}
-        </div>
-      </aside>
-
-      <div className="min-w-0 flex-1 bg-[#f8fafc] p-4 sm:p-5">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94a3b8]">Overview</p>
-            <p className="text-sm font-semibold text-[#111827]">Store performance</p>
+    <div className="lp-dashboard-shell">
+      {variant === 'desktop' && (
+        <aside className="lp-dashboard-sidebar">
+          <div className="lp-dashboard-sidebar-brand">
+            <span>بداية</span>
           </div>
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-600">
-            <TrendingUp className="h-3 w-3" />
-            +24%
+          <nav className="lp-dashboard-nav">
+            {navItems.map(({ icon: Icon, label, active }) => (
+              <div key={label} className={cn('lp-dashboard-nav-item', active && 'lp-dashboard-nav-item--active')}>
+                <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+                <span>{label}</span>
+              </div>
+            ))}
+          </nav>
+        </aside>
+      )}
+
+      <div className="lp-dashboard-main">
+        {variant === 'mobile' && (
+          <div className="lp-dashboard-mobile-brand">
+            <span>بداية</span>
+          </div>
+        )}
+
+        <div className="lp-dashboard-header">
+          <div className="lp-dashboard-header-copy">
+            <h3>مرحباً بك 👋</h3>
+            <p>إليك نظرة سريعة على أداء متجرك اليوم</p>
+          </div>
+          <span className="lp-dashboard-notify" aria-hidden>
+            <Bell className="h-4 w-4" strokeWidth={2} />
+            <span className="lp-dashboard-notify-badge">2</span>
           </span>
         </div>
 
-        <div className="mb-4 grid grid-cols-3 gap-2 sm:gap-3">
-          {[
-            { label: 'Revenue', value: '4.2M د.ع', tone: 'text-[#111827]' },
-            { label: 'Orders', value: '1,284', tone: 'text-primary' },
-            { label: 'Visitors', value: '18.5K', tone: 'text-[#111827]' },
-          ].map((stat) => (
-            <div key={stat.label} className="rounded-xl border border-[#e2e8f0] bg-white p-2.5 sm:p-3">
-              <p className="text-[9px] font-medium text-[#94a3b8] sm:text-[10px]">{stat.label}</p>
-              <p className={cn('mt-1 text-sm font-bold tabular-nums sm:text-base', stat.tone)}>{stat.value}</p>
+        <div className="lp-dashboard-metrics">
+          {metrics.map((metric) => (
+            <div key={metric.label} className="lp-dashboard-metric">
+              <div className="lp-dashboard-metric-top">
+                <span className="lp-dashboard-metric-icon">
+                  <metric.icon className="h-3.5 w-3.5" strokeWidth={1.75} />
+                </span>
+                <span className="lp-dashboard-metric-delta">
+                  <TrendingUp className="h-2.5 w-2.5" />
+                  {metric.delta}
+                </span>
+              </div>
+              <p className="lp-dashboard-metric-label">{metric.label}</p>
+              <p className="lp-dashboard-metric-value">
+                {metric.value}
+                {metric.suffix && <span>{metric.suffix}</span>}
+              </p>
+              <MiniLineChart points={metric.spark} />
             </div>
           ))}
         </div>
 
-        <div className="rounded-xl border border-[#e2e8f0] bg-white p-3 sm:p-4">
-          <div className="mb-3 flex items-end justify-between gap-2">
-            <p className="text-xs font-semibold text-[#111827]">Weekly sales</p>
-            <p className="text-[10px] text-[#94a3b8]">Last 7 days</p>
-          </div>
-          <div className="flex h-24 items-end gap-1.5 sm:h-28 sm:gap-2">
-            {[38, 52, 44, 68, 58, 82, 74].map((h, i) => (
-              <div key={i} className="flex flex-1 flex-col justify-end gap-1">
-                <div
-                  className={cn('w-full rounded-md', i === 5 ? 'bg-primary' : 'bg-primary/20')}
-                  style={{ height: `${h}%` }}
-                />
+        <div className="lp-dashboard-orders">
+          <p className="lp-dashboard-orders-title">أحدث الطلبات</p>
+          <div className="lp-dashboard-orders-list">
+            {recentOrders.map((order) => (
+              <div key={order.id} className="lp-dashboard-order-row">
+                <div className="lp-dashboard-order-user">
+                  <span className={cn('lp-dashboard-order-thumb', order.thumbClass)} aria-hidden>
+                    {order.thumb}
+                  </span>
+                  <div className="lp-dashboard-order-copy">
+                    <span className="lp-dashboard-order-id">{order.id}</span>
+                    <span className="lp-dashboard-order-time">{order.time}</span>
+                  </div>
+                </div>
+                <div className="lp-dashboard-order-meta">
+                  <span className="lp-dashboard-order-amount">{order.amount} د.ع</span>
+                  <span
+                    className={cn(
+                      'lp-dashboard-order-status',
+                      order.tone === 'emerald' && 'lp-dashboard-order-status--emerald',
+                      order.tone === 'sky' && 'lp-dashboard-order-status--sky',
+                      order.tone === 'amber' && 'lp-dashboard-order-status--amber'
+                    )}
+                  >
+                    {order.status}
+                  </span>
+                </div>
               </div>
             ))}
           </div>
