@@ -1,7 +1,6 @@
 import {
   Inbox,
   KeyRound,
-  Clock,
   Sparkles,
   CheckCircle2,
   ListFilter,
@@ -31,7 +30,7 @@ const ICONS: Record<string, LucideIcon> = {
   all: ListFilter,
   unread: Inbox,
   needs_code: KeyRound,
-  pending_activation: Clock,
+  pending_activation: CheckCircle2,
   pipeline: GitBranch,
   today: Sparkles,
   customers: CheckCircle2,

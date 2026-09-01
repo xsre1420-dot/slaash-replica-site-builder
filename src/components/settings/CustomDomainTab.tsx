@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  fetchCustomDomainSettings,
   removeCustomDomain,
   saveCustomDomain,
+  type CustomDomainSettings,
 } from "@/services/storeService";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
@@ -14,9 +14,17 @@ import { buildStorePublicUrl } from "@/lib/storeUrl";
 
 interface CustomDomainTabProps {
   storeSlug: string;
+  domainData: CustomDomainSettings | null;
+  domainLoading: boolean;
+  onDomainMutated?: () => void;
 }
 
-const CustomDomainTab = ({ storeSlug }: CustomDomainTabProps) => {
+const CustomDomainTab = ({
+  storeSlug,
+  domainData,
+  domainLoading,
+  onDomainMutated,
+}: CustomDomainTabProps) => {
   const { user } = useAuth();
   const [domain, setDomain] = useState("");
   const [savedDomain, setSavedDomain] = useState<string | null>(null);
@@ -25,16 +33,16 @@ const CustomDomainTab = ({ storeSlug }: CustomDomainTabProps) => {
   const [copied, setCopied] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user?.id) {
-      void fetchCustomDomainSettings(user.id).then((data) => {
-        if (data?.custom_domain) {
-          setDomain(data.custom_domain);
-          setSavedDomain(data.custom_domain);
-          setVerified(data.domain_verified);
-        }
-      });
+    if (domainData?.custom_domain) {
+      setDomain(domainData.custom_domain);
+      setSavedDomain(domainData.custom_domain);
+      setVerified(domainData.domain_verified);
+    } else if (domainData && !domainData.custom_domain) {
+      setDomain("");
+      setSavedDomain(null);
+      setVerified(false);
     }
-  }, [user?.id]);
+  }, [domainData]);
 
   const cleanDomain = (input: string) => {
     return input
@@ -69,6 +77,7 @@ const CustomDomainTab = ({ storeSlug }: CustomDomainTabProps) => {
       setSavedDomain(cleaned);
       setDomain(cleaned);
       setVerified(false);
+      onDomainMutated?.();
       toast.success("تم حفظ النطاق. اتبع تعليمات DNS أدناه.");
     } catch {
       toast.error("حدث خطأ غير متوقع");
@@ -82,10 +91,11 @@ const CustomDomainTab = ({ storeSlug }: CustomDomainTabProps) => {
     setSaving(true);
     try {
       await removeCustomDomain(user.id);
-      
+
       setDomain("");
       setSavedDomain(null);
       setVerified(false);
+      onDomainMutated?.();
       toast.success("تم إزالة النطاق المخصص");
     } finally {
       setSaving(false);
@@ -99,6 +109,14 @@ const CustomDomainTab = ({ storeSlug }: CustomDomainTabProps) => {
   };
 
   const defaultStoreUrl = storeSlug ? buildStorePublicUrl(storeSlug) : '';
+
+  if (domainLoading && !domainData) {
+    return (
+      <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 flex items-center justify-center py-16">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 space-y-5">

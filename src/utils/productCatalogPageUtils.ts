@@ -44,6 +44,8 @@ export const DEFAULT_PRODUCT_CATALOG_FILTERS: ProductCatalogFilters = {
 
 export type ProductLifecycleCounts = Record<ProductLifecycleFilter, number>;
 
+export type ProductCatalogStats = ReturnType<typeof computeProductCatalogStats>;
+
 export const computeProductCatalogStats = (products: Product[]) => {
   let published = 0;
   let drafts = 0;

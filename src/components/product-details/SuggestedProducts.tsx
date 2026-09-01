@@ -9,19 +9,34 @@ import {
   fetchSuggestedProductsForStore,
 } from '@/services/suggestedProductsService';
 
+import type { SuggestedProductCard } from '@/services/suggestedProductsService';
+
 interface SuggestedProductsProps {
   currentProductId: string;
   storeSlug?: string;
   category?: string;
+  /** From page bundle — skips separate fetch when provided */
+  prefetchedProducts?: SuggestedProductCard[] | null;
 }
 
-const SuggestedProducts = ({ currentProductId, storeSlug }: SuggestedProductsProps) => {
+const SuggestedProducts = ({
+  currentProductId,
+  storeSlug,
+  prefetchedProducts = null,
+}: SuggestedProductsProps) => {
   const [sectionRef, inView] = useInView<HTMLDivElement>();
-  const [suggestedProducts, setSuggestedProducts] = useState<
-    Awaited<ReturnType<typeof fetchSuggestedProductsForStore>>
-  >([]);
+  const [suggestedProducts, setSuggestedProducts] = useState<SuggestedProductCard[]>(
+    () => prefetchedProducts ?? []
+  );
 
   useEffect(() => {
+    if (prefetchedProducts != null) {
+      setSuggestedProducts(prefetchedProducts);
+    }
+  }, [prefetchedProducts]);
+
+  useEffect(() => {
+    if (prefetchedProducts != null) return;
     if (!inView || !currentProductId) return;
 
     const load = async () => {
@@ -39,7 +54,7 @@ const SuggestedProducts = ({ currentProductId, storeSlug }: SuggestedProductsPro
       }
     };
     void load();
-  }, [currentProductId, storeSlug, inView]);
+  }, [currentProductId, storeSlug, inView, prefetchedProducts]);
 
   const productLink = (id: string) =>
     storeSlug ? `/store/${storeSlug}/product/${id}` : `/product-details/${id}`;

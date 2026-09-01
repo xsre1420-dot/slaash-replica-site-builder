@@ -3,6 +3,8 @@
  */
 export {
   fetchStatisticsData,
+  loadStatisticsPageBundle,
+  peekStatisticsPageBundle,
   getStatisticsDateBounds,
   hasUsableStatisticsKpis,
   hasTopSellingProductsKpi,

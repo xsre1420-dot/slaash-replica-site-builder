@@ -31,9 +31,11 @@ import SubscriptionPlanSummaryCard from '@/components/subscription/SubscriptionP
 import SubscriptionRequestSuccess from '@/components/subscription/SubscriptionRequestSuccess';
 import SubscriptionTrustStrip from '@/components/subscription/SubscriptionTrustStrip';
 import { getPublicPlanById } from '@/data/subscriptionPlans';
+import { useLandingPageBundle } from '@/hooks/useLandingPageBundle';
 import { IRAQ_GOVERNORATES, MONTHLY_ORDER_OPTIONS } from '@/data/leadFormOptions';
 
 const RequestAccess = () => {
+  useLandingPageBundle();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const initialPlanId = searchParams.get('plan');

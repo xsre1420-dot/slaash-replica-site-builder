@@ -43,7 +43,8 @@ import {
   getRemainingSubscriptionMonths,
 } from '@/utils/accessCodeExpiryUtils';
 import { getStoredAccessCodeForLead, saveGeneratedAccessCode } from '@/utils/accessCodeSessionStore';
-import { PUBLIC_SUBSCRIPTION_PLANS } from '@/data/subscriptionPlans';
+import { PUBLIC_SUBSCRIPTION_PLANS, getPublicPlanById } from '@/data/subscriptionPlans';
+import { planLabelForLead } from '@/utils/subscriptionPlanLabels';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -54,8 +55,25 @@ const planLabelFor = (planId: string) =>
 type PlanId = 'annual' | 'yearly';
 type DialogStep = 'configure' | 'manage' | 'verify' | 'deliver' | 'reissue';
 
-const defaultPlanForLead = (lead: LeadRecord): PlanId =>
-  lead.selected_plan_id === 'yearly' ? 'yearly' : 'annual';
+const defaultPlanForLead = (lead: LeadRecord): PlanId => {
+  if (lead.selected_plan_id === 'yearly') return 'yearly';
+  if (lead.selected_plan_id === 'annual') return 'annual';
+  const name = lead.selected_plan_name?.trim() ?? '';
+  if (/سنو|yearly|12/i.test(name)) return 'yearly';
+  return 'annual';
+};
+
+const resolveLeadSelectedPlan = (lead: LeadRecord) => {
+  const byId = getPublicPlanById(lead.selected_plan_id);
+  if (byId) return byId;
+
+  const name = lead.selected_plan_name?.trim() ?? '';
+  if (!name) return null;
+  if (/سنو|yearly|12\s*ش/i.test(name)) return getPublicPlanById('yearly') ?? null;
+  if (/6\s*أ|annual|نصف/i.test(name)) return getPublicPlanById('annual') ?? null;
+
+  return null;
+};
 
 const defaultPriceForPlan = (planId: PlanId) =>
   PUBLIC_SUBSCRIPTION_PLANS.find((p) => p.id === planId)?.priceAmount ?? 125_000;
@@ -215,6 +233,18 @@ export const GenerateAccessCodeDialog = ({
     () => PUBLIC_SUBSCRIPTION_PLANS.find((p) => p.id === planId),
     [planId]
   );
+
+  const leadSelectedPlan = useMemo(
+    () => (lead ? resolveLeadSelectedPlan(lead) : null),
+    [lead]
+  );
+
+  const configurablePlans = useMemo(
+    () => (leadSelectedPlan ? [leadSelectedPlan] : PUBLIC_SUBSCRIPTION_PLANS),
+    [leadSelectedPlan]
+  );
+
+  const planLockedToLead = configurablePlans.length === 1;
 
   const handlePlanPick = (next: PlanId) => {
     setPlanId(next);
@@ -626,21 +656,28 @@ export const GenerateAccessCodeDialog = ({
               )}
               <>
                 <p className="text-sm text-muted-foreground">
-                  اختر المدة المتفق عليها ثم اضغط إنشاء — رمز واحد نشط لكل عميل.
+                  {planLockedToLead
+                    ? 'الباقة التي اختارها العميل — راجع السعر ثم اضغط إنشاء.'
+                    : 'اختر المدة المتفق عليها ثم اضغط إنشاء — رمز واحد نشط لكل عميل.'}
                 </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {PUBLIC_SUBSCRIPTION_PLANS.map((plan) => (
+                <div className={cn('gap-2', planLockedToLead ? 'grid grid-cols-1' : 'grid grid-cols-2')}>
+                  {configurablePlans.map((plan) => (
                     <button
                       key={plan.id}
                       type="button"
+                      disabled={planLockedToLead}
                       onClick={() => handlePlanPick(plan.id as PlanId)}
                       className={cn(
                         'rounded-xl border-2 px-3 py-4 text-right transition-all',
-                        planId === plan.id
+                        planId === plan.id || planLockedToLead
                           ? 'border-primary bg-primary/5 shadow-sm'
-                          : 'border-border hover:border-primary/40'
+                          : 'border-border hover:border-primary/40',
+                        planLockedToLead && 'cursor-default'
                       )}
                     >
+                      {planLockedToLead && (
+                        <p className="text-xs text-primary font-medium mb-1">{plan.name}</p>
+                      )}
                       <p className="font-bold">{plan.toggleLabel}</p>
                       <p className="text-sm text-muted-foreground mt-1">
                         {plan.priceAmount.toLocaleString('ar-IQ')} د.ع
@@ -648,6 +685,11 @@ export const GenerateAccessCodeDialog = ({
                     </button>
                   ))}
                 </div>
+                {planLockedToLead && (
+                  <p className="text-xs text-muted-foreground">
+                    {planLabelForLead(lead)}
+                  </p>
+                )}
                 {!showPrice ? (
                   <button
                     type="button"

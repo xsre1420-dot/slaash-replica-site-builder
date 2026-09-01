@@ -1,12 +1,12 @@
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, RefreshCw, Plus, PackageSearch } from "lucide-react";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { getCategories, getCategoriesSync } from "@/services/productService";
 import { useStoreHydration } from "@/context/StoreBootstrapContext";
 import { useMerchantProductsPage } from "@/hooks/useMerchantProductsPage";
+import { usePreviewStorePageBundle } from "@/hooks/usePreviewStorePageBundle";
 import { getProductLifecycleStatus } from "@/lib/productLifecycle";
-import { STOREFRONT_PRODUCTS_CHANGED, resolveStoreSlugByOwnerId } from "@/services/storefrontProductService";
-import { Product, Category } from "@/types";
+import { STOREFRONT_PRODUCTS_CHANGED } from "@/services/storefrontProductService";
+import { Product } from "@/types";
 import { useCartActions } from "@/context/CartContext";
 import { useStore } from "@/context/StoreContext";
 import { Button } from "@/components/ui/button";
@@ -28,15 +28,15 @@ import WhatsAppButton from "@/components/WhatsAppButton";
 import { useToast } from "@/hooks/use-toast";
 import { STORE_PRODUCTS_PAGE_SIZE } from "@/constants/pagination";
 import { getProductPath } from "@/lib/storefrontPaths";
-import { useStoreVisitTracking } from "@/hooks/useStoreVisitTracking";
 
 const PreviewStore = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [categories, setCategories] = useState<Category[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const { user } = useAuth();
-  const { isReady, hydrationVersion } = useStoreHydration();
+  const { isReady } = useStoreHydration();
+  const { loading: previewLoading, categories, storeSlug: publicStoreSlug, refetch: refetchPreview } =
+    usePreviewStorePageBundle();
   const { addToCart, setStoreOwner } = useCartActions();
   const { storeName, storeLogo, storeSettings } = useStore();
   const navigate = useNavigate();
@@ -46,25 +46,11 @@ const PreviewStore = () => {
   const debouncedSearch = useDebouncedValue(searchQuery, 300);
   const [sortBy, setSortBy] = useState<"default" | "price-asc" | "price-desc">("default");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [isLoading, setIsLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(STORE_PRODUCTS_PAGE_SIZE);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [filterPriceRange, setFilterPriceRange] = useState<[number, number]>([0, 0]);
   const [filterSizes, setFilterSizes] = useState<string[]>([]);
   const [headerScrolled, setHeaderScrolled] = useState(false);
-  const [publicStoreSlug, setPublicStoreSlug] = useState<string | undefined>();
-
-  useEffect(() => {
-    if (!user?.id) {
-      setPublicStoreSlug(undefined);
-      return;
-    }
-    void resolveStoreSlugByOwnerId(user.id).then((slug) => {
-      setPublicStoreSlug(slug ?? undefined);
-    });
-  }, [user?.id]);
-
-  useStoreVisitTracking(publicStoreSlug);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const bannerDotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -78,61 +64,44 @@ const PreviewStore = () => {
     return cat?.name ?? selectedCategory;
   }, [selectedCategory, categories]);
 
-  const catalog = useMerchantProductsPage(debouncedSearch, ownerCategoryFilter);
+  const catalog = useMerchantProductsPage(debouncedSearch, ownerCategoryFilter, { profile: "grid" });
 
   const allProducts = useMemo(
     () => catalog.products.filter((p) => getProductLifecycleStatus(p) === "published"),
     [catalog.products]
   );
 
+  const isLoading = previewLoading || catalog.loading;
+
   useEffect(() => {
-    setIsLoading(catalog.loading);
     setVisibleCount(STORE_PRODUCTS_PAGE_SIZE);
-  }, [selectedCategory, catalog.loading]);
+  }, [selectedCategory, debouncedSearch]);
 
   useEffect(() => {
     if (!user?.id) return;
     const onChanged = (e: Event) => {
       const detail = (e as CustomEvent<{ ownerId?: string }>).detail;
       if (detail?.ownerId && detail.ownerId !== user.id) return;
+      void refetchPreview();
       void catalog.reload();
     };
     window.addEventListener(STOREFRONT_PRODUCTS_CHANGED, onChanged);
     return () => window.removeEventListener(STOREFRONT_PRODUCTS_CHANGED, onChanged);
-  }, [user?.id, catalog.reload]);
-
-  useEffect(() => {
-    if (!isReady || !user?.id) return;
-    void catalog.reload();
-  }, [isReady, user?.id, catalog.reload]);
+  }, [user?.id, catalog.reload, refetchPreview]);
 
   useEffect(() => {
     if (user?.id) setStoreOwner(user.id);
   }, [user?.id, setStoreOwner]);
 
-  const loadCategories = useCallback(async (force = false) => {
-    try {
-      const categoriesData = await getCategories(force);
-      setCategories([{ id: "all", name: "الكل", order: -1 }, ...categoriesData]);
-    } catch {
-      setCategories([{ id: "all", name: "الكل", order: -1 }, ...getCategoriesSync()]);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!isReady) return;
-    void loadCategories(true);
-  }, [isReady, hydrationVersion, loadCategories]);
-
-  const loadData = useCallback(async (force = false) => {
-    setIsLoading(true);
-    try {
-      await loadCategories(force);
-      if (force) await catalog.reload();
-    } finally {
-      setIsLoading(false);
-    }
-  }, [loadCategories, catalog]);
+  const refreshAll = useCallback(
+    async (force = false) => {
+      if (force) {
+        await refetchPreview();
+        await catalog.reload();
+      }
+    },
+    [refetchPreview, catalog]
+  );
 
   const bannerImages = storeSettings.bannerImages || [];
 
@@ -214,7 +183,7 @@ const PreviewStore = () => {
     const diff = e.changedTouches[0].clientY - pullStartY.current;
     if (diff > 100 && window.scrollY === 0) {
       setIsRefreshing(true);
-      await loadData(true);
+      await refreshAll(true);
       setIsRefreshing(false);
     }
   };

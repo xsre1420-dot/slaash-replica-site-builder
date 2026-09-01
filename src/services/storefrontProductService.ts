@@ -10,7 +10,7 @@ import {
   STOREFRONT_DETAIL_SELECT,
   isSchemaColumnError,
 } from '@/lib/productUpdateUtils';
-import { cache, CacheKeys, CacheTTL, dedup } from '@/lib/cache';
+import { cache, CacheKeys, CacheTTL, dedup, peekInflight } from '@/lib/cache';
 import { cachedFetchNullable } from '@/lib/cache/enterpriseCache';
 import { callReadRpc } from '@/lib/readWrite/readClient';
 import { isStorefrontVisible } from '@/lib/productLifecycle';
@@ -22,12 +22,29 @@ import {
 import {
   getStorefrontCached,
   setStorefrontCached,
+  getStorefrontBundleFromCache,
+  setStorefrontBundleInCache,
+  peekStorefrontBundleEntry,
   StorefrontCacheKeys,
 } from '@/services/storefrontCacheService';
 import { ProductCacheKeys, flushStorefrontProductDetail } from '@/services/storefrontCacheTiers';
 import type { StorefrontInvalidationScope } from '@/services/storefrontCacheTiers';
 import type { StorefrontBundleCache, StorefrontProductsPage } from '@/types/storefrontCache';
 import { traceCriticalFlow } from '@/lib/tracing';
+import {
+  getStorefrontReadRpcOptions,
+  isStorefrontBundleFirstPage,
+  STOREFRONT_BUNDLE_RPC,
+  storefrontBundleInflightKey,
+  storefrontBundleStampedeKey,
+  type StorefrontBundleRequestOptions,
+} from '@/lib/storefront/storefrontRpcConfig';
+import { logStorefrontRequest } from '@/lib/storefront/storefrontRequestDebug';
+import { awaitStorefrontBundleReady } from '@/lib/storefront/storefrontLoadCoordinator';
+import { isStorefrontEdgeActive } from '@/services/storefrontEdgeService';
+import { cacheGet, cacheSet } from '@/utils/indexedDB';
+import { CacheTTLPolicy } from '@/lib/cache/cacheTtlPolicy';
+import { recordStorefrontCacheHit, recordStorefrontCacheMiss } from '@/services/storefrontCacheTiers';
 
 const MINIMAL_STOREFRONT_SELECT =
   'id, name, category, price, original_price, image_url, stock_quantity, discount_type, discount_value, discount_start_date, discount_end_date, is_active, archived_at, product_slug, created_at';
@@ -76,7 +93,7 @@ const countGalleryUrls = (product: Pick<Product, 'image' | 'additionalImages'>):
 };
 
 /** RPC/detail SELECT already includes gallery, variants, and stock — skip redundant enrich round-trip. */
-function storefrontProductDetailIsComplete(product: Product): boolean {
+export function isStorefrontProductDetailComplete(product: Product): boolean {
   return (
     product.stockQuantity != null &&
     Boolean(product.image?.trim() || (product.additionalImages?.length ?? 0) > 0)
@@ -143,73 +160,255 @@ async function enrichStorefrontProductDetail(
   return hydrateProductVariantOptions(merged);
 }
 
-const bundleMemoryKey = (slug: string) => StorefrontCacheKeys.bundle(slug);
+const STOREFRONT_BUNDLE_IDB_TTL = CacheTTLPolicy.static.browser_idb_storefront.ttlMs;
 
 /** Shared in-memory bundle cache (meta + first page) — one RPC/edge call serves both hooks. */
 export function peekStorefrontBundle(slug: string): StorefrontBundleCache | null {
-  return cache.get<StorefrontBundleCache>(bundleMemoryKey(slug.trim().toLowerCase()));
+  return peekStorefrontBundleEntry(slug.trim().toLowerCase(), {});
+}
+
+function createBundleRevalidate(
+  normalized: string,
+  options: StorefrontBundleRequestOptions
+): () => Promise<StorefrontBundleCache> {
+  const stampedeKey = storefrontBundleStampedeKey(normalized, options);
+  return () =>
+    dedup(stampedeKey, async () => {
+      const fresh = await fetchStorefrontBundleFresh(normalized, options);
+      if (!fresh?.store) throw new Error('storefront bundle revalidate empty');
+      setStorefrontBundleInCache(normalized, options, fresh);
+      persistStorefrontBundleIdb(normalized, options, fresh);
+      return fresh;
+    });
+}
+
+async function readStorefrontBundleFromIdb(
+  normalized: string,
+  options: StorefrontBundleRequestOptions
+): Promise<StorefrontBundleCache | null> {
+  if (!isStorefrontBundleFirstPage(options)) return null;
+  try {
+    const fromIdb = await cacheGet<StorefrontBundleCache>(
+      StorefrontCacheKeys.bundleIdb(normalized, options),
+      STOREFRONT_BUNDLE_IDB_TTL
+    );
+    if (fromIdb?.store) {
+      setStorefrontBundleInCache(normalized, options, fromIdb);
+      recordStorefrontCacheHit('store');
+      logStorefrontRequest(STOREFRONT_BUNDLE_RPC, 'cache_hit', { slug: normalized, source: 'idb' });
+      return fromIdb;
+    }
+  } catch {
+    /* IDB unavailable */
+  }
+  return null;
+}
+
+function persistStorefrontBundleIdb(
+  normalized: string,
+  options: StorefrontBundleRequestOptions,
+  bundle: StorefrontBundleCache
+): void {
+  if (!isStorefrontBundleFirstPage(options) || !bundle?.store) return;
+  void cacheSet(StorefrontCacheKeys.bundleIdb(normalized, options), bundle);
 }
 
 async function fetchStorefrontBundleRpc(
   slug: string,
-  options: { limit?: number; cursor?: string | null; category?: string; search?: string } = {}
+  options: StorefrontBundleRequestOptions = {}
 ): Promise<StorefrontBundleCache | null> {
   const normalized = slug.trim().toLowerCase();
-  try {
-    const { data, error } = await callReadRpc<Record<string, unknown>>('get_storefront_page_bundle', {
-      p_slug: normalized,
-      p_limit: options.limit ?? 24,
-      p_cursor: options.cursor || '',
-      p_category: options.category?.trim() || '',
-      p_search: options.search?.trim() || '',
-    }, { preferEdge: true });
-    if (error || !data?.store) return null;
-    const products = ((data.products as Record<string, unknown>[]) || [])
-      .map((row) => safeMapStorefrontProduct(row))
-      .filter((p): p is Product => p != null && isStorefrontVisible(p));
-    const featured = ((data.featured as Record<string, unknown>[]) || [])
-      .map((row) => safeMapStorefrontProduct(row))
-      .filter((p): p is Product => p != null && isStorefrontVisible(p));
-    return {
-      store: data.store as Record<string, unknown>,
-      hero: (data.hero as Record<string, unknown>) ?? null,
-      categories: (data.categories as Record<string, unknown>[]) || [],
-      featured,
-      products,
-      nextCursor: data.next_cursor || null,
-      hasMore: !!data.has_more,
-    };
-  } catch {
-    return null;
+  const rpcInflightKey = storefrontBundleInflightKey(normalized, options, 'rpc');
+
+  if (peekInflight(rpcInflightKey)) {
+    logStorefrontRequest(STOREFRONT_BUNDLE_RPC, 'dedup_hit', { slug: normalized, scope: 'rpc' });
   }
+
+  return dedup(rpcInflightKey, async () => {
+    try {
+      logStorefrontRequest(STOREFRONT_BUNDLE_RPC, 'start', { slug: normalized });
+      const started = Date.now();
+      const { data, error } = await callReadRpc<Record<string, unknown>>(
+        STOREFRONT_BUNDLE_RPC,
+        {
+          p_slug: normalized,
+          p_limit: options.limit ?? 24,
+          p_cursor: options.cursor || '',
+          p_category: options.category?.trim() || '',
+          p_search: options.search?.trim() || '',
+        },
+        getStorefrontReadRpcOptions({ preferEdge: true })
+      );
+      const durationMs = Date.now() - started;
+      if (error || !data?.store) {
+        logStorefrontRequest(STOREFRONT_BUNDLE_RPC, 'error', { durationMs, message: error?.slice(0, 80) });
+        return null;
+      }
+      logStorefrontRequest(STOREFRONT_BUNDLE_RPC, 'end', { durationMs });
+      const products = ((data.products as Record<string, unknown>[]) || [])
+        .map((row) => safeMapStorefrontProduct(row))
+        .filter((p): p is Product => p != null && isStorefrontVisible(p));
+      const featured = ((data.featured as Record<string, unknown>[]) || [])
+        .map((row) => safeMapStorefrontProduct(row))
+        .filter((p): p is Product => p != null && isStorefrontVisible(p));
+      return {
+        store: data.store as Record<string, unknown>,
+        hero: (data.hero as Record<string, unknown>) ?? null,
+        categories: (data.categories as Record<string, unknown>[]) || [],
+        featured,
+        products,
+        nextCursor: data.next_cursor || null,
+        hasMore: !!data.has_more,
+      };
+    } catch {
+      return null;
+    }
+  });
+}
+
+/** Single coordinated entry for first-page storefront data — deduped across hooks. */
+export async function ensureStorefrontPageBundle(
+  slug: string,
+  options: StorefrontBundleRequestOptions = {}
+): Promise<StorefrontBundleCache | null> {
+  const normalized = slug.trim().toLowerCase();
+  if (!/^[a-z0-9-]+$/.test(normalized)) return null;
+
+  const cached =
+    peekStorefrontBundle(normalized) ?? getStorefrontBundleFromCache(normalized, options);
+  if (cached?.store) return cached;
+
+  await awaitStorefrontBundleReady(normalized, options);
+  const warmed =
+    peekStorefrontBundle(normalized) ?? getStorefrontBundleFromCache(normalized, options);
+  if (warmed?.store) return warmed;
+
+  return loadStorefrontBundle(normalized, options);
+}
+
+/** Reuse a product from the warmed storefront bundle listing cache. */
+export function findStorefrontListProduct(slug: string, productId: string): Product | null {
+  const normalized = slug.trim().toLowerCase();
+  const id = productId.trim();
+  if (!id) return null;
+
+  const bundle = peekStorefrontBundle(normalized);
+  const fromList = bundle?.products?.find((p) => p.id === id);
+  if (fromList) return fromList;
+
+  const featured = bundle?.featured?.find((p) => p.id === id);
+  return featured ?? null;
+}
+
+export type ProductDetailBundleOptions = {
+  initialProduct?: Product | null;
+  /** When true (default), refresh complete cached products in the background. */
+  backgroundRevalidate?: boolean;
+};
+
+/** Coordinated product detail load — reuses storefront listing cache before RPC. */
+export async function loadProductDetailBundle(
+  slug: string,
+  productId: string,
+  options: ProductDetailBundleOptions = {}
+): Promise<Product | null> {
+  const normalized = slug.trim().toLowerCase();
+  const id = productId.trim();
+  if (!/^[a-z0-9-]+$/.test(normalized) || !id) return null;
+
+  const detailKey = CacheKeys.productDetail(normalized, id);
+  const productCacheKey = StorefrontCacheKeys.product(normalized, id);
+
+  const cachedDetail = getStorefrontCached<Product>(productCacheKey);
+  if (cachedDetail && isStorefrontProductDetailComplete(cachedDetail)) {
+    if (options.backgroundRevalidate !== false) {
+      void dedup(detailKey, () =>
+        fetchStorefrontProductById(normalized, id, { revalidate: true })
+      ).catch(() => undefined);
+    }
+    return cachedDetail;
+  }
+
+  const seed =
+    options.initialProduct?.id === id
+      ? options.initialProduct
+      : findStorefrontListProduct(normalized, id);
+
+  if (seed && isStorefrontProductDetailComplete(seed)) {
+    setStorefrontCached(productCacheKey, seed);
+    if (options.backgroundRevalidate !== false) {
+      void dedup(detailKey, () =>
+        fetchStorefrontProductById(normalized, id, { revalidate: true })
+      ).catch(() => undefined);
+    }
+    return hydrateProductVariantOptions(seed);
+  }
+
+  if (seed) {
+    setStorefrontCached(productCacheKey, seed);
+  }
+
+  return dedup(detailKey, () => fetchStorefrontProductById(normalized, id));
 }
 
 export async function loadStorefrontBundle(
   slug: string,
-  options: { limit?: number; cursor?: string | null; category?: string; search?: string } = {}
+  options: StorefrontBundleRequestOptions = {}
 ): Promise<StorefrontBundleCache | null> {
   return traceCriticalFlow('storefront.load', 'frontend', 'loadBundle', async () => {
   const normalized = slug.trim().toLowerCase();
   if (!/^[a-z0-9-]+$/.test(normalized)) return null;
 
-  const key = bundleMemoryKey(normalized);
-  const cached = getStorefrontCached<StorefrontBundleCache>(key, async () => {
-    const fresh = await fetchStorefrontBundleFresh(normalized, options);
-    if (fresh?.store) setStorefrontCached(key, fresh);
-    return fresh!;
-  });
-  if (cached?.store) return cached;
+  const stampedeKey = storefrontBundleStampedeKey(normalized, options);
+  const revalidate = createBundleRevalidate(normalized, options);
 
-  return dedup(key, () => fetchStorefrontBundleFresh(normalized, options));
+  const cached = getStorefrontBundleFromCache(normalized, options, revalidate);
+  if (cached?.store) {
+    recordStorefrontCacheHit('store');
+    logStorefrontRequest(STOREFRONT_BUNDLE_RPC, 'cache_hit', { slug: normalized });
+    return cached;
+  }
+
+  await awaitStorefrontBundleReady(normalized, options);
+  const warmedAfterWait = getStorefrontBundleFromCache(normalized, options);
+  if (warmedAfterWait?.store) {
+    recordStorefrontCacheHit('store');
+    logStorefrontRequest(STOREFRONT_BUNDLE_RPC, 'cache_hit', { slug: normalized });
+    return warmedAfterWait;
+  }
+
+  if (peekInflight(stampedeKey)) {
+    logStorefrontRequest(STOREFRONT_BUNDLE_RPC, 'dedup_hit', { slug: normalized, scope: 'stampede' });
+  }
+
+  return dedup(stampedeKey, async () => {
+    const warm = getStorefrontBundleFromCache(normalized, options);
+    if (warm?.store) {
+      recordStorefrontCacheHit('store');
+      logStorefrontRequest(STOREFRONT_BUNDLE_RPC, 'cache_hit', { slug: normalized });
+      return warm;
+    }
+
+    const fromIdb = await readStorefrontBundleFromIdb(normalized, options);
+    if (fromIdb?.store) return fromIdb;
+
+    recordStorefrontCacheMiss('store');
+    const fresh = await fetchStorefrontBundleFresh(normalized, options);
+    if (fresh?.store) {
+      setStorefrontBundleInCache(normalized, options, fresh);
+      persistStorefrontBundleIdb(normalized, options, fresh);
+    }
+    return fresh;
+  });
   }, { slug, search: options.search });
 }
 
 async function fetchStorefrontBundleFresh(
   normalized: string,
-  options: { limit?: number; cursor?: string | null; category?: string; search?: string } = {}
+  options: StorefrontBundleRequestOptions = {}
 ): Promise<StorefrontBundleCache | null> {
-  const key = StorefrontCacheKeys.bundle(normalized);
-  const edge = await fetchStorefrontBundleViaEdge(normalized, options);
+  if (isStorefrontEdgeActive()) {
+    const edge = await fetchStorefrontBundleViaEdge(normalized, options);
     if (edge) {
       const payload: StorefrontBundleCache = {
         store: edge.storeInfo,
@@ -219,15 +418,16 @@ async function fetchStorefrontBundleFresh(
         hasMore: edge.hasMore,
         cacheVersion: edge.cacheVersion,
       };
-      setStorefrontCached(key, payload);
+      setStorefrontBundleInCache(normalized, options, payload);
       return payload;
     }
+  }
 
-    const rpc = await fetchStorefrontBundleRpc(normalized, options);
-    if (rpc) {
-      setStorefrontCached(key, rpc);
-    }
-    return rpc;
+  const rpc = await fetchStorefrontBundleRpc(normalized, options);
+  if (rpc?.store) {
+    setStorefrontBundleInCache(normalized, options, rpc);
+  }
+  return rpc;
 }
 
 export async function resolveStoreOwnerBySlug(slug: string): Promise<string | null> {
@@ -242,16 +442,12 @@ export async function resolveStoreOwnerBySlug(slug: string): Promise<string | nu
   if (cached) return cached;
 
   return dedup(resolutionKey, async () => {
-    try {
-      const { data: meta, error } = await callReadRpc<{ store?: { owner_id?: string } }>('get_store_meta', { p_slug: normalized }, { preferEdge: true });
-      if (!error && meta?.store?.owner_id) {
-        const ownerId = String(meta.store.owner_id);
-        cache.set(resolutionKey, ownerId, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
-        cache.set(CacheKeys.ownerSlug(ownerId), normalized, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
-        return ownerId;
-      }
-    } catch {
-      /* RPC may be unavailable */
+    const bundleOwner = peekStorefrontBundle(normalized)?.store?.owner_id;
+    if (bundleOwner) {
+      const ownerId = String(bundleOwner);
+      cache.set(resolutionKey, ownerId, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+      cache.set(CacheKeys.ownerSlug(ownerId), normalized, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+      return ownerId;
     }
 
     try {
@@ -506,7 +702,7 @@ export function getStorefrontFirstPageFromCache(slug: string): StorefrontProduct
   const normalized = slug.trim().toLowerCase();
   if (!/^[a-z0-9-]+$/.test(normalized)) return null;
   const bundle = peekStorefrontBundle(normalized);
-  if (!bundle?.store || !bundle.products) return null;
+  if (!bundle?.store || bundle.products == null) return null;
   return pageFromBundle(bundle);
 }
 
@@ -537,6 +733,13 @@ export async function fetchStorefrontProductsPage(
     if (cachedBundle?.products) {
       return pageFromBundle(cachedBundle);
     }
+
+    await awaitStorefrontBundleReady(normalized, options);
+    const bundleAfterWait = peekStorefrontBundle(normalized);
+    if (bundleAfterWait?.products) {
+      return pageFromBundle(bundleAfterWait);
+    }
+
     const pageCacheKey = ProductCacheKeys.page(normalized, '', '', '', limit);
     const cachedPage = cache.get<StorefrontProductsPage>(pageCacheKey);
     if (cachedPage?.products) {
@@ -548,12 +751,15 @@ export async function fetchStorefrontProductsPage(
 
   return dedup(dedupeKey, async () => {
     if (isFirstPage) {
-      const bundle = peekStorefrontBundle(normalized) ?? (await loadStorefrontBundle(normalized, options));
-      if (bundle?.products) {
+      await awaitStorefrontBundleReady(normalized, options);
+      const bundle =
+        peekStorefrontBundle(normalized) ?? (await ensureStorefrontPageBundle(normalized, options));
+      if (bundle?.store) {
         const page = pageFromBundle(bundle);
         cache.set(dedupeKey, page, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
         return page;
       }
+      return { products: [], nextCursor: null, hasMore: false };
     }
 
     const edgePage = await fetchStorefrontPageViaEdge(normalized, {
@@ -682,7 +888,7 @@ async function finalizeStorefrontProduct(
   product: Product | null
 ): Promise<Product | null> {
   if (!product || !isStorefrontVisible(product)) return null;
-  if (storefrontProductDetailIsComplete(product)) {
+  if (isStorefrontProductDetailComplete(product)) {
     return hydrateProductVariantOptions(product);
   }
   return enrichStorefrontProductDetail(slug, productId, product);

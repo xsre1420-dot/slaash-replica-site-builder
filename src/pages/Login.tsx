@@ -8,8 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/context/AuthContext';
-import { useSubscription } from '@/context/SubscriptionContext';
 import { fetchMerchantAccessWithRetry } from '@/services/subscriptionService';
+import { useLoginPageBundle } from '@/hooks/useLoginPageBundle';
 import { previewAccessCode } from '@/services/leadAdminService';
 import { useToast } from '@/hooks/use-toast';
 import { AuthPageShell, AuthLoadingScreen } from '@/components/auth/AuthPageShell';
@@ -18,7 +18,7 @@ import { authHintClass, authSubmitClass } from '@/components/auth/authFormStyles
 import { clearAuthUrlParams, parseAuthUrlError, sanitizeInternalRedirect } from '@/lib/authUtils';
 import { env } from '@/lib/env';
 import {
-  ACCESS_CODE_ERROR_MESSAGES,
+  ACCESS_CODE_LOGIN_ERROR_MESSAGES,
   formatAccessCodeForSubmit,
   formatAccessCodeInput,
   parseAccessCodePaste,
@@ -61,7 +61,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const { loginWithAccessCode, user, loading, logout } = useAuth();
-  const { hasAccess, isAdmin, loading: subLoading, refresh: refreshSubscription } = useSubscription();
+  const loginPage = useLoginPageBundle();
 
   useEffect(() => {
     if (redirectAuthTokensToCallback(navigate)) return;
@@ -73,18 +73,18 @@ const Login = () => {
   }, []);
 
   useEffect(() => {
-    if (loading || subLoading) return;
+    if (loading || !loginPage.ready) return;
     if (!user) return;
-    if (isAdmin) {
+    if (loginPage.access?.isAdmin) {
       navigate('/admin/leads', { replace: true });
       return;
     }
-    if (hasAccess) {
+    if (loginPage.access?.hasAccess) {
       navigate(from, { replace: true });
     }
-  }, [user, loading, subLoading, hasAccess, isAdmin, navigate, from]);
+  }, [user, loading, loginPage.ready, loginPage.access, navigate, from]);
 
-  if (loading || subLoading) return <AuthLoadingScreen />;
+  if (loading || (user && !loginPage.ready)) return <AuthLoadingScreen />;
 
   const handleVerifyCode = async (e: FormEvent) => {
     e.preventDefault();
@@ -105,7 +105,7 @@ const Login = () => {
       setError(null);
     } catch (err) {
       const code = err instanceof Error ? err.message : 'invalid_code';
-      setError(ACCESS_CODE_ERROR_MESSAGES[code] || 'رمز التفعيل غير صحيح');
+      setError(ACCESS_CODE_LOGIN_ERROR_MESSAGES[code] || 'رمز التفعيل غير صحيح');
     } finally {
       setIsLoading(false);
     }
@@ -130,7 +130,6 @@ const Login = () => {
         return;
       }
 
-      await refreshSubscription();
       const access = await fetchMerchantAccessWithRetry();
 
       if (access.isAdmin) {

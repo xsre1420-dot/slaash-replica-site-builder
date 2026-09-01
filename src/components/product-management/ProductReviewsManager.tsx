@@ -1,4 +1,3 @@
-import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,51 +18,33 @@ import {
 import {
   approveProductReview,
   deleteProductReview,
-  fetchMerchantProductReviews,
   type MerchantProductReview,
 } from "@/services/reviewService";
 
 interface ProductReviewsManagerProps {
   productId: string;
   productName: string;
+  reviews: MerchantProductReview[];
+  loading?: boolean;
+  onReviewsChange?: (reviews: MerchantProductReview[]) => void;
 }
 
-const ProductReviewsManager = ({ productId, productName }: ProductReviewsManagerProps) => {
-  const [reviews, setReviews] = useState<MerchantProductReview[]>([]);
-  const [loading, setLoading] = useState(false);
+const ProductReviewsManager = ({
+  productId,
+  productName,
+  reviews,
+  loading = false,
+  onReviewsChange,
+}: ProductReviewsManagerProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
-
-  const fetchReviews = useCallback(async () => {
-    if (!user?.id || !productId) return;
-
-    setLoading(true);
-    try {
-      const rows = await fetchMerchantProductReviews(productId, user.id);
-      setReviews(rows);
-    } catch (error) {
-      console.error('Error fetching reviews:', error);
-      toast({
-        title: "خطأ",
-        description: "حدث خطأ في تحميل التعليقات",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [productId, user?.id, toast]);
-
-  useEffect(() => {
-    void fetchReviews();
-  }, [fetchReviews]);
 
   const handleApprove = async (reviewId: string) => {
     if (!user?.id) return;
     const result = await approveProductReview(reviewId, user.id);
     if (result.success) {
-      setReviews((prev) =>
-        prev.map((r) => (r.id === reviewId ? { ...r, is_approved: true } : r))
-      );
+      const next = reviews.map((r) => (r.id === reviewId ? { ...r, is_approved: true } : r));
+      onReviewsChange?.(next);
       toast({ title: "تمت الموافقة", description: "سيظهر التعليق في المتجر" });
     } else {
       toast({
@@ -78,7 +59,7 @@ const ProductReviewsManager = ({ productId, productName }: ProductReviewsManager
     if (!user?.id) return;
     const result = await deleteProductReview(reviewId, user.id);
     if (result.success) {
-      setReviews((prev) => prev.filter((review) => review.id !== reviewId));
+      onReviewsChange?.(reviews.filter((review) => review.id !== reviewId));
       toast({ title: "تم الحذف", description: "تم حذف التعليق بنجاح" });
     } else {
       toast({

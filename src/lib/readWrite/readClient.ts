@@ -13,6 +13,8 @@ export type ReadRpcOptions = Omit<RpcCallOptions, 'forcePrimary'> & {
   consistencyOverride?: ReadConsistency;
   preferClientCache?: boolean;
   preferEdge?: boolean;
+  /** Skip read-replica → primary retry (storefront hot path). */
+  skipReplicaFallback?: boolean;
 };
 
 export async function callReadRpc<T>(

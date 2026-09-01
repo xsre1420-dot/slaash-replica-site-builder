@@ -103,12 +103,28 @@ export function registerAllProcessors(): void {
 
   registerProcessor('analytics.trackVisit', async (job: BackgroundJob) => {
     const p = job.payload as { storeSlug: string; pagePath: string; userAgent: string | null };
-    await trackStoreVisitBySlug(p.storeSlug, p.pagePath, p.userAgent);
+    try {
+      await trackStoreVisitBySlug(p.storeSlug, p.pagePath, p.userAgent);
+    } catch (err) {
+      logger.warn('analytics.visit.isolated_failure', {
+        storeSlug: p.storeSlug,
+        pagePath: p.pagePath,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   });
 
   registerProcessor('analytics.trackProductView', async (job: BackgroundJob) => {
     const p = job.payload as { slug: string; productId: string; pagePath: string | null };
-    await trackProductViewBySlug(p.slug, p.productId, p.pagePath);
+    try {
+      await trackProductViewBySlug(p.slug, p.productId, p.pagePath);
+    } catch (err) {
+      logger.warn('analytics.product_view.isolated_failure', {
+        slug: p.slug,
+        productId: p.productId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   });
 
   registerProcessor('image.cleanupBranding', async (job: BackgroundJob) => {

@@ -12,6 +12,11 @@ import { getWorkerInstanceId } from '@/core/distributed/workerIdentity';
 import { logger, getCorrelationContext, newRequestId } from '@/lib/observability';
 import { recordBackgroundJob, recordQueueDepth } from '@/lib/monitoring/instrumentation';
 import { runWithTraceContext } from '@/lib/tracing';
+import {
+  isAnalyticsQueueSaturated,
+  QUEUE_PROCESSING_ORDER,
+  shouldDeferAnalyticsProcessing,
+} from '@/lib/analytics/analyticsBackpressure';
 
 let resumeHook: (() => void) | null = null;
 
@@ -35,7 +40,7 @@ export const QUEUE_CONFIGS: Record<QueueKind, QueueConfig> = {
   orders: { kind: 'orders', maxConcurrency: 1, defaultMaxAttempts: 4, pollIntervalMs: 250 },
   inventory: { kind: 'inventory', maxConcurrency: 2, defaultMaxAttempts: 3, pollIntervalMs: 300 },
   notifications: { kind: 'notifications', maxConcurrency: 2, defaultMaxAttempts: 5, pollIntervalMs: 500 },
-  analytics: { kind: 'analytics', maxConcurrency: 3, defaultMaxAttempts: 3, pollIntervalMs: 200 },
+  analytics: { kind: 'analytics', maxConcurrency: 1, defaultMaxAttempts: 1, pollIntervalMs: 500 },
   import: { kind: 'import', maxConcurrency: 1, defaultMaxAttempts: 3, pollIntervalMs: 1000 },
   export: { kind: 'export', maxConcurrency: 1, defaultMaxAttempts: 3, pollIntervalMs: 1000 },
   image: { kind: 'image', maxConcurrency: 1, defaultMaxAttempts: 3, pollIntervalMs: 400 },
@@ -76,6 +81,17 @@ export function enqueueJob<T>(
 
   if (options?.idempotencyKey && shouldSkipDuplicate(options.idempotencyKey)) {
     return id;
+  }
+
+  if (queue === 'analytics') {
+    const analyticsPending = pending.filter((j) => j.queue === 'analytics').length;
+    if (isAnalyticsQueueSaturated(analyticsPending)) {
+      logger.warn('background.analytics.queue_saturated', {
+        pending: analyticsPending,
+        type,
+      });
+      return '';
+    }
   }
 
   const job: BackgroundJob<T> = {
@@ -157,7 +173,9 @@ export async function processQueueTick(): Promise<number> {
   let processed = 0;
   const now = Date.now();
 
-  for (const kind of Object.keys(QUEUE_CONFIGS) as QueueKind[]) {
+  for (const kind of QUEUE_PROCESSING_ORDER) {
+    if (kind === 'analytics' && shouldDeferAnalyticsProcessing()) continue;
+
     const config = QUEUE_CONFIGS[kind];
     const active = countByQueue(kind, 'processing');
     if (active >= config.maxConcurrency) continue;

@@ -5,12 +5,28 @@
 import { Product } from '@/types';
 import { cache, CacheKeys, CacheTTL } from '@/lib/cache';
 import { mapDbProduct } from '@/mappers/productMapper';
+import {
+  isStorefrontBundleFirstPage,
+  storefrontBundleRevalidateKey,
+  type StorefrontBundleRequestOptions,
+} from '@/lib/storefront/storefrontRpcConfig';
 import type { StorefrontBundleCache, StorefrontProductsPage } from '@/types/storefrontCache';
 
 export type { StorefrontBundleCache, StorefrontProductsPage } from '@/types/storefrontCache';
 
 export const StorefrontCacheKeys = {
   bundle: (slug: string) => `storefront-bundle:${slug.trim().toLowerCase()}`,
+  /** Param-aware bundle key — isolates tenants and RPC argument variants. */
+  bundleRequest: (slug: string, options: StorefrontBundleRequestOptions = {}) => {
+    const normalized = slug.trim().toLowerCase();
+    const limit = options.limit ?? 24;
+    const cursor = options.cursor || '';
+    const category = options.category?.trim() || '';
+    const search = options.search?.trim() || '';
+    return `storefront-bundle:${normalized}:${limit}:${cursor}:${category}:${search}`;
+  },
+  bundleIdb: (slug: string, options: StorefrontBundleRequestOptions = {}) =>
+    `idb:${StorefrontCacheKeys.bundleRequest(slug, options)}`,
   version: (slug: string) => `storefront-version:${slug.trim().toLowerCase()}`,
   page: (slug: string, cursor: string, category: string, search: string, limit: number) =>
     `storefront-page:${slug.trim().toLowerCase()}:${cursor}:${category}:${search}:${limit}`,
@@ -26,12 +42,58 @@ export const StorefrontCacheKeys = {
   footer: (slug: string) => CacheKeys.footerSuggested(slug.trim().toLowerCase()),
 } as const;
 
-export function getStorefrontCached<T>(key: string, revalidate?: () => Promise<T>): T | null {
-  return cache.get<T>(key, revalidate);
+export function getStorefrontCached<T>(
+  key: string,
+  revalidate?: () => Promise<T>,
+  revalidateDedupKey?: string
+): T | null {
+  return cache.get<T>(key, revalidate, revalidateDedupKey ? { revalidateDedupKey } : undefined);
 }
 
 export function setStorefrontCached<T>(key: string, data: T): void {
   cache.set(key, data, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+}
+
+export function getStorefrontBundleFromCache(
+  slug: string,
+  options: StorefrontBundleRequestOptions = {},
+  revalidate?: () => Promise<StorefrontBundleCache>
+): StorefrontBundleCache | null {
+  const key = StorefrontCacheKeys.bundleRequest(slug, options);
+  return getStorefrontCached<StorefrontBundleCache>(
+    key,
+    revalidate,
+    revalidate ? storefrontBundleRevalidateKey(slug, options) : undefined
+  );
+}
+
+/** Persist successful bundle payloads — also mirrors first-page data to the slug alias key. */
+export function setStorefrontBundleInCache(
+  slug: string,
+  options: StorefrontBundleRequestOptions,
+  data: StorefrontBundleCache
+): void {
+  if (!data?.store) return;
+  const normalized = slug.trim().toLowerCase();
+  setStorefrontCached(StorefrontCacheKeys.bundleRequest(normalized, options), data);
+  if (isStorefrontBundleFirstPage(options)) {
+    setStorefrontCached(StorefrontCacheKeys.bundle(normalized), data);
+  }
+}
+
+export function peekStorefrontBundleEntry(
+  slug: string,
+  options: StorefrontBundleRequestOptions = {}
+): StorefrontBundleCache | null {
+  const normalized = slug.trim().toLowerCase();
+  const paramHit = cache.peek<StorefrontBundleCache>(
+    StorefrontCacheKeys.bundleRequest(normalized, options)
+  );
+  if (paramHit?.store) return paramHit;
+  if (isStorefrontBundleFirstPage(options)) {
+    return cache.peek<StorefrontBundleCache>(StorefrontCacheKeys.bundle(normalized));
+  }
+  return null;
 }
 
 export function rememberStorefrontCacheVersion(slug: string, version: number | undefined): void {

@@ -4,6 +4,7 @@ import { ArrowRight, MessageSquare } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageHeader from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
+import { useProductReviewsPageBundle } from '@/hooks/useProductReviewsPageBundle';
 
 const ProductReviewsManager = lazy(
   () => import('@/components/product-management/ProductReviewsManager')
@@ -12,8 +13,11 @@ const ProductReviewsManager = lazy(
 const ProductReviewsPage = () => {
   const { productId } = useParams<{ productId: string }>();
   const location = useLocation();
-  const productName =
+  const page = useProductReviewsPageBundle(productId);
+
+  const fallbackName =
     (location.state as { productName?: string } | null)?.productName?.trim() || 'المنتج';
+  const productName = page.productName || fallbackName;
 
   if (!productId) {
     return (
@@ -54,7 +58,13 @@ const ProductReviewsPage = () => {
         <Suspense
           fallback={<div className="py-12 text-center text-muted-foreground">جاري التحميل...</div>}
         >
-          <ProductReviewsManager productId={productId} productName={productName} />
+          <ProductReviewsManager
+            productId={productId}
+            productName={productName}
+            reviews={page.reviews}
+            loading={page.loading}
+            onReviewsChange={page.setReviews}
+          />
         </Suspense>
       </div>
     </DashboardLayout>

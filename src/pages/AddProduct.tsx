@@ -4,23 +4,31 @@ import CategoryDialog from '@/components/CategoryDialog';
 import ProductFormEditor from '@/components/add-product/ProductFormEditor';
 import ProductSaveActions from '@/components/add-product/ProductSaveActions';
 import { useAddProductForm } from '@/hooks/useAddProductForm';
+import { useAddProductPageBundle } from '@/hooks/useAddProductPageBundle';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import AttentionStrip from '@/components/ui/AttentionStrip';
-import { useMerchantProductsPage } from '@/hooks/useMerchantProductsPage';
-import { useStore } from '@/context/StoreContext';
-import { hasConfiguredDeliveryPrices } from '@/utils/deliveryUtils';
 import { buildAttentionHref } from '@/lib/attentionHighlight';
 import { Button } from '@/components/ui/button';
+import PageSpinner from '@/components/ui/page-spinner';
 import { PackagePlus, Truck } from 'lucide-react';
 
 const AddProduct = () => {
-  const { state, actions } = useAddProductForm();
-  const { storeSettings } = useStore();
+  const page = useAddProductPageBundle();
+  const { state, actions } = useAddProductForm({
+    categories: page.categories,
+    deliveryPrices: page.deliveryPrices,
+    onCategoriesChange: page.refreshCategories,
+  });
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
-  const catalog = useMerchantProductsPage('', 'all');
-  const catalogEmpty = !catalog.loading && catalog.total === 0;
-  const deliveryConfigured = hasConfiguredDeliveryPrices(storeSettings.deliveryPrices);
+
+  if (page.loading) {
+    return (
+      <DashboardLayout>
+        <PageSpinner message="جاري تحميل بيانات المنتج…" />
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -43,7 +51,7 @@ const AddProduct = () => {
       />
 
       <div className="ds-page max-w-6xl pb-28 lg:pb-8 space-y-6">
-        {!deliveryConfigured && (
+        {!page.deliveryConfigured && (
           <div className="rounded-2xl border border-destructive/30 bg-destructive/[0.04] p-4 space-y-3">
             <AttentionStrip
               attentionKey="missing-delivery-prices"
@@ -63,12 +71,12 @@ const AddProduct = () => {
 
         <AttentionStrip
           attentionKey="empty-catalog"
-          visible={catalogEmpty && deliveryConfigured}
+          visible={page.catalogEmpty && page.deliveryConfigured}
           icon={PackagePlus}
           message="متجرك بدون منتجات — أضف منتجاً واحداً على الأقل لبدء البيع"
         />
 
-        <div className={!deliveryConfigured ? 'pointer-events-none opacity-50 select-none' : undefined}>
+        <div className={!page.deliveryConfigured ? 'pointer-events-none opacity-50 select-none' : undefined}>
           <ProductFormEditor
             formId="add-product-form"
             state={state}

@@ -1,9 +1,12 @@
 import { createContext, useState, useContext, ReactNode, useEffect, useCallback, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { useStoreHydration } from "./StoreBootstrapContext";
+import { cache, CacheKeys } from "@/lib/cache";
 import {
   defaultStoreSettings,
   fetchStoreSettings,
+  mapStoreSettingsRow,
   upsertStoreSettings,
   type StoreSettings,
 } from "@/services/storeService";
@@ -21,34 +24,51 @@ const StoreContext = createContext<StoreContextType | null>(null);
 
 export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
+  const { pathname } = useLocation();
   const { isReady, hydrationVersion } = useStoreHydration();
+  const isPublicStorefront = /^\/store\/[a-z0-9-]+(\/|$)/.test(pathname);
+  const isProductFormRoute =
+    pathname.startsWith('/add-product') || pathname.startsWith('/edit-product');
+  const isStatisticsRoute = pathname.startsWith('/statistics');
+  const isProductsRoute = pathname.startsWith('/products');
+  const isSettingsRoute = pathname.startsWith('/settings');
+  const isOrdersRoute = pathname.startsWith('/orders');
+  const isPreviewRoute = pathname === '/preview';
+  const isProductDetailsRoute = pathname.startsWith('/product-details');
   const [storeName, setStoreName] = useState("");
   const [storeLogo, setStoreLogo] = useState("");
   const [storeGovernorate, setStoreGovernorate] = useState("");
   const [storeSettings, setStoreSettings] = useState<StoreSettings>(defaultStoreSettings());
 
+  const applyStoreProfile = useCallback((profile: ReturnType<typeof mapStoreSettingsRow>) => {
+    setStoreName(profile.storeName);
+    setStoreLogo(profile.storeLogo);
+    setStoreGovernorate(profile.storeGovernorate);
+    setStoreSettings(profile.settings);
+  }, []);
+
+  const loadStoreSettings = useCallback(async () => {
+    if (!user?.id) return;
+
+    const profile = await fetchStoreSettings(user.id);
+    if (profile) applyStoreProfile(profile);
+  }, [user?.id, applyStoreProfile]);
+
   useEffect(() => {
-    if (user?.id && isReady) {
-      loadStoreSettings();
+    if (user?.id && isReady && !isPublicStorefront) {
+      if (isProductFormRoute || isStatisticsRoute || isProductsRoute || isSettingsRoute || isOrdersRoute || isPreviewRoute || isProductDetailsRoute) {
+        const cached = cache.get<Record<string, unknown>>(CacheKeys.storeSettings(user.id));
+        if (cached) applyStoreProfile(mapStoreSettingsRow(cached));
+      } else {
+        void loadStoreSettings();
+      }
     } else if (!user?.id) {
       setStoreName("");
       setStoreLogo("");
       setStoreGovernorate("");
       setStoreSettings(defaultStoreSettings());
     }
-  }, [user?.id, isReady, hydrationVersion]);
-
-  const loadStoreSettings = async () => {
-    if (!user?.id) return;
-
-    const profile = await fetchStoreSettings(user.id);
-    if (profile) {
-      setStoreName(profile.storeName);
-      setStoreLogo(profile.storeLogo);
-      setStoreGovernorate(profile.storeGovernorate);
-      setStoreSettings(profile.settings);
-    }
-  };
+  }, [user?.id, isReady, hydrationVersion, isPublicStorefront, isProductFormRoute, isStatisticsRoute, isProductsRoute, isSettingsRoute, isOrdersRoute, isPreviewRoute, isProductDetailsRoute, applyStoreProfile, loadStoreSettings]);
 
   const updateStore = useCallback(async (logo: string, name: string, governorate?: string) => {
     if (!user?.id) return;

@@ -46,7 +46,7 @@ describe('getLeadWorkflowStage', () => {
     );
   });
 
-  it('classifies active code as pending activation', () => {
+  it('classifies active code as completed (pending_activation stage)', () => {
     expect(
       getLeadWorkflowStage(
         baseLead({ status: 'interested', has_pending_code: true, is_unread: false })
@@ -90,6 +90,18 @@ describe('matchesLeadQuickFilter', () => {
     ).toBe(false);
   });
 
+  it('excludes completed leads from pipeline', () => {
+    expect(
+      matchesLeadQuickFilter(
+        baseLead({ status: 'interested', has_pending_code: true, is_unread: false }),
+        'pipeline'
+      )
+    ).toBe(false);
+    expect(matchesLeadQuickFilter(baseLead({ status: 'contacted', is_unread: false }), 'pipeline')).toBe(
+      true
+    );
+  });
+
   it('matches pending_activation when code is active', () => {
     expect(
       matchesLeadQuickFilter(
@@ -112,7 +124,7 @@ describe('matchesLeadQuickFilter', () => {
     ).toBe(true);
   });
 
-  it('matches pipeline for non-customer non-rejected leads', () => {
+  it('matches pipeline for non-customer non-rejected leads without active code', () => {
     expect(matchesLeadQuickFilter(baseLead(), 'pipeline')).toBe(true);
     expect(
       matchesLeadQuickFilter(

@@ -7,13 +7,13 @@ import { Button } from '@/components/ui/button';
 import { AuthPageShell } from '@/components/auth/AuthPageShell';
 import { useAuth } from '@/context/AuthContext';
 import { useSubscription } from '@/context/SubscriptionContext';
+import { useLandingPageBundle } from '@/hooks/useLandingPageBundle';
 import { buildWhatsAppUrl } from '@/types/leads';
 import { isSubscriptionExpired } from '@/utils/subscriptionExpiryUtils';
 
-const SUPPORT_WHATSAPP = import.meta.env.VITE_SALES_WHATSAPP || '9647700000000';
-
 const SubscriptionExpired = () => {
   const navigate = useNavigate();
+  const landing = useLandingPageBundle();
   const { user, logout, loading: authLoading } = useAuth();
   const { hasAccess, isAdmin, loading: subLoading, subscription, accessError } = useSubscription();
 
@@ -25,7 +25,7 @@ const SubscriptionExpired = () => {
   }, [user, hasAccess, isAdmin, authLoading, subLoading, navigate]);
 
   const waUrl = buildWhatsAppUrl(
-    SUPPORT_WHATSAPP,
+    landing.salesWhatsApp,
     subscription?.end_date
       ? `مرحباً، انتهى اشتراكي في ${format(new Date(subscription.end_date), 'dd/MM/yyyy')} — أريد التجديد`
       : 'مرحباً، أريد تفعيل أو تجديد اشتراكي في منصة بداية'

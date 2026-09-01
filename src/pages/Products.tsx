@@ -21,7 +21,6 @@ import InventoryStockDialog from '@/components/inventory/InventoryStockDialog';
 import { Product } from '@/types';
 import { toast } from 'sonner';
 import {
-  getCategories,
   publishProduct,
   setProductLifecycle,
   addProduct,
@@ -35,8 +34,9 @@ import { productToInventoryRow, type InventoryProductRow } from '@/utils/invento
 import { variantStockSum } from '@/utils/inventoryUtils';
 import type { ProductVariant } from '@/types';
 import { useMerchantProductsPage } from '@/hooks/useMerchantProductsPage';
+import { useInventoryPageBundle } from '@/hooks/useInventoryPageBundle';
 import { useProgressiveRender } from '@/hooks/useProgressiveRender';
-import { getFirstPendingReviewTarget, countPendingReviewsForOwner } from '@/services/reviewService';
+import { getFirstPendingReviewTarget } from '@/services/reviewService';
 import type { ProductSaveMode } from '@/lib/productFormLabels';
 import { useAuth } from '@/context/AuthContext';
 import { useRealtimeProducts } from '@/hooks/useRealtimeProducts';
@@ -55,6 +55,7 @@ import {
   getProductCatalogStockStatus,
   type ProductCatalogFilters,
 } from '@/utils/productCatalogPageUtils';
+import { resolveInventoryPageStats } from '@/services/inventoryPageService';
 import { generateUUID } from '@/lib/uuid';
 
 const Products = () => {
@@ -64,8 +65,8 @@ const Products = () => {
   const { user } = useAuth();
   const [catalogFilters, setCatalogFilters] = useState<ProductCatalogFilters>(DEFAULT_PRODUCT_CATALOG_FILTERS);
   const debouncedSearch = useDebouncedValue(catalogFilters.search, 350);
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
-  const [pendingReviewsCount, setPendingReviewsCount] = useState(0);
+  const inventoryPage = useInventoryPageBundle();
+  const categories = inventoryPage.categories;
   const [stockDialogOpen, setStockDialogOpen] = useState(false);
   const [stockDialogProduct, setStockDialogProduct] = useState<InventoryProductRow | null>(null);
   const [stockSaving, setStockSaving] = useState(false);
@@ -80,6 +81,7 @@ const Products = () => {
 
   const catalog = useMerchantProductsPage(debouncedSearch, catalogFilters.category, {
     profile: 'inventory',
+    enabled: !inventoryPage.loading,
   });
 
   const syncFromCacheRef = useRef(catalog.syncFromCache);
@@ -92,7 +94,7 @@ const Products = () => {
 
   const reloadCatalog = catalog.reload;
   const loadedProducts = catalog.products;
-  const catalogLoading = catalog.loading;
+  const catalogLoading = inventoryPage.loading || catalog.loading;
 
   const productIdParam = searchParams.get('productId');
   const productNameParam = searchParams.get('productName');
@@ -142,18 +144,6 @@ const Products = () => {
   }, [searchParams, user?.id, navigate, catalogLoading, loadedProducts]);
 
   useEffect(() => {
-    getCategories().then((cats) => setCategories(cats));
-  }, []);
-
-  useEffect(() => {
-    if (!user?.id) {
-      setPendingReviewsCount(0);
-      return;
-    }
-    void countPendingReviewsForOwner(user.id).then(setPendingReviewsCount);
-  }, [user?.id]);
-
-  useEffect(() => {
     const state = location.state as { refreshProducts?: boolean } | null;
     if (state?.refreshProducts) return;
     const saved = loadFilters('products') as Record<string, string> | null;
@@ -174,6 +164,8 @@ const Products = () => {
     }));
   }, []);
 
+  const pendingReviewsCount = inventoryPage.pendingReviewsCount;
+
   useEffect(() => {
     if (catalogFilters.category === 'all' || categories.length === 0) return;
     if (!categories.some((c) => c.name === catalogFilters.category)) {
@@ -192,8 +184,8 @@ const Products = () => {
   }, [catalogFilters]);
 
   const stats = useMemo(
-    () => computeProductCatalogStats(loadedProducts),
-    [loadedProducts]
+    () => resolveInventoryPageStats(inventoryPage.bundle, loadedProducts),
+    [inventoryPage.bundle, loadedProducts]
   );
 
   const tabCountBase = useMemo(

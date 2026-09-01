@@ -3,7 +3,6 @@ import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStore } from "@/context/StoreContext";
-import { useStoreHydration } from "@/context/StoreBootstrapContext";
 import { toast } from "sonner";
 import { Store, Truck, FileText, Globe, Loader2, CheckCircle2 } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -16,37 +15,39 @@ import DesignTab from "@/components/settings/DesignTab";
 import CustomDomainTab from "@/components/settings/CustomDomainTab";
 import { validateStoreSlug, normalizeStoreSlugInput } from "@/lib/storeSlug";
 import { ATTENTION_PARAM } from "@/lib/attentionHighlight";
+import { saveMerchantComplianceSettings } from "@/services/storeService";
+import type { StoreSettings } from "@/types/store";
 import {
-  fetchMerchantComplianceSettings,
-  saveMerchantComplianceSettings,
-} from "@/services/storeService";
+  useSettingsPageBundle,
+  invalidateSettingsPageBundle,
+  settingsFormFromBundle,
+} from "@/hooks/useSettingsPageBundle";
 
 const Settings = () => {
   const { user } = useAuth();
-  const { isReady: storeHydrated } = useStoreHydration();
-  const { storeName, storeLogo, storeGovernorate, storeSettings, updateStore, updateStoreSettings } = useStore();
+  const { updateStore, updateStoreSettings } = useStore();
+  const { loading: bundleLoading, bundle, domain, domainLoading, loadDomain } = useSettingsPageBundle();
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstRender = useRef(true);
   const isDbLoaded = useRef(false);
-  const profileHydratedRef = useRef(false);
   const settingsDirtyRef = useRef(false);
   const lastSavedRef = useRef<string>("");
   const [saveStatus, setSaveStatus] = useState<'idle' | 'pending' | 'saving' | 'saved' | 'error'>('idle');
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('store');
-  
+
   const [settings, setSettings] = useState({
-    storeName: storeName,
-    storeLogo: storeLogo,
-    storeGovernorate: storeGovernorate,
+    storeName: "",
+    storeLogo: "",
+    storeGovernorate: "",
     storeSlug: "",
-    menuBackgroundColor: storeSettings.menuBackgroundColor,
-    menuTextColor: storeSettings.menuTextColor,
-    menuAccentColor: storeSettings.menuAccentColor,
-    storeFont: storeSettings.storeFont || "Tajawal",
-    bannerImages: storeSettings.bannerImages,
-    primaryBannerIndex: storeSettings.primaryBannerIndex,
-    deliveryPrices: storeSettings.deliveryPrices || [],
+    menuBackgroundColor: "#ffffff",
+    menuTextColor: "#333333",
+    menuAccentColor: "#6366f1",
+    storeFont: "Tajawal",
+    bannerImages: [] as string[],
+    primaryBannerIndex: 0,
+    deliveryPrices: [] as StoreSettings['deliveryPrices'],
     returnPolicy: "",
     termsConditions: "",
     privacyPolicy: "",
@@ -59,42 +60,18 @@ const Settings = () => {
   settingsRef.current = settings;
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!bundle || settingsDirtyRef.current) return;
+    const form = settingsFormFromBundle(bundle);
+    setSettings(form);
+    lastSavedRef.current = JSON.stringify(form);
+    isDbLoaded.current = true;
+  }, [bundle]);
 
-    let cancelled = false;
-
-    void fetchMerchantComplianceSettings(user.id).then((compliance) => {
-      if (cancelled) return;
-      if (!compliance) {
-        isDbLoaded.current = true;
-        setSettings((prev) => {
-          lastSavedRef.current = JSON.stringify(prev);
-          return prev;
-        });
-        return;
-      }
-
-      setSettings((prev) => {
-        const merged = {
-          ...prev,
-          storeSlug: compliance.storeSlug || prev.storeSlug,
-          returnPolicy: compliance.returnPolicy || prev.returnPolicy,
-          termsConditions: compliance.termsConditions || prev.termsConditions,
-          privacyPolicy: compliance.privacyPolicy || prev.privacyPolicy,
-          whatsappNumber: compliance.whatsappNumber || prev.whatsappNumber,
-          whatsappWelcomeMessage: compliance.whatsappWelcomeMessage || prev.whatsappWelcomeMessage,
-          whatsappOrderConfirmation: compliance.whatsappOrderConfirmation || prev.whatsappOrderConfirmation,
-        };
-        lastSavedRef.current = JSON.stringify(merged);
-        return merged;
-      });
-      isDbLoaded.current = true;
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id]);
+  useEffect(() => {
+    if (activeTab === 'domain' && user?.id) {
+      void loadDomain();
+    }
+  }, [activeTab, user?.id, loadDomain]);
 
   useEffect(() => {
     const attention = searchParams.get(ATTENTION_PARAM);
@@ -105,37 +82,6 @@ const Settings = () => {
       setActiveTab('delivery');
     }
   }, [searchParams]);
-
-  // Hydrate local form once from StoreContext after bootstrap — never overwrite in-progress edits.
-  useEffect(() => {
-    if (!storeHydrated || profileHydratedRef.current || settingsDirtyRef.current) return;
-    profileHydratedRef.current = true;
-    setSettings((prev) => ({
-      ...prev,
-      storeName: storeName || prev.storeName,
-      storeLogo: storeLogo || prev.storeLogo,
-      storeGovernorate: storeGovernorate || prev.storeGovernorate,
-      menuBackgroundColor: storeSettings.menuBackgroundColor || prev.menuBackgroundColor,
-      menuTextColor: storeSettings.menuTextColor || prev.menuTextColor,
-      menuAccentColor: storeSettings.menuAccentColor || prev.menuAccentColor,
-      storeFont: storeSettings.storeFont || prev.storeFont,
-      bannerImages: storeSettings.bannerImages.length > 0 ? storeSettings.bannerImages : prev.bannerImages,
-      primaryBannerIndex: storeSettings.primaryBannerIndex ?? prev.primaryBannerIndex,
-      deliveryPrices: storeSettings.deliveryPrices?.length ? storeSettings.deliveryPrices : prev.deliveryPrices,
-    }));
-  }, [
-    storeHydrated,
-    storeName,
-    storeLogo,
-    storeGovernorate,
-    storeSettings.menuBackgroundColor,
-    storeSettings.menuTextColor,
-    storeSettings.menuAccentColor,
-    storeSettings.storeFont,
-    storeSettings.bannerImages,
-    storeSettings.primaryBannerIndex,
-    storeSettings.deliveryPrices,
-  ]);
 
   const performSave = useCallback(async () => {
     const current = settingsRef.current;
@@ -191,6 +137,8 @@ const Settings = () => {
               : saveResult.error || 'فشل في حفظ رابط المتجر';
           throw new Error(message);
         }
+
+        invalidateSettingsPageBundle(user.id);
       }
 
       lastSavedRef.current = settingsHash;
@@ -249,6 +197,22 @@ const Settings = () => {
     { value: "policies", label: "السياسات", icon: FileText },
   ];
 
+  if (bundleLoading && !isDbLoaded.current) {
+    return (
+      <DashboardLayout>
+        <PageHeader
+          title="الإعدادات"
+          description="خصّص متجرك، التوصيل، السياسات، والتواصل — يتم الحفظ تلقائياً"
+          hideBack
+          breadcrumbs={[{ label: 'لوحة التحكم', href: '/builder' }, { label: 'الإعدادات' }]}
+        />
+        <div className="ds-page max-w-5xl flex items-center justify-center py-24">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <PageHeader
@@ -304,7 +268,12 @@ const Settings = () => {
           </TabsContent>
 
           <TabsContent value="domain" className="space-y-6">
-            <CustomDomainTab storeSlug={settings.storeSlug || ''} />
+            <CustomDomainTab
+              storeSlug={settings.storeSlug || ''}
+              domainData={domain}
+              domainLoading={domainLoading}
+              onDomainMutated={() => user?.id && void loadDomain({ force: true })}
+            />
           </TabsContent>
 
           <TabsContent value="policies" className="space-y-6">

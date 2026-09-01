@@ -8,8 +8,8 @@ import {
   loadAddProductDraft,
   saveAddProductDraft,
 } from '@/lib/addProductDraftStorage';
-import { addProduct, getCategories } from '@/services/productService';
-import { useStore } from '@/context/StoreContext';
+import { addProduct } from '@/services/productService';
+import { incrementMerchantProductCount } from '@/services/addProductPageService';
 import { hasConfiguredDeliveryPrices } from '@/utils/deliveryUtils';
 import { buildAttentionHref } from '@/lib/attentionHighlight';
 import { useToast } from '@/hooks/use-toast';
@@ -20,13 +20,21 @@ import { computeProfit, formatDisplayPrice, parseTagsInput, slugifyProductName }
 import { PRODUCT_SAVE_TOAST, type ProductSaveMode } from '@/lib/productFormLabels';
 import { toast as sonnerToast } from 'sonner';
 
+import type { DeliveryPrice } from '@/utils/deliveryUtils';
+
 export type SaveMode = ProductSaveMode;
 
-export function useAddProductForm() {
+export type UseAddProductFormOptions = {
+  categories: Category[];
+  deliveryPrices: DeliveryPrice[];
+  onCategoriesChange?: () => Promise<Category[]>;
+};
+
+export function useAddProductForm(options: UseAddProductFormOptions) {
+  const { categories: pageCategories, deliveryPrices, onCategoriesChange } = options;
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { storeSettings } = useStore();
-  const deliveryConfigured = hasConfiguredDeliveryPrices(storeSettings.deliveryPrices);
+  const deliveryConfigured = hasConfiguredDeliveryPrices(deliveryPrices);
   const submitLockRef = useRef(false);
   const idempotencyKeyRef = useRef(createProductIdempotencyKey());
   const ownerIdRef = useRef<string | null>(null);
@@ -48,7 +56,7 @@ export function useAddProductForm() {
   const [stockQuantity, setStockQuantity] = useState('');
   const [lowStockThreshold, setLowStockThreshold] = useState('3');
   const [variants, setVariants] = useState<ProductVariant[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Category[]>(pageCategories);
   const [tagsInput, setTagsInput] = useState('');
   const [seoTitle, setSeoTitle] = useState('');
   const [seoDescription, setSeoDescription] = useState('');
@@ -111,18 +119,19 @@ export function useAddProductForm() {
     if (variants.length > 0) setStockQuantity(String(totalVariantStock));
   }, [totalVariantStock, variants.length]);
 
+  useEffect(() => {
+    setCategories(pageCategories);
+  }, [pageCategories]);
+
   const loadCategories = useCallback(async () => {
     try {
-      const rows = await getCategories();
+      const rows = onCategoriesChange ? await onCategoriesChange() : pageCategories;
       setCategories(rows);
+      return rows;
     } catch {
-      /* fallback */
+      return categories;
     }
-  }, []);
-
-  useEffect(() => {
-    loadCategories();
-  }, [loadCategories]);
+  }, [onCategoriesChange, pageCategories, categories]);
 
   useEffect(() => {
     let cancelled = false;
@@ -296,7 +305,7 @@ export function useAddProductForm() {
       return;
     }
 
-    if (!hasConfiguredDeliveryPrices(storeSettings.deliveryPrices)) {
+    if (!hasConfiguredDeliveryPrices(deliveryPrices)) {
       sonnerToast.error('أضف أسعار التوصيل أولاً', {
         description: 'اذهب إلى الإعدادات ← التوصيل وحدّد أسعار المحافظات ثم حاول مرة أخرى',
         action: {
@@ -376,7 +385,10 @@ export function useAddProductForm() {
 
       if (result.success) {
         setSaveSucceeded(true);
-        if (ownerIdRef.current) clearAddProductDraft(ownerIdRef.current);
+        if (ownerIdRef.current) {
+          clearAddProductDraft(ownerIdRef.current);
+          incrementMerchantProductCount(ownerIdRef.current, 1);
+        }
 
         const stockMsg = newProduct.stockQuantity ? ` · المخزون: ${newProduct.stockQuantity}` : '';
         const saveMode: SaveMode = publish ? 'publish' : 'draft';

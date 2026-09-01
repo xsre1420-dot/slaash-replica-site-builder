@@ -79,6 +79,18 @@ const AdminLeads = () => {
     setRows((prev) => prev.map((row) => (row.id === leadId ? { ...row, ...patch } : row)));
   }, []);
 
+  const applyQuickFilter = useCallback(
+    (f: LeadQuickFilter) => {
+      setQuickFilter(f);
+      if (f !== 'all') setStatus('all');
+      const next = new URLSearchParams(searchParams);
+      if (f === 'all') next.delete('filter');
+      else next.set('filter', f);
+      setSearchParams(next, { replace: true });
+    },
+    [searchParams, setSearchParams]
+  );
+
   const {
     codeOpen,
     setCodeOpen,
@@ -93,6 +105,10 @@ const AdminLeads = () => {
     replacingCode,
   } = useLeadAccessCodeDialog({
     onLeadPatch: patchLeadRow,
+    onAfterCodeGenerated: () => {
+      applyQuickFilter('pending_activation');
+      toast.success('تم إنشاء الرمز — نُقل الطلب إلى «مكتمل»');
+    },
   });
 
   const activeCodesByLead = useMemo(() => {
@@ -146,15 +162,6 @@ const AdminLeads = () => {
       setQuickFilter('all');
     }
   }, [searchParams]);
-
-  const applyQuickFilter = (f: LeadQuickFilter) => {
-    setQuickFilter(f);
-    if (f !== 'all') setStatus('all');
-    const next = new URLSearchParams(searchParams);
-    if (f === 'all') next.delete('filter');
-    else next.set('filter', f);
-    setSearchParams(next, { replace: true });
-  };
 
   const handleStatusChange = (value: string) => {
     setStatus(value);
@@ -430,9 +437,8 @@ const AdminLeads = () => {
         onReissue={handleReissueCode}
         onReplace={handleReplaceCode}
         replacing={replacingCode}
-        onGenerated={({ accessCode, codeId }) => {
-          handleGenerated({ accessCode, codeId });
-          void load();
+        onGenerated={({ accessCode, codeId, meta }) => {
+          handleGenerated({ accessCode, codeId, meta });
           void loadStats();
         }}
       />

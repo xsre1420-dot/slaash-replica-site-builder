@@ -1,18 +1,16 @@
 import { Category } from '@/types';
-import { cache, CacheTTL, dedup } from '@/lib/cache';
-import { cacheGet, cacheSet, cacheDeleteByPrefix } from '@/utils/indexedDB';
+import { cache, CacheKeys, CacheTTL, dedup } from '@/lib/cache';
+import { cacheSet, cacheDeleteByPrefix } from '@/utils/indexedDB';
 import {
-  loadStorefrontBundle,
+  ensureStorefrontPageBundle,
   peekStorefrontBundle,
   resolveStoreOwnerBySlug,
   fetchStorePolicies,
   STOREFRONT_PRODUCTS_CHANGED,
 } from '@/services/storefrontProductService';
 import { StorefrontCacheKeys } from '@/services/storefrontCacheService';
-import { callReadRpc } from '@/lib/readWrite/readClient';
-import { supabase } from '@/integrations/supabase/client';
-
-const META_IDB_TTL = 10 * 60 * 1000;
+import { awaitStorefrontBundleReady } from '@/lib/storefront/storefrontLoadCoordinator';
+import { getTenantStoreInflight, setTenantStoreInflight } from '@/lib/tenantStoreInflight';
 
 export interface TenantStoreInfo {
   ownerId: string;
@@ -102,48 +100,29 @@ function schedulePolicyHydration(slug: string, storeInfo: TenantStoreInfo) {
   });
 }
 
-async function fetchStoreMeta(normalizedSlug: string) {
-  const bundle = await loadStorefrontBundle(normalizedSlug);
-  if (bundle?.store) {
-    const store = bundle.store;
-    let ownerId = String(store.owner_id || '');
-    if (!ownerId) {
-      ownerId = (await resolveStoreOwnerBySlug(normalizedSlug)) || '';
-    }
-    if (!ownerId) throw new Error('المتجر غير صالح');
-    return {
-      storeInfo: buildStoreInfo({ ...store, owner_id: ownerId }, normalizedSlug, ownerId),
-      categories: (bundle.categories || []).map((c) => ({
-        id: String(c.id),
-        name: String(c.name),
-        order: Number(c.display_order) || 0,
-      })),
-    };
+async function fetchTenantMetaFromBundle(normalizedSlug: string) {
+  const bundle =
+    peekStorefrontBundle(normalizedSlug) ??
+    (await ensureStorefrontPageBundle(normalizedSlug));
+  if (!bundle?.store) {
+    throw new Error('المتجر غير موجود');
   }
 
-  const { data: meta, error: metaErr } = await callReadRpc<{ store?: Record<string, unknown>; categories?: Record<string, unknown>[] }>('get_store_meta', {
-    p_slug: normalizedSlug,
-  }, { preferEdge: true });
-
-  if (!metaErr && meta?.store) {
-    const store = meta.store as Record<string, unknown>;
-    let ownerId = String(store.owner_id || '');
-    if (!ownerId) {
-      ownerId = (await resolveStoreOwnerBySlug(normalizedSlug)) || '';
-    }
-    if (!ownerId) throw new Error('المتجر غير صالح');
-
-    return {
-      storeInfo: buildStoreInfo(store, normalizedSlug, ownerId),
-      categories: ((meta.categories || []) as Record<string, unknown>[]).map((c) => ({
-        id: String(c.id),
-        name: String(c.name),
-        order: Number(c.display_order) || 0,
-      })),
-    };
+  const store = bundle.store;
+  let ownerId = String(store.owner_id || '');
+  if (!ownerId) {
+    ownerId = (await resolveStoreOwnerBySlug(normalizedSlug)) || '';
   }
+  if (!ownerId) throw new Error('المتجر غير صالح');
 
-  throw new Error(metaErr?.message || 'المتجر غير موجود');
+  return {
+    storeInfo: buildStoreInfo({ ...store, owner_id: ownerId }, normalizedSlug, ownerId),
+    categories: (bundle.categories || []).map((c) => ({
+      id: String(c.id),
+      name: String(c.name),
+      order: Number(c.display_order) || 0,
+    })),
+  };
 }
 
 function getEntry(slug: string): SlugEntry {
@@ -196,14 +175,86 @@ export function getTenantStoreSnapshot(slug: string): TenantStoreSnapshot | null
   return entries.get(slug)?.snapshot ?? null;
 }
 
+export type CheckoutInitBundle = {
+  ownerId: string;
+  storeName: string;
+  storeSlug: string;
+  deliveryPrices: TenantStoreInfo['deliveryPrices'];
+  paymentMethods: unknown;
+  whatsappNumber: string;
+};
+
+/** Sync checkout init from tenant registry — no network when storefront bundle is warm. */
+export function peekCheckoutInitBundle(slug: string): CheckoutInitBundle | null {
+  const normalized = slug.trim().toLowerCase();
+  const cached = cache.get<CheckoutInitBundle>(CacheKeys.checkoutInit(normalized));
+  if (cached?.ownerId) return cached;
+
+  const snapshot = getTenantStoreSnapshot(normalized);
+  const info = snapshot?.storeInfo;
+  if (!info?.ownerId) return null;
+
+  const bundle: CheckoutInitBundle = {
+    ownerId: info.ownerId,
+    storeName: info.storeName,
+    storeSlug: info.storeSlug,
+    deliveryPrices: info.deliveryPrices,
+    paymentMethods: info.paymentMethods,
+    whatsappNumber: info.whatsappNumber,
+  };
+  cache.set(CacheKeys.checkoutInit(normalized), bundle, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+  return bundle;
+}
+
+/** Ensures tenant meta is hydrated, then returns checkout initialization data. */
+export async function loadCheckoutInitBundle(slug: string): Promise<CheckoutInitBundle | null> {
+  const normalized = slug.trim().toLowerCase();
+  const peek = peekCheckoutInitBundle(normalized);
+  if (peek) return peek;
+
+  await fetchTenantStore(normalized);
+  return peekCheckoutInitBundle(normalized);
+}
+
 /** Ensures a registry entry exists; used by useSyncExternalStore getSnapshot. */
 export function peekTenantStoreSnapshot(slug: string): TenantStoreSnapshot {
   return getEntry(slug).snapshot;
 }
 
+async function hydrateSnapshotFromBundlePeek(slug: string): Promise<boolean> {
+  const bundlePeek = peekStorefrontBundle(slug);
+  if (!bundlePeek?.store) return false;
+
+  let ownerId = String(bundlePeek.store.owner_id || '');
+  if (!ownerId) {
+    ownerId = (await resolveStoreOwnerBySlug(slug)) || '';
+  }
+  if (!ownerId) return false;
+
+  const cacheKey = StorefrontCacheKeys.meta(slug);
+  const fromBundle = {
+    storeInfo: buildStoreInfo({ ...bundlePeek.store, owner_id: ownerId }, slug, ownerId),
+    categories: (bundlePeek.categories || []).map((c) => ({
+      id: String(c.id),
+      name: String(c.name),
+      order: Number(c.display_order) || 0,
+    })),
+  };
+  cache.set(cacheKey, fromBundle, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
+  setSnapshot(slug, {
+    storeInfo: fromBundle.storeInfo,
+    categories: fromBundle.categories,
+    loading: false,
+    error: null,
+  });
+  schedulePolicyHydration(slug, fromBundle.storeInfo);
+  return true;
+}
+
 export function invalidateTenantStore(slug: string): void {
   const normalized = slug.trim().toLowerCase();
   cache.del(StorefrontCacheKeys.meta(normalized));
+  cache.del(CacheKeys.checkoutInit(normalized));
   void cacheDeleteByPrefix(`idb:${StorefrontCacheKeys.meta(normalized)}`);
   setSnapshot(normalized, { loading: true, error: null });
   void fetchTenantStore(normalized, true);
@@ -241,63 +292,21 @@ export async function fetchTenantStore(slug: string, force = false): Promise<voi
 
   const task = (async () => {
     if (!force) {
-      const bundlePeek = peekStorefrontBundle(slug);
-      if (bundlePeek?.store) {
-        let ownerId = String(bundlePeek.store.owner_id || '');
-        if (!ownerId) {
-          ownerId = (await resolveStoreOwnerBySlug(slug)) || '';
-        }
-        if (ownerId) {
-          const fromBundle = {
-            storeInfo: buildStoreInfo({ ...bundlePeek.store, owner_id: ownerId }, slug, ownerId),
-            categories: (bundlePeek.categories || []).map((c) => ({
-              id: String(c.id),
-              name: String(c.name),
-              order: Number(c.display_order) || 0,
-            })),
-          };
-          cache.set(cacheKey, fromBundle, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
-          setSnapshot(slug, {
-            storeInfo: fromBundle.storeInfo,
-            categories: fromBundle.categories,
-            loading: false,
-            error: null,
-          });
-          schedulePolicyHydration(slug, fromBundle.storeInfo);
-          return;
-        }
-      }
+      if (await hydrateSnapshotFromBundlePeek(slug)) return;
 
-      const idbCached = await cacheGet<{ storeInfo: TenantStoreInfo; categories: Category[] }>(
-        idbKey,
-        META_IDB_TTL
-      );
-      if (idbCached) {
-        setSnapshot(slug, {
-          storeInfo: idbCached.storeInfo,
-          categories: idbCached.categories,
-          loading: false,
-          error: null,
-        });
-        return;
-      }
-
-      const memCached = cache.get<{ storeInfo: TenantStoreInfo; categories: Category[] }>(cacheKey);
-      if (memCached) {
-        setSnapshot(slug, {
-          storeInfo: memCached.storeInfo,
-          categories: memCached.categories,
-          loading: false,
-          error: null,
-        });
-        return;
-      }
+      await awaitStorefrontBundleReady(slug);
+      if (await hydrateSnapshotFromBundlePeek(slug)) return;
     }
 
     setSnapshot(slug, { loading: true, error: null });
 
     try {
-      const data = await dedup(cacheKey, () => fetchStoreMeta(slug));
+      await awaitStorefrontBundleReady(slug);
+      if (!force && (await hydrateSnapshotFromBundlePeek(slug))) return;
+
+      const cacheKey = StorefrontCacheKeys.meta(slug);
+      const idbKey = `idb:${cacheKey}`;
+      const data = await dedup(cacheKey, () => fetchTenantMetaFromBundle(slug));
       cache.set(cacheKey, data, CacheTTL.STOREFRONT, CacheTTL.STOREFRONT_STALE);
       await cacheSet(idbKey, data);
       setSnapshot(slug, {
@@ -316,9 +325,13 @@ export async function fetchTenantStore(slug: string, force = false): Promise<voi
   })();
 
   entry.inflight = task;
+  setTenantStoreInflight(slug, task);
   try {
     await task;
   } finally {
-    if (entry.inflight === task) entry.inflight = null;
+    if (entry.inflight === task) {
+      entry.inflight = null;
+      setTenantStoreInflight(slug, null);
+    }
   }
 }

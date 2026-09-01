@@ -40,6 +40,7 @@ export const upsertStoreSettings = async (
 
   if (data?.noop !== true) {
     cache.del(CacheKeys.storeSettings(ownerId));
+    cache.del(CacheKeys.settingsPage(ownerId));
     enqueueCacheInvalidation(ownerId, 'settings');
   }
   return { success: true };
@@ -49,6 +50,8 @@ export const invalidateStoreSettingsCache = (ownerId: string) => {
   cache.del(CacheKeys.storeSettings(ownerId));
   cache.del(CacheKeys.store(ownerId));
   cache.del(CacheKeys.ownerSlug(ownerId));
+  cache.del(CacheKeys.settingsPage(ownerId));
+  cache.del(CacheKeys.settingsDomain(ownerId));
   enqueueCacheInvalidation(ownerId, 'settings');
 };
 
@@ -196,6 +199,7 @@ export const saveCustomDomain = async (
     return { success: false, error: error.message, code: error.code };
   }
   cache.del(CacheKeys.storeSettings(ownerId));
+  cache.del(CacheKeys.settingsDomain(ownerId));
   return { success: true };
 };
 
@@ -208,5 +212,6 @@ export const removeCustomDomain = async (
 
   if (error) return { success: false, error: error.message };
   cache.del(CacheKeys.storeSettings(ownerId));
+  cache.del(CacheKeys.settingsDomain(ownerId));
   return { success: true };
 };

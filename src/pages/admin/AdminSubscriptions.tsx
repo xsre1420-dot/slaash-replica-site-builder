@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -6,9 +6,7 @@ import { ExternalLink, CalendarPlus, KeyRound } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import ExtendSubscriptionDialog from '@/components/admin/ExtendSubscriptionDialog';
 import GenerateAccessCodeDialog from '@/components/admin/GenerateAccessCodeDialog';
-import SubscriptionOverviewCards, {
-  type SubscriptionOverviewStats,
-} from '@/components/admin/subscription/SubscriptionOverviewCards';
+import SubscriptionOverviewCards from '@/components/admin/subscription/SubscriptionOverviewCards';
 import AdminSubscriptionFilters from '@/components/admin/subscription/AdminSubscriptionFilters';
 import SubscriptionStatusBadge from '@/components/admin/subscription/SubscriptionStatusBadge';
 import { Button } from '@/components/ui/button';
@@ -20,9 +18,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { fetchLeadById, fetchSubscriptions } from '@/services/leadAdminService';
+import { fetchLeadById } from '@/services/leadAdminService';
 import { SUBSCRIPTION_STATUS_LABELS, type SubscriptionRecord } from '@/types/leads';
 import { useLeadAccessCodeDialog } from '@/hooks/useLeadAccessCodeDialog';
+import { useAdminSubscriptionsPageBundle } from '@/hooks/useAdminSubscriptionsPageBundle';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { getSubscriptionRemainingDays, planLabelFor } from '@/utils/subscriptionPlanLabels';
 import { PUBLIC_SUBSCRIPTION_PLANS } from '@/data/subscriptionPlans';
 import { cn } from '@/lib/utils';
@@ -42,21 +42,14 @@ const PLAN_OPTIONS = [
 ];
 
 const AdminSubscriptions = () => {
-  const [rows, setRows] = useState<SubscriptionRecord[]>([]);
-  const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [planFilter, setPlanFilter] = useState('all');
-  const [loading, setLoading] = useState(true);
-  const [statsLoading, setStatsLoading] = useState(true);
-  const [stats, setStats] = useState<SubscriptionOverviewStats>({
-    total: 0,
-    active: 0,
-    expired: 0,
-    suspended: 0,
-  });
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [extendLeadId, setExtendLeadId] = useState<string | null>(null);
   const [extendCustomerName, setExtendCustomerName] = useState('');
+
+  const page = useAdminSubscriptionsPageBundle(debouncedSearch, status);
 
   const {
     codeOpen,
@@ -72,59 +65,12 @@ const AdminSubscriptions = () => {
     replacingCode,
   } = useLeadAccessCodeDialog();
 
-  const loadStats = useCallback(async () => {
-    setStatsLoading(true);
-    try {
-      const [all, active, expired, suspended] = await Promise.all([
-        fetchSubscriptions({ limit: 1 }),
-        fetchSubscriptions({ status: 'active', limit: 1 }),
-        fetchSubscriptions({ status: 'expired', limit: 1 }),
-        fetchSubscriptions({ status: 'suspended', limit: 1 }),
-      ]);
-      setStats({
-        total: all.total,
-        active: active.total,
-        expired: expired.total,
-        suspended: suspended.total,
-      });
-    } catch {
-      /* keep previous stats */
-    } finally {
-      setStatsLoading(false);
-    }
-  }, []);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await fetchSubscriptions({
-        search: search.trim() || undefined,
-        status: status === 'all' ? undefined : status,
-      });
-      setRows(result.rows as SubscriptionRecord[]);
-      setTotal(result.total);
-    } catch {
-      toast.error('تعذر تحميل الاشتراكات');
-    } finally {
-      setLoading(false);
-    }
-  }, [search, status]);
-
-  useEffect(() => {
-    void loadStats();
-  }, [loadStats]);
-
-  useEffect(() => {
-    const t = setTimeout(() => void load(), 300);
-    return () => clearTimeout(t);
-  }, [load]);
-
   const filteredRows = useMemo(() => {
-    if (planFilter === 'all') return rows;
-    return rows.filter((sub) => sub.plan_name === planFilter);
-  }, [rows, planFilter]);
+    if (planFilter === 'all') return page.rows;
+    return page.rows.filter((sub) => sub.plan_name === planFilter);
+  }, [page.rows, planFilter]);
 
-  const displayTotal = planFilter === 'all' ? total : filteredRows.length;
+  const displayTotal = planFilter === 'all' ? page.total : filteredRows.length;
 
   const openExtend = (sub: SubscriptionRecord) => {
     if (!sub.lead_id) {
@@ -148,13 +94,8 @@ const AdminSubscriptions = () => {
     }
   };
 
-  const handleStatusFilter = (value: string) => {
-    setStatus(value);
-  };
-
   const refreshAll = () => {
-    void loadStats();
-    void load();
+    void page.refetch();
   };
 
   const renderSubscriptionRow = (sub: SubscriptionRecord) => {
@@ -253,10 +194,10 @@ const AdminSubscriptions = () => {
     <AdminLayout title="إدارة الاشتراكات">
       <div className="space-y-5">
         <SubscriptionOverviewCards
-          stats={stats}
+          stats={page.stats}
           activeStatus={status}
-          onStatusFilter={handleStatusFilter}
-          loading={statsLoading}
+          onStatusFilter={setStatus}
+          loading={page.loading}
         />
 
         <AdminSubscriptionFilters
@@ -270,14 +211,13 @@ const AdminSubscriptions = () => {
           onPlanChange={setPlanFilter}
           planOptions={PLAN_OPTIONS}
           onRefresh={refreshAll}
-          loading={loading}
+          loading={page.loading}
           resultCount={displayTotal}
           resultLabel="اشتراك"
         />
 
-        {/* Mobile cards */}
         <div className="space-y-3 md:hidden">
-          {loading ? (
+          {page.loading ? (
             <div className="sub-admin-table-wrap p-8 text-center text-muted-foreground">
               جاري التحميل...
             </div>
@@ -290,7 +230,6 @@ const AdminSubscriptions = () => {
           )}
         </div>
 
-        {/* Desktop table */}
         <div className="sub-admin-table-wrap hidden md:block">
           <div className="sub-admin-table-wrap__header">
             <span>{displayTotal} اشتراك</span>
@@ -309,7 +248,7 @@ const AdminSubscriptions = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
+                {page.loading ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                       جاري التحميل...
@@ -417,8 +356,7 @@ const AdminSubscriptions = () => {
             if (!open) setExtendLeadId(null);
           }}
           onExtended={() => {
-            void load();
-            void loadStats();
+            void page.refetch();
           }}
         />
       )}

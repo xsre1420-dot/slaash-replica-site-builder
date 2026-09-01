@@ -24,7 +24,7 @@ import {
 import { getProductGalleryImages } from "@/lib/storefrontProductDisplay";
 import ProductHeader from "@/components/product-details/ProductHeader";
 import ProductImages from "@/components/product-details/ProductImages";
-import ProductData, { type ProductLoadStatus } from "@/components/product-details/ProductData";
+import { useProductDetailPageBundle } from "@/hooks/useProductDetailPageBundle";
 import ExpandableSection from "@/components/product-details/ExpandableSection";
 import RatingSection from "@/components/product-details/RatingSection";
 import SuggestedProducts from "@/components/product-details/SuggestedProducts";
@@ -66,10 +66,27 @@ const ProductDetails = () => {
   const { trackViewContent, trackAddToCart } = useMetaPixel();
   const viewTrackedRef = useRef<string | null>(null);
   const checkoutPath = getCheckoutPath(isTenantMode ? storeSlug : null);
-  useStoreVisitTracking(isTenantMode ? storeSlug : undefined);
-  useProductViewTracking(isTenantMode ? storeSlug : undefined, productId);
-  const [product, setProduct] = useState<Product | null>(null);
-  const [productLoadStatus, setProductLoadStatus] = useState<ProductLoadStatus>("loading");
+
+  const {
+    status: productLoadStatus,
+    product,
+    reviews: bundleReviews,
+    suggestedProducts: bundleSuggested,
+    refetch: refetchDetailBundle,
+  } = useProductDetailPageBundle({
+    productId,
+    storeSlug: isTenantMode ? storeSlug : undefined,
+    ownerId: !isTenantMode ? user?.id : undefined,
+    initialProduct,
+  });
+
+  useStoreVisitTracking(isTenantMode ? storeSlug : undefined, {
+    storefrontReady: !tenant.loading && !!tenant.storeInfo,
+  });
+  useProductViewTracking(isTenantMode ? storeSlug : undefined, productId, {
+    storefrontReady: !tenant.loading && !!tenant.storeInfo,
+  });
+
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
@@ -99,21 +116,6 @@ const ProductDetails = () => {
       if (ownerId) setStoreOwner(ownerId);
     });
   }, [isTenantMode, storeSlug, tenant.storeInfo?.ownerId, setStoreOwner]);
-
-  useEffect(() => {
-    if (initialProduct?.id === productId) {
-      setProduct(initialProduct);
-    } else {
-      setProduct(null);
-    }
-    setProductLoadStatus("loading");
-  }, [productId, storeSlug, initialProduct]);
-
-  const handleProductLoaded = useCallback((p: Product | null, status: ProductLoadStatus) => {
-    setProductLoadStatus(status);
-    if (status === "success" && p) setProduct(p);
-    if (status === "not_found") setProduct(null);
-  }, []);
 
   const activeProduct = product ? applyActiveDiscount(product) : null;
 
@@ -177,6 +179,10 @@ const ProductDetails = () => {
     }
   }, [selectedColor, selectedSize, activeProduct]);
 
+  const handleReviewsChanged = useCallback(() => {
+    void refetchDetailBundle();
+  }, [refetchDetailBundle]);
+
   if (productLoadStatus === "not_found") {
     const storeHome = getStoreHomePath(isTenantMode ? storeSlug : null);
     return (
@@ -195,15 +201,10 @@ const ProductDetails = () => {
     );
   }
 
-  const productDataLoader = (
-    <ProductData productId={productId} initialProduct={initialProduct} onProductLoaded={handleProductLoaded} />
-  );
-
   if (!product || !activeProduct) {
     return (
       <>
         <MarketingScripts storeSlug={isTenantMode ? storeSlug : undefined} storeOwnerId={isTenantMode ? tenant.storeInfo?.ownerId : user?.id} disabled={!isTenantMode} />
-        {productDataLoader}
         <ProductDetailsSkeleton />
       </>
     );
@@ -211,7 +212,6 @@ const ProductDetails = () => {
 
   return (
     <StoreThemeProvider colors={themeColors}>
-      {productDataLoader}
       <div className="sf-page pb-28 lg:pb-16">
         <MarketingScripts storeSlug={isTenantMode ? storeSlug : undefined} storeOwnerId={isTenantMode ? tenant.storeInfo?.ownerId : user?.id} disabled={!isTenantMode} />
         <ProductHeader />
@@ -277,12 +277,22 @@ const ProductDetails = () => {
 
             <ScrollReveal delay={240}>
               <div id="product-reviews">
-                <RatingSection productId={productId || ""} storeSlug={storeSlug} />
+                <RatingSection
+                  productId={productId || ""}
+                  storeSlug={storeSlug}
+                  prefetchedReviews={bundleReviews}
+                  onReviewsChanged={handleReviewsChanged}
+                />
               </div>
             </ScrollReveal>
 
             <ScrollReveal delay={280}>
-              <SuggestedProducts currentProductId={productId || ""} storeSlug={storeSlug} category={product.category} />
+              <SuggestedProducts
+                currentProductId={productId || ""}
+                storeSlug={storeSlug}
+                category={product.category}
+                prefetchedProducts={bundleSuggested}
+              />
             </ScrollReveal>
           </div>
 

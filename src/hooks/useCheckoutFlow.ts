@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
 import { useStore } from "@/context/StoreContext";
 import { useTenantStore } from "@/context/TenantStoreContext";
+import { loadCheckoutPageBundle, type CheckoutPageInit } from "@/services/checkoutPageService";
 import { useAuth } from "@/context/AuthContext";
 import { Order } from "@/types";
 import { saveOrderToDatabase } from "@/utils/orderUtils";
@@ -94,14 +95,92 @@ export const useCheckoutFlow = () => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethodId>("cash_on_delivery");
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [checkoutStoreSlug, setCheckoutStoreSlug] = useState<string | null>(storeSlug ?? null);
+  const [checkoutPageInit, setCheckoutPageInit] = useState<CheckoutPageInit | null>(null);
   const customerHydratedRef = useRef(false);
 
+  const [checkoutPageReady, setCheckoutPageReady] = useState(
+    () => cartItems.length === 0
+  );
+  const cartSyncAppliedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (cartItems.length === 0) {
+      setCheckoutPageReady(true);
+      return;
+    }
+
+    const merchantOwnerId = !isTenantMode ? user?.id || storeOwnerId : undefined;
+    if (isTenantMode && !storeSlug) return;
+    if (!isTenantMode && !merchantOwnerId) return;
+
+    if (cartSyncAppliedRef.current === cartFingerprint && checkoutPageInit) {
+      setCheckoutPageReady(true);
+      return;
+    }
+
+    let cancelled = false;
+    setCheckoutPageReady(false);
+
+    const cartFallback = new Map(cartItems.map((i) => [i.product.id, i.product]));
+
+    void loadCheckoutPageBundle({
+      storeSlug: isTenantMode ? storeSlug : undefined,
+      ownerId: merchantOwnerId,
+      productIds: cartItems.map((i) => i.product.id),
+      cartKey: cartFingerprint,
+      cartFallback,
+    }).then((bundle) => {
+      if (cancelled || !bundle) {
+        if (!cancelled) setCheckoutPageReady(true);
+        return;
+      }
+
+      setCheckoutPageInit(bundle.init);
+      if (bundle.init.storeSlug) {
+        setCheckoutStoreSlug(bundle.init.storeSlug);
+        persistCheckoutStoreSlug(bundle.init.ownerId, bundle.init.storeSlug);
+      }
+      setStoreOwner(bundle.init.ownerId);
+
+      const validation = validateAndRefreshCart(cartItems, bundle.freshProducts);
+      replaceCartItems(validation.updatedItems);
+
+      if (!validation.valid && validation.updatedItems.length > 0) {
+        const stockMsg = validation.errors.find(
+          (e) => e.includes('تم تعديل كمية') || e.includes('غير متوفر')
+        );
+        if (stockMsg) toast.warning(stockMsg);
+      }
+
+      cartSyncAppliedRef.current = cartFingerprint;
+      setCheckoutPageReady(true);
+    }).catch(() => {
+      if (!cancelled) {
+        toast.warning("تعذر تحديث أسعار السلة. سيتم التحقق عند تأكيد الطلب.");
+        setCheckoutPageReady(true);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isTenantMode,
+    storeSlug,
+    user?.id,
+    storeOwnerId,
+    cartFingerprint,
+    cartItems,
+    replaceCartItems,
+    setStoreOwner,
+    checkoutPageInit,
+  ]);
+
   const paymentMethodOptions = useMemo(() => {
-    const raw = isTenantMode
-      ? tenant.storeInfo?.paymentMethods
-      : storeSettings.paymentMethods;
+    const raw = checkoutPageInit?.paymentMethods
+      ?? (isTenantMode ? tenant.storeInfo?.paymentMethods : storeSettings.paymentMethods);
     return buildPaymentMethodOptions(parseEnabledPaymentMethods(raw));
-  }, [isTenantMode, tenant.storeInfo?.paymentMethods, storeSettings.paymentMethods]);
+  }, [checkoutPageInit?.paymentMethods, isTenantMode, tenant.storeInfo?.paymentMethods, storeSettings.paymentMethods]);
 
   useEffect(() => {
     const firstAvailable = paymentMethodOptions.find((m) => m.available);
@@ -109,16 +188,20 @@ export const useCheckoutFlow = () => {
   }, [paymentMethodOptions]);
 
   const deliveryPrices = useMemo(() => {
+    if (checkoutPageInit?.deliveryPrices?.length) {
+      return checkoutPageInit.deliveryPrices;
+    }
     if (isTenantMode && tenant.storeInfo?.deliveryPrices?.length) {
       return tenant.storeInfo.deliveryPrices;
     }
     return storeSettings.deliveryPrices || [];
-  }, [isTenantMode, tenant.storeInfo, storeSettings.deliveryPrices]);
+  }, [checkoutPageInit?.deliveryPrices, isTenantMode, tenant.storeInfo, storeSettings.deliveryPrices]);
 
   const ownerId = useMemo(() => {
+    if (checkoutPageInit?.ownerId) return checkoutPageInit.ownerId;
     if (isTenantMode) return tenant.storeInfo?.ownerId || storeOwnerId;
     return user?.id || storeOwnerId;
-  }, [isTenantMode, tenant.storeInfo, storeOwnerId, user?.id]);
+  }, [checkoutPageInit?.ownerId, isTenantMode, tenant.storeInfo, storeOwnerId, user?.id]);
 
   useEffect(() => {
     if (ownerId) setStoreOwner(ownerId);
@@ -130,6 +213,11 @@ export const useCheckoutFlow = () => {
       if (ownerId) persistCheckoutStoreSlug(ownerId, storeSlug);
       return;
     }
+    if (checkoutPageInit?.storeSlug) {
+      setCheckoutStoreSlug(checkoutPageInit.storeSlug);
+      if (ownerId) persistCheckoutStoreSlug(ownerId, checkoutPageInit.storeSlug);
+      return;
+    }
     if (!ownerId) {
       setCheckoutStoreSlug(null);
       return;
@@ -137,17 +225,8 @@ export const useCheckoutFlow = () => {
     const savedSlug = loadCheckoutStoreSlug(ownerId);
     if (savedSlug) {
       setCheckoutStoreSlug(savedSlug);
-      return;
     }
-    let cancelled = false;
-    resolveStoreSlugByOwnerId(ownerId).then((slug) => {
-      if (!cancelled) {
-        setCheckoutStoreSlug(slug);
-        if (slug) persistCheckoutStoreSlug(ownerId, slug);
-      }
-    });
-    return () => { cancelled = true; };
-  }, [storeSlug, ownerId]);
+  }, [storeSlug, ownerId, checkoutPageInit?.storeSlug]);
 
   useEffect(() => {
     if (!ownerId) return;
@@ -198,8 +277,16 @@ export const useCheckoutFlow = () => {
       return;
     }
 
-    let cancelled = false;
     const localFee = calculateDeliveryFeeFromPrices(deliveryPrices, selectedGovernorate);
+    setDeliveryFee(localFee);
+
+    // Tenant checkout uses storefront bundle delivery prices for display.
+    // Authoritative fee validation happens server-side on submit via preflight.
+    if (isTenantMode && deliveryPrices.length > 0) {
+      return;
+    }
+
+    let cancelled = false;
 
     const feePromise = checkoutStoreSlug
       ? fetchDeliveryFeeBySlug(checkoutStoreSlug, selectedGovernorate)
@@ -214,7 +301,7 @@ export const useCheckoutFlow = () => {
       });
 
     return () => { cancelled = true; };
-  }, [selectedGovernorate, ownerId, deliveryPrices, checkoutStoreSlug]);
+  }, [selectedGovernorate, ownerId, deliveryPrices, checkoutStoreSlug, isTenantMode]);
 
   const discountAmount = appliedCoupon?.discountAmount || 0;
   const totalWithDelivery = computeOrderTotal(cartTotal, deliveryFee, discountAmount);
@@ -311,53 +398,7 @@ export const useCheckoutFlow = () => {
   }, [isSubmitting]);
 
   useEffect(() => {
-    if (!ownerId || cartItems.length === 0) return;
-
-    let cancelled = false;
-    const cartFallback = new Map(cartItems.map((i) => [i.product.id, i.product]));
-    const syncCartPrices = async () => {
-      try {
-        const productIds = cartItems.map((i) => i.product.id);
-        const freshMap = await fetchFreshProducts(
-          ownerId,
-          productIds,
-          checkoutStoreSlug ?? undefined,
-          { cartFallback }
-        );
-        if (cancelled) return;
-
-        const validation = validateAndRefreshCart(cartItems, freshMap);
-        if (cancelled) return;
-
-        if (validation.updatedItems.length === 0 && cartItems.length > 0) {
-          toast.error(
-            validation.errors[0] ||
-              'بعض المنتجات لم تعد متوفرة. حدّث الصفحة أو راجع المخزون في لوحة التحكم.'
-          );
-          return;
-        }
-
-        replaceCartItems(validation.updatedItems);
-
-        if (!cancelled && !validation.valid && validation.updatedItems.length > 0) {
-          const stockMsg = validation.errors.find(
-            (e) => e.includes('تم تعديل كمية') || e.includes('غير متوفر')
-          );
-          if (stockMsg) toast.warning(stockMsg);
-        }
-      } catch {
-        if (!cancelled) {
-          toast.warning("تعذر تحديث أسعار السلة. سيتم التحقق عند تأكيد الطلب.");
-        }
-      }
-    };
-
-    void syncCartPrices();
-    return () => { cancelled = true; };
-  }, [ownerId, cartFingerprint, checkoutStoreSlug, replaceCartItems]);
-
-  useEffect(() => {
-    if (cartItems.length === 0 || checkoutTrackedRef.current) return;
+    if (cartItems.length === 0 || !checkoutPageReady) return;
     checkoutTrackedRef.current = true;
     trackInitiateCheckout(
       totalWithDelivery,
@@ -766,7 +807,9 @@ export const useCheckoutFlow = () => {
   return {
     isTenantMode,
     storeSlug,
-    tenantLoading: tenant.loading,
+    tenantLoading: tenant.loading && !checkoutPageReady,
+    checkoutPageReady,
+    checkoutPageInit,
     cartItems,
     cartTotal,
     cartCount,

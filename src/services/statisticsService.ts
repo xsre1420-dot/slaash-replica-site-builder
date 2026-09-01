@@ -145,6 +145,11 @@ const fetchProductCount = async (
     if (Number.isFinite(n)) return n;
   }
 
+  const fromBootstrap = cache.get<number>(CacheKeys.merchantProductCount(ownerId));
+  if (typeof fromBootstrap === 'number' && Number.isFinite(fromBootstrap)) {
+    return fromBootstrap;
+  }
+
   const activeRes = await supabase
     .from('products')
     .select('id', { count: 'exact', head: true })
@@ -251,18 +256,47 @@ const fetchOrderItemsForStatistics = async (
   return data || [];
 };
 
+function statisticsRangeKey(dateRange: string, customStart?: string, customEnd?: string): string {
+  return dateRange === 'custom' ? `${customStart}_${customEnd}` : dateRange;
+}
+
+function statisticsPageCacheKey(ownerId: string, rangeKey: string): string {
+  return CacheKeys.statistics(ownerId, rangeKey);
+}
+
+/** Sync read when a statistics page bundle is already cached for this period. */
+export function peekStatisticsPageBundle(
+  ownerId: string,
+  dateRange: string,
+  customStart?: string,
+  customEnd?: string
+): DatabaseData | null {
+  if (!ownerId) return null;
+  const rangeKey = statisticsRangeKey(dateRange, customStart, customEnd);
+  return cache.get<DatabaseData>(statisticsPageCacheKey(ownerId, rangeKey));
+}
+
+/** Single deduped entry for Statistics initial load — one bundle RPC + coordinated supplements. */
+export async function loadStatisticsPageBundle(
+  dateRange: string,
+  customStart?: string,
+  customEnd?: string,
+  options?: { skipCache?: boolean }
+): Promise<DatabaseData> {
+  return fetchStatisticsData(dateRange, customStart, customEnd, options);
+}
+
 export const fetchStatisticsData = async (
   dateRange: string,
   customStart?: string,
   customEnd?: string,
-  options?: { skipCache?: boolean; includeChartOrders?: boolean }
+  options?: { skipCache?: boolean }
 ): Promise<DatabaseData> => {
   const { data: { user } } = await supabase.auth.getUser();
   const ownerId = user?.id;
   const bounds = getStatisticsDateBounds(dateRange, customStart, customEnd);
-  const rangeKey = dateRange === 'custom' ? `${customStart}_${customEnd}` : dateRange;
-  const chartScope = options?.includeChartOrders === false ? 'kpi' : 'chart';
-  const cacheKey = `${CacheKeys.statistics(ownerId || 'anon', rangeKey)}:${chartScope}`;
+  const rangeKey = statisticsRangeKey(dateRange, customStart, customEnd);
+  const cacheKey = statisticsPageCacheKey(ownerId || 'anon', rangeKey);
 
   if (!ownerId) {
     return { orders: [], orderItems: [], customers: [], products: [], visits: [], dateBounds: bounds };
@@ -281,7 +315,7 @@ export const fetchStatisticsData = async (
     skipCache: options?.skipCache,
     ttlPolicyPath: 'medium.statistics',
     fetchFn: async () => {
-    await flushMerchantAnalyticsBuffer();
+    void flushMerchantAnalyticsBuffer().catch(() => undefined);
     const periodStart = bounds.start.toISOString();
     const periodEnd = bounds.end.toISOString();
     const previousEnd = new Date(bounds.start.getTime() - 1);
@@ -316,8 +350,6 @@ export const fetchStatisticsData = async (
         hasUsableStatisticsKpis(previousKpis) &&
         ((num(kpis?.unique_visitors) ?? 0) > 0 || (num(kpis?.visit_count) ?? 0) > 0);
       const skipOrderItems = rpcReady && hasTopSellingProductsKpi(kpis);
-      const includeChartOrders = options?.includeChartOrders !== false;
-      const skipOrders = rpcReady && !includeChartOrders;
       const needsCustomerMetrics =
         rpcReady &&
         kpis != null &&
@@ -326,9 +358,7 @@ export const fetchStatisticsData = async (
       const [ordersResult, visitsResult, productCount, orderItems, customerMetrics] =
         await withTimeout(
           Promise.all([
-            skipOrders
-              ? Promise.resolve({ orders: [] as DatabaseData['orders'] })
-              : fetchOrdersForStatistics(ownerId, ordersFrom, periodEnd, ordersCap),
+            fetchOrdersForStatistics(ownerId, ordersFrom, periodEnd, ordersCap),
             skipVisits
               ? Promise.resolve({ visits: [] as DatabaseData['visits'] })
               : fetchVisitsForStatistics(ownerId, visitsFrom, periodEnd, visitsCap),

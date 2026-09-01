@@ -6,6 +6,14 @@ import { classifyError } from '@/lib/observability/errorTaxonomy';
 import { traceSpan } from '@/lib/tracing/spanEngine';
 import { recordRpcCall, recordRpcReplicaFallback, recordHttpRequest } from '@/lib/monitoring/instrumentation';
 import { withCircuitBreaker } from '@/lib/resilience/circuitBreaker';
+import {
+  acquireRpcSlot,
+  RpcConcurrencyRejectedError,
+} from '@/lib/requestConcurrency/rpcConcurrencyGate';
+import {
+  resolveRpcTrafficClass,
+  type RpcTrafficClass,
+} from '@/lib/requestConcurrency/rpcTrafficClass';
 
 export type RpcResult<T> = {
   data: T | null;
@@ -18,9 +26,17 @@ export type RpcCallOptions = {
   forcePrimary?: boolean;
   /** Skip circuit breaker (health probes) */
   skipBreaker?: boolean;
+  /** Do not re-issue the same RPC on read-replica failure (avoids 2× load under pressure). */
+  skipReplicaFallback?: boolean;
+  /** Use fetch transport only — no legacy Supabase client retry (storefront writes). */
+  singleTransport?: boolean;
   timeoutMs?: number;
   /** Populated by callReadRpc for observability. */
   readRoute?: ReadRouteDecision;
+  /** Backpressure priority — defaults from RPC name. */
+  trafficClass?: RpcTrafficClass;
+  /** Health probes / internal bypass. */
+  skipConcurrencyGate?: boolean;
 };
 
 const REPLICA_LABELS = new Set(['read_replica', 'regional_replica']);
@@ -61,6 +77,8 @@ export async function callSupabaseRpc<T>(
     const requestId = newRequestId();
     const correlationHeaders = buildCorrelationHeaders(requestId);
     const started = Date.now();
+    const trafficClass = options.trafficClass ?? resolveRpcTrafficClass(fn);
+    let releaseSlot: (() => void) | undefined;
 
     const emitRpcMetrics = (
       status: 'ok' | 'error',
@@ -97,6 +115,19 @@ export async function callSupabaseRpc<T>(
         span.setStage('rpc');
 
         try {
+          if (!options.skipConcurrencyGate) {
+            try {
+              releaseSlot = await acquireRpcSlot(trafficClass, controller.signal);
+            } catch (err) {
+              if (err instanceof RpcConcurrencyRejectedError) {
+                const durationMs = Date.now() - started;
+                emitRpcMetrics('error', durationMs, 'backpressure');
+                return { data: null, error: err.message, route: endpoint.label };
+              }
+              throw err;
+            }
+          }
+
           const authHeaders = await resolvePostgrestAuthHeaders(endpoint.key);
           const res = await fetch(`${endpoint.url}/rest/v1/rpc/${fn}`, {
             method: 'POST',
@@ -178,6 +209,8 @@ export async function callSupabaseRpc<T>(
           });
           if (options.skipBreaker) throw err;
           return { data: null, error: message, route: endpoint.label };
+        } finally {
+          releaseSlot?.();
         }
       },
       { rpcName: fn, route: endpoint.label, stage: 'rpc' }
@@ -215,6 +248,7 @@ export async function callSupabaseRpc<T>(
     });
 
     if (
+      !options.skipReplicaFallback &&
       !options.forcePrimary &&
       isReplicaLabel(endpoint.label) &&
       result.error
@@ -226,6 +260,7 @@ export async function callSupabaseRpc<T>(
   } catch (err) {
     const message = err instanceof Error ? err.message : 'RPC failed';
     if (
+      !options.skipReplicaFallback &&
       message.startsWith('circuit_open:') &&
       !options.forcePrimary &&
       isReplicaLabel(endpoint.label)

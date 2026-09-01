@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import { Product } from '@/types';
 import { PRODUCTS_PAGE_SIZE, loadProductsPage, getProductsSync, invalidateProducts } from '@/services/productService';
+import { peekInventoryPageBundle } from '@/services/inventoryPageService';
+import { peekPreviewStorePageBundle } from '@/services/previewStorePageService';
 import type { MerchantProductSelectProfile } from '@/lib/productUpdateUtils';
 import { useStoreHydration } from '@/context/StoreBootstrapContext';
 import { useAuth } from '@/context/AuthContext';
@@ -97,16 +99,42 @@ export function useMerchantProductsPage(
 
   useEffect(() => {
     if (!isReady || !user?.id || !enabled) return;
+
+    const hasFilters = !!search?.trim() || (category && category !== 'all');
+
+    if (profile === 'inventory' && !hasFilters) {
+      const bundle = peekInventoryPageBundle(user.id);
+      if (bundle?.products.length) {
+        setProducts(bundle.products);
+        setTotal(bundle.total);
+        setHasMore(bundle.hasMore);
+        nextCursorRef.current = bundle.nextCursor;
+        setLoading(false);
+        return;
+      }
+    }
+
+    if (profile === 'grid' && !hasFilters) {
+      const previewBundle = peekPreviewStorePageBundle(user.id);
+      if (previewBundle?.products.length) {
+        setProducts(previewBundle.products);
+        setTotal(previewBundle.total);
+        setHasMore(previewBundle.hasMore);
+        nextCursorRef.current = previewBundle.nextCursor;
+        setLoading(false);
+        return;
+      }
+    }
+
     const warm = getProductsSync();
-    const hasWarmCache =
-      warm.length > 0 && !search?.trim() && (!category || category === 'all');
+    const hasWarmCache = warm.length > 0 && !hasFilters;
     if (hasWarmCache) {
       setProducts(warm);
       setLoading(false);
       return;
     }
     void fetchPage(0, false);
-  }, [isReady, hydrationVersion, user?.id, fetchPage, enabled, search, category]);
+  }, [isReady, hydrationVersion, user?.id, fetchPage, enabled, search, category, profile]);
 
   const syncFromCache = useCallback(() => {
     const synced = getProductsSync();

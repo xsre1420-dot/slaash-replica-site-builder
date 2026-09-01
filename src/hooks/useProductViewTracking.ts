@@ -1,23 +1,31 @@
 import { useEffect, useRef } from 'react';
 import { scheduleAnalyticsTask } from '@/utils/scheduleAnalytics';
-import { trackProductViewBySlug } from '@/services/analyticsTrackingService';
-import { raceWithTimeout } from '@/lib/memory/asyncGuards';
+import { enqueueAnalyticsProductView } from '@/background/enqueue';
 
 const dedupeKey = (slug: string, productId: string) => `product-view:${slug}:${productId}`;
 const DEDUPE_MS = 30 * 60 * 1000;
-const VIEW_RPC_TIMEOUT_MS = 8_000;
+
+export type UseProductViewTrackingOptions = {
+  /** When false, product view tracking waits until storefront data is available. */
+  storefrontReady?: boolean;
+};
 
 /**
  * Records an internal product view via slug-bound RPC (tenant-safe).
- * Deferred + deduped to reduce DB writes under high traffic.
+ * Deferred + deduped + enqueued — never blocks storefront render.
  */
-export function useProductViewTracking(storeSlug?: string, productId?: string | null) {
+export function useProductViewTracking(
+  storeSlug?: string,
+  productId?: string | null,
+  options: UseProductViewTrackingOptions = {}
+) {
+  const { storefrontReady = true } = options;
   const inflightRef = useRef<string | null>(null);
 
   useEffect(() => {
     const normalizedSlug = storeSlug?.trim().toLowerCase();
     const normalizedProductId = productId?.trim();
-    if (!normalizedSlug || !normalizedProductId) return;
+    if (!normalizedSlug || !normalizedProductId || !storefrontReady) return;
 
     const key = dedupeKey(normalizedSlug, normalizedProductId);
 
@@ -31,46 +39,32 @@ export function useProductViewTracking(storeSlug?: string, productId?: string | 
     if (inflightRef.current === key) return;
 
     let cancelled = false;
-    let timeoutClear: (() => void) | null = null;
 
     const cancelDeferred = scheduleAnalyticsTask(() => {
       if (cancelled) return;
       inflightRef.current = key;
 
-      const viewPromise = trackProductViewBySlug(
+      const jobId = enqueueAnalyticsProductView(
         normalizedSlug,
         normalizedProductId,
         typeof window !== 'undefined' ? window.location.pathname : null
       );
 
-      const timed = raceWithTimeout(viewPromise, VIEW_RPC_TIMEOUT_MS);
-      timeoutClear = timed.clear;
+      if (jobId) {
+        try {
+          sessionStorage.setItem(key, String(Date.now()));
+        } catch {
+          /* ignore */
+        }
+      }
 
-      void timed.race
-        .then((data) => {
-          if (cancelled) return;
-          if (data?.success) {
-            try {
-              sessionStorage.setItem(key, String(Date.now()));
-            } catch {
-              /* ignore */
-            }
-          }
-        })
-        .catch(() => {
-          /* product view tracking is best-effort */
-        })
-        .finally(() => {
-          timeoutClear?.();
-          if (!cancelled && inflightRef.current === key) inflightRef.current = null;
-        });
+      if (!cancelled && inflightRef.current === key) inflightRef.current = null;
     });
 
     return () => {
       cancelled = true;
-      timeoutClear?.();
       cancelDeferred();
       if (inflightRef.current === key) inflightRef.current = null;
     };
-  }, [storeSlug, productId]);
+  }, [storeSlug, productId, storefrontReady]);
 }

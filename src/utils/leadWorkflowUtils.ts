@@ -38,8 +38,8 @@ export const WORKFLOW_STAGE_STYLES: Record<
     className: 'bg-violet-500/10 text-violet-800 border-violet-500/25',
   },
   pending_activation: {
-    label: 'بانتظار التفعيل',
-    className: 'bg-amber-500/10 text-amber-800 border-amber-500/25',
+    label: 'مكتمل',
+    className: 'bg-emerald-500/10 text-emerald-800 border-emerald-500/25',
   },
   customer: {
     label: 'مُفعّل',
@@ -111,13 +111,13 @@ export const LEAD_FILTER_DEFINITIONS: LeadFilterDefinition[] = [
   },
   {
     id: 'pending_activation',
-    label: 'بانتظار التفعيل',
+    label: 'مكتمل',
     statKey: 'pending_activation_count',
-    description: 'الرمز مُرسَل — بانتظار دخول العميل من /login',
-    emptyMessage: 'لا عملاء بانتظار التفعيل',
+    description: 'تم إنشاء الرمز وإرساله — بانتظار دخول العميل من /login',
+    emptyMessage: 'لا طلبات مكتملة بانتظار تفعيل العميل',
     group: 'workflow',
-    accentBg: 'bg-amber-500/10',
-    accentText: 'text-amber-600',
+    accentBg: 'bg-emerald-500/10',
+    accentText: 'text-emerald-600',
   },
   {
     id: 'pipeline',
@@ -175,7 +175,12 @@ export const matchesLeadQuickFilter = (lead: LeadRecord, filter: LeadQuickFilter
     return !lead.converted_user_id && Boolean(lead.has_pending_code);
   }
   if (filter === 'pipeline') {
-    return !lead.converted_user_id && lead.status !== 'rejected' && lead.status !== 'customer';
+    return (
+      !lead.converted_user_id &&
+      lead.status !== 'rejected' &&
+      lead.status !== 'customer' &&
+      !lead.has_pending_code
+    );
   }
   if (filter === 'customers') {
     return Boolean(lead.converted_user_id) || lead.status === 'customer';

@@ -40,22 +40,24 @@ const readCachedCategories = (userId: string): Category[] =>
 
 export const hydrateMerchantStore = async (
   userId: string,
-  options?: { username?: string; storeName?: string }
+  options?: { username?: string; storeName?: string; light?: boolean }
 ): Promise<HydrationResult> => {
-  logger.info('merchant.hydrate.start', { userId });
+  logger.info('merchant.hydrate.start', { userId, light: !!options?.light });
 
-  void fetchPlatformHealth(false).then((health) => {
-    if (!health.ok) {
-      logger.warn('platform.health.deferred', {
-        userId,
-        message: health.message,
-        missing: health.missing,
-      });
+  if (!options?.light) {
+    void fetchPlatformHealth(false).then((health) => {
+      if (!health.ok) {
+        logger.warn('platform.health.deferred', {
+          userId,
+          message: health.message,
+          missing: health.missing,
+        });
+      }
+    });
+
+    if (!cache.has(CacheKeys.dashboardBatch(userId))) {
+      void fetchDashboardStatisticsBatch(userId).catch(() => undefined);
     }
-  });
-
-  if (!cache.has(CacheKeys.dashboardBatch(userId))) {
-    void fetchDashboardStatisticsBatch(userId).catch(() => undefined);
   }
 
   const bootstrap = await bootstrapOwnerStore(userId);
@@ -66,6 +68,27 @@ export const hydrateMerchantStore = async (
   }).catch((error) => {
     logger.warn('store.slug.ensure_deferred_failed', { userId, error });
   });
+
+  if (options?.light) {
+    const categories = readCachedCategories(userId);
+    const productCount =
+      cache.get<number>(CacheKeys.merchantProductCount(userId)) ??
+      bootstrap?.productsLoaded ??
+      0;
+
+    if (bootstrap?.storeId) {
+      setCurrentStore(bootstrap.storeId);
+    }
+
+    return {
+      userId,
+      storeId: bootstrap?.storeId ?? null,
+      productsCount: productCount,
+      categoriesCount: categories.length || bootstrap?.categoriesLoaded || 0,
+      ordersCount: 0,
+      settingsLoaded: cache.has(CacheKeys.storeSettings(userId)),
+    };
+  }
 
   const needsStore = !cache.has(CacheKeys.store(userId));
   const needsSettings = !cache.has(CacheKeys.storeSettings(userId));

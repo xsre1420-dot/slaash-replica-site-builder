@@ -73,7 +73,9 @@ const Checkout = () => {
     ]
   );
 
-  useStoreVisitTracking(isTenantMode ? storeSlug : undefined);
+  useStoreVisitTracking(isTenantMode ? storeSlug : undefined, {
+    storefrontReady: !tenantLoading && !!ownerId,
+  });
 
   useEffect(() => {
     if (prevStepRef.current !== null && currentStep > prevStepRef.current && formRef.current) {

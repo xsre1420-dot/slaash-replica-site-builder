@@ -1,7 +1,8 @@
 import { callReadRpc } from '@/lib/readWrite/readClient';
 import { callWriteRpc } from '@/lib/readWrite/writeClient';
 import { supabase } from '@/integrations/supabase/client';
-import { cache, CacheTTL } from '@/lib/cache';
+import { cache, CacheKeys, CacheTTL, clearInflight } from '@/lib/cache';
+import { invalidateProductReviewsPageBundle } from '@/services/productReviewsPageService';
 
 export type MerchantProductReview = {
   id: string;
@@ -70,7 +71,7 @@ export async function approveProductReview(
     });
 
     if (!error && data?.success) {
-      cache.del(`reviews:pending-count:${ownerId}`);
+      invalidateReviewCaches(ownerId, undefined);
       return { success: true };
     }
   } catch {
@@ -84,7 +85,7 @@ export async function approveProductReview(
     .eq('owner_id', ownerId);
 
   if (error) return { success: false, error: error.message };
-  cache.del(`reviews:pending-count:${ownerId}`);
+  invalidateReviewCaches(ownerId, undefined);
   return { success: true };
 }
 
@@ -99,8 +100,15 @@ export async function deleteProductReview(
     .eq('owner_id', ownerId);
 
   if (error) return { success: false, error: error.message };
-  cache.del(`reviews:pending-count:${ownerId}`);
+  invalidateReviewCaches(ownerId, undefined);
   return { success: true };
+}
+
+function invalidateReviewCaches(ownerId: string, productId?: string): void {
+  cache.del(`reviews:pending-count:${ownerId}`);
+  cache.del(CacheKeys.inventoryPage(ownerId));
+  clearInflight(CacheKeys.inventoryPage(ownerId));
+  invalidateProductReviewsPageBundle(ownerId, productId);
 }
 
 /** Count merchant reviews awaiting approval across all products */

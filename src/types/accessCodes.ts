@@ -47,6 +47,16 @@ export const ACCESS_CODE_ERROR_MESSAGES: Record<string, string> = {
   db_migration_required: 'قاعدة البيانات تحتاج تحديث — شغّل: npm run db:deploy',
 };
 
+/** Customer-facing login errors — hide admin/dev instructions. */
+export const ACCESS_CODE_LOGIN_ERROR_MESSAGES: Record<string, string> = {
+  ...ACCESS_CODE_ERROR_MESSAGES,
+  db_migration_required:
+    'خدمة تفعيل الرمز غير جاهزة على الخادم — تواصل مع فريق المبيعات أو حاول لاحقاً',
+  edge_unavailable:
+    'خدمة تفعيل الرمز غير متوفرة حالياً — تواصل مع فريق المبيعات أو حاول لاحقاً',
+  cors_blocked: 'تعذر الاتصال بخدمة التفعيل — تواصل مع فريق المبيعات',
+};
+
 export type AccessCodePreview = {
   planId: string;
   durationMonths: number;

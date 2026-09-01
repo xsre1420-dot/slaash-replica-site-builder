@@ -196,13 +196,14 @@ export function flushStorefrontProductCaches(slug: string): void {
 /** Flush store/settings/meta caches only (preserve product lists). */
 export function flushStorefrontStoreCaches(slug: string): void {
   const normalized = slug.trim().toLowerCase();
-  cache.del(StoreCacheKeys.bundle(normalized));
+  cache.flushByPrefix(`storefront-bundle:${normalized}`);
   cache.del(StoreCacheKeys.meta(normalized));
   cache.del(StoreCacheKeys.version(normalized));
   cache.del(StoreCacheKeys.footer(normalized));
   cache.flushByPrefix(`edge-bundle:${normalized}`);
   cache.flushByPrefix(`edge-meta:${normalized}`);
   void cacheDeleteByPrefix(`idb:${StoreCacheKeys.meta(normalized)}`);
+  void cacheDeleteByPrefix(`idb:storefront-bundle:${normalized}`);
 }
 
 /** Invalidate a single product detail entry. */

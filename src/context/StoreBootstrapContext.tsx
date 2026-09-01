@@ -48,6 +48,11 @@ const DEFERRED_HYDRATION_PATHS = new Set([
 const shouldDeferMerchantHydration = (pathname: string): boolean =>
   DEFERRED_HYDRATION_PATHS.has(pathname);
 
+const LIGHT_HYDRATION_PREFIXES = ['/add-product', '/edit-product', '/statistics', '/products', '/settings', '/orders', '/preview', '/product-details'];
+
+const shouldUseLightMerchantHydration = (pathname: string): boolean =>
+  LIGHT_HYDRATION_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+
 export const StoreBootstrapProvider = ({ children }: { children: ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
   const location = useLocation();
@@ -61,7 +66,7 @@ export const StoreBootstrapProvider = ({ children }: { children: ReactNode }) =>
   const runHydration = useCallback(async (
     userId: string,
     force = false,
-    profile?: { username?: string; storeName?: string }
+    profile?: { username?: string; storeName?: string; light?: boolean }
   ) => {
     if (!force && hydratedForRef.current === userId && inflightRef.current) {
       return inflightRef.current;
@@ -86,6 +91,7 @@ export const StoreBootstrapProvider = ({ children }: { children: ReactNode }) =>
         await hydrateMerchantStore(userId, {
           username: profile?.username,
           storeName: profile?.storeName,
+          light: profile?.light,
         });
         hydratedForRef.current = userId;
         setHydrationVersion((v) => v + 1);
@@ -136,6 +142,7 @@ export const StoreBootstrapProvider = ({ children }: { children: ReactNode }) =>
     runHydration(user.id, false, {
       username: user.username,
       storeName: user.store_name,
+      light: shouldUseLightMerchantHydration(location.pathname),
     });
   }, [user?.id, user?.username, user?.store_name, authLoading, location.pathname, runHydration, isReady]);
 

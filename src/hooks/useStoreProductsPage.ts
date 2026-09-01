@@ -6,9 +6,11 @@ import { ProductCacheKeys } from '@/services/storefrontCacheTiers';
 import {
   fetchStorefrontProductsPage,
   getStorefrontFirstPageFromCache,
+  ensureStorefrontPageBundle,
   STOREFRONT_PRODUCTS_CHANGED,
   type StorefrontInvalidationScope,
 } from '@/services/storefrontProductService';
+import { awaitStorefrontBundleReady } from '@/lib/storefront/storefrontLoadCoordinator';
 
 const PAGE_SIZE = 24;
 const PRODUCTS_IDB_TTL = 5 * 60 * 1000;
@@ -143,21 +145,46 @@ export const useStoreProductsPage = (
   useEffect(() => {
     if (!enabled) return;
     cursorRef.current = null;
+    let cancelled = false;
 
-    if (!categoryFilter && !searchFilter) {
-      const cachedFirstPage = getStorefrontFirstPageFromCache(normalizedSlug);
-      if (cachedFirstPage?.products.length) {
-        setProducts(cachedFirstPage.products);
-        cursorRef.current = cachedFirstPage.nextCursor;
-        setHasMore(!!cachedFirstPage.hasMore);
-        setError(null);
-        setLoading(false);
-        setLoadingMore(false);
-        return;
+    const run = async () => {
+      if (!categoryFilter && !searchFilter) {
+        let cachedFirstPage = getStorefrontFirstPageFromCache(normalizedSlug);
+        if (!cachedFirstPage) {
+          await awaitStorefrontBundleReady(normalizedSlug, {
+            limit: PAGE_SIZE,
+            cursor: null,
+            category: categoryFilter,
+            search: searchFilter,
+          });
+          if (cancelled) return;
+          cachedFirstPage = getStorefrontFirstPageFromCache(normalizedSlug);
+        }
+
+        if (!cachedFirstPage) {
+          await ensureStorefrontPageBundle(normalizedSlug, { limit: PAGE_SIZE });
+          if (cancelled) return;
+          cachedFirstPage = getStorefrontFirstPageFromCache(normalizedSlug);
+        }
+
+        if (cachedFirstPage) {
+          setProducts(cachedFirstPage.products);
+          cursorRef.current = cachedFirstPage.nextCursor;
+          setHasMore(!!cachedFirstPage.hasMore);
+          setError(null);
+          setLoading(false);
+          setLoadingMore(false);
+          return;
+        }
       }
-    }
 
-    fetchPage(false, null);
+      if (!cancelled) fetchPage(false, null);
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
   }, [enabled, normalizedSlug, categoryFilter, searchFilter, fetchPage]);
 
 const PRODUCT_SCOPES: StorefrontInvalidationScope[] = ['full', 'products', 'product'];

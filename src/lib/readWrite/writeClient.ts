@@ -11,6 +11,13 @@ export async function callWriteRpc<T>(
   args: Record<string, unknown>,
   options: WriteRpcOptions = {}
 ): Promise<RpcResult<T>> {
+  if (options.singleTransport) {
+    return callSupabaseRpc<T>(fn, args, {
+      ...options,
+      forcePrimary: options.forcePrimary ?? true,
+    });
+  }
+
   const viaClient = await callSupabaseRpcLegacy<T>(fn, args);
   if (!viaClient.error) return viaClient;
 

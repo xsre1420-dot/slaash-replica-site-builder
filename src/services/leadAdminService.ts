@@ -764,9 +764,6 @@ const previewAccessCodeViaRpc = async (
   );
 
   if (rpcError) {
-    if (/PGRST202|Could not find the function|schema cache/i.test(rpcError)) {
-      throw new Error('db_migration_required');
-    }
     return null;
   }
 
@@ -810,7 +807,6 @@ export const previewAccessCode = async (code: string): Promise<import('@/types/a
     rpcUnavailable = true;
   } catch (rpcErr) {
     const rpcCode = rpcErr instanceof Error ? rpcErr.message : 'invalid_code';
-    if (rpcCode === 'db_migration_required') throw rpcErr;
     if (
       rpcCode === 'invalid_code' ||
       rpcCode === 'code_expired' ||

@@ -6,7 +6,7 @@ import {
   selectStoreSettingsByOwner,
   selectCustomDomainSettings,
 } from '@/repositories/store/storeRepository';
-import { cache, CacheKeys, CacheTTL } from '@/lib/cache';
+import { cache, CacheKeys, CacheTTL, dedup } from '@/lib/cache';
 import { isSchemaColumnError } from '@/lib/productUpdateUtils';
 import { defaultStoreSettings, StoreProfile, StoreSettings } from '@/types/store';
 import { DeliveryPrice } from '@/utils/deliveryUtils';
@@ -123,8 +123,12 @@ export interface BootstrapResult {
   categoriesLoaded: number;
 }
 
-/** Phase 6: Combined bootstrap RPC with parallel fallback */
+/** Phase 6: Combined bootstrap RPC with parallel fallback — deduped per owner. */
 export const bootstrapOwnerStore = async (userId: string): Promise<BootstrapResult | null> => {
+  return dedup(CacheKeys.ownerBootstrap(userId), () => bootstrapOwnerStoreOnce(userId));
+};
+
+async function bootstrapOwnerStoreOnce(userId: string): Promise<BootstrapResult | null> {
   try {
     const { data, error } = await rpcGetOwnerBootstrap(userId);
     if (!error && data?.store?.id) {
@@ -150,6 +154,7 @@ export const bootstrapOwnerStore = async (userId: string): Promise<BootstrapResu
       cache.set(CacheKeys.categories(userId), categories, CacheTTL.MEDIUM, CacheTTL.STALE);
 
       const productCount = Number(data.product_count ?? 0);
+      cache.set(CacheKeys.merchantProductCount(userId), productCount, CacheTTL.MEDIUM, CacheTTL.STALE);
 
       return {
         storeId,
@@ -163,7 +168,7 @@ export const bootstrapOwnerStore = async (userId: string): Promise<BootstrapResu
 
   const store = await fetchStoreByUserId(userId);
   return store ? { storeId: store.id, productsLoaded: 0, categoriesLoaded: 0 } : null;
-};
+}
 
 export { defaultStoreSettings, type StoreSettings };
 

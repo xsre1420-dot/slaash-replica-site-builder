@@ -13,7 +13,6 @@ const MAX_CACHE_ENTRIES = 2000;
 
 class CacheStore {
   private store = new Map<string, CacheEntry>();
-  private revalidating = new Set<string>();
 
   private evictIfNeeded(): void {
     if (this.store.size <= MAX_CACHE_ENTRIES) return;
@@ -31,27 +30,44 @@ class CacheStore {
     });
   }
 
-  get<T>(key: string, revalidateFn?: () => Promise<T>): T | null {
+  get<T>(
+    key: string,
+    revalidateFn?: () => Promise<T>,
+    options?: { revalidateDedupKey?: string }
+  ): T | null {
     const entry = this.store.get(key) as CacheEntry<T> | undefined;
     if (!entry) return null;
 
     const age = Date.now() - entry.createdAt;
+    const revalidateKey = options?.revalidateDedupKey ?? `revalidate:${key}`;
 
     if (age < entry.ttl) return entry.data;
 
     if (age < entry.ttl + entry.staleWhileRevalidate) {
-      if (revalidateFn && !this.revalidating.has(key)) {
-        this.revalidating.add(key);
-        revalidateFn()
-          .then((fresh) => this.set(key, fresh, entry.ttl, entry.staleWhileRevalidate))
-          .catch((err) => console.warn('[cache] revalidate failed:', err))
-          .finally(() => this.revalidating.delete(key));
+      if (revalidateFn) {
+        void dedup(revalidateKey, async () => {
+          const fresh = await revalidateFn();
+          this.set(key, fresh, entry.ttl, entry.staleWhileRevalidate);
+          return fresh;
+        }).catch((err) => console.warn('[cache] revalidate failed:', err));
       }
+      return entry.data;
+    }
+
+    // Fully expired — serve last good value while a stampede-protected refresh is in flight.
+    if (revalidateFn && peekInflight(revalidateKey)) {
       return entry.data;
     }
 
     this.store.delete(key);
     return null;
+  }
+
+  /** Read without triggering SWR — used to serve stale data during in-flight refresh. */
+  peek<T>(key: string): T | null {
+    const entry = this.store.get(key) as CacheEntry<T> | undefined;
+    if (!entry) return null;
+    return entry.data;
   }
 
   del(key: string): void {
@@ -98,11 +114,19 @@ export const cache = new CacheStore();
 
 const inflight = new Map<string, Promise<any>>();
 
+export function peekInflight<T>(key: string): Promise<T> | undefined {
+  return inflight.get(key) as Promise<T> | undefined;
+}
+
 export function dedup<T>(key: string, fn: () => Promise<T>): Promise<T> {
   const existing = inflight.get(key);
   if (existing) return existing as Promise<T>;
 
-  const promise = fn().finally(() => inflight.delete(key));
+  const promise = Promise.resolve()
+    .then(fn)
+    .finally(() => {
+      inflight.delete(key);
+    });
   inflight.set(key, promise);
   return promise;
 }
@@ -118,6 +142,27 @@ export function clearInflightAll(): void {
 
 export const CacheKeys = {
   products: (ownerId: string) => `products:${ownerId}`,
+  /** Deduped get_owner_bootstrap RPC per owner session */
+  ownerBootstrap: (userId: string) => `owner-bootstrap:${userId}`,
+  /** Total catalog size from bootstrap — avoids full product list fetch on form pages */
+  merchantProductCount: (ownerId: string) => `merchant-product-count:${ownerId}`,
+  addProductPage: (ownerId: string) => `add-product-page:${ownerId}`,
+  /** Merchant edit product — product + categories for initial form render */
+  editProductPage: (ownerId: string, productId: string) =>
+    `edit-product-page:${ownerId}:${productId.trim()}`,
+  /** Merchant product reviews — product meta + reviews list */
+  productReviewsPage: (ownerId: string, productId: string) =>
+    `product-reviews-page:${ownerId}:${productId.trim()}`,
+  /** Merchant storefront preview (/preview) initial load */
+  previewStorePage: (ownerId: string) => `preview-store-page:${ownerId}`,
+  /** Merchant inventory / products hub initial load */
+  inventoryPage: (ownerId: string) => `inventory-page:${ownerId}`,
+  /** Merchant settings page initial load */
+  settingsPage: (ownerId: string) => `settings-page:${ownerId}`,
+  settingsDomain: (ownerId: string) => `settings-domain:${ownerId}`,
+  /** Merchant orders hub — list + tab counts + stats for one filter/page */
+  ordersPage: (ownerId: string, filterKey: string, page: number) =>
+    `orders-page:${ownerId}:${filterKey}:${page}`,
   productsByStore: (storeId: string) => `products:store:${storeId}`,
   categories: (ownerId: string) => `categories:${ownerId}`,
   categoriesByStore: (storeId: string) => `categories:store:${storeId}`,
@@ -142,6 +187,26 @@ export const CacheKeys = {
   slugOwner: (slug: string) => `slug-owner:${slug}`,
   storefrontProduct: (slug: string, productId: string) => `storefront-product:${slug}:${productId}`,
   footerSuggested: (slug: string) => `footer-suggested:${slug}`,
+  /** Public checkout init — store settings scoped by slug */
+  checkoutInit: (slug: string) => `checkout-init:${slug.trim().toLowerCase()}`,
+  /** Product detail bundle — aliases storefrontProduct for coordinated loads */
+  productDetail: (slug: string, productId: string) =>
+    `product-detail:${slug.trim().toLowerCase()}:${productId.trim()}`,
+  /** Product detail page — product + reviews + suggested (scoped by store slug or owner) */
+  productDetailPage: (scope: string, productId: string) =>
+    `product-detail-page:${scope}:${productId.trim()}`,
+  /** Checkout page — store init + cart product validation */
+  checkoutPage: (scope: string, cartKey: string) => `checkout-page:${scope}:${cartKey}`,
+  /** Merchant marketing hub — coupons + discount products + settings */
+  marketingPage: (ownerId: string) => `marketing-page:${ownerId}`,
+  /** Public landing / pricing — static plan catalog */
+  landingPage: () => 'landing-page:public',
+  /** Merchant subscription access gate */
+  merchantAccess: (userId: string) => `merchant-access:${userId}`,
+  /** Admin subscriptions hub — list + overview stats */
+  adminSubscriptionsPage: (search: string, status: string) =>
+    `admin-subscriptions-page:${search}:${status}`,
+  adminSubscriptionsStats: () => 'admin-subscriptions-stats',
 } as const;
 
 export const CacheTTL = {
@@ -160,6 +225,7 @@ export const CacheTTL = {
 /** Invalidate order list caches only — preserves dashboard batch / analytics KPIs. */
 export function flushOrderListCache(ownerId: string): void {
   cache.flushByPrefix(`orders:${ownerId}:`);
+  cache.flushByPrefix(`orders-page:${ownerId}:`);
   cache.del(CacheKeys.ordersStatsSummary(ownerId));
   cache.del(CacheKeys.ordersRecent(ownerId));
 }
@@ -177,6 +243,7 @@ export function flushOrderCache(ownerId: string): void {
 export function flushOwnerCache(ownerId: string): void {
   flushOrderCache(ownerId);
   cache.del(CacheKeys.products(ownerId));
+  cache.del(CacheKeys.merchantProductCount(ownerId));
   cache.del(CacheKeys.categories(ownerId));
   cache.del(CacheKeys.storeSettings(ownerId));
   cache.del(CacheKeys.store(ownerId));

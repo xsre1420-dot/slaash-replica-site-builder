@@ -70,6 +70,8 @@ export const syncMerchantProductCatalog = (
   options?: { refreshStats?: boolean }
 ) => {
   cache.del(CacheKeys.products(ownerId));
+  cache.del(CacheKeys.inventoryPage(ownerId));
+  clearInflight(CacheKeys.inventoryPage(ownerId));
   cache.flushByPrefix(`${CacheKeys.products(ownerId)}:p`);
   clearInflight(`${CacheKeys.products(ownerId)}:p0:s:c`);
   if (options?.refreshStats !== false) {
@@ -100,6 +102,7 @@ export const patchMerchantStockInCache = (
   stockQuantity: number
 ): void => {
   const key = CacheKeys.products(ownerId);
+  const inventoryKey = CacheKeys.inventoryPage(ownerId);
   const cached = cache.get<Product[]>(key);
   if (cached) {
     const updated = cached.map((p) =>
@@ -108,6 +111,21 @@ export const patchMerchantStockInCache = (
     cache.set(key, updated, CacheTTL.MEDIUM, CacheTTL.STALE);
     syncModuleProductsMirror(updated);
   }
+  const inventoryBundle = cache.get<{ products: Product[] }>(inventoryKey);
+  if (inventoryBundle?.products) {
+    cache.set(
+      inventoryKey,
+      {
+        ...inventoryBundle,
+        products: inventoryBundle.products.map((p) =>
+          p.id === productId ? { ...p, stockQuantity } : p
+        ),
+      },
+      CacheTTL.MEDIUM,
+      CacheTTL.STALE
+    );
+  }
+  clearInflight(inventoryKey);
   cache.flushByPrefix(`${CacheKeys.products(ownerId)}:p`);
   markLocalStorefrontMutation(ownerId);
   void patchStorefrontProductFromOwner(ownerId, productId, { stockQuantity });
@@ -354,6 +372,13 @@ export const invalidateProducts = async () => {
   const ownerId = await getAuthOwnerId();
   if (ownerId) {
     clearInflight(`${CacheKeys.products(ownerId)}:p0:s:c`);
+    cache.del(CacheKeys.previewStorePage(ownerId));
+    clearInflight(CacheKeys.previewStorePage(ownerId));
+    cache.del(CacheKeys.inventoryPage(ownerId));
+    clearInflight(CacheKeys.inventoryPage(ownerId));
+    cache.flushByPrefix(`edit-product-page:${ownerId}:`);
+    cache.flushByPrefix(`product-reviews-page:${ownerId}:`);
+    cache.flushByPrefix(`product-detail-page:o:${ownerId}:`);
     enqueueCacheInvalidationForOwner(ownerId);
   }
 };

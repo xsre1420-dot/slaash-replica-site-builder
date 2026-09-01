@@ -1,30 +1,50 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
 import { Order } from '@/types';
-import { dedup, flushOrderCache, flushOrderListCache, cache, CacheKeys } from '@/lib/cache';
+import { flushOrderCache, flushOrderListCache, cache, CacheKeys } from '@/lib/cache';
 import { useAuth } from '@/context/AuthContext';
 import { useStoreHydration } from '@/context/StoreBootstrapContext';
 import { mapOrderError } from '@/utils/orderErrors';
 import { canTransitionOrderStatus } from '@/utils/orderStatusUtils';
 import {
-  fetchOrdersFiltered,
-  fetchWorkflowTabCounts,
   updateOrderStatus,
   ORDERS_PER_PAGE,
   type WorkflowTabCounts,
 } from '@/services/orderService';
+import type { OrderDashboardStats } from '@/types/orders';
 import {
   DEFAULT_ORDER_FILTERS,
   OrderListFilters,
   OrderWorkflowTab,
 } from '@/utils/orderWorkflowUtils';
-import { serializeOrderFilters } from '@/utils/orderQueryBuilder';
 import { markLocalOrderMutation } from '@/lib/localMutationGuard';
+import {
+  loadOrdersPageBundle,
+  peekOrdersPageBundle,
+  invalidateOrdersPageBundle,
+} from '@/services/ordersPageService';
+import { serializeOrderFilters } from '@/utils/orderQueryBuilder';
 
 const EMPTY_TAB_COUNTS: WorkflowTabCounts = {
   new: 0,
   completed: 0,
   cancelled: 0,
+};
+
+const EMPTY_STATS: OrderDashboardStats = {
+  total: 0,
+  newOrders: 0,
+  pendingFulfillment: 0,
+  delivered: 0,
+  revenue: 0,
+  todayRevenue: 0,
+  weekRevenue: 0,
+  monthRevenue: 0,
+  pendingRevenue: 0,
+  avgOrderValue: 0,
+  todayOrders: 0,
+  weekOrders: 0,
+  monthOrders: 0,
 };
 
 const VISIBILITY_REFETCH_MS = 60_000;
@@ -38,6 +58,7 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [tabCounts, setTabCounts] = useState<WorkflowTabCounts>(EMPTY_TAB_COUNTS);
+  const [stats, setStats] = useState<OrderDashboardStats>(EMPTY_STATS);
   const knownOrderIdsRef = useRef<Set<string>>(new Set());
   const lastVisibilityRefetchRef = useRef(0);
 
@@ -47,46 +68,42 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
     setPage(0);
   }, [filterKey]);
 
-  const loadTabCounts = useCallback(async () => {
-    const ownerId = user?.id;
-    if (!ownerId) {
-      setTabCounts(EMPTY_TAB_COUNTS);
-      return;
-    }
+  const applyBundle = useCallback((bundle: NonNullable<ReturnType<typeof peekOrdersPageBundle>>) => {
+    setOrders(bundle.orders);
+    setTotal(bundle.total);
+    setTotalPages(bundle.totalPages);
+    setTabCounts(bundle.tabCounts);
+    setStats(bundle.stats);
+    bundle.orders.forEach((o) => knownOrderIdsRef.current.add(o.id));
+  }, []);
 
-    try {
-      const counts = await dedup(`fetch-wc-${ownerId}-${filterKey}`, () =>
-        fetchWorkflowTabCounts(ownerId, listFilters)
-      );
-      setTabCounts(counts);
-    } catch (err) {
-      console.error('[useOrders] tab counts failed:', err);
-    }
-  }, [user?.id, filterKey, listFilters]);
-
-  const loadOrdersPage = useCallback(
-    async (pageNum: number) => {
+  const loadBundle = useCallback(
+    async (pageNum: number, options?: { force?: boolean }) => {
       const ownerId = user?.id;
       if (!ownerId) {
         setOrders([]);
         setTotal(0);
         setTotalPages(1);
+        setTabCounts(EMPTY_TAB_COUNTS);
+        setStats(EMPTY_STATS);
         setLoading(false);
         return;
+      }
+
+      if (!options?.force) {
+        const cached = peekOrdersPageBundle(ownerId, listFilters, pageNum);
+        if (cached) {
+          applyBundle(cached);
+          setLoading(false);
+          return;
+        }
       }
 
       setLoading(true);
 
       try {
-        const dedupKey = `fetch-orders-${ownerId}-${filterKey}-${pageNum}`;
-        const result = await dedup(dedupKey, () =>
-          fetchOrdersFiltered(ownerId, listFilters, pageNum, ORDERS_PER_PAGE)
-        );
-
-        setOrders(result.orders);
-        setTotal(result.total);
-        setTotalPages(result.totalPages);
-        result.orders.forEach((o) => knownOrderIdsRef.current.add(o.id));
+        const bundle = await loadOrdersPageBundle(ownerId, listFilters, pageNum, options);
+        applyBundle(bundle);
       } catch (err) {
         console.error('[useOrders] load failed:', err);
         toast.error('تعذر تحميل الطلبات');
@@ -94,18 +111,13 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
         setLoading(false);
       }
     },
-    [user?.id, filterKey, listFilters]
+    [user?.id, listFilters, applyBundle]
   );
 
   useEffect(() => {
     if (!isReady) return;
-    void loadTabCounts();
-  }, [isReady, hydrationVersion, loadTabCounts]);
-
-  useEffect(() => {
-    if (!isReady) return;
-    void loadOrdersPage(page);
-  }, [isReady, hydrationVersion, page, loadOrdersPage]);
+    void loadBundle(page);
+  }, [isReady, hydrationVersion, page, loadBundle]);
 
   useEffect(() => {
     const onVisible = () => {
@@ -114,12 +126,11 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
       if (now - lastVisibilityRefetchRef.current < VISIBILITY_REFETCH_MS) return;
       lastVisibilityRefetchRef.current = now;
       flushOrderListCache(user.id);
-      void loadOrdersPage(page);
-      void loadTabCounts();
+      void loadBundle(page, { force: true });
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [loadOrdersPage, loadTabCounts, page, user?.id]);
+  }, [loadBundle, page, user?.id]);
 
   const updateOrderStatusLocal = async (
     orderId: string,
@@ -151,7 +162,8 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
         return prev.map((o) => (o.id === orderId ? updated : o));
       });
       flushOrderCache(ownerId);
-      void loadTabCounts();
+      invalidateOrdersPageBundle(ownerId);
+      void loadBundle(page, { force: true });
       return true;
     }
 
@@ -161,9 +173,12 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
 
   const refetch = useCallback(() => {
     if (user?.id) flushOrderCache(user.id);
-    void loadOrdersPage(page);
-    void loadTabCounts();
-  }, [loadOrdersPage, loadTabCounts, page, user?.id]);
+    void loadBundle(page, { force: true });
+  }, [loadBundle, page, user?.id]);
+
+  const reloadStats = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   const goToPage = useCallback((nextPage: number) => {
     setPage(Math.max(0, nextPage));
@@ -188,7 +203,9 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
       totalPages,
       pageSize: ORDERS_PER_PAGE,
       tabCounts,
+      stats,
       refetch,
+      reloadStats,
       isNewOrder,
       markOrderKnown,
     }),
@@ -201,7 +218,9 @@ export const useOrders = (listFilters: OrderListFilters = DEFAULT_ORDER_FILTERS)
       total,
       totalPages,
       tabCounts,
+      stats,
       refetch,
+      reloadStats,
       isNewOrder,
       markOrderKnown,
     ]

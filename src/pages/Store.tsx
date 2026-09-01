@@ -42,7 +42,9 @@ const Store = () => {
     returnPolicy,
     privacyPolicy,
   } = useStoreDisplay(storeSlug);
-  useStoreVisitTracking(isTenantMode ? storeSlug : undefined);
+  useStoreVisitTracking(isTenantMode ? storeSlug : undefined, {
+    storefrontReady: !displayLoading && !!displayOwnerId,
+  });
 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [categories, setCategories] = useState<Category[]>([]);

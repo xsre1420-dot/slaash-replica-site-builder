@@ -48,6 +48,12 @@ describe('storefront slug resolution cache', () => {
                 error: null,
               }),
             })),
+            ilike: vi.fn(() => ({
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: { owner_id: 'owner-1' },
+                error: null,
+              }),
+            })),
           })),
         };
       }
@@ -75,13 +81,13 @@ describe('storefront slug resolution cache', () => {
     expect(cache.get(CacheKeys.ownerSlug('owner-1'))).toBe('my-store');
   });
 
-  it('caches resolveStoreOwnerBySlug via get_store_meta', async () => {
+  it('caches resolveStoreOwnerBySlug via store_settings fallback', async () => {
     const first = await resolveStoreOwnerBySlug('my-store');
     const second = await resolveStoreOwnerBySlug('my-store');
 
     expect(first).toBe('owner-1');
     expect(second).toBe('owner-1');
-    expect(mockRpc).toHaveBeenCalledTimes(1);
+    expect(mockFrom).toHaveBeenCalledTimes(1);
     expect(cache.get(CacheKeys.slugOwner('my-store'))).toBe('owner-1');
   });
 

@@ -81,7 +81,7 @@ export async function invalidateStorefrontScope(
         }
         break;
       case 'full':
-        cache.del(StorefrontCacheKeys.bundle(slug));
+        cache.flushByPrefix(`storefront-bundle:${slug}`);
         cache.del(StorefrontCacheKeys.version(slug));
         cache.flushByPrefix(`tenant-products:${slug}`);
         cache.flushByPrefix(StorefrontCacheKeys.meta(slug));
@@ -93,6 +93,7 @@ export async function invalidateStorefrontScope(
         cache.del(StorefrontCacheKeys.footer(slug));
         await cacheDeleteByPrefix(`idb:tenant-products:${slug}`);
         await cacheDeleteByPrefix(`idb:tenant-meta:${slug}`);
+        await cacheDeleteByPrefix(`idb:storefront-bundle:${slug}`);
         enqueueEdgePurge(slug);
         break;
     }

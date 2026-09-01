@@ -1,8 +1,7 @@
 import { useMemo, useCallback, useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ensureWritableSession } from '@/lib/authSession';
-import { fetchProductById, getCategories, updateProduct } from '@/services/productService';
-import { useStoreHydration } from '@/context/StoreBootstrapContext';
+import { updateProduct } from '@/services/productService';
 import { useToast } from '@/hooks/use-toast';
 import { Product, Category, ColorOption, ProductVariant } from '@/types';
 import { formatPriceInput, isValidPrice, convertArabicToEnglish } from '@/utils/numberUtils';
@@ -19,14 +18,24 @@ import { toast as sonnerToast } from 'sonner';
 
 export type SaveMode = ProductSaveMode;
 
-export function useEditProductForm(productId: string | undefined) {
+export type UseEditProductFormOptions = {
+  product: Product | null;
+  categories: Category[];
+  pageLoading: boolean;
+  onCategoriesChange?: () => Promise<Category[]>;
+};
+
+export function useEditProductForm(
+  productId: string | undefined,
+  options: UseEditProductFormOptions
+) {
+  const { product, categories: pageCategories, pageLoading, onCategoriesChange } = options;
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { isReady, hydrationVersion } = useStoreHydration();
   const submitLockRef = useRef(false);
   const loadedProductRef = useRef<Product | null>(null);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(pageLoading);
   const [mainImage, setMainImage] = useState<string | null>(null);
   const [additionalImages, setAdditionalImages] = useState<string[]>([]);
   const [name, setName] = useState('');
@@ -42,7 +51,7 @@ export function useEditProductForm(productId: string | undefined) {
   const [stockQuantity, setStockQuantity] = useState('');
   const [lowStockThreshold, setLowStockThreshold] = useState('3');
   const [variants, setVariants] = useState<ProductVariant[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Category[]>(pageCategories);
   const [tagsInput, setTagsInput] = useState('');
   const [seoTitle, setSeoTitle] = useState('');
   const [seoDescription, setSeoDescription] = useState('');
@@ -105,18 +114,21 @@ export function useEditProductForm(productId: string | undefined) {
     if (variants.length > 0) setStockQuantity(String(totalVariantStock));
   }, [totalVariantStock, variants.length]);
 
-  const loadCategories = useCallback(async () => {
-    try {
-      const rows = await getCategories();
-      setCategories(rows);
-    } catch {
-      /* fallback */
-    }
-  }, []);
+  useEffect(() => {
+    setCategories(pageCategories);
+  }, [pageCategories]);
 
   useEffect(() => {
-    loadCategories();
-  }, [loadCategories]);
+    setLoading(pageLoading);
+  }, [pageLoading]);
+
+  const loadCategories = useCallback(async () => {
+    if (onCategoriesChange) {
+      const rows = await onCategoriesChange();
+      setCategories(rows);
+      return;
+    }
+  }, [onCategoriesChange]);
 
   const hydrateFromProduct = useCallback((product: Product) => {
     loadedProductRef.current = product;
@@ -148,26 +160,18 @@ export function useEditProductForm(productId: string | undefined) {
   }, []);
 
   useEffect(() => {
-    if (!productId || !isReady) return;
-
-    let cancelled = false;
-    void (async () => {
-      setLoading(true);
-      const product = await fetchProductById(productId);
-      if (cancelled) return;
-      if (product) {
-        hydrateFromProduct(product);
-      } else {
-        toast({ title: 'خطأ', description: 'المنتج غير موجود', variant: 'destructive' });
-        navigate('/products');
-      }
-      setLoading(false);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [productId, isReady, hydrationVersion, hydrateFromProduct, navigate, toast]);
+    if (pageLoading) return;
+    if (!productId) {
+      navigate('/products');
+      return;
+    }
+    if (!product) {
+      toast({ title: 'خطأ', description: 'المنتج غير موجود', variant: 'destructive' });
+      navigate('/products');
+      return;
+    }
+    hydrateFromProduct(product);
+  }, [productId, product, pageLoading, hydrateFromProduct, navigate, toast]);
 
   const validateField = useCallback((field: string, value: string) => {
     setFieldErrors((prev) => {

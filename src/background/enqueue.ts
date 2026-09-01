@@ -94,12 +94,16 @@ export function enqueueAnalyticsVisit(
   pagePath: string,
   userAgent: string | null
 ): string {
+  const normalized = storeSlug.trim().toLowerCase();
   return safeEnqueueBestEffort('analytics', () =>
     enqueueJob(
       'analytics',
       'analytics.trackVisit',
-      { storeSlug, pagePath, userAgent },
-      { idempotencyKey: `visit:${storeSlug}:${pagePath}` }
+      { storeSlug: normalized, pagePath, userAgent },
+      {
+        idempotencyKey: `visit:${normalized}`,
+        maxAttempts: 1,
+      }
     )
   );
 }
@@ -109,12 +113,16 @@ export function enqueueAnalyticsProductView(
   productId: string,
   pagePath: string | null
 ): string {
+  const normalized = slug.trim().toLowerCase();
   return safeEnqueueBestEffort('analytics', () =>
     enqueueJob(
       'analytics',
       'analytics.trackProductView',
-      { slug, productId, pagePath },
-      { idempotencyKey: `view:${slug}:${productId}` }
+      { slug: normalized, productId, pagePath },
+      {
+        idempotencyKey: `view:${normalized}:${productId}`,
+        maxAttempts: 1,
+      }
     )
   );
 }

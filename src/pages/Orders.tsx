@@ -21,11 +21,10 @@ import {
   OrderListFilters,
   formatOrderNumber,
 } from '@/utils/orderWorkflowUtils';
-import { useOrderDashboardStats } from '@/hooks/useOrderDashboardStats';
-import { isLocalOrderMutationEcho } from '@/lib/localMutationGuard';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { toast } from 'sonner';
 import { copyStorePublicUrl, getStoreLinkShareHint } from '@/lib/storeUrl';
+import { isLocalOrderMutationEcho } from '@/lib/localMutationGuard';
 import { useScrollPersistence } from '@/hooks/useScrollPersistence';
 import { ATTENTION_PARAM } from '@/lib/attentionHighlight';
 
@@ -48,7 +47,9 @@ const Orders = () => {
     loading,
     total,
     tabCounts,
+    stats,
     refetch,
+    reloadStats,
     isNewOrder,
     markOrderKnown,
   } = useOrders(listFilters);
@@ -63,8 +64,6 @@ const Orders = () => {
   } = useOrderNotifications(user?.id);
 
   useScrollPersistence('orders');
-
-  const { stats, reloadStats } = useOrderDashboardStats();
 
   useEffect(() => {
     if (searchParams.get(ATTENTION_PARAM) !== 'pending-orders' || attentionApplied.current) return;

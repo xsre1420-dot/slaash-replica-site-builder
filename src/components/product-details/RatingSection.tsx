@@ -16,6 +16,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 
+import type { ProductDetailReview } from '@/services/productDetailPageService';
+
 interface Review {
   id: string;
   name: string;
@@ -32,6 +34,9 @@ interface RatingSectionProps {
   productId: string;
   storeSlug?: string;
   reviews?: Review[];
+  /** Reviews from page bundle — skips initial fetch when set */
+  prefetchedReviews?: ProductDetailReview[] | null;
+  onReviewsChanged?: () => void;
 }
 
 const reviewCountLabel = (count: number) => {
@@ -42,9 +47,15 @@ const reviewCountLabel = (count: number) => {
   return `${count} مراجعة`;
 };
 
-const RatingSection = ({ productId, storeSlug, reviews = [] }: RatingSectionProps) => {
+const RatingSection = ({
+  productId,
+  storeSlug,
+  reviews = [],
+  prefetchedReviews = null,
+  onReviewsChanged,
+}: RatingSectionProps) => {
   const [sectionRef, inView] = useInView<HTMLDivElement>();
-  const [dbReviews, setDbReviews] = useState<Review[]>([]);
+  const [dbReviews, setDbReviews] = useState<Review[]>(() => prefetchedReviews ?? []);
   const [loading, setLoading] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -96,9 +107,16 @@ const RatingSection = ({ productId, storeSlug, reviews = [] }: RatingSectionProp
   }, [productId, storeSlug, user?.id]);
 
   useEffect(() => {
+    if (prefetchedReviews != null) {
+      setDbReviews(prefetchedReviews);
+    }
+  }, [prefetchedReviews]);
+
+  useEffect(() => {
+    if (prefetchedReviews != null) return;
     if (!inView) return;
     void fetchReviews();
-  }, [inView, fetchReviews]);
+  }, [inView, fetchReviews, prefetchedReviews]);
 
   const allReviews = reviews.length > 0 ? reviews : dbReviews;
   const hasReviews = allReviews.length > 0;
@@ -160,6 +178,7 @@ const RatingSection = ({ productId, storeSlug, reviews = [] }: RatingSectionProp
       setNewReview({ name: "", rating: 0, comment: "" });
       setShowReviewForm(false);
       void fetchReviews();
+      onReviewsChanged?.();
     } catch (error) {
       console.error("Error submitting review:", error);
       toast({

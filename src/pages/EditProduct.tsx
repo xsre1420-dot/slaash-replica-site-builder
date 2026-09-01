@@ -7,6 +7,7 @@ import ProductFormEditor from '@/components/add-product/ProductFormEditor';
 import ProductSaveActions from '@/components/add-product/ProductSaveActions';
 import ProductEditorHeaderActions from '@/components/add-product/ProductEditorHeaderActions';
 import { useEditProductForm } from '@/hooks/useEditProductForm';
+import { useEditProductPageBundle } from '@/hooks/useEditProductPageBundle';
 import { deleteProduct } from '@/services/productService';
 import { useUndoDelete } from '@/hooks/useUndoDelete';
 import { useToast } from '@/hooks/use-toast';
@@ -40,7 +41,13 @@ const EditProductSkeleton = () => (
 
 const EditProduct = () => {
   const { productId } = useParams<{ productId: string }>();
-  const { state, actions } = useEditProductForm(productId);
+  const page = useEditProductPageBundle(productId);
+  const { state, actions } = useEditProductForm(productId, {
+    product: page.product,
+    categories: page.categories,
+    pageLoading: page.loading,
+    onCategoriesChange: page.refreshCategories,
+  });
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const navigate = useNavigate();

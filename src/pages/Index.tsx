@@ -11,10 +11,12 @@ import { FadeUp } from "@/components/landing/FadeUp";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useReducedMotion, motion } from "framer-motion";
+import { useLandingPageBundle } from "@/hooks/useLandingPageBundle";
 
 const Index = () => {
   const [scrolled, setScrolled] = useState(false);
   const reducedMotion = useReducedMotion();
+  useLandingPageBundle();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);

@@ -38,10 +38,12 @@ type CodeDialogDeliver = {
 type UseLeadAccessCodeDialogOptions = {
   onCodesChanged?: (leadId: string, codes: AccessCodeRecord[]) => void;
   onLeadPatch?: (leadId: string, patch: Partial<LeadRecord>) => void;
+  /** After a new/replaced code is created — e.g. switch admin list to «مكتمل». */
+  onAfterCodeGenerated?: (leadId: string) => void;
 };
 
 export const useLeadAccessCodeDialog = (options: UseLeadAccessCodeDialogOptions = {}) => {
-  const { onCodesChanged, onLeadPatch } = options;
+  const { onCodesChanged, onLeadPatch, onAfterCodeGenerated } = options;
 
   const [codeOpen, setCodeOpen] = useState(false);
   const [codeLead, setCodeLead] = useState<LeadRecord | null>(null);
@@ -113,9 +115,10 @@ export const useLeadAccessCodeDialog = (options: UseLeadAccessCodeDialogOptions 
         },
       });
       onLeadPatch?.(leadId, { has_pending_code: true });
+      onAfterCodeGenerated?.(leadId);
       setCodeOpen(true);
     },
-    [onLeadPatch]
+    [onLeadPatch, onAfterCodeGenerated]
   );
 
   const openCodeDialog = useCallback(
@@ -235,15 +238,17 @@ export const useLeadAccessCodeDialog = (options: UseLeadAccessCodeDialogOptions 
       if (codeLead) {
         onLeadPatch?.(codeLead.id, {
           has_pending_code: true,
+          is_unread: false,
           status:
             codeLead.status === 'new' || codeLead.status === 'contacted'
               ? 'interested'
               : codeLead.status,
         });
+        onAfterCodeGenerated?.(codeLead.id);
         void loadCodes(codeLead.id);
       }
     },
-    [codeLead, loadCodes, onLeadPatch]
+    [codeLead, loadCodes, onAfterCodeGenerated, onLeadPatch]
   );
 
   const closeCodeDialog = useCallback((open: boolean) => {
