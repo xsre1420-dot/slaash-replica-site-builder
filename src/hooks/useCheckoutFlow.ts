@@ -102,6 +102,7 @@ export const useCheckoutFlow = () => {
     () => cartItems.length === 0
   );
   const cartSyncAppliedRef = useRef<string | null>(null);
+  const cartFingerprint = useMemo(() => buildCartFingerprint(cartItems), [cartItems]);
 
   useEffect(() => {
     if (cartItems.length === 0) {
@@ -332,7 +333,6 @@ export const useCheckoutFlow = () => {
   const submitLockRef = useRef(false);
   const submitSucceededRef = useRef(false);
   const finalizeNavigateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const cartFingerprint = buildCartFingerprint(cartItems);
 
   useEffect(() => {
     return () => {
