@@ -9,7 +9,14 @@ type KvEntry = { value: string; expiresAt: number };
 const localKvFallback = new Map<string, KvEntry>();
 
 function kvConfigured(): boolean {
-  return Boolean(env.VITE_KV_REST_URL?.trim() && env.VITE_KV_REST_TOKEN?.trim());
+  const hasCredentials = Boolean(env.VITE_KV_REST_URL?.trim() && env.VITE_KV_REST_TOKEN?.trim());
+  if (!hasCredentials) return false;
+  // Production browser bundles must not ship Upstash write tokens unless explicitly opted in.
+  // Edge functions use UPSTASH_REDIS_REST_* secrets (see supabase/functions/_shared/distributedKv.ts).
+  if (env.VITE_APP_ENV === 'production' && env.VITE_KV_BROWSER_ENABLED !== 'true') {
+    return false;
+  }
+  return true;
 }
 
 async function kvFetch(path: string, init?: RequestInit): Promise<Response | null> {

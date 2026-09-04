@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.process-order-webhook-outbox]
 verify_jwt = false
+
+[functions.process-background-queue]
+verify_jwt = false

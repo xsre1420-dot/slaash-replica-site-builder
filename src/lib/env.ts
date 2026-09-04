@@ -15,8 +15,10 @@ const envSchema = z.object({
   VITE_OBSERVABILITY_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional(),
   VITE_FAILOVER_SUPABASE_URL: z.union([z.string().url(), z.literal('')]).optional(),
   VITE_FAILOVER_SUPABASE_PUBLISHABLE_KEY: z.string().min(20).optional(),
-  /** Transaction pooler — use project HTTPS URL; client sends x-connection-mode: pooler */
+  /** Transaction pooler — legacy flag; enables x-connection-mode: pooler (Postgres hostname is NOT the REST base). */
   VITE_SUPABASE_POOLER_URL: z.union([z.string().url(), z.literal('')]).optional(),
+  /** Explicit pooler toggle — auto-enabled in production when unset. */
+  VITE_SUPABASE_USE_POOLER: z.enum(['true', 'false', '0', '1']).optional(),
   /** Edge function URL override; defaults to {SUPABASE_URL}/functions/v1/get-store-products */
   VITE_STOREFRONT_EDGE_URL: z.union([z.string().url(), z.literal('')]).optional(),
   /** When true, routes public storefront reads through the edge function (shared HTTP cache). */
@@ -29,9 +31,11 @@ const envSchema = z.object({
   VITE_SUPABASE_REGIONAL_REPLICA_URL: z.union([z.string().url(), z.literal('')]).optional(),
   /** Region label sent as x-read-region header (e.g. eu-west, us-east). */
   VITE_READ_REPLICA_REGION: z.string().min(2).max(32).optional(),
-  /** Upstash Redis REST — shared L2 cache across browser tabs / instances. */
+  /** Upstash Redis REST — dev/staging L2 cache only; prefer edge UPSTASH_* secrets in production. */
   VITE_KV_REST_URL: z.union([z.string().url(), z.literal('')]).optional(),
   VITE_KV_REST_TOKEN: z.string().min(10).optional(),
+  /** Explicit opt-in to expose KV token in production browser bundle (not recommended). */
+  VITE_KV_BROWSER_ENABLED: z.enum(['true', 'false', '0', '1']).optional(),
   /** Canonical public site URL for shareable store links (e.g. https://app.bidaya.com) */
   VITE_PUBLIC_APP_URL: z.string().optional(),
 });
@@ -50,6 +54,7 @@ const raw = {
   VITE_FAILOVER_SUPABASE_URL: import.meta.env.VITE_FAILOVER_SUPABASE_URL as string | undefined,
   VITE_FAILOVER_SUPABASE_PUBLISHABLE_KEY: import.meta.env.VITE_FAILOVER_SUPABASE_PUBLISHABLE_KEY as string | undefined,
   VITE_SUPABASE_POOLER_URL: import.meta.env.VITE_SUPABASE_POOLER_URL as string | undefined,
+  VITE_SUPABASE_USE_POOLER: import.meta.env.VITE_SUPABASE_USE_POOLER as string | undefined,
   VITE_STOREFRONT_EDGE_URL: import.meta.env.VITE_STOREFRONT_EDGE_URL as string | undefined,
   VITE_STOREFRONT_EDGE_ENABLED: import.meta.env.VITE_STOREFRONT_EDGE_ENABLED as string | undefined,
   VITE_CDN_BASE_URL: import.meta.env.VITE_CDN_BASE_URL as string | undefined,
@@ -58,6 +63,7 @@ const raw = {
   VITE_READ_REPLICA_REGION: import.meta.env.VITE_READ_REPLICA_REGION as string | undefined,
   VITE_KV_REST_URL: import.meta.env.VITE_KV_REST_URL as string | undefined,
   VITE_KV_REST_TOKEN: import.meta.env.VITE_KV_REST_TOKEN as string | undefined,
+  VITE_KV_BROWSER_ENABLED: import.meta.env.VITE_KV_BROWSER_ENABLED as string | undefined,
   VITE_PUBLIC_APP_URL: import.meta.env.VITE_PUBLIC_APP_URL as string | undefined,
 };
 
