@@ -6,14 +6,12 @@ import { cache, CacheKeys, clearInflight } from '@/lib/cache';
 import { cachedFetch } from '@/lib/cache/enterpriseCache';
 import { assertMerchantOwner } from '@/lib/tenantGuard';
 import { fetchCustomerMetricsForPeriod } from '@/services/customerService';
-import { flushMerchantAnalyticsBuffer } from '@/services/analyticsTrackingService';
+import { scheduleMerchantAnalyticsFlush } from '@/lib/analytics/analyticsFlushQueue';
+import { hasStatisticsPageBundleRpc } from '@/lib/supabase/schemaCapabilities';
+import { withTimeout, DASHBOARD_READ_TIMEOUT_MS } from '@/lib/resilience/timeouts';
 
-const withTimeout = <T>(promise: Promise<T>, ms = 12000): Promise<T> => {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Request timeout')), ms)),
-  ]);
-};
+const withStatisticsTimeout = <T>(promise: Promise<T>): Promise<T> =>
+  withTimeout(promise, DASHBOARD_READ_TIMEOUT_MS, 'statistics.read');
 
 const num = (value: unknown): number | null =>
   value != null && value !== '' ? Number(value) : null;
@@ -51,18 +49,20 @@ const fetchStatisticsPageBundleRpc = async (
   previousStart: string,
   previousEnd: string
 ): Promise<{ current?: Record<string, unknown>; previous?: Record<string, unknown> } | undefined> => {
+  if (!(await hasStatisticsPageBundleRpc())) {
+    return undefined;
+  }
   try {
     const { data, error } = await callReadRpc<Record<string, unknown>>(
       'get_statistics_page_bundle',
-    {
-      p_owner_id: ownerId,
-      p_current_start: periodStart,
-      p_current_end: periodEnd,
-      p_previous_start: previousStart,
-      p_previous_end: previousEnd,
-    },
-    { forcePrimary: true }
-  );
+      {
+        p_owner_id: ownerId,
+        p_current_start: periodStart,
+        p_current_end: periodEnd,
+        p_previous_start: previousStart,
+        p_previous_end: previousEnd,
+      }
+    );
     if (!error && data && typeof data === 'object') {
       const payload = data;
       return {
@@ -118,8 +118,7 @@ const fetchStoreStatisticsRpc = async (
         p_owner_id: ownerId,
         p_start: periodStart,
         p_end: periodEnd,
-      },
-      { forcePrimary: true }
+      }
     );
     if (!error && data) {
       return data as Record<string, unknown>;
@@ -315,7 +314,7 @@ export const fetchStatisticsData = async (
     skipCache: options?.skipCache,
     ttlPolicyPath: 'medium.statistics',
     fetchFn: async () => {
-    void flushMerchantAnalyticsBuffer().catch(() => undefined);
+    scheduleMerchantAnalyticsFlush(ownerId);
     const periodStart = bounds.start.toISOString();
     const periodEnd = bounds.end.toISOString();
     const previousEnd = new Date(bounds.start.getTime() - 1);
@@ -324,7 +323,7 @@ export const fetchStatisticsData = async (
 
     try {
       const previousStart = bounds.previousStart.toISOString();
-      const bundle = await withTimeout(
+      const bundle = await withStatisticsTimeout(
         fetchStatisticsPageBundleRpc(ownerId, periodStart, periodEnd, previousStart, previousEnd.toISOString())
       );
 
@@ -332,7 +331,7 @@ export const fetchStatisticsData = async (
       let previousKpis = bundle?.previous;
 
       if (!hasUsableStatisticsKpis(kpis)) {
-        [kpis, previousKpis] = await withTimeout(
+        [kpis, previousKpis] = await withStatisticsTimeout(
           Promise.all([
             fetchStoreStatisticsRpc(ownerId, periodStart, periodEnd),
             fetchStoreStatisticsRpc(ownerId, previousStart, previousEnd.toISOString()),
@@ -356,7 +355,7 @@ export const fetchStatisticsData = async (
         (kpis.new_customers == null || kpis.returning_customers == null);
 
       const [ordersResult, visitsResult, productCount, orderItems, customerMetrics] =
-        await withTimeout(
+        await withStatisticsTimeout(
           Promise.all([
             fetchOrdersForStatistics(ownerId, ordersFrom, periodEnd, ordersCap),
             skipVisits

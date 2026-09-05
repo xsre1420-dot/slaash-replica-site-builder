@@ -9,6 +9,7 @@ import {
   recordSecurityEvent,
   recordSideEffectsQueue,
 } from './instrumentation';
+import { hasMonitoringAuditRpc } from '@/lib/supabase/schemaCapabilities';
 
 export type ServerMonitoringAudit = {
   database?: {
@@ -46,6 +47,7 @@ export type SideEffectsBacklogHealth = {
 };
 
 export async function probeServerMonitoringMetrics(): Promise<ServerMonitoringAudit | null> {
+  if (!(await hasMonitoringAuditRpc())) return null;
   const { data, error } = await callReadRpc<ServerMonitoringAudit>(
     'platform_monitoring_observability_audit'
   );

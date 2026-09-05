@@ -11,11 +11,15 @@ import {
 } from '@/services/productService';
 import {
   fetchMerchantInventorySummary,
+  mapMerchantInventorySummaryPayload,
   type MerchantInventorySummary,
 } from '@/services/inventoryService';
 import { countPendingReviewsForOwner } from '@/services/reviewService';
 import type { ProductCatalogStats } from '@/utils/productCatalogPageUtils';
 import { computeProductCatalogStats } from '@/utils/productCatalogPageUtils';
+import { rpcGetMerchantInventoryPageBundle } from '@/repositories/inventory/inventoryRepository';
+import { hasInventoryPageBundleRpc } from '@/lib/supabase/schemaCapabilities';
+import { safeMapDbProduct } from '@/mappers/productMapper';
 
 export type InventoryPageBundle = {
   categories: Category[];
@@ -53,6 +57,48 @@ export function invalidateInventoryPageBundle(ownerId: string): void {
   clearInflight(CacheKeys.inventoryPage(ownerId));
 }
 
+function mapBundleCategories(raw: unknown): Category[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((row) => {
+    const cat = row as Record<string, unknown>;
+    return {
+      id: String(cat.id ?? ''),
+      name: String(cat.name ?? ''),
+      order: Number(cat.display_order ?? cat.order ?? 0),
+    };
+  });
+}
+
+async function tryLoadInventoryPageBundleRpc(
+  ownerId: string,
+  pageSize: number
+): Promise<InventoryPageBundle | null> {
+  if (!(await hasInventoryPageBundleRpc())) return null;
+
+  const { data, error } = await rpcGetMerchantInventoryPageBundle(ownerId, pageSize);
+  const payload = data as Record<string, unknown> | null;
+  if (error || !payload?.success) return null;
+
+  const products = ((payload.products as Record<string, unknown>[]) || [])
+    .map((row) => safeMapDbProduct(row))
+    .filter((p): p is Product => p != null);
+
+  const categories = mapBundleCategories(payload.categories);
+  if (categories.length > 0) {
+    cache.set(CacheKeys.categories(ownerId), categories, CacheTTL.LONG, CacheTTL.STALE);
+  }
+
+  return {
+    categories,
+    products,
+    total: Number(payload.total ?? products.length),
+    hasMore: Boolean(payload.has_more),
+    nextCursor: (payload.next_cursor as string | null) ?? null,
+    summary: mapMerchantInventorySummaryPayload(payload.summary as Record<string, unknown>),
+    pendingReviewsCount: Number(payload.pending_reviews_count ?? 0),
+  };
+}
+
 /** Single deduped entry for /products initial inventory data. */
 export async function loadInventoryPageBundle(
   ownerId: string,
@@ -68,6 +114,14 @@ export async function loadInventoryPageBundle(
   }
 
   return dedup(key, async () => {
+    if (!options?.force) {
+      const fromRpc = await tryLoadInventoryPageBundleRpc(ownerId, PRODUCTS_PAGE_SIZE).catch(() => null);
+      if (fromRpc) {
+        cache.set(key, fromRpc, CacheTTL.MEDIUM, CacheTTL.STALE);
+        return fromRpc;
+      }
+    }
+
     const categoriesFromCache = getCategoriesSync();
     const [categories, page, summary, pendingReviewsCount] = await Promise.all([
       categoriesFromCache.length > 0

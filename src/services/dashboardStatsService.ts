@@ -1,5 +1,9 @@
 import { callReadRpc } from '@/lib/readWrite/readClient';
-import { flushMerchantAnalyticsBuffer } from '@/services/analyticsTrackingService';
+import {
+  hasDashboardKpisLightRpc,
+  hasDashboardWorkflowCountsRpc,
+} from '@/lib/supabase/schemaCapabilities';
+import { scheduleMerchantAnalyticsFlush } from '@/lib/analytics/analyticsFlushQueue';
 import {
   fetchDashboardBatchCached,
   fetchDashboardKpisLightCached,
@@ -70,21 +74,59 @@ export const invalidateDashboardBatchCache = (ownerId: string): void => {
   invalidateDashboardCaches(ownerId);
 };
 
+async function fetchDashboardStatisticsBatchRaw(
+  ownerId: string
+): Promise<DashboardBatchPayload | null> {
+  try {
+    scheduleMerchantAnalyticsFlush(ownerId);
+    const { data, error } = await callReadRpc<Record<string, unknown>>(
+      'get_dashboard_statistics_batch',
+      { p_owner_id: ownerId }
+    );
+    if (error || !data) return null;
+
+    return {
+      today: parsePeriod(data.today),
+      yesterday: parsePeriod(data.yesterday),
+      week: parsePeriod(data.week),
+      previousWeek: parsePeriod(data.previous_week),
+      month: parsePeriod(data.month),
+      allTime: (data.all_time as Record<string, unknown>) ?? null,
+      workflowCounts: normalizeWorkflowTabCounts(
+        data.workflow_counts as Record<string, number> | null
+      ),
+      catalogKpis: parseCatalogKpis(data),
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** Lightweight dashboard KPIs — today/week + catalog counts only. */
 export const fetchDashboardKpisLight = async (
   ownerId: string
 ): Promise<Record<string, unknown> | null> => {
   return fetchDashboardKpisLightCached(ownerId, async () => {
-    try {
-      const { data, error } = await callReadRpc<Record<string, unknown>>(
-        'get_dashboard_kpis_light',
-        { p_owner_id: ownerId }
-      );
-      if (error || !data) return null;
-      return data;
-    } catch {
-      return null;
+    if (await hasDashboardKpisLightRpc()) {
+      try {
+        const { data, error } = await callReadRpc<Record<string, unknown>>(
+          'get_dashboard_kpis_light',
+          { p_owner_id: ownerId }
+        );
+        if (!error && data) return data;
+      } catch {
+        /* fall through to batch-derived payload */
+      }
     }
+
+    const batch = await fetchDashboardStatisticsBatchRaw(ownerId);
+    if (!batch) return null;
+
+    return {
+      today: batch.today,
+      week: batch.week,
+      catalog_kpis: batch.catalogKpis ?? batch.allTime,
+    };
   });
 };
 
@@ -93,52 +135,36 @@ export const fetchDashboardWorkflowCounts = async (
   ownerId: string
 ): Promise<WorkflowTabCounts | null> => {
   return fetchDashboardWorkflowCountsCached(ownerId, async () => {
-    try {
-      const { data, error } = await callReadRpc<WorkflowTabCounts>(
-        'get_dashboard_workflow_counts',
-        { p_owner_id: ownerId }
-      );
-      if (error || !data) return null;
-      return data;
-    } catch {
-      return null;
+    if (await hasDashboardWorkflowCountsRpc()) {
+      try {
+        const { data, error } = await callReadRpc<WorkflowTabCounts>(
+          'get_dashboard_workflow_counts',
+          { p_owner_id: ownerId }
+        );
+        if (!error && data) return data;
+      } catch {
+        /* fall through to batch-derived counts */
+      }
     }
+
+    const batch = await fetchDashboardStatisticsBatchRaw(ownerId);
+    return batch?.workflowCounts ?? null;
   });
 };
 
 export const fetchDashboardStatisticsBatch = async (
   ownerId: string
 ): Promise<DashboardBatchPayload | null> => {
+  const statsStarted = performance.now();
   return traceCriticalFlow('dashboard.load', 'rpc', 'statisticsBatch', async () =>
     fetchDashboardBatchCached(ownerId, async () => {
-    try {
-      void flushMerchantAnalyticsBuffer().catch(() => undefined);
-      const { data, error } = await callReadRpc<Record<string, unknown>>(
-        'get_dashboard_statistics_batch',
-        { p_owner_id: ownerId },
-        { forcePrimary: true }
-      );
-
-      if (error || !data) {
-        return null;
-      }
-
-      const payload = data;
-      return {
-        today: parsePeriod(payload.today),
-        yesterday: parsePeriod(payload.yesterday),
-        week: parsePeriod(payload.week),
-        previousWeek: parsePeriod(payload.previous_week),
-        month: parsePeriod(payload.month),
-        allTime: (payload.all_time as Record<string, unknown>) ?? null,
-        workflowCounts: normalizeWorkflowTabCounts(
-          payload.workflow_counts as Record<string, number> | null
-        ),
-        catalogKpis: parseCatalogKpis(payload),
-      };
-    } catch {
-      return null;
+    const batch = await fetchDashboardStatisticsBatchRaw(ownerId);
+    if (batch) {
+      void import('@/lib/monitoring/instrumentation').then(({ recordDashboardStatsFetch }) => {
+        recordDashboardStatsFetch(Date.now() - statsStarted);
+      });
     }
+    return batch;
   })
   , { ownerId });
 };

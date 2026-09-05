@@ -1,6 +1,7 @@
 /**
  * Inventory audit and movement history — read-only.
  */
+import { fetchInventorySummaryCached, invalidateInventorySummaryCache } from '@/lib/cache/inventoryCacheLayer';
 import {
   rpcAuditMerchantInventoryIntegrity,
   rpcMerchantInventorySummary,
@@ -19,6 +20,7 @@ import {
   getAuthUserId,
 } from '@/repositories/inventory/inventoryRepository';
 import { assertMerchantOwner } from '@/lib/tenantGuard';
+import { hasWarehouseInventory } from '@/lib/supabase/schemaCapabilities';
 
 export class InventoryRestockError extends Error {
   constructor(message: string) {
@@ -182,13 +184,10 @@ export const auditInventoryIntegrity = async (
   };
 };
 
-export const fetchMerchantInventorySummary = async (
-  ownerId: string
-): Promise<MerchantInventorySummary | null> => {
-  await assertMerchantOwner(ownerId);
-  const { data, error } = await rpcMerchantInventorySummary(ownerId);
-  const p = data as Record<string, unknown>;
-  if (error || !p?.success) return null;
+export function mapMerchantInventorySummaryPayload(
+  p: Record<string, unknown> | null | undefined
+): MerchantInventorySummary | null {
+  if (!p?.success) return null;
   return {
     totalProducts: Number(p.total_products ?? 0),
     published: Number(p.published ?? 0),
@@ -205,7 +204,21 @@ export const fetchMerchantInventorySummary = async (
     incomingUnits: Number(p.incoming_units ?? 0),
     reservedUnits: Number(p.reserved_units ?? 0),
   };
+}
+
+export const fetchMerchantInventorySummary = async (
+  ownerId: string
+): Promise<MerchantInventorySummary | null> => {
+  await assertMerchantOwner(ownerId);
+  return fetchInventorySummaryCached(ownerId, async () => {
+    const { data, error } = await rpcMerchantInventorySummary(ownerId);
+    const p = data as Record<string, unknown>;
+    if (error || !p?.success) return null;
+    return mapMerchantInventorySummaryPayload(p);
+  });
 };
+
+export { invalidateInventorySummaryCache };
 
 export const fetchGlobalMovements = async (
   ownerId: string,
@@ -259,6 +272,7 @@ export const lookupProductByBarcode = async (
 
 export const fetchWarehouses = async (ownerId: string): Promise<WarehouseRow[]> => {
   await assertMerchantOwner(ownerId);
+  if (!(await hasWarehouseInventory())) return [];
   const { data, error } = await warehousesTable()
     .select('id, name, code, is_default, address, is_active')
     .eq('owner_id', ownerId)
@@ -269,6 +283,7 @@ export const fetchWarehouses = async (ownerId: string): Promise<WarehouseRow[]> 
 
 export const fetchSuppliers = async (ownerId: string): Promise<SupplierRow[]> => {
   await assertMerchantOwner(ownerId);
+  if (!(await hasWarehouseInventory())) return [];
   const { data, error } = await suppliersTable()
     .select('id, name, phone, email, notes')
     .eq('owner_id', ownerId)
@@ -280,6 +295,7 @@ export const fetchSuppliers = async (ownerId: string): Promise<SupplierRow[]> =>
 
 export const fetchPurchaseOrders = async (ownerId: string): Promise<PurchaseOrderRow[]> => {
   await assertMerchantOwner(ownerId);
+  if (!(await hasWarehouseInventory())) return [];
   const { data, error } = await purchaseOrdersTable()
     .select('id, status, reference_code, expected_at, notes, created_at, supplier_id, suppliers(name)')
     .eq('owner_id', ownerId)
@@ -304,6 +320,7 @@ export const fetchPurchaseOrderLines = async (
 
 export const fetchOpenCycleCounts = async (ownerId: string): Promise<CycleCountRow[]> => {
   await assertMerchantOwner(ownerId);
+  if (!(await hasWarehouseInventory())) return [];
   const { data, error } = await cycleCountsTable()
     .select('id, name, status, started_at, completed_at')
     .eq('owner_id', ownerId)
@@ -355,6 +372,7 @@ export const fetchWarehouseStock = async (
   warehouseId?: string
 ): Promise<Array<{ product_id: string; quantity: number; reserved_quantity: number; products?: { name: string } }>> => {
   await assertMerchantOwner(ownerId);
+  if (!(await hasWarehouseInventory())) return [];
   let query = warehouseStockTable()
     .select('product_id, quantity, reserved_quantity, products(name)')
     .eq('owner_id', ownerId);

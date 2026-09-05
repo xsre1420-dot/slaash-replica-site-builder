@@ -16,6 +16,7 @@ import {
   warehousesTable,
 } from '@/repositories/inventory/inventoryRepository';
 import { assertMerchantOwner } from '@/lib/tenantGuard';
+import { hasWarehouseInventory } from '@/lib/supabase/schemaCapabilities';
 import { recordHealthEvent } from '@/lib/observability/healthMonitor';
 import type { InventoryProductRow } from '@/utils/inventoryPageUtils';
 import { InventoryRestockError } from '@/services/read/inventory/inventoryReadService';
@@ -141,6 +142,7 @@ export const batchRestockWithSuggestions = async (
 
 export const ensureDefaultWarehouse = async (ownerId: string): Promise<string | null> => {
   await assertMerchantOwner(ownerId);
+  if (!(await hasWarehouseInventory())) return null;
   const { data, error } = await rpcEnsureDefaultWarehouse(ownerId);
   if (error) return null;
   return typeof data === 'string' ? data : null;
@@ -155,6 +157,9 @@ export const transferWarehouseStock = async (args: {
   notes?: string;
 }): Promise<void> => {
   await assertMerchantOwner(args.ownerId);
+  if (!(await hasWarehouseInventory())) {
+    throw new InventoryRestockError('ميزة المستودعات غير متوفرة في قاعدة البيانات الحالية');
+  }
   const { data, error } = await rpcTransferWarehouseStock({
     p_owner_id: args.ownerId,
     p_product_id: args.productId,
@@ -174,6 +179,7 @@ export const createSupplier = async (
   input: { name: string; phone?: string; email?: string; notes?: string }
 ): Promise<string | null> => {
   await assertMerchantOwner(ownerId);
+  if (!(await hasWarehouseInventory())) return null;
   const { data, error } = await suppliersTable()
     .insert({ owner_id: ownerId, ...input })
     .select('id')
@@ -194,6 +200,7 @@ export const createPurchaseOrder = async (
   }
 ): Promise<string | null> => {
   await assertMerchantOwner(ownerId);
+  if (!(await hasWarehouseInventory())) return null;
   const whId = input.warehouseId ?? (await ensureDefaultWarehouse(ownerId));
   const { data: po, error: poErr } = await purchaseOrdersTable()
     .insert({
@@ -242,6 +249,7 @@ export const startCycleCount = async (
   warehouseId?: string
 ): Promise<string | null> => {
   await assertMerchantOwner(ownerId);
+  if (!(await hasWarehouseInventory())) return null;
   const { data, error } = await rpcStartInventoryCycleCount(ownerId, warehouseId, name);
   const payload = data as { success?: boolean; cycle_count_id?: string };
   if (error || !payload?.success) return null;
@@ -282,6 +290,7 @@ export const createWarehouse = async (
   input: { name: string; code?: string; address?: string }
 ): Promise<string | null> => {
   await assertMerchantOwner(ownerId);
+  if (!(await hasWarehouseInventory())) return null;
   const { data, error } = await warehousesTable()
     .insert({
       owner_id: ownerId,
