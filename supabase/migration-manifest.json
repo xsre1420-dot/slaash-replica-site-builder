@@ -1,0 +1,202 @@
+{
+  "$schema": "./migration-manifest.schema.json",
+  "manifestVersion": 1,
+  "updatedAt": "2026-09-06",
+  "description": "Canonical migration classification for selective/wave production deployments. Never use supabase db push --include-all.",
+  "blockedVersions": ["20260731000002"],
+  "historyRepair": [
+    {
+      "version": "20260905000001",
+      "file": "20260905000001_checkout_phase_4_1_slo_monitoring.sql",
+      "reason": "SQL applied out-of-band; repair remote history without re-running migration.",
+      "schemaProbes": [
+        {
+          "type": "rpc",
+          "name": "platform_checkout_side_effects_slo_snapshot"
+        }
+      ]
+    }
+  ],
+  "deferred": [
+    {
+      "version": "20260728000001",
+      "file": "20260728000001_inventory_premium_platform.sql",
+      "wave": "premium-inventory",
+      "deployAfter": [],
+      "schemaProbes": [{ "type": "table", "name": "warehouses" }],
+      "notes": "Premium warehouse/PO inventory. Skipped when 20260730000001 was applied out of order."
+    },
+    {
+      "version": "20260731000003",
+      "file": "20260731000003_simplified_order_workflow.sql",
+      "wave": "order-workflow",
+      "deployAfter": [],
+      "schemaProbes": [],
+      "notes": "Simplified merchant order workflow states."
+    },
+    {
+      "version": "20260801000001",
+      "file": "20260801000001_meta_tracking_enterprise.sql",
+      "wave": "meta-tracking",
+      "deployAfter": [],
+      "schemaProbes": [],
+      "notes": "Enterprise Meta CAPI tracking extensions."
+    },
+    {
+      "version": "20260803000001",
+      "file": "20260803000001_preview_merchant_access_code.sql",
+      "wave": "preview-access",
+      "deployAfter": [],
+      "schemaProbes": [],
+      "notes": "Preview merchant access code flow."
+    },
+    {
+      "version": "20260804000001",
+      "file": "20260804000001_subscription_reliability_fixes.sql",
+      "wave": "subscription-reliability",
+      "deployAfter": [],
+      "schemaProbes": [],
+      "notes": "Subscription billing reliability fixes."
+    },
+    {
+      "version": "20260805000001",
+      "file": "20260805000001_lead_completed_pipeline.sql",
+      "wave": "lead-pipeline",
+      "deployAfter": [],
+      "schemaProbes": [],
+      "notes": "Lead completed conversion pipeline."
+    },
+    {
+      "version": "20260902000003",
+      "file": "20260902000003_dashboard_statistics_phase_3_4.sql",
+      "wave": "phase-3.4-dashboard",
+      "deployAfter": ["20260902160000"],
+      "schemaProbes": [
+        { "type": "rpc", "name": "get_dashboard_kpis_light" },
+        { "type": "rpc", "name": "get_statistics_page_bundle" }
+      ],
+      "notes": "Dashboard/statistics RPC bundle optimization."
+    },
+    {
+      "version": "20260902000004",
+      "file": "20260902000004_inventory_read_optimization_phase_3_5.sql",
+      "wave": "phase-3.5-inventory",
+      "deployAfter": ["20260902000003"],
+      "schemaProbes": [
+        { "type": "rpc", "name": "get_merchant_inventory_page_bundle" }
+      ],
+      "notes": "Merchant inventory page read bundle."
+    },
+    {
+      "version": "20260902000005",
+      "file": "20260902000005_checkout_concurrency_phase_3_6.sql",
+      "wave": "phase-3.6-checkout",
+      "deployAfter": ["20260902000004"],
+      "requiresApproval": true,
+      "schemaProbes": [],
+      "notes": "Checkout concurrency hardening. Requires explicit ops approval before deploy."
+    },
+    {
+      "version": "20260902000006",
+      "file": "20260902000006_connection_pool_phase_4.sql",
+      "wave": "phase-4-connection-pool",
+      "deployAfter": ["20260902000005"],
+      "schemaProbes": [],
+      "notes": "Connection pool observability and routing metadata."
+    },
+    {
+      "version": "20260902000008",
+      "file": "20260902000008_production_reliability_phase_6.sql",
+      "wave": "phase-6-reliability",
+      "deployAfter": ["20260902000006"],
+      "schemaProbes": [],
+      "notes": "Production reliability guardrails."
+    },
+    {
+      "version": "20260902000009",
+      "file": "20260902000009_tenant_isolation_security_phase_7.sql",
+      "wave": "phase-7-tenant-isolation",
+      "deployAfter": ["20260902000008"],
+      "schemaProbes": [],
+      "notes": "Tenant isolation and analytics buffer hardening."
+    },
+    {
+      "version": "20260902000010",
+      "file": "20260902000010_backup_recovery_phase_8.sql",
+      "wave": "phase-8-backup",
+      "deployAfter": ["20260902000009"],
+      "schemaProbes": [],
+      "notes": "Backup/recovery playbooks and audit RPCs."
+    },
+    {
+      "version": "20260902000011",
+      "file": "20260902000011_monitoring_observability_phase_9.sql",
+      "wave": "phase-9-monitoring",
+      "deployAfter": ["20260902000010"],
+      "schemaProbes": [
+        { "type": "rpc", "name": "platform_monitoring_observability_audit" }
+      ],
+      "notes": "Platform monitoring and observability audit RPCs."
+    }
+  ],
+  "nonLinearApplied": [
+    {
+      "version": "20260730000001",
+      "skippedPredecessors": ["20260728000001"],
+      "notes": "Applied while premium inventory migration remained deferred."
+    },
+    {
+      "version": "20260802000001",
+      "skippedPredecessors": [
+        "20260801000001",
+        "20260803000001",
+        "20260804000001",
+        "20260805000001"
+      ],
+      "notes": "Applied while meta/preview/subscription/lead migrations remained deferred."
+    },
+    {
+      "version": "20260829000001",
+      "supersedesBlocked": ["20260731000002"],
+      "notes": "Async visit analytics replacement for blocked v100 migration."
+    },
+    {
+      "version": "20260901000001",
+      "skippedPredecessors": ["20260728000001"],
+      "notes": "Storefront bundle concurrency wave applied selectively."
+    },
+    {
+      "version": "20260902000002",
+      "skippedPredecessors": ["20260902000003"],
+      "notes": "Storefront bundle phase 3.3 applied before dashboard phase 3.4."
+    },
+    {
+      "version": "20260902120000",
+      "skippedPredecessors": ["20260902000003", "20260902000004", "20260902000005"],
+      "notes": "Phase 4f storefront bundle wave."
+    },
+    {
+      "version": "20260902160000",
+      "replacesBlocked": "20260731000002",
+      "notes": "Analytics isolation phase 5 (async outbox only)."
+    }
+  ],
+  "deployWaves": {
+    "recommendedOrder": [
+      "premium-inventory",
+      "order-workflow",
+      "meta-tracking",
+      "preview-access",
+      "subscription-reliability",
+      "lead-pipeline",
+      "phase-3.4-dashboard",
+      "phase-3.5-inventory",
+      "phase-3.6-checkout",
+      "phase-4-connection-pool",
+      "phase-6-reliability",
+      "phase-7-tenant-isolation",
+      "phase-8-backup",
+      "phase-9-monitoring"
+    ]
+  }
+}

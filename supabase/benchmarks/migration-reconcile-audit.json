@@ -1,0 +1,38 @@
+{
+  "generatedAt": "2026-09-05T11:04:15.098Z",
+  "activeMigrationCount": 219,
+  "deferredMigrationCount": 14,
+  "blockedMigrationCount": 1,
+  "localOnly": [
+    "20260906000001"
+  ],
+  "allowedLocalOnly": [
+    "20260906000001"
+  ],
+  "remoteOnly": [],
+  "unexpectedLocalOnly": [],
+  "issues": [],
+  "warnings": [],
+  "manifestHead": [
+    {
+      "local": "20260902160000",
+      "remote": "20260902160000"
+    },
+    {
+      "local": "20260905000001",
+      "remote": "20260905000001"
+    },
+    {
+      "local": "20260905000002",
+      "remote": "20260905000002"
+    },
+    {
+      "local": "20260905000003",
+      "remote": "20260905000003"
+    },
+    {
+      "local": "20260905000004",
+      "remote": "20260905000004"
+    }
+  ]
+}

@@ -27,8 +27,8 @@ if (-not (Test-Path $linkFile)) {
 
 Push-Location $repoRoot
 try {
-  Write-Host "Pushing migrations..." -ForegroundColor Green
-  supabase db push --yes
+  Write-Host "Pushing migrations (safe wrapper — deferred migrations excluded)..." -ForegroundColor Green
+  node scripts/safe-db-push.mjs
   if ($LASTEXITCODE -ne 0) {
     Write-Host ""
     Write-Host "Push failed. If objects already exist on remote, try baseline then redeploy:" -ForegroundColor Yellow
