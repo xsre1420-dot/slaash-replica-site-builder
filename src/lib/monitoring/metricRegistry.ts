@@ -6,11 +6,13 @@ export const METRIC_NAMES = {
     requestsTotal: 'http_requests_total',
     requestDurationMs: 'http_request_duration_ms',
     errorsTotal: 'http_errors_total',
+    timeoutsTotal: 'http_timeouts_total',
   },
   rpc: {
     callsTotal: 'rpc_calls_total',
     durationMs: 'rpc_duration_ms',
     errorsTotal: 'rpc_errors_total',
+    timeoutsTotal: 'rpc_timeouts_total',
     replicaFallbackTotal: 'rpc_replica_fallback_total',
   },
   edge: {
@@ -73,6 +75,35 @@ export const METRIC_NAMES = {
     hitRate: 'cache_hit_rate',
     invalidationsTotal: 'cache_invalidations_total',
     failuresTotal: 'cache_failures_total',
+    staleResponsesTotal: 'cache_stale_responses_total',
+    originRequestsTotal: 'cache_origin_requests_total',
+  },
+  analytics: {
+    queueDepth: 'analytics_queue_depth',
+    processingRate: 'analytics_processing_rate',
+    failedJobsTotal: 'analytics_failed_jobs_total',
+    backlogAgeMs: 'analytics_backlog_age_ms',
+    outboxSpillTotal: 'analytics_outbox_spill_total',
+  },
+  sideEffects: {
+    pending: 'order_side_effects_pending',
+    workerStaleMinutes: 'side_effects_worker_stale_minutes',
+    deadLetter: 'order_side_effects_dead_letter',
+    processedRate: 'order_side_effects_processed_rate',
+  },
+  orders: {
+    createdTotal: 'orders_created_total',
+    failedTotal: 'orders_failed_total',
+    duplicateAttemptsTotal: 'orders_duplicate_attempts_total',
+    stockFailuresTotal: 'orders_stock_failures_total',
+    transactionFailuresTotal: 'orders_transaction_failures_total',
+    durationMs: 'order_creation_duration_ms',
+  },
+  security: {
+    authFailuresTotal: 'security_auth_failures_total',
+    rateLimitViolationsTotal: 'security_rate_limit_violations_total',
+    crossTenantAttemptsTotal: 'security_cross_tenant_attempts_total',
+    webhookFailuresTotal: 'security_webhook_failures_total',
   },
   infra: {
     cpuUtilization: 'infra_cpu_utilization',
@@ -86,6 +117,13 @@ export const METRIC_NAMES = {
     storeVisitsTotal: 'store_visits_total',
     registrationsTotal: 'customer_registrations_total',
     jobThroughput: 'background_job_throughput',
+  },
+  /** Server-side DB gauges — synced from platform_monitoring_observability_audit RPC */
+  server: {
+    dbCpuUtilization: 'server_db_cpu_utilization',
+    dbConnectionWait: 'server_db_connection_wait',
+    dbLockWaits: 'server_db_lock_waits',
+    dbSizeBytes: 'server_db_size_bytes',
   },
   errors: {
     total: 'errors_total',

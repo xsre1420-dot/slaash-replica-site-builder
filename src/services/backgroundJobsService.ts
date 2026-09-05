@@ -20,6 +20,11 @@ export type BackgroundJobsStatus = {
     oldestPendingSeconds: number;
     processor: string;
   };
+  orderSideEffects?: {
+    pending: number;
+    oldestPendingSeconds: number;
+    processor: string;
+  };
   recommendations: string[];
   client?: ClientBackgroundStatus;
 };
@@ -36,6 +41,7 @@ export const fetchBackgroundJobsStatus = async (): Promise<BackgroundJobsStatus 
     status?: BackgroundJobsStatus['status'];
     analytics?: Record<string, unknown>;
     order_webhooks?: Record<string, unknown>;
+    order_side_effects?: Record<string, unknown>;
     recommendations?: string[] | unknown;
   };
 
@@ -62,6 +68,15 @@ export const fetchBackgroundJobsStatus = async (): Promise<BackgroundJobsStatus 
         payload.order_webhooks?.processor ?? 'claim_order_webhook_outbox_batch'
       ),
     },
+    orderSideEffects: payload.order_side_effects
+      ? {
+          pending: Number(payload.order_side_effects.pending ?? 0),
+          oldestPendingSeconds: Number(payload.order_side_effects.oldest_pending_seconds ?? 0),
+          processor: String(
+            payload.order_side_effects.processor ?? 'process_order_side_effects_batch'
+          ),
+        }
+      : undefined,
     recommendations,
   };
 };

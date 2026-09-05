@@ -1,7 +1,6 @@
 import { getServiceSupabase } from '../_shared/supabaseClient.ts';
 import { logStructured, withEdgeSpan } from '../_shared/observability.ts';
-
-const WORKER_SECRET = Deno.env.get('BACKGROUND_WORKER_SECRET') || '';
+import { authorizeWorker } from '../_shared/workerAuth.ts';
 
 const jsonHeaders = (extra: Record<string, string> = {}) => ({
   'Content-Type': 'application/json',
@@ -18,15 +17,8 @@ Deno.serve(async (req) => {
       return new Response('Method not allowed', { status: 405 });
     }
 
-    if (WORKER_SECRET) {
-      const auth = req.headers.get('authorization') || '';
-      if (auth !== `Bearer ${WORKER_SECRET}`) {
-        return new Response(JSON.stringify({ success: false, error: 'unauthorized' }), {
-          status: 401,
-          headers: jsonHeaders(),
-        });
-      }
-    }
+    const workerDenied = authorizeWorker(req);
+    if (workerDenied) return workerDenied;
 
     const supabase = getServiceSupabase();
     const limit = Math.min(Math.max(Number(new URL(req.url).searchParams.get('limit') || 50), 1), 200);

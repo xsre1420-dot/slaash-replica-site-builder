@@ -238,6 +238,8 @@ export function evaluateAlertRules(snapshot: {
     analyticsBacklog: number;
     orderFailureRate: number;
     securityEventRate: number;
+    sideEffectsBacklog: number;
+    sideEffectsWorkerStaleMinutes: number;
   };
   gauges: Array<{ name: string; value: number; labels: Record<string, string> }>;
   histograms: Array<{ name: string; p95: number; p99?: number }>;
@@ -259,6 +261,10 @@ export function evaluateAlertRules(snapshot: {
     if (name === 'background_queue_depth') return snapshot.derived.queueBacklog;
     if (name === 'background_dead_letter_total') return snapshot.derived.deadLetterCount;
     if (name === 'analytics_queue_depth') return snapshot.derived.analyticsBacklog;
+    if (name === 'order_side_effects_pending') return snapshot.derived.sideEffectsBacklog;
+    if (name === 'side_effects_worker_stale_minutes') {
+      return snapshot.derived.sideEffectsWorkerStaleMinutes;
+    }
     if (name === 'cache_failures_total') return gauge(name);
     if (name === 'rpc_replica_fallback_total') return counterSum(name);
     if (name === 'db_connection_pool_utilization') return gauge(name);

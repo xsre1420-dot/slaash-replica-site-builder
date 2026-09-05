@@ -13,6 +13,7 @@ export function recordHttpRequest(options: {
   path: string;
   status: number;
   durationMs: number;
+  timedOut?: boolean;
 }): void {
   const labels = {
     method: options.method,
@@ -24,6 +25,9 @@ export function recordHttpRequest(options: {
   if (options.status >= 400) {
     incrementCounter(METRIC_NAMES.http.errorsTotal, 1, labels);
   }
+  if (options.timedOut) {
+    incrementCounter(METRIC_NAMES.http.timeoutsTotal, 1, labels);
+  }
 }
 
 export function recordRpcCall(options: {
@@ -32,6 +36,7 @@ export function recordRpcCall(options: {
   status: 'ok' | 'error';
   route?: string;
   errorCategory?: string;
+  timedOut?: boolean;
 }): void {
   const labels = {
     rpc: options.rpcName.slice(0, 60),
@@ -45,6 +50,9 @@ export function recordRpcCall(options: {
       rpc: options.rpcName.slice(0, 60),
       category: options.errorCategory ?? 'unexpected',
     });
+  }
+  if (options.timedOut) {
+    incrementCounter(METRIC_NAMES.rpc.timeoutsTotal, 1, { rpc: options.rpcName.slice(0, 60) });
   }
   if (options.route && options.route !== 'primary') {
     incrementCounter(METRIC_NAMES.infra.replicaUtilization, 1, { route: options.route });
@@ -185,6 +193,8 @@ export function recordCacheOperation(options: {
   latencyMs?: number;
   invalidation?: boolean;
   failure?: boolean;
+  stale?: boolean;
+  origin?: boolean;
 }): void {
   const labels = { domain: options.domain };
   if (options.hit) {
@@ -200,6 +210,12 @@ export function recordCacheOperation(options: {
   }
   if (options.failure) {
     incrementCounter(METRIC_NAMES.cache.failuresTotal, 1, labels);
+  }
+  if (options.stale) {
+    incrementCounter(METRIC_NAMES.cache.staleResponsesTotal, 1, labels);
+  }
+  if (options.origin) {
+    incrementCounter(METRIC_NAMES.cache.originRequestsTotal, 1, labels);
   }
 }
 
@@ -237,6 +253,172 @@ export function recordInfraMemoryUtilization(pct: number): void {
 export function recordError(category: string): void {
   incrementCounter(METRIC_NAMES.errors.byCategory, 1, { category });
   incrementCounter(METRIC_NAMES.errors.total, 1, { category });
+}
+
+export function recordAnalyticsQueue(options: {
+  queue: string;
+  depth: number;
+  processingRatePerMin?: number;
+  backlogAgeMs?: number;
+  failedJobs?: number;
+}): void {
+  const labels = { queue: options.queue };
+  setGauge(METRIC_NAMES.analytics.queueDepth, options.depth, labels);
+  if (options.processingRatePerMin != null) {
+    setGauge(METRIC_NAMES.analytics.processingRate, options.processingRatePerMin, labels);
+  }
+  if (options.backlogAgeMs != null) {
+    setGauge(METRIC_NAMES.analytics.backlogAgeMs, options.backlogAgeMs, labels);
+  }
+  if (options.failedJobs != null && options.failedJobs > 0) {
+    incrementCounter(METRIC_NAMES.analytics.failedJobsTotal, options.failedJobs, labels);
+  }
+}
+
+export function recordSideEffectsQueue(options: {
+  pending: number;
+  workerStaleMinutes?: number | null;
+  deadLetter?: number;
+  processedLast60s?: number;
+}): void {
+  setGauge(METRIC_NAMES.sideEffects.pending, options.pending, { queue: 'order_side_effects_outbox' });
+  if (options.workerStaleMinutes != null) {
+    setGauge(METRIC_NAMES.sideEffects.workerStaleMinutes, options.workerStaleMinutes, {
+      worker: 'process_order_side_effects_batch',
+    });
+  }
+  if (options.deadLetter != null && options.deadLetter > 0) {
+    setGauge(METRIC_NAMES.sideEffects.deadLetter, options.deadLetter, {
+      queue: 'order_side_effects_outbox',
+    });
+    incrementCounter(METRIC_NAMES.worker.deadLetterTotal, options.deadLetter, {
+      queue: 'order_side_effects_outbox',
+    });
+  }
+  if (options.processedLast60s != null) {
+    setGauge(METRIC_NAMES.sideEffects.processedRate, options.processedLast60s, {
+      queue: 'order_side_effects_outbox',
+    });
+  }
+}
+
+export function recordAnalyticsOutboxSpill(queue: string): void {
+  incrementCounter(METRIC_NAMES.analytics.outboxSpillTotal, 1, { queue });
+}
+
+export type OrderFailureReason =
+  | 'stock'
+  | 'transaction'
+  | 'duplicate'
+  | 'validation'
+  | 'rate_limit'
+  | 'unknown';
+
+export function recordOrderOutcome(options: {
+  status: 'success' | 'failure';
+  durationMs?: number;
+  reason?: OrderFailureReason;
+  idempotent?: boolean;
+}): void {
+  if (options.status === 'success') {
+    if (!options.idempotent) {
+      incrementCounter(METRIC_NAMES.orders.createdTotal);
+    } else {
+      incrementCounter(METRIC_NAMES.orders.duplicateAttemptsTotal);
+    }
+  } else {
+    incrementCounter(METRIC_NAMES.orders.failedTotal, 1, {
+      reason: options.reason ?? 'unknown',
+    });
+    switch (options.reason) {
+      case 'stock':
+        incrementCounter(METRIC_NAMES.orders.stockFailuresTotal);
+        break;
+      case 'transaction':
+        incrementCounter(METRIC_NAMES.orders.transactionFailuresTotal);
+        break;
+      case 'duplicate':
+        incrementCounter(METRIC_NAMES.orders.duplicateAttemptsTotal);
+        break;
+    }
+  }
+  if (options.durationMs != null) {
+    observeHistogram(METRIC_NAMES.orders.durationMs, options.durationMs, {
+      status: options.status,
+    });
+  }
+}
+
+export type SecurityEventType =
+  | 'auth_failure'
+  | 'rate_limit'
+  | 'cross_tenant'
+  | 'webhook_failure';
+
+export function recordSecurityEvent(type: SecurityEventType, surface?: string): void {
+  const labels = surface ? { surface } : undefined;
+  switch (type) {
+    case 'auth_failure':
+      incrementCounter(METRIC_NAMES.security.authFailuresTotal, 1, labels);
+      recordError('auth.login');
+      break;
+    case 'rate_limit':
+      incrementCounter(METRIC_NAMES.security.rateLimitViolationsTotal, 1, labels);
+      recordError('auth.rate_limit');
+      break;
+    case 'cross_tenant':
+      incrementCounter(METRIC_NAMES.security.crossTenantAttemptsTotal, 1, labels);
+      recordError('auth.cross_tenant');
+      break;
+    case 'webhook_failure':
+      incrementCounter(METRIC_NAMES.security.webhookFailuresTotal, 1, labels);
+      recordError('webhook.delivery');
+      break;
+  }
+}
+
+export function recordServerDatabaseMetrics(options: {
+  connectionSaturationPct?: number;
+  connectionWait?: number;
+  lockWaits?: number;
+  dbSizeBytes?: number;
+  cpuUtilizationPct?: number;
+}): void {
+  if (options.connectionSaturationPct != null) {
+    recordDatabasePoolUtilization(options.connectionSaturationPct);
+  }
+  if (options.connectionWait != null) {
+    setGauge(METRIC_NAMES.server.dbConnectionWait, options.connectionWait);
+  }
+  if (options.lockWaits != null) {
+    setGauge(METRIC_NAMES.server.dbLockWaits, options.lockWaits);
+  }
+  if (options.dbSizeBytes != null) {
+    setGauge(METRIC_NAMES.server.dbSizeBytes, options.dbSizeBytes);
+  }
+  if (options.cpuUtilizationPct != null) {
+    setGauge(METRIC_NAMES.server.dbCpuUtilization, options.cpuUtilizationPct);
+  }
+}
+
+export async function syncClientQueueMetrics(): Promise<void> {
+  try {
+    const { getAllQueueMetrics } = await import('@/background/queues/JobQueue');
+    for (const m of getAllQueueMetrics()) {
+      recordQueueDepth(m.queue, m.pending, m.processing);
+      if (m.queue === 'analytics') {
+        recordAnalyticsQueue({
+          queue: m.queue,
+          depth: m.pending,
+          processingRatePerMin: m.processingRatePerMin,
+          backlogAgeMs: m.oldestPendingMs,
+          failedJobs: m.failed,
+        });
+      }
+    }
+  } catch {
+    /* optional in SSR/tests */
+  }
 }
 
 export function syncObservabilityMetric(

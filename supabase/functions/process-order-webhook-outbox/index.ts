@@ -1,9 +1,6 @@
 import { getServiceSupabase } from '../_shared/supabaseClient.ts';
 import { logStructured, withEdgeSpan } from '../_shared/observability.ts';
-
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-const WORKER_SECRET = Deno.env.get('BACKGROUND_WORKER_SECRET') || '';
+import { authorizeWorker } from '../_shared/workerAuth.ts';
 
 const jsonHeaders = (extra: Record<string, string> = {}) => ({
   'Content-Type': 'application/json',
@@ -30,21 +27,17 @@ Deno.serve(async (req) => {
       return new Response('Method not allowed', { status: 405 });
     }
 
+    const workerDenied = authorizeWorker(req);
+    if (workerDenied) return workerDenied;
+
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       return new Response(JSON.stringify({ success: false, error: 'misconfigured' }), {
         status: 503,
         headers: jsonHeaders(),
       });
-    }
-
-    if (WORKER_SECRET) {
-      const auth = req.headers.get('authorization') || '';
-      if (auth !== `Bearer ${WORKER_SECRET}`) {
-        return new Response(JSON.stringify({ success: false, error: 'unauthorized' }), {
-          status: 401,
-          headers: jsonHeaders(),
-        });
-      }
     }
 
     const supabase = getServiceSupabase();
@@ -54,14 +47,30 @@ Deno.serve(async (req) => {
       200
     );
 
-    const { data: sideEffectsData } = await supabase.rpc('process_order_side_effects_batch', {
-      p_limit: limit,
-    });
-
-    const { data: claimData, error: claimError } = await supabase.rpc(
-      'claim_order_webhook_outbox_batch',
+    const { data: startData, error: startError } = await supabase.rpc(
+      'process_webhook_outbox_worker_start',
       { p_limit: limit }
     );
+
+    let sideEffectsData: unknown = null;
+    let claimData: unknown = null;
+    let claimError: { message?: string } | null = null;
+
+    if (!startError && startData?.success !== false) {
+      sideEffectsData = startData?.side_effects ?? null;
+      claimData = startData?.claim ?? startData;
+    } else {
+      logStructured('warn', 'webhook-outbox.bundle_fallback', {
+        error: startError?.message ?? startData?.error,
+      });
+      const { data: sideEffects } = await supabase.rpc('process_order_side_effects_batch', {
+        p_limit: limit,
+      });
+      sideEffectsData = sideEffects;
+      const claimResult = await supabase.rpc('claim_order_webhook_outbox_batch', { p_limit: limit });
+      claimData = claimResult.data;
+      claimError = claimResult.error;
+    }
 
     if (claimError) {
       logStructured('error', 'webhook-outbox.claim_failed', { message: claimError.message });
