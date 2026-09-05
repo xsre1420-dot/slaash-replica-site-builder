@@ -35,6 +35,7 @@
     "db:audit": "node scripts/schema-sync-audit.mjs",
     "db:function-drift": "node scripts/function-drift-audit.mjs",
     "db:index-audit": "node scripts/index-performance-audit.mjs --save",
+    "db:queue-hardening-test": "node scripts/queue-outbox-hardening-test.mjs --save",
     "audit:read-write": "node scripts/read-write-audit.mjs",
     "audit:background-jobs": "node scripts/background-jobs-audit.mjs",
     "audit:enterprise-architecture": "node scripts/enterprise-architecture-audit.mjs",

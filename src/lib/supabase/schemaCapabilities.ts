@@ -21,7 +21,8 @@ type CapabilityKey =
   | 'statisticsPageBundleRpc'
   | 'analyticsFlushRpc'
   | 'monitoringAuditRpc'
-  | 'webhookWorkerStartRpc';
+  | 'webhookWorkerStartRpc'
+  | 'queueHealthAuditRpc';
 
 const cache = new Map<CapabilityKey, boolean>();
 
@@ -138,6 +139,9 @@ async function resolveCapability(key: CapabilityKey): Promise<boolean> {
     case 'webhookWorkerStartRpc':
       available = await probeRpcExists('process_webhook_outbox_worker_start', { p_limit: 1 });
       break;
+    case 'queueHealthAuditRpc':
+      available = await probeRpcExists('platform_queue_health_audit', {});
+      break;
   }
 
   cache.set(key, available);
@@ -194,6 +198,10 @@ export async function hasMonitoringAuditRpc(): Promise<boolean> {
 
 export async function hasWebhookWorkerStartRpc(): Promise<boolean> {
   return resolveCapability('webhookWorkerStartRpc');
+}
+
+export async function hasQueueHealthAuditRpc(): Promise<boolean> {
+  return resolveCapability('queueHealthAuditRpc');
 }
 
 /** Test helper — reset cached probes. */

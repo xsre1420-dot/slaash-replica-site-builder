@@ -54,6 +54,11 @@ const CANONICAL = {
     'flush_merchant_analytics_buffer',
     'process_webhook_outbox_worker_start',
     'platform_monitoring_observability_audit',
+    'platform_queue_health_audit',
+    'retry_analytics_dead_letter',
+    'retry_side_effects_dead_letter',
+    'recover_stale_import_jobs',
+    'get_background_jobs_status',
     'get_merchant_inventory_page_bundle',
   ],
   obsolete: [

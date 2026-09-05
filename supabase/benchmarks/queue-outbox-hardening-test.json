@@ -1,0 +1,77 @@
+{
+  "audited_at": "2026-09-05T11:48:37.119Z",
+  "passed": 14,
+  "total": 14,
+  "checks": [
+    {
+      "name": "hardening migration exists",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "analytics outbox retry columns",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "side effects backoff column",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "analytics processor retry budget",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "dead letter replay RPCs",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "import stuck recovery",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "unified queue health audit",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "background jobs status excludes DLQ from pending",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "worker bundle includes import recovery + health",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "backgroundJobsService exposes DLQ retry + health audit",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "server job catalog documents retry limits",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "anon blocked from queue health audit",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "anon blocked from analytics DLQ replay",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "live service probes (skipped — no service key)",
+      "pass": true,
+      "detail": "missing SUPABASE_SERVICE_ROLE_KEY"
+    }
+  ]
+}

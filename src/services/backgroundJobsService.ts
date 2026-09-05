@@ -11,6 +11,8 @@ export type BackgroundJobsStatus = {
   analytics: {
     pending: number;
     oldestPendingSeconds: number;
+    deadLetter?: number;
+    workerStale?: boolean;
     processor: string;
   };
   orderWebhooks: {
@@ -23,10 +25,21 @@ export type BackgroundJobsStatus = {
   orderSideEffects?: {
     pending: number;
     oldestPendingSeconds: number;
+    deadLetter?: number;
+    workerStale?: boolean;
     processor: string;
   };
   recommendations: string[];
   client?: ClientBackgroundStatus;
+};
+
+export type QueueHealthAudit = {
+  critical: boolean;
+  analytics: Record<string, unknown>;
+  sideEffects: Record<string, unknown>;
+  webhooks: Record<string, unknown>;
+  importJobs: Record<string, unknown>;
+  recommendations: string[];
 };
 
 export type WebhookRetryResult = {
@@ -57,6 +70,8 @@ export const fetchBackgroundJobsStatus = async (): Promise<BackgroundJobsStatus 
     analytics: {
       pending: Number(payload.analytics?.pending ?? 0),
       oldestPendingSeconds: Number(payload.analytics?.oldest_pending_seconds ?? 0),
+      deadLetter: Number(payload.analytics?.dead_letter ?? 0),
+      workerStale: Boolean(payload.analytics?.worker_stale),
       processor: String(payload.analytics?.processor ?? 'process_analytics_event_buffer'),
     },
     orderWebhooks: {
@@ -72,12 +87,56 @@ export const fetchBackgroundJobsStatus = async (): Promise<BackgroundJobsStatus 
       ? {
           pending: Number(payload.order_side_effects.pending ?? 0),
           oldestPendingSeconds: Number(payload.order_side_effects.oldest_pending_seconds ?? 0),
+          deadLetter: Number(payload.order_side_effects.dead_letter ?? 0),
+          workerStale: Boolean(payload.order_side_effects.worker_stale),
           processor: String(
             payload.order_side_effects.processor ?? 'process_order_side_effects_batch'
           ),
         }
       : undefined,
     recommendations,
+  };
+};
+
+export const retryAnalyticsDeadLetter = async (limit = 100): Promise<{ reset: number } | null> => {
+  const { data, error } = await callWriteRpc<Record<string, unknown>>('retry_analytics_dead_letter', {
+    p_limit: limit,
+  });
+
+  const payload = data as { success?: boolean; reset?: number };
+  if (error || !payload?.success) return null;
+  return { reset: payload.reset ?? 0 };
+};
+
+export const retrySideEffectsDeadLetter = async (
+  ownerId: string,
+  limit = 50
+): Promise<{ reset: number } | null> => {
+  await assertMerchantOwner(ownerId);
+
+  const { data, error } = await callWriteRpc<Record<string, unknown>>(
+    'retry_side_effects_dead_letter',
+    { p_owner_id: ownerId, p_limit: limit }
+  );
+
+  const payload = data as { success?: boolean; reset?: number };
+  if (error || !payload?.success) return null;
+  return { reset: payload.reset ?? 0 };
+};
+
+/** Service-role queue audit — null for merchant sessions. */
+export const fetchQueueHealthAudit = async (): Promise<QueueHealthAudit | null> => {
+  const { data, error } = await callReadRpc<Record<string, unknown>>('platform_queue_health_audit');
+  if (error || !data) return null;
+
+  const recs = data.recommendations;
+  return {
+    critical: Boolean(data.critical),
+    analytics: (data.analytics as Record<string, unknown>) ?? {},
+    sideEffects: (data.side_effects as Record<string, unknown>) ?? {},
+    webhooks: (data.webhooks as Record<string, unknown>) ?? {},
+    importJobs: (data.import_jobs as Record<string, unknown>) ?? {},
+    recommendations: Array.isArray(recs) ? recs.filter((r): r is string => typeof r === 'string') : [],
   };
 };
 
