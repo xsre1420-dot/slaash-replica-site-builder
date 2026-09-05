@@ -1,4 +1,5 @@
-import { callReadRpc } from '@/lib/readWrite/readClient';
+import { rpcRecoverOrderByIdempotencyKey } from '@/repositories/orders/orderRepository';
+import { normalizeStoreSlugForCheckout } from '@/lib/checkout/checkoutContract';
 import { getOrCreateIdempotencyKey } from '@/utils/checkoutSession';
 
 export type RecoveredCheckoutOrder = {
@@ -19,10 +20,10 @@ export const tryRecoverCheckoutOrder = async (
   if (!idempotencyKey) return null;
 
   try {
-    const { data, error } = await callReadRpc<Record<string, unknown>>('get_order_by_idempotency_key', {
+    const { data, error } = await rpcRecoverOrderByIdempotencyKey({
       p_idempotency_key: idempotencyKey,
       p_owner_id: ownerId,
-      p_store_slug: storeSlug?.trim().toLowerCase() || null,
+      p_store_slug: normalizeStoreSlugForCheckout(storeSlug),
     });
 
     if (error || !data?.found) return null;

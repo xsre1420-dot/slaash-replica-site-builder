@@ -1,13 +1,23 @@
 /**
  * Order write commands — primary DB only. No list/query reads.
  */
-import { Order, CartItem } from '@/types';
-import { getOrCreateIdempotencyKey } from '@/utils/checkoutSession';
+import { Order } from '@/types';
+import { getOrCreateIdempotencyKey, touchCheckoutSubmitLock } from '@/utils/checkoutSession';
 import { tryRecoverCheckoutOrder } from '@/services/checkoutRecoveryService';
 import { mapOrderRpcFailure, mapOrderError } from '@/utils/orderErrors';
 import { flushOrderCache } from '@/lib/cache';
 import { instrumentAsync, logger, metrics } from '@/lib/observability';
 import { recordHealthEvent } from '@/lib/observability/healthMonitor';
+import { classifyError } from '@/lib/observability/errorTaxonomy';
+import {
+  checkoutRetryBudgetKey,
+  computeRetryDelayMs,
+  consumeRetryBudget,
+  getMaxAttempts,
+  isRetryableCheckoutTransportError,
+  isRetryableTotalCorrection,
+} from '@/lib/resilience/checkoutReliability';
+import { runBestEffortSideEffect } from '@/core/distributed/failureIsolation';
 import {
   enforceRateLimit,
   formatRateLimitMessageAr,
@@ -25,43 +35,31 @@ import {
   rpcCreateOrderWithStockDeduction,
   rpcAttachOrderMarketingAttribution,
 } from '@/repositories/orders/orderRepository';
+import {
+  normalizeCheckoutRpcItems,
+  normalizeStoreSlugForCheckout,
+} from '@/lib/checkout/checkoutContract';
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+function mapOrderFailureReason(errorText: string): import('@/lib/monitoring/instrumentation').OrderFailureReason {
+  const lower = errorText.toLowerCase();
+  if (/stock|inventory|out_of_stock|quantity|نفد/.test(lower)) return 'stock';
+  if (/timeout|network|transport|connection|rpc/.test(lower)) return 'transaction';
+  if (/duplicate|idempoten/.test(lower)) return 'duplicate';
+  if (/rate.?limit/.test(lower)) return 'rate_limit';
+  if (/valid|required|invalid/.test(lower)) return 'validation';
+  return 'unknown';
+}
 
-const inflightOrders = new Map<string, Promise<CreateOrderResult>>();
 
 export type CreateOrderResult = Order & { wasIdempotent?: boolean };
 
-/** @internal test helper */
 export const clearInflightOrdersForTests = (): void => {
   inflightOrders.clear();
 };
 
-const isRetryableOrderError = (message: string): boolean => {
-  const lower = message.toLowerCase();
-  if (
-    lower.includes('insufficient stock') ||
-    lower.includes('stock_deduction_failed') ||
-    lower.includes('total_amount_mismatch') ||
-    lower.includes('rate_limited') ||
-    message.includes('غير متوفر') ||
-    message.includes('مخزون')
-  ) {
-    return false;
-  }
-  return (
-    lower.includes('timeout') ||
-    lower.includes('lock') ||
-    lower.includes('could not be processed') ||
-    lower.includes('connection') ||
-    lower.includes('fetch') ||
-    lower.includes('network') ||
-    lower.includes('aborted') ||
-    lower.includes('econnreset') ||
-    lower.includes('socket') ||
-    lower.includes('temporarily unavailable')
-  );
-};
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const inflightOrders = new Map<string, Promise<CreateOrderResult>>();
 
 const buildRecoveredOrderResult = (
   order: Order,
@@ -72,21 +70,6 @@ const buildRecoveredOrderResult = (
   total: recovered.totalAmount,
   wasIdempotent: true,
 });
-
-import { findProductColorOption } from '@/utils/orderItemDisplayUtils';
-
-const normalizeOrderRpcItems = (items: CartItem[]) =>
-  items.map((item) => {
-    const colorOpt = findProductColorOption(item.product.colors, item.selectedColor);
-    return {
-      product_id: item.product.id,
-      quantity: item.quantity,
-      selected_size: item.selectedSize?.trim() || null,
-      selected_color: item.selectedColor?.trim() || null,
-      color_name: item.selectedColorName ?? colorOpt?.name ?? null,
-      color_image: item.selectedColorImage ?? colorOpt?.image ?? null,
-    };
-  });
 
 export const updateOrderStatus = async (
   orderId: string,
@@ -133,21 +116,29 @@ export const createOrder = async (
   if (existing) return existing;
 
   const promise = instrumentAsync('order.create', async () => {
+    const orderStarted = performance.now();
     try {
       enforceRateLimit(`checkout:${ownerId}`, RATE_LIMITS.checkout);
     } catch (err) {
       if (err instanceof RateLimitExceededError) {
+        void import('@/lib/monitoring/instrumentation').then(({ recordSecurityEvent, recordOrderOutcome }) => {
+          recordSecurityEvent('rate_limit', 'checkout');
+          recordOrderOutcome({ status: 'failure', reason: 'rate_limit' });
+        });
         throw new Error(formatRateLimitMessageAr(err.retryAfterMs));
       }
       throw err;
     }
 
-    const maxAttempts = 3;
-    const orderItems = normalizeOrderRpcItems(order.items);
+    const maxAttempts = getMaxAttempts('checkout_create');
+    const retryBudgetKey = checkoutRetryBudgetKey(ownerId, idempotencyKey);
+    const orderItems = normalizeCheckoutRpcItems(order.items);
+    const normalizedStoreSlug = normalizeStoreSlugForCheckout(storeSlug);
     let submitTotal = order.total;
     let lastError = 'Order creation failed';
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      touchCheckoutSubmitLock(ownerId);
       const { data, error } = await rpcCreateOrderWithStockDeduction({
         p_order_id: order.id,
         p_owner_id: ownerId,
@@ -161,7 +152,7 @@ export const createOrder = async (
         p_items: orderItems,
         p_payment_method: paymentMethod,
         p_coupon_code: couponCode || null,
-        p_store_slug: storeSlug?.trim().toLowerCase() || null,
+        p_store_slug: normalizedStoreSlug,
       });
 
       if (!error && data?.success) {
@@ -173,21 +164,23 @@ export const createOrder = async (
           metrics.increment('checkout.submit.idempotent');
         }
 
-        if (marketingAttribution && storeSlug?.trim() && !wasIdempotent) {
-          await rpcAttachOrderMarketingAttribution({
-            p_order_id: orderId,
-            p_store_slug: storeSlug.trim().toLowerCase(),
-            p_attribution: marketingAttribution,
+        if (marketingAttribution && normalizedStoreSlug && !wasIdempotent) {
+          void runBestEffortSideEffect('notifications', async () => {
+            await rpcAttachOrderMarketingAttribution({
+              p_order_id: orderId,
+              p_store_slug: normalizedStoreSlug,
+              p_attribution: marketingAttribution,
+            });
           });
         }
 
-        if (storeSlug?.trim() && !wasIdempotent) {
-          const metaCtx = typeof window !== 'undefined' ? getMetaBrowserContext(storeSlug) : { fbp: null, fbc: null, eventSourceUrl: null };
+        if (normalizedStoreSlug && !wasIdempotent) {
+          const metaCtx = typeof window !== 'undefined' ? getMetaBrowserContext(normalizedStoreSlug) : { fbp: null, fbc: null, eventSourceUrl: null };
           const purchaseLines = buildMetaPurchaseContents(
             order.items.map((item) => ({ productId: item.product.id, quantity: item.quantity }))
           );
           enqueueMetaConversion({
-            storeSlug: storeSlug.trim().toLowerCase(),
+            storeSlug: normalizedStoreSlug,
             orderId,
             eventId: purchaseEventId(orderId),
             value: Number(data.total_amount ?? order.total),
@@ -207,11 +200,17 @@ export const createOrder = async (
 
         logger.info('order.create.success', { orderId, ownerId, attempt, wasIdempotent });
         recordHealthEvent('order', true);
-        if (!wasIdempotent) {
-          void import('@/lib/monitoring/instrumentation').then(({ recordBusinessEvent }) => {
-            recordBusinessEvent('order_created');
+        void import('@/lib/monitoring/instrumentation').then(({ recordOrderOutcome, recordBusinessEvent }) => {
+          recordOrderOutcome({
+            status: 'success',
+            durationMs: performance.now() - orderStarted,
+            idempotent: wasIdempotent,
           });
+          if (!wasIdempotent) recordBusinessEvent('order_created');
+        });
+        if (!wasIdempotent) {
           flushOrderCache(ownerId);
+          // Stock-only product updates skip DB cache-version trigger — manual bump required.
           enqueueCacheInvalidation(ownerId, 'full', { bumpVersion: true });
         }
         return {
@@ -224,14 +223,25 @@ export const createOrder = async (
 
       if (error) {
         lastError = mapOrderRpcFailure({ error: error.message });
-        logger.warn('order.create.rpc_transport_error', { ownerId, attempt, error: error.message });
+        const classified = classifyError(error);
+        logger.warn('order.create.rpc_transport_error', {
+          ownerId,
+          attempt,
+          error: error.message,
+          errorCategory: classified.category,
+          retryable: classified.retryable,
+        });
 
-        if (attempt < maxAttempts && isRetryableOrderError(lastError)) {
-          await sleep(400 * attempt);
+        if (
+          attempt < maxAttempts &&
+          isRetryableCheckoutTransportError(lastError) &&
+          consumeRetryBudget(retryBudgetKey)
+        ) {
+          await sleep(computeRetryDelayMs('checkout_create', attempt));
           continue;
         }
 
-        const recovered = await tryRecoverCheckoutOrder(ownerId, storeSlug);
+        const recovered = await tryRecoverCheckoutOrder(ownerId, normalizedStoreSlug);
         if (recovered) {
           logger.info('order.create.recovered_after_transport_error', {
             orderId: recovered.orderId,
@@ -246,9 +256,10 @@ export const createOrder = async (
       }
 
       if (
-        data?.error === 'total_amount_mismatch' &&
+        isRetryableTotalCorrection(data) &&
         data?.expected_total != null &&
-        attempt < maxAttempts
+        attempt < maxAttempts &&
+        consumeRetryBudget(`${retryBudgetKey}:total`)
       ) {
         submitTotal = Number(data.expected_total);
         logger.warn('order.create.total_mismatch_retry', {
@@ -257,7 +268,7 @@ export const createOrder = async (
           expectedTotal: submitTotal,
           receivedTotal: order.total,
         });
-        await sleep(200);
+        await sleep(computeRetryDelayMs('checkout_total_correction', attempt));
         continue;
       }
 
@@ -272,12 +283,23 @@ export const createOrder = async (
         receivedTotal: order.total,
       });
 
-      if (attempt < maxAttempts && isRetryableOrderError(lastError)) {
-        await sleep(400 * attempt);
+      if (
+        attempt < maxAttempts &&
+        isRetryableCheckoutTransportError(lastError) &&
+        consumeRetryBudget(retryBudgetKey)
+      ) {
+        await sleep(computeRetryDelayMs('checkout_create', attempt));
         continue;
       }
 
       recordHealthEvent('order', false, { message: lastError });
+      void import('@/lib/monitoring/instrumentation').then(({ recordOrderOutcome }) => {
+        recordOrderOutcome({
+          status: 'failure',
+          durationMs: performance.now() - orderStarted,
+          reason: mapOrderFailureReason(lastError),
+        });
+      });
       throw new Error(lastError);
     }
 
@@ -289,6 +311,13 @@ export const createOrder = async (
     }
 
     recordHealthEvent('order', false, { message: lastError });
+    void import('@/lib/monitoring/instrumentation').then(({ recordOrderOutcome }) => {
+      recordOrderOutcome({
+        status: 'failure',
+        durationMs: performance.now() - orderStarted,
+        reason: mapOrderFailureReason(lastError),
+      });
+    });
     throw new Error(lastError);
   }, { ownerId, paymentMethod, itemCount: order.items.length });
 

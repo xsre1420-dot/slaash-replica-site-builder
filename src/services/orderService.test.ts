@@ -1,10 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mapOrderError, mapOrderRpcFailure } from '@/utils/orderErrors';
+import { CHECKOUT_CREATE_RPC } from '@/lib/checkout/checkoutContract';
 
-const mockRpc = vi.fn();
+const mockCreateOrderRpc = vi.fn();
+const mockRecoverOrderRpc = vi.fn();
 
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: { rpc: (...args: unknown[]) => mockRpc(...args) },
+vi.mock('@/repositories/orders/orderRepository', () => ({
+  rpcCreateOrderWithStockDeduction: (...args: unknown[]) => mockCreateOrderRpc(...args),
+  rpcRecoverOrderByIdempotencyKey: (...args: unknown[]) => mockRecoverOrderRpc(...args),
+  rpcUpdateMerchantOrderStatus: vi.fn(),
+  rpcAttachOrderMarketingAttribution: vi.fn(),
 }));
 
 vi.mock('@/lib/security/rateLimiter', () => ({
@@ -27,6 +32,7 @@ vi.mock('@/lib/observability', () => ({
 
 vi.mock('@/utils/checkoutSession', () => ({
   getOrCreateIdempotencyKey: () => 'test-key',
+  touchCheckoutSubmitLock: vi.fn(),
   clearCheckoutIdempotencyKey: vi.fn(),
 }));
 
@@ -37,11 +43,6 @@ vi.mock('@/services/checkoutRecoveryService', () => ({
 vi.mock('@/background/enqueue', () => ({
   enqueueCacheInvalidation: vi.fn(),
   enqueueMetaConversion: vi.fn(),
-}));
-
-vi.mock('@/services/storefrontProductService', () => ({
-  invalidateStorefrontForOwner: vi.fn().mockResolvedValue(undefined),
-  invalidateStorefrontScope: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@/lib/cache', async (importOriginal) => {
@@ -67,33 +68,37 @@ const sampleOrder: Order = {
 
 describe('orderService integration', () => {
   beforeEach(() => {
-    mockRpc.mockReset();
+    mockCreateOrderRpc.mockReset();
+    mockRecoverOrderRpc.mockReset();
     clearInflightOrdersForTests();
     vi.mocked(tryRecoverCheckoutOrder).mockResolvedValue(null);
   });
 
   it('creates order via RPC on success', async () => {
-    mockRpc.mockResolvedValue({
+    mockCreateOrderRpc.mockResolvedValue({
       data: { success: true, order_id: 'order-1', total_amount: 1000 },
       error: null,
     });
 
     const result = await createOrder(sampleOrder, 'owner-1');
     expect(result.id).toBe('order-1');
-    expect(mockRpc).toHaveBeenCalledWith(
-      'create_order_with_stock_deduction',
-      expect.objectContaining({ p_owner_id: 'owner-1', p_store_slug: null })
+    expect(mockCreateOrderRpc).toHaveBeenCalledWith(
+      expect.objectContaining({
+        p_owner_id: 'owner-1',
+        p_store_slug: null,
+        p_idempotency_key: 'test-key',
+      })
     );
   });
 
   it('throws mapped error on RPC failure', async () => {
-    mockRpc.mockResolvedValue({ data: { success: false, error: 'insufficient stock' }, error: null });
+    mockCreateOrderRpc.mockResolvedValue({ data: { success: false, error: 'insufficient stock' }, error: null });
 
     await expect(createOrder(sampleOrder, 'owner-1')).rejects.toThrow(mapOrderError('insufficient stock'));
   });
 
   it('includes product name in insufficient stock errors', async () => {
-    mockRpc.mockResolvedValue({
+    mockCreateOrderRpc.mockResolvedValue({
       data: {
         success: false,
         error: 'insufficient stock',
@@ -114,7 +119,7 @@ describe('orderService integration', () => {
   });
 
   it('retries once when server reports total_amount_mismatch', async () => {
-    mockRpc
+    mockCreateOrderRpc
       .mockResolvedValueOnce({
         data: { success: false, error: 'total_amount_mismatch', expected_total: 1200 },
         error: null,
@@ -126,12 +131,12 @@ describe('orderService integration', () => {
 
     const result = await createOrder(sampleOrder, 'owner-1');
     expect(result.total).toBe(1200);
-    expect(mockRpc).toHaveBeenCalledTimes(2);
-    expect(mockRpc.mock.calls[1][1].p_total_amount).toBe(1200);
+    expect(mockCreateOrderRpc).toHaveBeenCalledTimes(2);
+    expect(mockCreateOrderRpc.mock.calls[1][0].p_total_amount).toBe(1200);
   });
 
   it('returns existing order on idempotent RPC response', async () => {
-    mockRpc.mockResolvedValue({
+    mockCreateOrderRpc.mockResolvedValue({
       data: {
         success: true,
         order_id: 'existing-order',
@@ -143,7 +148,7 @@ describe('orderService integration', () => {
 
     const result = await createOrder(sampleOrder, 'owner-1');
     expect(result.id).toBe('existing-order');
-    expect(mockRpc).toHaveBeenCalledTimes(1);
+    expect(mockCreateOrderRpc).toHaveBeenCalledTimes(1);
   });
 
   it('deduplicates concurrent createOrder calls', async () => {
@@ -151,7 +156,7 @@ describe('orderService integration', () => {
     const rpcPromise = new Promise((resolve) => {
       resolveRpc = resolve;
     });
-    mockRpc.mockReturnValue(rpcPromise);
+    mockCreateOrderRpc.mockReturnValue(rpcPromise);
 
     const p1 = createOrder(sampleOrder, 'owner-1');
     const p2 = createOrder(sampleOrder, 'owner-1');
@@ -164,11 +169,11 @@ describe('orderService integration', () => {
     const [r1, r2] = await Promise.all([p1, p2]);
     expect(r1.id).toBe('order-1');
     expect(r2.id).toBe('order-1');
-    expect(mockRpc).toHaveBeenCalledTimes(1);
+    expect(mockCreateOrderRpc).toHaveBeenCalledTimes(1);
   });
 
   it('recovers order after transport error when server already created it', async () => {
-    mockRpc.mockResolvedValue({ data: null, error: { message: 'Failed to fetch' } });
+    mockCreateOrderRpc.mockResolvedValue({ data: null, error: { message: 'Failed to fetch' } });
     vi.mocked(tryRecoverCheckoutOrder).mockResolvedValue({
       orderId: 'recovered-order',
       totalAmount: 1000,
@@ -179,5 +184,9 @@ describe('orderService integration', () => {
     expect(result.id).toBe('recovered-order');
     expect(result.wasIdempotent).toBe(true);
     expect(tryRecoverCheckoutOrder).toHaveBeenCalledWith('owner-1', 'demo-store');
+  });
+
+  it('uses canonical checkout RPC contract constant', () => {
+    expect(CHECKOUT_CREATE_RPC).toBe('create_order_with_stock_deduction');
   });
 });

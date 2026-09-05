@@ -91,16 +91,14 @@
       "version": "20260902000005",
       "file": "20260902000005_checkout_concurrency_phase_3_6.sql",
       "wave": "phase-3.6-checkout",
-      "deployAfter": ["20260902000004"],
-      "requiresApproval": true,
-      "schemaProbes": [],
-      "notes": "Checkout concurrency hardening. Requires explicit ops approval before deploy."
+      "supersededBy": "20260906000002_checkout_production_alignment.sql",
+      "notes": "Superseded — core snapshot-lock path shipped in 20260906000002 without benchmark RPCs."
     },
     {
       "version": "20260902000006",
       "file": "20260902000006_connection_pool_phase_4.sql",
       "wave": "phase-4-connection-pool",
-      "deployAfter": ["20260902000005"],
+      "deployAfter": ["20260906000002"],
       "schemaProbes": [],
       "notes": "Connection pool observability and routing metadata."
     },
@@ -192,7 +190,6 @@
       "phase-3.4-dashboard",
       "phase-3.5-inventory",
       "phase-3.6-checkout",
-      "phase-4-connection-pool",
       "phase-6-reliability",
       "phase-7-tenant-isolation",
       "phase-8-backup",

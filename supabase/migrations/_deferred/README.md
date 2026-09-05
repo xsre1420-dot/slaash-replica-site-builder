@@ -4,6 +4,12 @@ Migrations in this directory are **intentionally excluded** from the active
 `supabase/migrations/` set. Supabase CLI ignores subdirectories, so these files
 are never picked up by a blind `supabase db push`.
 
+## Superseded
+
+- `20260902000005_checkout_concurrency_phase_3_6.sql` — **superseded** by
+  `20260906000002_checkout_production_alignment.sql` (snapshot-lock checkout path
+  without benchmark RPCs). Do not deploy this file directly.
+
 ## Why
 
 Production uses **selective/wave deployments**. Several migrations were skipped
