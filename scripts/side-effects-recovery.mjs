@@ -75,9 +75,10 @@ function cliQuery(sql) {
 async function snapshot(label) {
   const sql = `
     SELECT
-      (SELECT count(*)::int FROM public.order_side_effects_outbox WHERE processed_at IS NULL) AS pending,
+      (SELECT count(*)::int FROM public.order_side_effects_outbox WHERE processed_at IS NULL AND dead_letter_at IS NULL) AS pending,
       (SELECT count(*)::int FROM public.order_side_effects_outbox WHERE processed_at IS NOT NULL) AS processed,
-      (SELECT count(*)::int FROM public.order_side_effects_outbox WHERE last_error IS NOT NULL AND trim(last_error) <> '') AS with_errors,
+      (SELECT count(*)::int FROM public.order_side_effects_outbox WHERE dead_letter_at IS NOT NULL) AS dead_letter,
+      (SELECT count(*)::int FROM public.order_side_effects_outbox WHERE last_error IS NOT NULL AND trim(last_error) <> '' AND dead_letter_at IS NULL) AS with_errors,
       (SELECT count(*)::int FROM public.order_webhook_outbox WHERE status = 'pending') AS webhook_pending
   `;
 
@@ -92,10 +93,12 @@ async function snapshot(label) {
   const row = health
     ? {
         pending: health.pending,
+        dead_letter: health.dead_letter,
         processed_last_60s: health.processed_last_60s,
         errors: health.errors,
         oldest_minutes: health.oldest_minutes,
         last_worker_success_at: health.last_worker_success_at,
+        worker_stale_minutes: health.worker_stale_minutes,
       }
     : {};
   console.log(`[${label}]`, row);
@@ -108,17 +111,21 @@ async function classifyBacklog() {
       count(*)::int AS total,
       count(*) FILTER (WHERE EXISTS (SELECT 1 FROM public.shipments s WHERE s.order_id = o.order_id))::int AS already_has_shipment,
       count(*) FILTER (WHERE EXISTS (SELECT 1 FROM public.order_webhook_outbox w WHERE w.order_id = o.order_id AND w.event_type = 'order.created'))::int AS already_has_webhook,
-      count(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM public.orders ord WHERE ord.id = o.order_id))::int AS orphaned
+      count(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM public.orders ord WHERE ord.id = o.order_id))::int AS orphaned,
+      count(*) FILTER (WHERE o.dead_letter_at IS NOT NULL)::int AS dead_letter
     FROM public.order_side_effects_outbox o
     WHERE o.processed_at IS NULL
   `;
 
   if (useCli || !serviceKey) {
-    return cliQuery(sql).rows?.[0] ?? {};
+    try {
+      return cliQuery(sql).rows?.[0] ?? {};
+    } catch {
+      return {};
+    }
   }
 
-  // No dedicated RPC — use CLI fallback message
-  console.warn('Classification requires --use-cli or extend with service role + raw SQL');
+  console.warn('Classification requires --use-cli when side_effects_outbox_backlog_health lacks detail');
   return {};
 }
 
@@ -140,9 +147,10 @@ async function invokeEdgeWorker(limit) {
 
 async function main() {
   console.log('Side effects recovery — Phase 0.3');
-  console.log({ dryRun, batchSize, maxBatches, useCli, invokeEdge });
+  const effectiveUseCli = useCli || !serviceKey;
+  console.log({ dryRun, batchSize, maxBatches, useCli: effectiveUseCli, invokeEdge });
 
-  const classification = await classifyBacklog();
+  const classification = await classifyBacklog().catch(() => ({}));
   if (Object.keys(classification).length) {
     console.log('[classification]', classification);
     if (classification.orphaned > 0) {
