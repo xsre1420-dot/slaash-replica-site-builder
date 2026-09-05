@@ -58,7 +58,10 @@ const CANONICAL = {
     'retry_analytics_dead_letter',
     'retry_side_effects_dead_letter',
     'recover_stale_import_jobs',
-    'get_background_jobs_status',
+    'platform_worker_health_audit',
+    'record_platform_worker_heartbeat',
+    'process_analytics_event_buffer_cron_fallback',
+    'process_order_side_effects_batch_cron_fallback',
     'get_merchant_inventory_page_bundle',
   ],
   obsolete: [

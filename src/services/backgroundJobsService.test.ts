@@ -18,6 +18,7 @@ vi.mock('@/lib/tenantGuard', () => ({
 import {
   fetchBackgroundJobsStatus,
   fetchQueueHealthAudit,
+  fetchWorkerHealthAudit,
   retryFailedWebhookEvents,
   retrySideEffectsDeadLetter,
 } from './backgroundJobsService';
@@ -44,6 +45,7 @@ describe('backgroundJobsService', () => {
           processing: 1,
           failed_dead_letter: 2,
           oldest_pending_seconds: 45,
+          worker_stale: false,
           processor: 'claim_order_webhook_outbox_batch + edge worker',
         },
         order_side_effects: {
@@ -52,6 +54,12 @@ describe('backgroundJobsService', () => {
           dead_letter: 1,
           worker_stale: false,
           processor: 'process_order_side_effects_batch',
+        },
+        workers: {
+          bundle_stale: true,
+          webhook_worker_stale: false,
+          primary: 'process-background-queue + process-order-webhook-outbox',
+          fallback: 'pg_cron conditional fallbacks',
         },
         recommendations: ['run process_analytics_event_buffer'],
       },
@@ -65,6 +73,7 @@ describe('backgroundJobsService', () => {
     expect(status?.analytics.workerStale).toBe(true);
     expect(status?.orderWebhooks.failedDeadLetter).toBe(2);
     expect(status?.orderSideEffects?.deadLetter).toBe(1);
+    expect(status?.workers?.bundleStale).toBe(true);
     expect(status?.recommendations).toContain('run process_analytics_event_buffer');
   });
 
@@ -88,21 +97,22 @@ describe('backgroundJobsService', () => {
     });
   });
 
-  it('maps platform_queue_health_audit payload', async () => {
+  it('maps platform_worker_health_audit payload', async () => {
     mockCallReadRpc.mockResolvedValue({
       data: {
-        critical: false,
-        analytics: { pending: 0 },
-        side_effects: { pending: 0 },
-        webhooks: { pending: 0 },
-        import_jobs: { stuck_processing: 0 },
+        overall: 'ok',
+        stale_workers: 0,
+        workers: [{ worker_id: 'process_background_worker_bundle', stale: false }],
+        pg_cron_jobs: [{ jobname: 'worker-health-check', active: true }],
+        queue_health: { critical: false },
         recommendations: [],
       },
       error: null,
     });
 
-    const audit = await fetchQueueHealthAudit();
-    expect(audit?.critical).toBe(false);
-    expect(mockCallReadRpc).toHaveBeenCalledWith('platform_queue_health_audit');
+    const audit = await fetchWorkerHealthAudit();
+    expect(audit?.overall).toBe('ok');
+    expect(audit?.workers).toHaveLength(1);
+    expect(mockCallReadRpc).toHaveBeenCalledWith('platform_worker_health_audit');
   });
 });

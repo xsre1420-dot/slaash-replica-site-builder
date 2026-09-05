@@ -20,6 +20,7 @@ export type BackgroundJobsStatus = {
     processing: number;
     failedDeadLetter: number;
     oldestPendingSeconds: number;
+    workerStale?: boolean;
     processor: string;
   };
   orderSideEffects?: {
@@ -31,6 +32,12 @@ export type BackgroundJobsStatus = {
   };
   recommendations: string[];
   client?: ClientBackgroundStatus;
+  workers?: {
+    bundleStale?: boolean;
+    webhookWorkerStale?: boolean;
+    primary?: string;
+    fallback?: string;
+  };
 };
 
 export type QueueHealthAudit = {
@@ -39,6 +46,15 @@ export type QueueHealthAudit = {
   sideEffects: Record<string, unknown>;
   webhooks: Record<string, unknown>;
   importJobs: Record<string, unknown>;
+  recommendations: string[];
+};
+
+export type WorkerHealthAudit = {
+  overall: 'ok' | 'degraded' | 'critical';
+  staleWorkers: number;
+  workers: Array<Record<string, unknown>>;
+  pgCronJobs: Array<Record<string, unknown>>;
+  queueHealth: Record<string, unknown>;
   recommendations: string[];
 };
 
@@ -79,6 +95,7 @@ export const fetchBackgroundJobsStatus = async (): Promise<BackgroundJobsStatus 
       processing: Number(payload.order_webhooks?.processing ?? 0),
       failedDeadLetter: Number(payload.order_webhooks?.failed_dead_letter ?? 0),
       oldestPendingSeconds: Number(payload.order_webhooks?.oldest_pending_seconds ?? 0),
+      workerStale: Boolean(payload.order_webhooks?.worker_stale),
       processor: String(
         payload.order_webhooks?.processor ?? 'claim_order_webhook_outbox_batch'
       ),
@@ -95,6 +112,14 @@ export const fetchBackgroundJobsStatus = async (): Promise<BackgroundJobsStatus 
         }
       : undefined,
     recommendations,
+    workers: payload.workers
+      ? {
+          bundleStale: Boolean((payload.workers as Record<string, unknown>).bundle_stale),
+          webhookWorkerStale: Boolean((payload.workers as Record<string, unknown>).webhook_worker_stale),
+          primary: String((payload.workers as Record<string, unknown>).primary ?? ''),
+          fallback: String((payload.workers as Record<string, unknown>).fallback ?? ''),
+        }
+      : undefined,
   };
 };
 
@@ -122,6 +147,29 @@ export const retrySideEffectsDeadLetter = async (
   const payload = data as { success?: boolean; reset?: number };
   if (error || !payload?.success) return null;
   return { reset: payload.reset ?? 0 };
+};
+
+/** Service-role worker audit — null for merchant sessions. */
+export const fetchWorkerHealthAudit = async (): Promise<WorkerHealthAudit | null> => {
+  const { data, error } = await callReadRpc<Record<string, unknown>>('platform_worker_health_audit');
+  if (error || !data) return null;
+
+  const recs = data.recommendations;
+  const workers = data.workers;
+  const cronJobs = data.pg_cron_jobs;
+
+  return {
+    overall: (data.overall as WorkerHealthAudit['overall']) ?? 'ok',
+    staleWorkers: Number(data.stale_workers ?? 0),
+    workers: Array.isArray(workers)
+      ? workers.filter((w): w is Record<string, unknown> => typeof w === 'object' && w !== null)
+      : [],
+    pgCronJobs: Array.isArray(cronJobs)
+      ? cronJobs.filter((j): j is Record<string, unknown> => typeof j === 'object' && j !== null)
+      : [],
+    queueHealth: (data.queue_health as Record<string, unknown>) ?? {},
+    recommendations: Array.isArray(recs) ? recs.filter((r): r is string => typeof r === 'string') : [],
+  };
 };
 
 /** Service-role queue audit — null for merchant sessions. */

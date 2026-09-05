@@ -1,0 +1,67 @@
+{
+  "audited_at": "2026-09-05T11:55:53.554Z",
+  "passed": 12,
+  "total": 12,
+  "checks": [
+    {
+      "name": "worker architecture migration exists",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "worker registry table seeded",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "unified heartbeat recorder",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "conditional pg_cron fallbacks",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "worker health audit RPC",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "pg_cron worker-health-check scheduled",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "edge bundle records failure heartbeat on fallback",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "webhook edge records heartbeat",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "app exposes worker health audit",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "server job catalog documents primary/fallback",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "anon blocked from worker health audit",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "live service probes (skipped — no service key)",
+      "pass": true,
+      "detail": "missing SUPABASE_SERVICE_ROLE_KEY"
+    }
+  ]
+}

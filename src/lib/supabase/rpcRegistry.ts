@@ -186,6 +186,20 @@ export const OPTIONAL_RPCS: RpcDefinition[] = [
     notes: 'Unified outbox worker-stale + DLQ audit',
   },
   {
+    name: 'platform_worker_health_audit',
+    domain: 'background',
+    status: 'service_role',
+    migration: '20260906000007',
+    notes: 'Full worker registry + pg_cron schedule audit',
+  },
+  {
+    name: 'record_platform_worker_heartbeat',
+    domain: 'background',
+    status: 'service_role',
+    migration: '20260906000007',
+    notes: 'Unified heartbeat recorder for edge + DB workers',
+  },
+  {
     name: 'retry_analytics_dead_letter',
     domain: 'background',
     status: 'service_role',

@@ -9,7 +9,7 @@ import {
   recordSecurityEvent,
   recordSideEffectsQueue,
 } from './instrumentation';
-import { hasMonitoringAuditRpc } from '@/lib/supabase/schemaCapabilities';
+import { hasMonitoringAuditRpc, hasWorkerHealthAuditRpc } from '@/lib/supabase/schemaCapabilities';
 
 export type ServerMonitoringAudit = {
   database?: {
@@ -63,10 +63,24 @@ export async function probeSideEffectsBacklogHealth(): Promise<SideEffectsBacklo
   return data;
 }
 
+export type WorkerHealthAuditSummary = {
+  overall?: string;
+  stale_workers?: number;
+  workers?: Array<{ worker_id?: string; stale?: boolean; minutes_since_success?: number | null }>;
+};
+
+export async function probeWorkerHealthAudit(): Promise<WorkerHealthAuditSummary | null> {
+  if (!(await hasWorkerHealthAuditRpc())) return null;
+  const { data, error } = await callReadRpc<WorkerHealthAuditSummary>('platform_worker_health_audit');
+  if (error || !data) return null;
+  return data;
+}
+
 export async function syncServerMonitoringMetrics(): Promise<boolean> {
   const audit = await probeServerMonitoringMetrics();
   const sideEffects = await probeSideEffectsBacklogHealth();
-  if (!audit && !sideEffects) return false;
+  const workerHealth = await probeWorkerHealthAudit();
+  if (!audit && !sideEffects && !workerHealth) return false;
 
   if (audit) {
     const saturation = audit.database?.connection_saturation;
@@ -100,6 +114,13 @@ export async function syncServerMonitoringMetrics(): Promise<boolean> {
       deadLetter: Number(sideEffects.dead_letter ?? 0),
       processedLast60s: Number(sideEffects.processed_last_60s ?? 0),
     });
+  }
+
+  if (workerHealth) {
+    const stale = Number(workerHealth.stale_workers ?? 0);
+    if (stale > 0 || workerHealth.overall === 'critical') {
+      recordSecurityEvent('worker_stale', 'platform_worker_health_audit');
+    }
   }
 
   return true;

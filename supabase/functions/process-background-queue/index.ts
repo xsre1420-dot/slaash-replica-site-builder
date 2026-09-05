@@ -48,6 +48,13 @@ Deno.serve(async (req) => {
 
       const { data: lifecycle } = await supabase.rpc('platform_run_data_lifecycle');
       results.lifecycle = lifecycle;
+
+      await supabase.rpc('record_platform_worker_heartbeat', {
+        p_worker_id: 'process_background_worker_bundle',
+        p_success: false,
+        p_result: { fallback: true, bundle_error: error?.message ?? data?.error, ...results },
+        p_error: error?.message ?? String(data?.error ?? 'bundle_failed'),
+      });
     } else {
       results.side_effects = data?.side_effects;
       results.analytics = data?.analytics;

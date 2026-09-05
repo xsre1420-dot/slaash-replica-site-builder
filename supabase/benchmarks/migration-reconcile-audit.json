@@ -1,23 +1,19 @@
 {
-  "generatedAt": "2026-09-05T11:48:09.880Z",
-  "activeMigrationCount": 224,
+  "generatedAt": "2026-09-05T11:55:22.328Z",
+  "activeMigrationCount": 225,
   "deferredMigrationCount": 14,
   "blockedMigrationCount": 1,
   "localOnly": [
-    "20260906000006"
+    "20260906000007"
   ],
   "allowedLocalOnly": [
-    "20260906000006"
+    "20260906000007"
   ],
   "remoteOnly": [],
   "unexpectedLocalOnly": [],
   "issues": [],
   "warnings": [],
   "manifestHead": [
-    {
-      "local": "20260906000001",
-      "remote": "20260906000001"
-    },
     {
       "local": "20260906000002",
       "remote": "20260906000002"
@@ -33,6 +29,10 @@
     {
       "local": "20260906000005",
       "remote": "20260906000005"
+    },
+    {
+      "local": "20260906000006",
+      "remote": "20260906000006"
     }
   ]
 }

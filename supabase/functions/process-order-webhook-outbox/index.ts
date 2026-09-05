@@ -74,6 +74,12 @@ Deno.serve(async (req) => {
 
     if (claimError) {
       logStructured('error', 'webhook-outbox.claim_failed', { message: claimError.message });
+      await supabase.rpc('record_platform_worker_heartbeat', {
+        p_worker_id: 'process-order-webhook-outbox',
+        p_success: false,
+        p_result: { claimed: 0 },
+        p_error: claimError.message ?? 'claim_failed',
+      });
       return new Response(JSON.stringify({ success: false, error: claimError.message }), {
         status: 500,
         headers: jsonHeaders(),
@@ -157,6 +163,13 @@ Deno.serve(async (req) => {
       failed,
       retried,
     };
+
+    await supabase.rpc('record_platform_worker_heartbeat', {
+      p_worker_id: 'process-order-webhook-outbox',
+      p_success: true,
+      p_result: summary,
+      p_error: null,
+    });
 
     logStructured('info', 'webhook-outbox.batch_complete', summary);
 
