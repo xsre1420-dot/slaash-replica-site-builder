@@ -221,11 +221,11 @@ export const OPTIONAL_RPCS: RpcDefinition[] = [
     notes: 'Resets import_jobs stuck in processing',
   },
   {
-    name: 'get_background_jobs_status',
+    name: 'platform_scaling_pressure_audit',
     domain: 'background',
     status: 'service_role',
-    migration: '20260906000006',
-    notes: 'Ops dashboard — pending/DLQ/worker stale per queue',
+    migration: '20260906000008',
+    notes: 'Connection pool + queue + worker pressure snapshot',
   },
   {
     name: 'platform_monitoring_observability_audit',

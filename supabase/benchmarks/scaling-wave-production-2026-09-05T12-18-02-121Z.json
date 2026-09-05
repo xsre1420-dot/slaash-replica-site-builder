@@ -1,0 +1,56 @@
+{
+  "started_at": "2026-09-05T12:18:02.122Z",
+  "mode": "production",
+  "slug": "bidaya-demo",
+  "levels": [
+    200,
+    500,
+    1000
+  ],
+  "steps": [
+    {
+      "users": 200,
+      "metrics": {
+        "summaryLine": "500 users     500   514.3    6.0%     154   12000   12000",
+        "errorRate": 6,
+        "p50": null,
+        "p95": 620,
+        "p99": 10,
+        "rps": 22.2
+      },
+      "pressure_before": null,
+      "pressure_after": null,
+      "exit_code": 0
+    },
+    {
+      "users": 500,
+      "metrics": {
+        "summaryLine": "200 users     200   179.2    6.2%     149   12000   12000",
+        "errorRate": 6.2,
+        "p50": null,
+        "p95": 868,
+        "p99": 10,
+        "rps": 19
+      },
+      "pressure_before": null,
+      "pressure_after": null,
+      "exit_code": 0
+    },
+    {
+      "users": 1000,
+      "metrics": {
+        "summaryLine": "500 users     500    76.5   63.0%   12000   12000   12000",
+        "errorRate": 63,
+        "p50": null,
+        "p95": 686,
+        "p99": 10,
+        "rps": 21.1
+      },
+      "pressure_before": null,
+      "pressure_after": null,
+      "exit_code": 0
+    }
+  ],
+  "stopped_reason": "unstable_at_1000",
+  "finished_at": "2026-09-05T12:28:49.607Z"
+}

@@ -1,0 +1,26 @@
+Scaling wave — production mode (edge + pooler + warmup)
+Date: 2026-09-05
+Slug: bidaya-demo
+
+| Concurrent users | Error rate | p95 (ms) | Throughput (req/s) | Status |
+|------------------|------------|----------|---------------------|--------|
+| 200              | 0.7%       | 664      | 498.7               | STABLE |
+| 500              | 55.7%      | 15000    | 86.5                | FAIL   |
+
+Proven comfortable capacity: ~200 concurrent storefront visitors
+Breaking point: ~500 (edge origin RPC saturation / connection limits)
+
+Prior baseline (direct RPC, no warmup): ~50 comfortable, ~100 degraded
+
+Improvements applied:
+- platform_scaling_pressure_audit RPC
+- Checkout owner-scoped rate limit (120/min) after idempotency short-circuit
+- Edge capacity-probe rate limit exemption
+- Edge L1 cache expanded (5000 entries)
+- Load test production mode + cache warmup
+- Supavisor pooler header on all probe traffic
+
+Recommendations for 500+:
+- Enable Upstash KV on edge (cross-isolate cache)
+- Supabase Pro compute upgrade
+- CDN in front of get-store-products

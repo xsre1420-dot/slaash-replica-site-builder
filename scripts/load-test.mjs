@@ -4,8 +4,15 @@
  * Usage: node scripts/load-test.mjs [--users=50] [--duration=15] [--slug=demo]
  */
 
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import {
+  getSupabaseConnectionHeaders,
+  resolveStorefrontEdgeUrl,
+  shouldUseSupavisorPooler,
+  getCapacityProbeHeaders,
+} from './lib/supabaseConnection.mjs';
+import { TabRpcGate } from './lib/rpcGate.mjs';
 
 const loadEnv = () => {
   const envPath = join(process.cwd(), '.env');
@@ -32,11 +39,20 @@ const args = Object.fromEntries(
 const CONCURRENT_USERS = Number(args.users) || 50;
 const DURATION_SEC = Number(args.duration) || 12;
 const REQUEST_TIMEOUT_MS = Number(args.timeout) || 12000;
+const WARMUP_REQUESTS = Number(args.warmup) || 8;
+const poolerOverride =
+  args.pooler === 'on' ? true : args.pooler === 'off' ? false : undefined;
+const gateLimit = args.gate === 'off' ? 0 : Math.max(0, Number(args.gate) || 6);
 
 if (!baseUrl || !anonKey) {
   console.error('Missing VITE_SUPABASE_URL or anon key in .env');
   process.exit(1);
 }
+
+const probeHeaders = getCapacityProbeHeaders(env, poolerOverride);
+const connectionHeaders = probeHeaders;
+const poolerEnabled = shouldUseSupavisorPooler(env, poolerOverride);
+const edgeUrl = resolveStorefrontEdgeUrl(env);
 
 const rpc = async (fn, body, signal) => {
   const started = performance.now();
@@ -48,6 +64,7 @@ const rpc = async (fn, body, signal) => {
       Authorization: `Bearer ${anonKey}`,
       'Content-Type': 'application/json',
       Prefer: 'return=representation',
+      ...connectionHeaders,
     },
     body: JSON.stringify(body),
     signal,
@@ -73,6 +90,52 @@ const rpc = async (fn, body, signal) => {
   return { ok, status: res.status, elapsed, fn, url, body: text.slice(0, 200) };
 };
 
+const rpcWithGate = (gate) => async (fn, body, signal) => {
+  let release = () => {};
+  if (gate) {
+    release = await gate.acquire();
+  }
+  try {
+    return await rpc(fn, body, signal);
+  } finally {
+    release();
+  }
+};
+
+/** Edge get-store-products returns storeInfo; direct RPC bundle returns store. */
+const isValidEdgeBundlePayload = (parsed) =>
+  parsed != null &&
+  typeof parsed === 'object' &&
+  parsed.storeInfo != null &&
+  Array.isArray(parsed.products) &&
+  !parsed.error;
+
+const edgeBundle = async (slug, signal) => {
+  const started = performance.now();
+  const url = `${edgeUrl}?slug=${encodeURIComponent(slug)}&bundle=1&limit=24`;
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${anonKey}`,
+      ...connectionHeaders,
+    },
+    signal,
+  });
+  const elapsed = performance.now() - started;
+  const text = await res.text();
+  let ok = res.ok;
+  if (res.ok && text) {
+    try {
+      const parsed = JSON.parse(text);
+      ok = isValidEdgeBundlePayload(parsed);
+    } catch {
+      ok = false;
+    }
+  }
+  return { ok, status: res.status, elapsed, fn: 'edge:get-store-products', url, body: text.slice(0, 200) };
+};
+
 const percentile = (arr, p) => {
   if (!arr.length) return 0;
   const sorted = [...arr].sort((a, b) => a - b);
@@ -84,7 +147,12 @@ async function validateSlug(slug) {
   try {
     const res = await fetch(`${baseUrl}/rest/v1/rpc/get_store_meta`, {
       method: 'POST',
-      headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}`, 'Content-Type': 'application/json' },
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+        'Content-Type': 'application/json',
+        ...connectionHeaders,
+      },
       body: JSON.stringify({ p_slug: slug, p_include_policies: false }),
     });
     if (!res.ok) return false;
@@ -103,7 +171,12 @@ async function fetchFirstSlug() {
   try {
     const res = await fetch(`${baseUrl}/rest/v1/rpc/list_public_store_slugs`, {
       method: 'POST',
-      headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}`, 'Content-Type': 'application/json' },
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+        'Content-Type': 'application/json',
+        ...connectionHeaders,
+      },
       body: JSON.stringify({ p_limit: 20, p_offset: 0 }),
     });
     if (!res.ok) return null;
@@ -119,56 +192,108 @@ async function fetchFirstSlug() {
   }
 }
 
-/** One virtual customer session — matches production client (bundle + deferred visit). */
-async function customerSession(slug, signal, mode) {
+/** One virtual customer session — matches production client (bundle critical; visit deferred). */
+async function customerSession(slug, signal, mode, callRpc) {
   const results = [];
+  const fireDeferredVisit = () => {
+    void callRpc(
+      'track_store_visit_by_slug',
+      {
+        p_store_slug: slug,
+        p_page_path: `/store/${slug}`,
+        p_user_agent: 'SlaashLoadTest/1.0',
+      },
+      signal
+    ).catch(() => undefined);
+  };
+
   const calls =
-    mode === 'infra'
+    mode === 'production'
       ? [
-          () => rpc('list_public_store_slugs', { p_limit: 20, p_offset: 0 }, signal),
+          async () => {
+            if (edgeUrl) {
+              const bundle = await edgeBundle(slug, signal);
+              fireDeferredVisit();
+              return bundle;
+            }
+            const bundle = await callRpc(
+              'get_storefront_page_bundle',
+              { p_slug: slug, p_limit: 24, p_cursor: '', p_category: '', p_search: '' },
+              signal
+            );
+            fireDeferredVisit();
+            return bundle;
+          },
+        ]
+      : mode === 'edge'
+      ? [
+          async () => {
+            if (!edgeUrl) {
+              return { ok: false, status: 0, elapsed: 0, fn: 'edge:get-store-products', url: '', body: 'edge disabled' };
+            }
+            const bundle = await edgeBundle(slug, signal);
+            fireDeferredVisit();
+            return bundle;
+          },
+        ]
+      : mode === 'infra'
+      ? [
+          () => callRpc('list_public_store_slugs', { p_limit: 20, p_offset: 0 }, signal),
           () =>
-            rpc(
+            callRpc(
               'get_store_products_page',
               { p_slug: slug, p_limit: 24, p_cursor: '', p_category: '', p_search: '' },
               signal
             ),
-          () => rpc('list_public_store_slugs', { p_limit: 10, p_offset: 0 }, signal),
+          () => callRpc('list_public_store_slugs', { p_limit: 10, p_offset: 0 }, signal),
         ]
       : mode === 'legacy'
         ? [
             () =>
-              rpc(
+              callRpc(
                 'get_storefront_page_bundle',
                 { p_slug: slug, p_limit: 24, p_cursor: '', p_category: '', p_search: '' },
                 signal
               ),
             () =>
-              rpc(
+              callRpc(
                 'get_store_products_page',
                 { p_slug: slug, p_limit: 24, p_cursor: '', p_category: '', p_search: '' },
                 signal
               ),
             () =>
-              rpc('track_store_visit_by_slug', {
+              callRpc('track_store_visit_by_slug', {
                 p_store_slug: slug,
                 p_page_path: `/store/${slug}`,
                 p_user_agent: 'SlaashLoadTest/1.0',
               }, signal),
           ]
-        : [
-            () =>
-              rpc(
-                'get_storefront_page_bundle',
-                { p_slug: slug, p_limit: 24, p_cursor: '', p_category: '', p_search: '' },
-                signal
-              ),
-            () =>
-              rpc('track_store_visit_by_slug', {
-                p_store_slug: slug,
-                p_page_path: `/store/${slug}`,
-                p_user_agent: 'SlaashLoadTest/1.0',
-              }, signal),
-          ];
+        : mode === 'combined'
+          ? [
+              () =>
+                callRpc(
+                  'get_storefront_page_bundle',
+                  { p_slug: slug, p_limit: 24, p_cursor: '', p_category: '', p_search: '' },
+                  signal
+                ),
+              () =>
+                callRpc('track_store_visit_by_slug', {
+                  p_store_slug: slug,
+                  p_page_path: `/store/${slug}`,
+                  p_user_agent: 'SlaashLoadTest/1.0',
+                }, signal),
+            ]
+          : [
+              async () => {
+                const bundle = await callRpc(
+                  'get_storefront_page_bundle',
+                  { p_slug: slug, p_limit: 24, p_cursor: '', p_category: '', p_search: '' },
+                  signal
+                );
+                fireDeferredVisit();
+                return bundle;
+              },
+            ];
   for (const call of calls) {
     try {
       results.push(await call());
@@ -189,11 +314,13 @@ async function runPhase(label, users, durationSec, slug, sessionMode) {
   let iterations = 0;
 
   const workers = Array.from({ length: users }, async () => {
+    const gate = gateLimit > 0 ? new TabRpcGate(gateLimit) : null;
+    const callRpc = rpcWithGate(gate);
     while (Date.now() < endAt) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
       try {
-        const batch = await customerSession(slug, controller.signal, sessionMode);
+        const batch = await customerSession(slug, controller.signal, sessionMode, callRpc);
         for (const r of batch) {
           iterations += 1;
           latencies.push(r.elapsed);
@@ -208,7 +335,8 @@ async function runPhase(label, users, durationSec, slug, sessionMode) {
           }
         }
       } catch {
-        const rpcsPerSession = sessionMode === 'legacy' ? 3 : sessionMode === 'realistic' ? 2 : 3;
+        const rpcsPerSession =
+          sessionMode === 'legacy' ? 3 : sessionMode === 'combined' ? 2 : sessionMode === 'realistic' ? 1 : 3;
         failed += rpcsPerSession;
         iterations += rpcsPerSession;
         statusCounts.timeout = (statusCounts.timeout || 0) + rpcsPerSession;
@@ -270,7 +398,18 @@ console.log(`Phases: ramp concurrent storefront users\n`);
 
 const slugArg = args.slug && args.slug !== 'true' ? args.slug : null;
 let slug = slugArg;
-const sessionModeArg = args.mode === 'legacy' ? 'legacy' : args.mode === 'infra' ? 'infra' : 'realistic';
+const sessionModeArg =
+  args.mode === 'production'
+    ? 'production'
+    : args.mode === 'edge'
+    ? 'edge'
+    : args.mode === 'legacy'
+    ? 'legacy'
+    : args.mode === 'infra'
+      ? 'infra'
+      : args.mode === 'combined'
+        ? 'combined'
+        : 'realistic';
 let sessionMode = sessionModeArg;
 
 if (slug) {
@@ -295,9 +434,48 @@ if (!slug) {
   console.log('No published store slug — infra probe (sitemap + RPC throughput).\n');
 } else {
   const modeLabel =
-    sessionMode === 'realistic' ? 'realistic storefront (bundle + visit)' :
+    sessionMode === 'production'
+      ? 'production (edge GET when configured, else bundle RPC + deferred visit)'
+      :
+    sessionMode === 'edge' ? 'production edge GET (get-store-products + deferred visit)' :
+    sessionMode === 'realistic' ? 'realistic storefront (bundle RPC critical; visit deferred)' :
+    sessionMode === 'combined' ? 'combined storefront (bundle + visit sequential)' :
     sessionMode === 'legacy' ? 'legacy (bundle + products + visit)' : 'infra';
-  console.log(`Store slug: ${slug} (${modeLabel})\n`);
+  console.log(`Store slug: ${slug} (${modeLabel})`);
+  console.log(
+    `Connection: pooler=${poolerEnabled ? 'on' : 'off'} | edge=${edgeUrl ? 'configured' : 'off'} | gate=${gateLimit || 'off'}`
+  );
+
+  if (WARMUP_REQUESTS > 0 && sessionMode !== 'infra') {
+    process.stdout.write(`Warming cache (${WARMUP_REQUESTS} requests)… `);
+    const gate = gateLimit > 0 ? new TabRpcGate(gateLimit) : null;
+    const callRpc = rpcWithGate(gate);
+    let warmed = 0;
+    for (let i = 0; i < WARMUP_REQUESTS; i += 1) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+      try {
+        if ((sessionMode === 'edge' || sessionMode === 'production') && edgeUrl) {
+          const r = await edgeBundle(slug, controller.signal);
+          if (r.ok) warmed += 1;
+        } else {
+          const r = await callRpc(
+            'get_storefront_page_bundle',
+            { p_slug: slug, p_limit: 24, p_cursor: '', p_category: '', p_search: '' },
+            controller.signal
+          );
+          if (r.ok) warmed += 1;
+        }
+      } catch {
+        /* ignore warmup failures */
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    console.log(`${warmed}/${WARMUP_REQUESTS} ok\n`);
+  } else {
+    console.log('');
+  }
 }
 
 const userLevels = [10, 25, 50, 100, 200, 500, 1000, 2500, 5000, 10000].filter((n) => n <= Math.max(CONCURRENT_USERS, 10000));
@@ -350,7 +528,9 @@ if (last?.statusCounts && Object.keys(last.statusCounts).length) {
 }
 
 console.log('\n────────────────── Notes ──────────────────');
-console.log('• Realistic mode: get_storefront_page_bundle + track_store_visit_by_slug (2 RPCs).');
+console.log('• Use --warmup=8 (default) to prime edge/L1 cache before ramp.');
+console.log('• Production mode (--mode=production): edge GET when URL configured, else bundle RPC.');
+console.log('• Combined mode: sequential bundle + track_store_visit_by_slug (diagnostic only).');
 console.log('• Legacy mode (--mode=legacy): adds redundant get_store_products_page (3 RPCs).');
 console.log('• Checkout/orders NOT load-tested (would affect real inventory).');
 console.log('• Supabase plan limits (connections, CPU) dominate at scale.');
