@@ -6,10 +6,15 @@ import {
 } from '@/lib/supabase/schemaCapabilities';
 
 const mockCallReadRpc = vi.fn();
+const mockCallWriteRpc = vi.fn();
 const mockFrom = vi.fn();
 
 vi.mock('@/lib/readWrite/readClient', () => ({
   callReadRpc: (...args: unknown[]) => mockCallReadRpc(...args),
+}));
+
+vi.mock('@/lib/readWrite/writeClient', () => ({
+  callWriteRpc: (...args: unknown[]) => mockCallWriteRpc(...args),
 }));
 
 vi.mock('@/integrations/supabase/client', () => ({
@@ -48,5 +53,13 @@ describe('schemaCapabilities', () => {
     mockCallReadRpc.mockResolvedValueOnce({ data: { success: true }, error: null });
     const { hasMerchantInventorySummaryRpc } = await import('@/lib/supabase/schemaCapabilities');
     await expect(hasMerchantInventorySummaryRpc()).resolves.toBe(true);
+  });
+
+  it('detects missing analytics flush RPC', async () => {
+    mockCallWriteRpc.mockResolvedValue({
+      error: 'Could not find the function public.flush_merchant_analytics_buffer',
+    });
+    const { hasAnalyticsFlushRpc } = await import('@/lib/supabase/schemaCapabilities');
+    await expect(hasAnalyticsFlushRpc()).resolves.toBe(false);
   });
 });

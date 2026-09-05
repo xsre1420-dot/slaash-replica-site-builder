@@ -33,6 +33,7 @@
     "db:baseline": "powershell -ExecutionPolicy Bypass -File scripts/db-baseline.ps1",
     "db:verify": "node scripts/verify-platform-db.mjs",
     "db:audit": "node scripts/schema-sync-audit.mjs",
+    "db:function-drift": "node scripts/function-drift-audit.mjs",
     "audit:read-write": "node scripts/read-write-audit.mjs",
     "audit:background-jobs": "node scripts/background-jobs-audit.mjs",
     "audit:enterprise-architecture": "node scripts/enterprise-architecture-audit.mjs",

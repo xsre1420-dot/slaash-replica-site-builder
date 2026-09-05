@@ -14,9 +14,12 @@ type CapabilityKey =
   | 'batchRestockRpc'
   | 'inventoryMovementsRpc'
   | 'warehouseTables'
+  | 'premiumInventoryForecastRpc'
+  | 'premiumInventoryAbcRpc'
   | 'dashboardKpisLightRpc'
   | 'dashboardWorkflowCountsRpc'
   | 'statisticsPageBundleRpc'
+  | 'analyticsFlushRpc'
   | 'monitoringAuditRpc'
   | 'webhookWorkerStartRpc';
 
@@ -99,6 +102,16 @@ async function resolveCapability(key: CapabilityKey): Promise<boolean> {
     case 'warehouseTables':
       available = await probeTableExists('warehouses');
       break;
+    case 'premiumInventoryForecastRpc':
+      available = await probeRpcExists('merchant_inventory_forecast', {
+        p_owner_id: PROBE_OWNER,
+      });
+      break;
+    case 'premiumInventoryAbcRpc':
+      available = await probeRpcExists('merchant_abc_analysis', {
+        p_owner_id: PROBE_OWNER,
+      });
+      break;
     case 'dashboardKpisLightRpc':
       available = await probeRpcExists('get_dashboard_kpis_light', { p_owner_id: PROBE_OWNER });
       break;
@@ -112,6 +125,11 @@ async function resolveCapability(key: CapabilityKey): Promise<boolean> {
         p_current_end: new Date().toISOString(),
         p_previous_start: new Date().toISOString(),
         p_previous_end: new Date().toISOString(),
+      });
+      break;
+    case 'analyticsFlushRpc':
+      available = await probeWriteRpcExists('flush_merchant_analytics_buffer', {
+        p_limit: 1,
       });
       break;
     case 'monitoringAuditRpc':
@@ -144,6 +162,18 @@ export async function hasInventoryMovementsRpc(): Promise<boolean> {
 
 export async function hasWarehouseInventory(): Promise<boolean> {
   return resolveCapability('warehouseTables');
+}
+
+export async function hasPremiumInventoryForecastRpc(): Promise<boolean> {
+  return resolveCapability('premiumInventoryForecastRpc');
+}
+
+export async function hasPremiumInventoryAbcRpc(): Promise<boolean> {
+  return resolveCapability('premiumInventoryAbcRpc');
+}
+
+export async function hasAnalyticsFlushRpc(): Promise<boolean> {
+  return resolveCapability('analyticsFlushRpc');
 }
 
 export async function hasDashboardKpisLightRpc(): Promise<boolean> {

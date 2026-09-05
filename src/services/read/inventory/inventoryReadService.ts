@@ -24,6 +24,8 @@ import {
   hasWarehouseInventory,
   hasMerchantInventorySummaryRpc,
   hasInventoryMovementsRpc,
+  hasPremiumInventoryForecastRpc,
+  hasPremiumInventoryAbcRpc,
 } from '@/lib/supabase/schemaCapabilities';
 import { computeMerchantInventorySummaryFromProducts } from '@/lib/inventory/simpleInventorySummary';
 import { supabase } from '@/integrations/supabase/client';
@@ -274,6 +276,7 @@ export const fetchInventoryForecast = async (
   ownerId: string
 ): Promise<InventoryForecastItem[]> => {
   await assertMerchantOwner(ownerId);
+  if (!(await hasPremiumInventoryForecastRpc())) return [];
   const { data, error } = await rpcMerchantInventoryForecast(ownerId);
   const p = data as { success?: boolean; items?: InventoryForecastItem[] };
   if (error || !p?.success) return [];
@@ -282,6 +285,7 @@ export const fetchInventoryForecast = async (
 
 export const fetchAbcAnalysis = async (ownerId: string): Promise<AbcAnalysisItem[]> => {
   await assertMerchantOwner(ownerId);
+  if (!(await hasPremiumInventoryAbcRpc())) return [];
   const { data, error } = await rpcMerchantAbcAnalysis(ownerId);
   const p = data as { success?: boolean; items?: AbcAnalysisItem[] };
   if (error || !p?.success) return [];

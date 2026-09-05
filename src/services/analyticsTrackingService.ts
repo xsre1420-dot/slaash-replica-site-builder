@@ -2,7 +2,8 @@
  * Public storefront analytics events — visit and product view tracking.
  */
 import { callWriteRpc } from '@/lib/readWrite/writeClient';
-import { traceCriticalFlow } from '@/lib/tracing';
+import { hasAnalyticsFlushRpc } from '@/lib/supabase/schemaCapabilities';
+import { runIsolatedSubsystem } from '@/core/distributed/failureIsolation';
 import { dedup, peekInflight } from '@/lib/cache';
 import {
   getStorefrontVisitWriteOptions,
@@ -90,7 +91,7 @@ export async function trackStoreVisitBySlug(
     }
 
     try {
-      return await traceCriticalFlow('analytics', 'rpc', 'storeVisit', async () => {
+      const result = await runIsolatedSubsystem('analytics', async () => {
         logStorefrontRequest(STOREFRONT_VISIT_RPC, 'start', { slug: normalized, path });
         const started = Date.now();
         const { data, error } = await callWriteRpc<Record<string, unknown>>(
@@ -113,7 +114,12 @@ export async function trackStoreVisitBySlug(
         markRecentSlugVisit(normalized);
         logStorefrontRequest(STOREFRONT_VISIT_RPC, 'end', { durationMs });
         return (data ?? {}) as { success?: boolean; deduped?: boolean; rate_limited?: boolean };
-      }, { storeSlug: normalized, pagePath: path });
+      });
+
+      if (!result.ok) {
+        return { success: false, error: result.error };
+      }
+      return result.value ?? { success: true };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'visit tracking failed';
       logStorefrontRequest(STOREFRONT_VISIT_RPC, 'error', { message: message.slice(0, 80) });
@@ -154,7 +160,7 @@ export async function trackProductViewBySlug(
     }
 
     try {
-      return await traceCriticalFlow('analytics', 'rpc', 'productView', async () => {
+      const result = await runIsolatedSubsystem('analytics', async () => {
         logStorefrontRequest(STOREFRONT_PRODUCT_VIEW_RPC, 'start', {
           slug: normalized,
           productId: normalizedProductId,
@@ -180,7 +186,12 @@ export async function trackProductViewBySlug(
         markRecentProductView(key);
         logStorefrontRequest(STOREFRONT_PRODUCT_VIEW_RPC, 'end', { durationMs });
         return (data ?? {}) as { success?: boolean; deduped?: boolean };
-      }, { storeSlug: normalized, productId: normalizedProductId });
+      });
+
+      if (!result.ok) {
+        return { success: false, error: result.error };
+      }
+      return result.value ?? { success: true };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'product view tracking failed';
       logStorefrontRequest(STOREFRONT_PRODUCT_VIEW_RPC, 'error', {
@@ -195,6 +206,9 @@ export async function trackProductViewBySlug(
 export async function flushMerchantAnalyticsBuffer(
   limit = 200
 ): Promise<{ success?: boolean; processed?: number }> {
+  if (!(await hasAnalyticsFlushRpc())) {
+    return { success: false, processed: 0 };
+  }
   try {
     const { data, error } = await callWriteRpc<Record<string, unknown>>(
       'flush_merchant_analytics_buffer',

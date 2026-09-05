@@ -98,9 +98,8 @@
       "version": "20260902000006",
       "file": "20260902000006_connection_pool_phase_4.sql",
       "wave": "phase-4-connection-pool",
-      "deployAfter": ["20260906000002"],
-      "schemaProbes": [],
-      "notes": "Connection pool observability and routing metadata."
+      "supersededBy": "20260906000004_function_drift_alignment.sql",
+      "notes": "process_webhook_outbox_worker_start shipped in 20260906000004 without full phase-4 wave."
     },
     {
       "version": "20260902000008",
