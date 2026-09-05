@@ -52,7 +52,7 @@ describe('dashboardStatsService production fallbacks', () => {
 
     const kpis = await fetchDashboardKpisLight('owner-1');
     expect(kpis?.today).toMatchObject({ orders: 3, revenue: 300 });
-    expect(kpis?.catalog_kpis).toEqual({ product_count: 25, low_stock_count: 2 });
+    expect(kpis?.catalog_kpis).toMatchObject({ productCount: 25, lowStockCount: 2 });
   });
 
   it('derives workflow counts from statistics batch when dedicated RPC is absent', async () => {
