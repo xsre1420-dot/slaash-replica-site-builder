@@ -16,7 +16,7 @@ import {
   warehousesTable,
 } from '@/repositories/inventory/inventoryRepository';
 import { assertMerchantOwner } from '@/lib/tenantGuard';
-import { hasWarehouseInventory } from '@/lib/supabase/schemaCapabilities';
+import { hasWarehouseInventory, hasBatchRestockRpc } from '@/lib/supabase/schemaCapabilities';
 import { recordHealthEvent } from '@/lib/observability/healthMonitor';
 import type { InventoryProductRow } from '@/utils/inventoryPageUtils';
 import { InventoryRestockError } from '@/services/read/inventory/inventoryReadService';
@@ -115,18 +115,42 @@ export const batchRestockProducts = async (
   await assertMerchantOwner(ownerId);
   if (items.length === 0) return { succeeded: 0, failed: 0 };
 
-  const { data, error } = await rpcBatchRestockProducts(ownerId, items);
-  const payload = data as { success?: boolean; succeeded?: number; failed?: number; error?: string };
+  if (await hasBatchRestockRpc()) {
+    const { data, error } = await rpcBatchRestockProducts(ownerId, items);
+    const payload = data as { success?: boolean; succeeded?: number; failed?: number; error?: string };
 
-  if (error || !payload?.success) {
-    throw new InventoryRestockError(payload?.error ?? 'فشل التعبئة الجماعية');
+    if (error || !payload?.success) {
+      throw new InventoryRestockError(payload?.error ?? 'فشل التعبئة الجماعية');
+    }
+
+    recordHealthEvent('inventory', (payload.failed ?? 0) === 0);
+    return {
+      succeeded: payload.succeeded ?? 0,
+      failed: payload.failed ?? 0,
+    };
   }
 
-  recordHealthEvent('inventory', (payload.failed ?? 0) === 0);
-  return {
-    succeeded: payload.succeeded ?? 0,
-    failed: payload.failed ?? 0,
-  };
+  let succeeded = 0;
+  let failed = 0;
+  for (const item of items) {
+    if (item.delta <= 0) {
+      failed += 1;
+      continue;
+    }
+    const { data, error } = await rpcIncrementProductStock({
+      p_product_id: item.product_id,
+      p_owner_id: ownerId,
+      p_delta: item.delta,
+      p_reason: 'restock',
+      ...(item.min_stock_level != null ? { p_min_stock_level: item.min_stock_level } : {}),
+    });
+    const payload = data as { success?: boolean };
+    if (!error && payload?.success) succeeded += 1;
+    else failed += 1;
+  }
+
+  recordHealthEvent('inventory', failed === 0);
+  return { succeeded, failed };
 };
 
 export const batchRestockWithSuggestions = async (
@@ -235,6 +259,7 @@ export const receivePurchaseOrderLine = async (
   quantity: number
 ): Promise<number | null> => {
   await assertMerchantOwner(ownerId);
+  if (!(await hasWarehouseInventory())) return null;
   const { data, error } = await rpcReceivePurchaseOrderLine(ownerId, lineId, quantity);
   const payload = data as { success?: boolean; stock_quantity?: number; error?: string };
   if (error || !payload?.success) {
@@ -263,6 +288,9 @@ export const submitCycleCountLine = async (
   applyAdjustment = false
 ): Promise<number> => {
   await assertMerchantOwner(ownerId);
+  if (!(await hasWarehouseInventory())) {
+    throw new InventoryRestockError('ميزة الجرد غير متوفرة في قاعدة البيانات الحالية');
+  }
   const { data, error } = await rpcSubmitCycleCountLine(
     ownerId,
     lineId,
@@ -278,6 +306,9 @@ export const submitCycleCountLine = async (
 
 export const completeCycleCount = async (ownerId: string, cycleCountId: string): Promise<void> => {
   await assertMerchantOwner(ownerId);
+  if (!(await hasWarehouseInventory())) {
+    throw new InventoryRestockError('ميزة الجرد غير متوفرة في قاعدة البيانات الحالية');
+  }
   const { data, error } = await rpcCompleteInventoryCycleCount(ownerId, cycleCountId);
   const payload = data as { success?: boolean };
   if (error || !payload?.success) {

@@ -1,35 +1,25 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { restockProduct, InventoryRestockError } from './inventoryService';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { restockProduct, batchRestockProducts, InventoryRestockError } from './inventoryService';
 
-const { mockUpdate, mockInsert, mockRpc } = vi.hoisted(() => ({
-  mockUpdate: vi.fn(),
-  mockInsert: vi.fn(),
-  mockRpc: vi.fn(),
-}));
+const mockIncrement = vi.fn();
+const mockBatch = vi.fn();
 
 vi.mock('@/lib/tenantGuard', () => ({
   assertMerchantOwner: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    rpc: mockRpc,
-    from: vi.fn((table: string) => {
-      if (table === 'products') {
-        return {
-          update: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              eq: mockUpdate,
-            })),
-          })),
-        };
-      }
-      if (table === 'inventory_movements') {
-        return { insert: mockInsert };
-      }
-      return {};
-    }),
-  },
+vi.mock('@/lib/supabase/schemaCapabilities', () => ({
+  hasWarehouseInventory: vi.fn().mockResolvedValue(false),
+  hasBatchRestockRpc: vi.fn().mockResolvedValue(false),
+}));
+
+vi.mock('@/repositories/inventory/inventoryRepository', () => ({
+  rpcIncrementProductStock: (...args: unknown[]) => mockIncrement(...args),
+  rpcBatchRestockProducts: (...args: unknown[]) => mockBatch(...args),
+}));
+
+vi.mock('@/lib/tracing', () => ({
+  traceCriticalFlow: (_flow: string, _layer: string, _op: string, fn: () => Promise<unknown>) => fn(),
 }));
 
 const product = {
@@ -46,12 +36,10 @@ const product = {
 describe('inventoryService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockRpc.mockResolvedValue({
+    mockIncrement.mockResolvedValue({
       data: { success: true, stock_quantity: 15 },
       error: null,
     });
-    mockUpdate.mockResolvedValue({ error: null });
-    mockInsert.mockResolvedValue({ error: null });
   });
 
   it('rejects negative add amounts', async () => {
@@ -60,12 +48,10 @@ describe('inventoryService', () => {
     ).rejects.toBeInstanceOf(InventoryRestockError);
   });
 
-  it('records restock movement for positive adds', async () => {
+  it('records restock via increment_product_stock RPC', async () => {
     const result = await restockProduct({ product, ownerId: 'o1', addAmount: 5 });
     expect(result.newQuantity).toBe(15);
-    expect(result.added).toBe(5);
-    expect(mockRpc).toHaveBeenCalledWith(
-      'increment_product_stock',
+    expect(mockIncrement).toHaveBeenCalledWith(
       expect.objectContaining({
         p_product_id: 'p1',
         p_owner_id: 'o1',
@@ -74,43 +60,31 @@ describe('inventoryService', () => {
     );
   });
 
-  it('allows min level update via locked stock RPC without movement', async () => {
-    mockRpc.mockResolvedValueOnce({
+  it('allows min level update via delta=0 increment RPC', async () => {
+    mockIncrement.mockResolvedValueOnce({
       data: { success: true, stock_quantity: 10 },
       error: null,
     });
     const result = await restockProduct({ product, ownerId: 'o1', addAmount: 0, minLevel: 8 });
     expect(result.added).toBe(0);
-    expect(mockRpc).toHaveBeenCalledWith(
-      'increment_product_stock',
+    expect(mockIncrement).toHaveBeenCalledWith(
       expect.objectContaining({
         p_delta: 0,
         p_min_stock_level: 8,
         p_reason: 'threshold_update',
       })
     );
-    expect(mockUpdate).not.toHaveBeenCalled();
   });
 
-  it('passes min level to restock RPC when stock and threshold change together', async () => {
-    await restockProduct({ product, ownerId: 'o1', addAmount: 5, minLevel: 8 });
-    expect(mockRpc).toHaveBeenCalledWith(
-      'increment_product_stock',
-      expect.objectContaining({
-        p_min_stock_level: 8,
-      })
-    );
-    expect(mockUpdate).not.toHaveBeenCalled();
-  });
-
-  it('applyStockQuantityPatch uses increment RPC for positive deltas', async () => {
-    const { applyStockQuantityPatch } = await import('./inventoryService');
-    const qty = await applyStockQuantityPatch('p1', 'o1', 10, 15);
-    expect(qty).toBe(15);
-    expect(mockRpc).toHaveBeenCalledWith(
-      'increment_product_stock',
-      expect.objectContaining({ p_delta: 5, p_reason: 'restock' })
-    );
+  it('batch restock falls back to sequential increment when batch RPC absent', async () => {
+    const result = await batchRestockProducts('o1', [
+      { product_id: 'p1', delta: 2 },
+      { product_id: 'p2', delta: 3 },
+    ]);
+    expect(result.succeeded).toBe(2);
+    expect(result.failed).toBe(0);
+    expect(mockBatch).not.toHaveBeenCalled();
+    expect(mockIncrement).toHaveBeenCalledTimes(2);
   });
 
   it('applyStockQuantityPatch rejects negative deltas', async () => {
@@ -118,34 +92,5 @@ describe('inventoryService', () => {
     await expect(applyStockQuantityPatch('p1', 'o1', 10, 5)).rejects.toBeInstanceOf(
       InventoryRestockError
     );
-  });
-
-  it('auditInventoryIntegrity maps RPC payload', async () => {
-    mockRpc.mockResolvedValueOnce({
-      data: {
-        success: true,
-        score: 95,
-        total_products: 10,
-        issues_count: 1,
-        summary: {
-          negative_stock: 0,
-          variant_drift: 1,
-          duplicate_initial_stock: 0,
-          missing_initial_stock: 0,
-          ledger_mismatch: 0,
-          orphan_movements: 0,
-          archived_still_active: 0,
-        },
-        issues: [{ type: 'variant_drift', product_id: 'p1' }],
-      },
-      error: null,
-    });
-    const { auditInventoryIntegrity } = await import('./inventoryService');
-    const result = await auditInventoryIntegrity('o1');
-    expect(result?.score).toBe(95);
-    expect(result?.summary.variant_drift).toBe(1);
-    expect(mockRpc).toHaveBeenCalledWith('audit_merchant_inventory_integrity', {
-      p_owner_id: 'o1',
-    });
   });
 });

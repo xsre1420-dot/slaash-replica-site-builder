@@ -20,7 +20,13 @@ import {
   getAuthUserId,
 } from '@/repositories/inventory/inventoryRepository';
 import { assertMerchantOwner } from '@/lib/tenantGuard';
-import { hasWarehouseInventory } from '@/lib/supabase/schemaCapabilities';
+import {
+  hasWarehouseInventory,
+  hasMerchantInventorySummaryRpc,
+  hasInventoryMovementsRpc,
+} from '@/lib/supabase/schemaCapabilities';
+import { computeMerchantInventorySummaryFromProducts } from '@/lib/inventory/simpleInventorySummary';
+import { supabase } from '@/integrations/supabase/client';
 
 export class InventoryRestockError extends Error {
   constructor(message: string) {
@@ -211,10 +217,37 @@ export const fetchMerchantInventorySummary = async (
 ): Promise<MerchantInventorySummary | null> => {
   await assertMerchantOwner(ownerId);
   return fetchInventorySummaryCached(ownerId, async () => {
-    const { data, error } = await rpcMerchantInventorySummary(ownerId);
-    const p = data as Record<string, unknown>;
-    if (error || !p?.success) return null;
-    return mapMerchantInventorySummaryPayload(p);
+    if (await hasMerchantInventorySummaryRpc()) {
+      const { data, error } = await rpcMerchantInventorySummary(ownerId);
+      const p = data as Record<string, unknown>;
+      if (!error && p?.success) {
+        return mapMerchantInventorySummaryPayload(p);
+      }
+    }
+
+    const { data: rows, error: productsError } = await supabase
+      .from('products')
+      .select('id, price, cost, sku, image_url, stock_quantity, min_stock_level, is_active, archived_at')
+      .eq('owner_id', ownerId);
+
+    if (productsError || !rows?.length) return null;
+
+    const products = rows.map((row) => ({
+      id: String(row.id),
+      name: '',
+      description: '',
+      category: '',
+      price: Number(row.price ?? 0),
+      cost: row.cost != null ? Number(row.cost) : undefined,
+      sku: row.sku ?? undefined,
+      image: row.image_url ?? '',
+      stockQuantity: row.stock_quantity != null ? Number(row.stock_quantity) : undefined,
+      lowStockThreshold: row.min_stock_level != null ? Number(row.min_stock_level) : undefined,
+      isActive: row.is_active ?? true,
+      archivedAt: row.archived_at ?? undefined,
+    }));
+
+    return computeMerchantInventorySummaryFromProducts(products);
   });
 };
 
@@ -225,6 +258,7 @@ export const fetchGlobalMovements = async (
   opts?: { from?: string; to?: string; limit?: number }
 ): Promise<InventoryMovementRow[]> => {
   await assertMerchantOwner(ownerId);
+  if (!(await hasInventoryMovementsRpc())) return [];
   const { data, error } = await rpcListMerchantInventoryMovements(
     ownerId,
     opts?.from,
@@ -259,7 +293,10 @@ export const lookupProductByBarcode = async (
   barcode: string
 ): Promise<{ id: string; name: string; sku?: string; stock_quantity?: number } | null> => {
   await assertMerchantOwner(ownerId);
-  const { data, error } = await rpcLookupProductByBarcode(ownerId, barcode.trim());
+  if (!(await hasWarehouseInventory())) return null;
+  const trimmed = barcode.trim();
+  if (!trimmed) return null;
+  const { data, error } = await rpcLookupProductByBarcode(ownerId, trimmed);
   const p = data as { success?: boolean; product?: Record<string, unknown>; error?: string };
   if (error || !p?.success || !p.product) return null;
   return {
@@ -310,6 +347,7 @@ export const fetchPurchaseOrderLines = async (
   ownerId: string
 ): Promise<PurchaseOrderLineRow[]> => {
   await assertMerchantOwner(ownerId);
+  if (!(await hasWarehouseInventory())) return [];
   const { data, error } = await purchaseOrderLinesTable()
     .select('id, product_id, quantity_ordered, quantity_received, unit_cost, products(name, sku)')
     .eq('purchase_order_id', poId)
@@ -335,6 +373,7 @@ export const fetchCycleCountLines = async (
   ownerId: string
 ): Promise<CycleCountLineRow[]> => {
   await assertMerchantOwner(ownerId);
+  if (!(await hasWarehouseInventory())) return [];
   const { data, error } = await cycleCountLinesTable()
     .select('id, product_id, expected_qty, counted_qty, variance, products(name)')
     .eq('cycle_count_id', countId)

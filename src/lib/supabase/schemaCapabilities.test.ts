@@ -43,4 +43,10 @@ describe('schemaCapabilities', () => {
     });
     await expect(hasWarehouseInventory()).resolves.toBe(false);
   });
+
+  it('detects merchant inventory summary RPC', async () => {
+    mockCallReadRpc.mockResolvedValueOnce({ data: { success: true }, error: null });
+    const { hasMerchantInventorySummaryRpc } = await import('@/lib/supabase/schemaCapabilities');
+    await expect(hasMerchantInventorySummaryRpc()).resolves.toBe(true);
+  });
 });

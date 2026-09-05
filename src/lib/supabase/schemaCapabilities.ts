@@ -4,11 +4,15 @@
  */
 import { supabase } from '@/integrations/supabase/client';
 import { callReadRpc } from '@/lib/readWrite/readClient';
+import { callWriteRpc } from '@/lib/readWrite/writeClient';
 
 const PROBE_OWNER = '00000000-0000-0000-0000-000000000000';
 
 type CapabilityKey =
   | 'inventoryPageBundleRpc'
+  | 'merchantInventorySummaryRpc'
+  | 'batchRestockRpc'
+  | 'inventoryMovementsRpc'
   | 'warehouseTables'
   | 'dashboardKpisLightRpc'
   | 'dashboardWorkflowCountsRpc'
@@ -32,6 +36,16 @@ function isMissingTableError(error: { message?: string; code?: string } | null):
   if (!error) return false;
   if (error.code === '42P01') return true;
   return isMissingObjectError(error.message);
+}
+
+async function probeWriteRpcExists(name: string, args: Record<string, unknown>): Promise<boolean> {
+  try {
+    const { error } = await callWriteRpc(name, args);
+    if (!error) return true;
+    return !isMissingObjectError(error);
+  } catch {
+    return false;
+  }
 }
 
 async function probeRpcExists(name: string, args: Record<string, unknown>): Promise<boolean> {
@@ -61,6 +75,23 @@ async function resolveCapability(key: CapabilityKey): Promise<boolean> {
   switch (key) {
     case 'inventoryPageBundleRpc':
       available = await probeRpcExists('get_merchant_inventory_page_bundle', {
+        p_owner_id: PROBE_OWNER,
+        p_limit: 1,
+      });
+      break;
+    case 'merchantInventorySummaryRpc':
+      available = await probeRpcExists('merchant_inventory_summary', {
+        p_owner_id: PROBE_OWNER,
+      });
+      break;
+    case 'batchRestockRpc':
+      available = await probeWriteRpcExists('batch_restock_products', {
+        p_owner_id: PROBE_OWNER,
+        p_items: [],
+      });
+      break;
+    case 'inventoryMovementsRpc':
+      available = await probeRpcExists('list_merchant_inventory_movements', {
         p_owner_id: PROBE_OWNER,
         p_limit: 1,
       });
@@ -97,6 +128,18 @@ async function resolveCapability(key: CapabilityKey): Promise<boolean> {
 
 export async function hasInventoryPageBundleRpc(): Promise<boolean> {
   return resolveCapability('inventoryPageBundleRpc');
+}
+
+export async function hasMerchantInventorySummaryRpc(): Promise<boolean> {
+  return resolveCapability('merchantInventorySummaryRpc');
+}
+
+export async function hasBatchRestockRpc(): Promise<boolean> {
+  return resolveCapability('batchRestockRpc');
+}
+
+export async function hasInventoryMovementsRpc(): Promise<boolean> {
+  return resolveCapability('inventoryMovementsRpc');
 }
 
 export async function hasWarehouseInventory(): Promise<boolean> {
